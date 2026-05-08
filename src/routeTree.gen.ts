@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
+import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 
@@ -46,6 +47,11 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFormsRoute = AppFormsRouteImport.update({
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -60,6 +66,7 @@ const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AppDashboardRoute
+  '/forms': typeof AppFormsRoute
   '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/login': typeof AuthLoginRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AppDashboardRoute
+  '/forms': typeof AppFormsRoute
   '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/login': typeof AuthLoginRoute
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/forms': typeof AppFormsRoute
   '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/pipeline': typeof AppPipelineRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -89,18 +98,27 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
+    | '/forms'
     | '/leads'
     | '/pipeline'
     | '/login'
     | '/leads/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/leads' | '/pipeline' | '/login' | '/leads/$id'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/forms'
+    | '/leads'
+    | '/pipeline'
+    | '/login'
+    | '/leads/$id'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/_auth'
     | '/_app/dashboard'
+    | '/_app/forms'
     | '/_app/leads'
     | '/_app/pipeline'
     | '/_auth/login'
@@ -157,6 +175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/forms': {
+      id: '/_app/forms'
+      path: '/forms'
+      fullPath: '/forms'
+      preLoaderRoute: typeof AppFormsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -188,12 +213,14 @@ const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppFormsRoute: typeof AppFormsRoute
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppPipelineRoute: typeof AppPipelineRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppFormsRoute: AppFormsRoute,
   AppLeadsRoute: AppLeadsRouteWithChildren,
   AppPipelineRoute: AppPipelineRoute,
 }
@@ -218,3 +245,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
