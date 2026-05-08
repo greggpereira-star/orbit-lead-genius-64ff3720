@@ -63,13 +63,16 @@
 
 :root {
   --radius: 0.625rem;
-   --background: oklch(0.985 0.004 247.8); /* #f6f9fc - Light grey background */
-   --foreground: oklch(0.44 0.02 255); /* #425466 - Grey text */
+   --background: oklch(0.985 0.002 247.8); /* #f6f9fc - Light grey background */
+   --foreground: oklch(0.35 0.02 255); /* #425466 with improved contrast */
    --card: oklch(1 0 0); /* White cards for contrast */
    --card-foreground: oklch(0.24 0.04 260); /* #0a2540 - Dark brand text */
    --popover: oklch(1 0 0);
    --popover-foreground: oklch(0.44 0.02 255);
-   --primary: oklch(0.55 0.20 264); /* #635bff - Corporate blue */
+   --primary: oklch(0.53 0.18 264); /* #635bff - Slightly darker for contrast */
+   --accent-brand: oklch(0.78 0.16 220); /* #00d4ff */
+   --dark-brand: oklch(0.24 0.04 260); /* #0a2540 */
+   --surface-gray: oklch(0.975 0.005 247.8); /* #f6f9fc */
    --primary-foreground: oklch(1 0 0);
    --secondary: oklch(0.24 0.04 260); /* #0a2540 - Dark brand */
    --secondary-foreground: oklch(1 0 0);
