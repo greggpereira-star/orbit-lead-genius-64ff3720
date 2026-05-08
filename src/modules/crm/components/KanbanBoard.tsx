@@ -4,6 +4,7 @@
  import { Badge } from '@/components/ui/badge';
  import { MoreHorizontal, GripVertical } from 'lucide-react';
  import { Button } from '@/components/ui/button';
+ import { useNavigate } from '@tanstack/react-router';
  
  interface Lead {
    id: string;
@@ -125,6 +126,7 @@
                          <Card
                            ref={provided.innerRef}
                            {...provided.draggableProps}
+                           onClick={() => window.location.href = `/leads/${lead.id}`}
                            className={`p-3 shadow-sm border-none group cursor-pointer hover:ring-1 hover:ring-primary/20 transition-all ${
                              snapshot.isDragging ? 'shadow-lg rotate-2' : ''
                            }`}
