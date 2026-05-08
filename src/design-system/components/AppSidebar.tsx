@@ -72,7 +72,7 @@
          <SidebarMenu>
            <SidebarMenuItem>
              <SidebarMenuButton asChild tooltip="Settings">
-               <Link to="/settings" as={any}>
+               <Link to="/settings" asChild>
                  <Settings className="h-4 w-4" />
                  <span>Settings</span>
                </Link>
