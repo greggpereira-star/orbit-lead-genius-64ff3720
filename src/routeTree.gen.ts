@@ -17,6 +17,7 @@ import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
+import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
@@ -65,6 +66,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppPipelineRoute = AppPipelineRouteImport.update({
   id: '/pipeline',
   path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLeadsRoute = AppLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFormsRoute = AppFormsRouteImport.update({
@@ -119,9 +125,9 @@ const AppSettingsAutomationsRoute = AppSettingsAutomationsRouteImport.update({
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
-  id: '/leads/$id',
-  path: '/leads/$id',
-  getParentRoute: () => AppRoute,
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppLeadsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
+  '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
+  '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/forms': typeof AppFormsRoute
+  '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/whatsapp': typeof AppWhatsappRoute
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/dashboard'
     | '/forms'
+    | '/leads'
     | '/pipeline'
     | '/settings'
     | '/whatsapp'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/dashboard'
     | '/forms'
+    | '/leads'
     | '/pipeline'
     | '/whatsapp'
     | '/login'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/_app/automations'
     | '/_app/dashboard'
     | '/_app/forms'
+    | '/_app/leads'
     | '/_app/pipeline'
     | '/_app/settings'
     | '/_app/whatsapp'
@@ -308,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPipelineRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/leads': {
+      id: '/_app/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof AppLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/forms': {
       id: '/_app/forms'
       path: '/forms'
@@ -380,13 +399,25 @@ declare module '@tanstack/react-router' {
     }
     '/_app/leads/$id': {
       id: '/_app/leads/$id'
-      path: '/leads/$id'
+      path: '/$id'
       fullPath: '/leads/$id'
       preLoaderRoute: typeof AppLeadsIdRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppLeadsRoute
     }
   }
 }
+
+interface AppLeadsRouteChildren {
+  AppLeadsIdRoute: typeof AppLeadsIdRoute
+}
+
+const AppLeadsRouteChildren: AppLeadsRouteChildren = {
+  AppLeadsIdRoute: AppLeadsIdRoute,
+}
+
+const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
+  AppLeadsRouteChildren,
+)
 
 interface AppSettingsRouteChildren {
   AppSettingsAutomationsRoute: typeof AppSettingsAutomationsRoute
@@ -415,10 +446,10 @@ interface AppRouteChildren {
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppFormsRoute: typeof AppFormsRoute
+  AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppPipelineRoute: typeof AppPipelineRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
-  AppLeadsIdRoute: typeof AppLeadsIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -426,10 +457,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppAutomationsRoute: AppAutomationsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppFormsRoute: AppFormsRoute,
+  AppLeadsRoute: AppLeadsRouteWithChildren,
   AppPipelineRoute: AppPipelineRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
-  AppLeadsIdRoute: AppLeadsIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
