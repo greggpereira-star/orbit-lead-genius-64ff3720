@@ -2,7 +2,19 @@
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
- import { Facebook, Chrome, MessageSquare, Database } from 'lucide-react';
+ import { Facebook, Chrome, MessageSquare, Database, AlertCircle } from 'lucide-react';
+ import { 
+   Dialog, 
+   DialogContent, 
+   DialogDescription, 
+   DialogHeader, 
+   DialogTitle, 
+   DialogTrigger,
+   DialogFooter
+ } from '@/components/ui/dialog';
+ import { Label } from '@/components/ui/label';
+ import { Input } from '@/components/ui/input';
+ import { Switch } from '@/components/ui/switch';
  
  export const Route = createFileRoute('/_app/settings/integrations')({
    component: IntegrationsSettings,
@@ -70,12 +82,67 @@
                    </div>
                    <h4 className="font-semibold text-sm mb-1">{app.name}</h4>
                    <p className="text-xs text-muted-foreground mb-6 flex-1">{app.description}</p>
-                   <Button 
-                     variant={app.status === 'connected' ? 'outline' : 'default'} 
-                     className="w-full text-xs h-9"
-                   >
-                     {app.status === 'connected' ? 'Configure' : 'Connect'}
-                   </Button>
+                   {app.id === 'meta' ? (
+                     <Dialog>
+                       <DialogTrigger asChild>
+                         <Button 
+                           variant={app.status === 'connected' ? 'outline' : 'default'} 
+                           className="w-full text-xs h-9"
+                         >
+                           {app.status === 'connected' ? 'Configure' : 'Connect'}
+                         </Button>
+                       </DialogTrigger>
+                       <DialogContent className="sm:max-w-[500px]">
+                         <DialogHeader>
+                           <DialogTitle className="flex items-center gap-2">
+                             <Facebook className="h-5 w-5 text-blue-600" />
+                             Meta Integration
+                           </DialogTitle>
+                           <DialogDescription>
+                             Configure your Pixel and Conversions API settings.
+                           </DialogDescription>
+                         </DialogHeader>
+                         <div className="space-y-6 py-4">
+                           <div className="space-y-4 border rounded-lg p-4 bg-slate-50">
+                             <div className="flex items-center justify-between">
+                               <div className="space-y-0.5">
+                                 <Label>Conversions API (CAPI)</Label>
+                                 <p className="text-xs text-muted-foreground">Improve tracking accuracy with server-side events.</p>
+                               </div>
+                               <Switch defaultChecked />
+                             </div>
+                           </div>
+                           <div className="space-y-4">
+                             <div className="space-y-2">
+                               <Label htmlFor="pixel-id">Pixel ID</Label>
+                               <Input id="pixel-id" placeholder="Ex: 123456789012345" defaultValue="728394102938475" />
+                             </div>
+                             <div className="space-y-2">
+                               <Label htmlFor="access-token">CAPI Access Token</Label>
+                               <Input id="access-token" type="password" placeholder="EAAB..." defaultValue="••••••••••••••••" />
+                             </div>
+                           </div>
+                           <div className="flex items-start gap-3 p-3 rounded-md bg-amber-50 border border-amber-100 text-amber-800 text-xs">
+                             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                             <p>
+                               Ensure you have enabled the "Lead" event in your Events Manager and configured the correct permissions.
+                             </p>
+                           </div>
+                         </div>
+                         <DialogFooter>
+                           <Button variant="outline" onClick={() => {}}>Disconnect</Button>
+                           <Button onClick={() => {}}>Save Configuration</Button>
+                         </DialogFooter>
+                       </DialogContent>
+                     </Dialog>
+                   ) : (
+                     <Button 
+                       variant={app.status === 'connected' ? 'outline' : 'default'} 
+                       className="w-full text-xs h-9"
+                     >
+                       {app.status === 'connected' ? 'Configure' : 'Connect'}
+                     </Button>
+                   )}
                  </CardContent>
                </Card>
              ))}
