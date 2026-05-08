@@ -1,4 +1,8 @@
  import { createFileRoute } from '@tanstack/react-router';
+ import { useState, useEffect } from 'react';
+ import { supabase } from '@/lib/supabase';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
+ import { toast } from 'sonner';
  import { Button } from '@/components/ui/button';
  import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  import { Badge } from '@/components/ui/badge';
@@ -26,34 +30,47 @@
  
  function LeadDetailsPage() {
    const { id } = Route.useParams();
+   const { company } = useAuth();
+   const [lead, setLead] = useState<any>(null);
+   const [events, setEvents] = useState<any[]>([]);
+   const [isLoading, setIsLoading] = useState(true);
  
-   // Mock lead data
-   const lead = {
-     id,
-     name: 'John Doe',
-     email: 'john@acme.com',
-     phone: '+55 11 99999-9999',
-     city: 'São Paulo, SP',
-     status: 'qualified',
-     temperature: 'hot',
-     score: 85,
-     company: 'Acme Corp',
-     role: 'Head of Sales',
-     created_at: '2024-03-20 14:30',
-     source: 'Google Ads',
-     campaign: 'Search_Enterprise_BR',
-     events: [
-       { id: 1, type: 'form_submission', title: 'Form Submitted', description: 'Enterprise Inquiry Form', date: '2 hours ago' },
-       { id: 2, type: 'status_change', title: 'Status Changed', description: 'Moved from New to Qualified', date: '4 hours ago' },
-       { id: 3, type: 'page_view', title: 'Pricing Page Viewed', description: 'Duration: 4m 32s', date: '1 day ago' },
-     ],
-     metadata: {
-       utm_source: 'google',
-       utm_medium: 'cpc',
-       utm_campaign: 'Search_Enterprise_BR',
-       gclid: 'aw-123456789',
+   useEffect(() => {
+     if (company && id) {
+       fetchLeadDetails();
+     }
+   }, [company, id]);
+ 
+   const fetchLeadDetails = async () => {
+     setIsLoading(true);
+     try {
+       const { data: leadData, error: leadError } = await supabase
+         .from('leads')
+         .select('*')
+         .eq('id', id)
+         .single();
+ 
+       if (leadError) throw leadError;
+       setLead(leadData);
+ 
+       const { data: eventsData, error: eventsError } = await supabase
+         .from('lead_events')
+         .select('*')
+         .eq('lead_id', id)
+         .order('created_at', { ascending: false });
+ 
+       if (eventsError) throw eventsError;
+       setEvents(eventsData);
+     } catch (error) {
+       console.error('Error fetching lead details:', error);
+       toast.error('Failed to load lead details');
+     } finally {
+       setIsLoading(false);
      }
    };
+ 
+   if (isLoading) return <div className="p-8 text-center">Loading lead details...</div>;
+   if (!lead) return <div className="p-8 text-center text-rose-500 font-bold">Lead not found</div>;
  
    return (
      <div className="space-y-6">
@@ -67,8 +84,15 @@
              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 capitalize">
                {lead.status}
              </Badge>
-             <Badge variant="outline" className="capitalize text-rose-600 bg-rose-50 border-rose-100">
-               {lead.temperature}
+             <Badge 
+               variant="outline" 
+               className={`capitalize ${
+                 lead.temperature === 'hot' ? 'text-rose-600 bg-rose-50 border-rose-100' : 
+                 lead.temperature === 'warm' ? 'text-amber-600 bg-amber-50 border-amber-100' : 
+                 'text-blue-600 bg-blue-50 border-blue-100'
+               }`}
+             >
+               {lead.temperature || 'cold'}
              </Badge>
            </div>
            <p className="text-muted-foreground text-sm">{lead.role} at {lead.company}</p>
@@ -125,22 +149,22 @@
                   Marketing Attribution
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Source</span>
-                  <Badge variant="secondary" className="text-[10px] py-0">{lead.source}</Badge>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Campaign</span>
-                  <span className="font-medium truncate ml-4 text-right text-foreground/80">{lead.campaign}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">GCLID</span>
-                  <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground/70">
-                    {lead.metadata.gclid}
-                  </span>
-                </div>
-              </CardContent>
+             <CardContent className="space-y-3">
+               <div className="flex justify-between text-xs">
+                 <span className="text-muted-foreground">Source</span>
+                 <Badge variant="secondary" className="text-[10px] py-0">{lead.utm_source || lead.source || 'Direct'}</Badge>
+               </div>
+               <div className="flex justify-between text-xs">
+                 <span className="text-muted-foreground">Campaign</span>
+                 <span className="font-medium truncate ml-4 text-right text-foreground/80">{lead.utm_campaign || 'None'}</span>
+               </div>
+               <div className="flex justify-between text-xs">
+                 <span className="text-muted-foreground">GCLID</span>
+                 <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground/70">
+                   {lead.gclid || 'None'}
+                 </span>
+               </div>
+             </CardContent>
             </Card>
          </div>
  
@@ -169,24 +193,28 @@
                  Tags & Labels
                </TabsTrigger>
              </TabsList>
-             <TabsContent value="activity" className="pt-6">
-               <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
-                 {lead.events.map((event) => (
-                   <div key={event.id} className="relative flex items-start gap-6">
-                     <div className="absolute left-0 flex items-center justify-center w-10 h-10 rounded-full bg-background border shadow-sm ring-8 ring-background">
-                       <Activity className="h-4 w-4 text-primary" />
-                     </div>
-                     <div className="flex-1 ml-10">
-                       <div className="flex items-center justify-between">
-                         <h4 className="text-sm font-semibold">{event.title}</h4>
-                         <span className="text-xs text-muted-foreground">{event.date}</span>
+               <TabsContent value="activity" className="pt-6">
+                 <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
+                   {events.length === 0 ? (
+                     <p className="text-sm text-muted-foreground italic ml-10">No activities recorded yet.</p>
+                   ) : (
+                     events.map((event) => (
+                       <div key={event.id} className="relative flex items-start gap-6">
+                         <div className="absolute left-0 flex items-center justify-center w-10 h-10 rounded-full bg-background border shadow-sm ring-8 ring-background">
+                           <Activity className="h-4 w-4 text-primary" />
+                         </div>
+                         <div className="flex-1 ml-10">
+                           <div className="flex items-center justify-between">
+                             <h4 className="text-sm font-semibold capitalize">{event.event_type.replace('_', ' ')}</h4>
+                             <span className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span>
+                           </div>
+                           <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                         </div>
                        </div>
-                       <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </TabsContent>
+                     ))
+                   )}
+                 </div>
+               </TabsContent>
              <TabsContent value="history" className="pt-6">
                 <p className="text-sm text-muted-foreground italic">No history available yet.</p>
              </TabsContent>
