@@ -1,6 +1,29 @@
  import { createFileRoute } from '@tanstack/react-router';
- import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
- import { Users, GitPullRequest, TrendingUp, Target } from 'lucide-react';
+ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+ import { 
+   Users, 
+   GitPullRequest, 
+   TrendingUp, 
+   Target, 
+   MousePointer2, 
+   FormInput, 
+   CheckCircle2,
+   Globe,
+   Search,
+   Facebook
+ } from 'lucide-react';
+ import { 
+   AreaChart, 
+   Area, 
+   XAxis, 
+   YAxis, 
+   CartesianGrid, 
+   Tooltip, 
+   ResponsiveContainer,
+   BarChart,
+   Bar,
+   Cell
+ } from 'recharts';
  
  export const Route = createFileRoute('/_app/dashboard')({
    component: DashboardPage,
@@ -11,6 +34,30 @@
    { title: 'Deals in Pipeline', value: '$42,500', icon: Target, change: '+8.2%', trend: 'up' },
    { title: 'Conversion Rate', value: '3.2%', icon: TrendingUp, change: '-0.4%', trend: 'down' },
    { title: 'Active Automations', value: '12', icon: GitPullRequest, change: '+2', trend: 'up' },
+ ];
+ 
+ const chartData = [
+   { name: 'Mon', leads: 40, conversions: 24 },
+   { name: 'Tue', leads: 30, conversions: 13 },
+   { name: 'Wed', leads: 20, conversions: 98 },
+   { name: 'Thu', leads: 27, conversions: 39 },
+   { name: 'Fri', leads: 18, conversions: 48 },
+   { name: 'Sat', leads: 23, conversions: 38 },
+   { name: 'Sun', leads: 34, conversions: 43 },
+ ];
+ 
+ const attributionData = [
+   { name: 'Google Ads', value: 45, color: '#4285F4' },
+   { name: 'Meta Ads', value: 30, color: '#1877F2' },
+   { name: 'Organic', value: 15, color: '#34A853' },
+   { name: 'Direct', value: 10, color: '#EA4335' },
+ ];
+ 
+ const liveEvents = [
+   { id: 1, type: 'page_view', text: 'Someone from São Paulo viewed Pricing', time: '2m ago', icon: MousePointer2, color: 'text-blue-500' },
+   { id: 2, type: 'form_submission', text: 'New lead "Alice M." via Enterprise Form', time: '5m ago', icon: FormInput, color: 'text-emerald-500' },
+   { id: 3, type: 'status_change', text: 'Lead "Bob R." moved to Qualified', time: '12m ago', icon: CheckCircle2, color: 'text-amber-500' },
+   { id: 4, type: 'whatsapp', text: 'Message sent to "John Doe"', time: '15m ago', icon: Globe, color: 'text-green-500' },
  ];
  
  function DashboardPage() {
@@ -47,26 +94,65 @@
              <CardTitle>Lead Performance</CardTitle>
            </CardHeader>
            <CardContent className="h-[300px] flex items-center justify-center border-2 border-dashed rounded-lg">
-             <p className="text-muted-foreground">Chart will be implemented here (Apache ECharts)</p>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="oklch(0.55 0.20 255)" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="oklch(0.55 0.20 255)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(0.92 0.01 255)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'oklch(0.55 0.01 255)' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'oklch(0.55 0.01 255)' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid oklch(0.92 0.01 255)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 500 }}
+                  />
+                  <Area type="monotone" dataKey="leads" stroke="oklch(0.55 0.20 255)" strokeWidth={2} fillOpacity={1} fill="url(#colorLeads)" />
+                </AreaChart>
+              </ResponsiveContainer>
            </CardContent>
          </Card>
-         <Card className="col-span-3 border-none shadow-sm">
+          <Card className="col-span-3 border-none shadow-sm flex flex-col">
            <CardHeader>
              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Live events from your tracking pixel</CardDescription>
            </CardHeader>
-           <CardContent>
-             <div className="space-y-4">
-               {[1, 2, 3, 4, 5].map((i) => (
-                 <div key={i} className="flex items-center gap-4 text-sm border-b pb-3 last:border-0 last:pb-0">
-                   <div className="h-2 w-2 rounded-full bg-primary" />
-                   <div className="flex-1">
-                     <p className="font-medium">Lead "John Doe" reached "Qualified" stage</p>
-                     <p className="text-xs text-muted-foreground">2 hours ago</p>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </CardContent>
+            <CardContent className="flex-1">
+              <div className="space-y-5">
+                {liveEvents.map((event) => (
+                  <div key={event.id} className="flex items-start gap-4">
+                    <div className={`mt-0.5 p-1.5 rounded-lg bg-muted/50 ${event.color}`}>
+                      <event.icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none text-foreground/90">{event.text}</p>
+                      <p className="text-xs text-muted-foreground">{event.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 pt-6 border-t">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Channel Attribution</h4>
+                <div className="space-y-3">
+                  {attributionData.map((item) => (
+                    <div key={item.name} className="space-y-1.5">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-muted-foreground">{item.value}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full" 
+                          style={{ width: `${item.value}%`, backgroundColor: item.color }} 
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
          </Card>
        </div>
      </div>
