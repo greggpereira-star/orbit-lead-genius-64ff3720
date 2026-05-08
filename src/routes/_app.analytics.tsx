@@ -50,9 +50,9 @@ function AnalyticsPage() {
           <CardContent>
             <div className="space-y-6">
               {[
-                { name: 'Search_Enterprise_US', roi: '4.2x', spend: '.2k' },
-                { name: 'Remarketing_FB_LATAM', roi: '3.8x', spend: '00' },
-                { name: 'LinkedIn_DecisionMakers', roi: '2.5x', spend: '.5k' },
+                { name: 'Search_Enterprise_US', roi: '4.2x', spend: '$1.2k' },
+                { name: 'Remarketing_FB_LATAM', roi: '3.8x', spend: '$800' },
+                { name: 'LinkedIn_DecisionMakers', roi: '2.5x', spend: '$2.5k' },
               ].map((c) => (
                 <div key={c.name} className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -83,7 +83,7 @@ function AnalyticsPage() {
                 />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {channelData.map((entry, index) => (
-                    <Cell key={} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
