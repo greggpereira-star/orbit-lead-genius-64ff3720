@@ -1,4 +1,4 @@
- import { createFileRoute, useNavigate } from '@tanstack/react-router';
+ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
  import * as React from 'react';
  import { useState } from 'react';
  import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -53,9 +53,17 @@
            </div>
          </CardContent>
          <CardFooter>
-           <Button className="w-full" type="submit" disabled={isLoading}>
-             {isLoading ? 'Signing in...' : 'Sign in'}
-           </Button>
+            <div className="w-full space-y-4">
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading ? 'Signing in...' : 'Sign in'}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Don't have an account?{' '}
+                <Link to="/signup" className="text-primary hover:underline font-medium">
+                  Create one
+                </Link>
+              </p>
+            </div>
          </CardFooter>
        </form>
      </Card>
