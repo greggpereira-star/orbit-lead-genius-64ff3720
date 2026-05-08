@@ -8,7 +8,7 @@
  import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
  import { CheckCircle2 } from 'lucide-react';
  
- export const Route = createFileRoute('/_auth/signup')({
+ export const Route = createFileRoute('/_auth/register')({
    component: SignupPage,
  });
  

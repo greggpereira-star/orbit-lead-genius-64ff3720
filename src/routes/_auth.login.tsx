@@ -59,7 +59,7 @@
               </Button>
               <p className="text-xs text-center text-muted-foreground">
                 Don't have an account?{' '}
-                <Link to="/signup" className="text-primary hover:underline font-medium">
+                <Link to="/register" className="text-primary hover:underline font-medium">
                   Create one
                 </Link>
               </p>

@@ -32,16 +32,16 @@
              <a href="#solutions" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Solutions</a>
              <a href="#pricing" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Pricing</a>
            </div>
-           <div className="flex items-center gap-4">
-             <Link to="/login">
-               <Button variant="ghost" className="text-sm font-semibold">Sign in</Button>
-             </Link>
-             <Link to="/signup">
-               <Button className="text-sm font-semibold px-5 py-2.5 shadow-lg shadow-primary/20">
-                 Get Started
-               </Button>
-             </Link>
-           </div>
+            <div className="flex items-center gap-4">
+              <Link to="/login">
+                <Button variant="ghost" className="text-sm font-semibold">Sign in</Button>
+              </Link>
+              <Link to="/register">
+                <Button className="text-sm font-semibold px-5 py-2.5 shadow-lg shadow-primary/20">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
          </div>
        </nav>
  
@@ -60,17 +60,17 @@
                <p className="text-xl text-slate-600 leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                  The modern CRM that combines deep lead intelligence, marketing attribution, and automated workflows to scale your sales team.
                </p>
-               <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
-                 <Link to="/signup">
-                   <Button size="lg" className="h-14 px-8 text-lg font-bold gap-3 shadow-2xl shadow-primary/30 group">
-                     Start Free Trial
-                     <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                   </Button>
-                 </Link>
-                 <p className="text-sm text-slate-500 font-medium italic px-4">
-                   Join 2,500+ high-growth companies.
-                 </p>
-               </div>
+                <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
+                  <Link to="/register">
+                    <Button size="lg" className="h-14 px-8 text-lg font-bold gap-3 shadow-2xl shadow-primary/30 group">
+                      Start Free Trial
+                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                  <p className="text-sm text-slate-500 font-medium italic px-4">
+                    Join 2,500+ high-growth companies.
+                  </p>
+                </div>
                <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 pt-8 border-t border-slate-100 animate-in fade-in duration-1000 delay-700">
                  <div className="space-y-1">
                    <div className="text-2xl font-bold">148%</div>
@@ -193,17 +193,17 @@
                <p className="text-slate-400 text-xl leading-relaxed">
                  Start your 14-day trial today and see the difference intelligence makes.
                </p>
-               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                 <Link to="/signup">
-                   <Button size="lg" className="h-16 px-10 text-xl font-bold gap-3 shadow-2xl shadow-primary/40">
-                     Get Started Now
-                     <ArrowRight className="h-6 w-6" />
-                   </Button>
-                 </Link>
-                 <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-slate-700 text-white hover:bg-slate-800">
-                   Book a Demo
-                 </Button>
-               </div>
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <Link to="/register">
+                    <Button size="lg" className="h-16 px-10 text-xl font-bold gap-3 shadow-2xl shadow-primary/40">
+                      Get Started Now
+                      <ArrowRight className="h-6 w-6" />
+                    </Button>
+                  </Link>
+                  <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-slate-700 text-white hover:bg-slate-800">
+                    Book a Demo
+                  </Button>
+                </div>
              </div>
            </div>
          </section>
