@@ -200,7 +200,7 @@
                        <ArrowRight className="h-6 w-6" />
                      </Button>
                    </Link>
-                   <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-white/20 text-white hover:bg-white/10 hover:text-white">
+                   <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold !border-white/20 !text-white hover:!bg-white/10 hover:!text-white">
                      Book a Demo
                    </Button>
                 </div>
