@@ -13,7 +13,9 @@
  } from '@/components/ui/form';
  import { Input } from '@/components/ui/input';
  import { toast } from 'sonner';
- import { getStoredTracking } from '@/core/tracking/pixel';
+ import { captureService } from '../services/captureService';
+ import { tracker } from '@/core/tracking/tracker';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
  
  const formSchema = z.object({
    name: z.string().min(2, 'Name is too short'),
@@ -33,21 +35,30 @@
      },
    });
  
+   const { company } = useAuth();
+ 
    const onSubmit = async (values: z.infer<typeof formSchema>) => {
-     const trackingData = getStoredTracking();
-     const submission = {
-       ...values,
-       tracking: trackingData,
-       submitted_at: new Date().toISOString(),
-     };
+     if (!company) {
+       toast.error('No company context found');
+       return;
+     }
+ 
+     const trackingData = tracker.getTrackingParams();
      
-     console.log('Form Submission with Tracking:', submission);
-     
-     // Mock API call
-     await new Promise(resolve => setTimeout(resolve, 1000));
-     
-     toast.success('Lead captured successfully!');
-     form.reset();
+     const result = await captureService.submitLead(company.id, {
+       name: values.name,
+       email: values.email,
+       phone: values.phone,
+       metadata: { company_name: values.company }
+     }, trackingData);
+ 
+     if (result.success) {
+       toast.success('Lead captured successfully!');
+       form.reset();
+     } else {
+       toast.error('Error capturing lead');
+       console.error(result.error);
+     }
    };
  
    return (
