@@ -97,19 +97,19 @@
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="oklch(0.55 0.20 255)" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="oklch(0.55 0.20 255)" stopOpacity={0}/>
-                    </linearGradient>
+                   <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1}/>
+                     <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                   </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(0.92 0.01 255)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'oklch(0.55 0.01 255)' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'oklch(0.55 0.01 255)' }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid oklch(0.92 0.01 255)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: 500 }}
-                  />
-                  <Area type="monotone" dataKey="leads" stroke="oklch(0.55 0.20 255)" strokeWidth={2} fillOpacity={1} fill="url(#colorLeads)" />
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', opacity: 0.5 }} />
+                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', opacity: 0.5 }} />
+                   <Tooltip 
+                     contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                     itemStyle={{ fontSize: '12px', fontWeight: 500, color: 'var(--foreground)' }}
+                   />
+                   <Area type="monotone" dataKey="leads" stroke="var(--primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
                 </AreaChart>
               </ResponsiveContainer>
            </CardContent>
