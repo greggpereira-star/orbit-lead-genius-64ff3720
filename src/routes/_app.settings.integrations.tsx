@@ -2,7 +2,7 @@
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
- import { Facebook, Chrome, MessageSquare, Database, AlertCircle } from 'lucide-react';
+ import { Facebook, Chrome, MessageSquare, Database, AlertCircle, Code, Copy, CheckCircle2 } from 'lucide-react';
  import { 
    Dialog, 
    DialogContent, 
@@ -56,8 +56,48 @@
  ];
  
  function IntegrationsSettings() {
+   const trackingScript = `<script>
+  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://cdn.lovable.app/tracking.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','TRACKING_ID');
+</script>`;
+
    return (
      <div className="space-y-6">
+       <Card className="border-none shadow-sm bg-primary/[0.02] border-primary/10">
+         <CardHeader className="flex flex-row items-center justify-between space-y-0">
+           <div>
+             <CardTitle className="flex items-center gap-2">
+               <Code className="h-5 w-5 text-primary" />
+               Tracking Pixel
+             </CardTitle>
+             <CardDescription>Install this script on your website to track leads and attribution.</CardDescription>
+           </div>
+           <Button size="sm" variant="outline" className="gap-2" onClick={() => {
+             navigator.clipboard.writeText(trackingScript);
+           }}>
+             <Copy className="h-4 w-4" />
+             Copy Script
+           </Button>
+         </CardHeader>
+         <CardContent>
+           <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-300 overflow-x-auto whitespace-pre">
+             {trackingScript}
+           </div>
+           <div className="mt-4 flex items-center gap-4">
+             <div className="flex items-center gap-2 text-xs font-medium text-emerald-600">
+               <CheckCircle2 className="h-4 w-4" />
+               Active on 3 domains
+             </div>
+             <div className="text-[10px] text-muted-foreground">
+               Last event received: 2 minutes ago
+             </div>
+           </div>
+         </CardContent>
+       </Card>
+
        <Card className="border-none shadow-sm">
          <CardHeader>
            <CardTitle>Connected Apps</CardTitle>
