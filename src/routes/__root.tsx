@@ -75,14 +75,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Alt Flow Lead" },
+      { name: "description", content: "LeadFlow Intelligence is an enterprise SaaS platform for intelligent lead capture, CRM, and sales automation." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Alt Flow Lead" },
+      { property: "og:description", content: "LeadFlow Intelligence is an enterprise SaaS platform for intelligent lead capture, CRM, and sales automation." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Alt Flow Lead" },
+      { name: "twitter:description", content: "LeadFlow Intelligence is an enterprise SaaS platform for intelligent lead capture, CRM, and sales automation." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f6e4698d-713c-484f-86cd-d7617a252508/id-preview-5ad65da5--d6850840-86f1-4af9-84f6-1f9679aa532b.lovable.app-1778272059766.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f6e4698d-713c-484f-86cd-d7617a252508/id-preview-5ad65da5--d6850840-86f1-4af9-84f6-1f9679aa532b.lovable.app-1778272059766.png" },
     ],
     links: [
       {
