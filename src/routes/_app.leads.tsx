@@ -15,7 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
  import { Search, Filter, Plus, MoreHorizontal, Globe, Share2 } from 'lucide-react';
 
- function LeadsPage() {
+  export const Route = createFileRoute('/_app/leads')({
+    component: LeadsPage,
+  });
+  
+  function LeadsPage() {
    const { company } = useAuth();
    const [leads, setLeads] = useState<any[]>([]);
    const [isLoading, setIsLoading] = useState(true);
