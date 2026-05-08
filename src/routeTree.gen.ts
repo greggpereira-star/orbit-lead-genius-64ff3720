@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
+import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
@@ -40,6 +41,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => AuthRoute,
+} as any)
+const AppWhatsappRoute = AppWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/settings': typeof AppSettingsRouteWithChildren
+  '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/forms': typeof AppFormsRoute
   '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
+  '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
+  '/_app/whatsapp': typeof AppWhatsappRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/leads'
     | '/pipeline'
     | '/settings'
+    | '/whatsapp'
     | '/login'
     | '/leads/$id'
     | '/settings/integrations'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/forms'
     | '/leads'
     | '/pipeline'
+    | '/whatsapp'
     | '/login'
     | '/leads/$id'
     | '/settings/integrations'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/_app/leads'
     | '/_app/pipeline'
     | '/_app/settings'
+    | '/_app/whatsapp'
     | '/_auth/login'
     | '/_app/leads/$id'
     | '/_app/settings/integrations'
@@ -206,6 +218,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_app/whatsapp': {
+      id: '/_app/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AppWhatsappRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -306,6 +325,7 @@ interface AppRouteChildren {
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppPipelineRoute: typeof AppPipelineRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
+  AppWhatsappRoute: typeof AppWhatsappRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -315,6 +335,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeadsRoute: AppLeadsRouteWithChildren,
   AppPipelineRoute: AppPipelineRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
+  AppWhatsappRoute: AppWhatsappRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -337,3 +358,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
