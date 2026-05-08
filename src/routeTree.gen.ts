@@ -16,6 +16,7 @@ import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -50,20 +51,27 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppLeadsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof AppDashboardRoute
-  '/leads': typeof AppLeadsRoute
+  '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/login': typeof AuthLoginRoute
+  '/leads/$id': typeof AppLeadsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof AppDashboardRoute
-  '/leads': typeof AppLeadsRoute
+  '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/login': typeof AuthLoginRoute
+  '/leads/$id': typeof AppLeadsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,15 +79,22 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
-  '/_app/leads': typeof AppLeadsRoute
+  '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/pipeline': typeof AppPipelineRoute
   '/_auth/login': typeof AuthLoginRoute
+  '/_app/leads/$id': typeof AppLeadsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/leads' | '/pipeline' | '/login'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/leads'
+    | '/pipeline'
+    | '/login'
+    | '/leads/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/leads' | '/pipeline' | '/login'
+  to: '/' | '/dashboard' | '/leads' | '/pipeline' | '/login' | '/leads/$id'
   id:
     | '__root__'
     | '/'
@@ -89,6 +104,7 @@ export interface FileRouteTypes {
     | '/_app/leads'
     | '/_app/pipeline'
     | '/_auth/login'
+    | '/_app/leads/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -148,18 +164,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/leads/$id': {
+      id: '/_app/leads/$id'
+      path: '/$id'
+      fullPath: '/leads/$id'
+      preLoaderRoute: typeof AppLeadsIdRouteImport
+      parentRoute: typeof AppLeadsRoute
+    }
   }
 }
 
+interface AppLeadsRouteChildren {
+  AppLeadsIdRoute: typeof AppLeadsIdRoute
+}
+
+const AppLeadsRouteChildren: AppLeadsRouteChildren = {
+  AppLeadsIdRoute: AppLeadsIdRoute,
+}
+
+const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
+  AppLeadsRouteChildren,
+)
+
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
-  AppLeadsRoute: typeof AppLeadsRoute
+  AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppPipelineRoute: typeof AppPipelineRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
-  AppLeadsRoute: AppLeadsRoute,
+  AppLeadsRoute: AppLeadsRouteWithChildren,
   AppPipelineRoute: AppPipelineRoute,
 }
 
@@ -183,3 +218,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
