@@ -7,12 +7,12 @@
  });
  
  const settingsNav = [
-   { title: 'Profile', icon: User, to: '/settings' },
-   { title: 'Company', icon: Building, to: '/settings/company' },
-   { title: 'Integrations', icon: Share2, to: '/settings/integrations' },
+    { title: 'Profile', icon: User, to: '/settings/' },
+    { title: 'Company', icon: Building, to: '/settings/company' },
+    { title: 'Integrations', icon: Share2, to: '/settings/integrations' },
    { title: 'Automations', icon: Zap, to: '/settings/automations' },
-   { title: 'Security', icon: Shield, to: '/settings/security' },
-   { title: 'Notifications', icon: Bell, to: '/settings/notifications' },
+    { title: 'Security', icon: Shield, to: '/settings/security' },
+    { title: 'Notifications', icon: Bell, to: '/settings/notifications' },
  ];
  
  function SettingsLayout() {

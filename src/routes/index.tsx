@@ -27,11 +27,12 @@
              </div>
              <span className="font-bold text-xl tracking-tight">Lovable CRM</span>
            </div>
-           <div className="hidden md:flex items-center gap-8">
-             <a href="#features" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Features</a>
-             <a href="#solutions" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Solutions</a>
-             <a href="#pricing" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Pricing</a>
-           </div>
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Features</a>
+              <a href="#solutions" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Solutions</a>
+              <a href="#pricing" className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Pricing</a>
+              <Link to="/dashboard" className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">Go to App</Link>
+            </div>
             <div className="flex items-center gap-4">
               <Link to="/login">
                 <Button variant="ghost" className="text-sm font-semibold">Sign in</Button>

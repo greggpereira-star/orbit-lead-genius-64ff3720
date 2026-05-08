@@ -25,13 +25,13 @@
  import { useAuth } from '@/core/auth/hooks/useAuth';
  
  const menuItems = [
-   { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
-   { title: 'Leads', icon: Users, to: '/leads' },
-   { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
-   { title: 'Forms', icon: FileText, to: '/forms' },
-   { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
-   { title: 'Automations', icon: Zap, to: '/automations' },
-   { title: 'Analytics', icon: BarChart3, to: '/analytics' },
+    { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
+    { title: 'Leads', icon: Users, to: '/leads' },
+    { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
+    { title: 'Forms', icon: FileText, to: '/forms' },
+    { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
+    { title: 'Automations', icon: Zap, to: '/automations' },
+    { title: 'Analytics', icon: BarChart3, to: '/analytics' },
  ];
  
  export function AppSidebar() {
@@ -68,18 +68,18 @@
            </SidebarGroupContent>
          </SidebarGroup>
        </SidebarContent>
-       <SidebarFooter>
-         <SidebarMenu>
-           <SidebarMenuItem>
-             <SidebarMenuButton asChild tooltip="Settings">
-                <Link to="/settings">
-                 <Settings className="h-4 w-4" />
-                 <span>Settings</span>
-               </Link>
-             </SidebarMenuButton>
-           </SidebarMenuItem>
-         </SidebarMenu>
-       </SidebarFooter>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Settings">
+                <Link to="/settings" activeOptions={{ exact: false }}>
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
      </Sidebar>
    );
  }
