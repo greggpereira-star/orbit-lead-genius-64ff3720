@@ -194,15 +194,15 @@
                  Start your 14-day trial today and see the difference intelligence makes.
                </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                  <Link to="/register">
-                    <Button size="lg" className="h-16 px-10 text-xl font-bold gap-3 shadow-2xl shadow-primary/40">
-                      Get Started Now
-                      <ArrowRight className="h-6 w-6" />
-                    </Button>
-                  </Link>
-                  <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-slate-700 text-white hover:bg-slate-800">
-                    Book a Demo
-                  </Button>
+                   <Link to="/register">
+                     <Button size="lg" className="h-16 px-10 text-xl font-bold gap-3 shadow-2xl shadow-[#635bff]/30 bg-[#635bff] hover:bg-[#635bff]/90 text-white">
+                       Get Started Now
+                       <ArrowRight className="h-6 w-6" />
+                     </Button>
+                   </Link>
+                   <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-slate-600 text-white hover:bg-white/10">
+                     Book a Demo
+                   </Button>
                 </div>
              </div>
            </div>
