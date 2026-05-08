@@ -1,10 +1,11 @@
  import { createFileRoute, useNavigate } from '@tanstack/react-router';
- import { useAuth } from '../../core/auth/hooks/useAuth';
- import { Button } from '../../components/ui/button';
- import { Input } from '../../components/ui/input';
- import { Label } from '../../components/ui/label';
- import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
+ import * as React from 'react';
  import { useState } from 'react';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
+ import { Button } from '@/components/ui/button';
+ import { Input } from '@/components/ui/input';
+ import { Label } from '@/components/ui/label';
+ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
  
  export const Route = createFileRoute('/_auth/login')({
    component: LoginPage,
@@ -16,7 +17,7 @@
    const [email, setEmail] = useState('');
    const [isLoading, setIsLoading] = useState(false);
  
-   const handleSubmit = async (e: React.FormEvent) => {
+   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
      e.preventDefault();
      setIsLoading(true);
      try {
