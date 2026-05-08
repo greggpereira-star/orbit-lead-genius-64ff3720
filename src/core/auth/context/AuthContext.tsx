@@ -18,6 +18,7 @@
    isAuthenticated: boolean;
    isLoading: boolean;
    login: (email: string) => Promise<void>;
+  signup: (email: string, companyName: string) => Promise<void>;
    logout: () => void;
    switchCompany: (companyId: string) => void;
  }
@@ -50,6 +51,16 @@
      setIsLoading(false);
    };
  
+  const signup = async (email: string, companyName: string) => {
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const mockUser = { id: 'u1', email, name: email.split('@')[0] };
+    setUser(mockUser);
+    setCompany({ id: '1', name: companyName, slug: companyName.toLowerCase().replace(/\s+/g, '-') });
+    localStorage.setItem('mock_user', JSON.stringify(mockUser));
+    setIsLoading(false);
+  };
+
    const logout = () => {
      setUser(null);
      setCompany(null);
@@ -68,6 +79,7 @@
        isAuthenticated: !!user, 
        isLoading, 
        login, 
+      signup,
        logout,
        switchCompany 
      }}>
