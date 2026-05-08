@@ -24,6 +24,7 @@ import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
+import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -99,6 +100,11 @@ const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/leads/$id': typeof AppLeadsIdRoute
+  '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/': typeof AppSettingsIndexRoute
 }
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/leads/$id': typeof AppLeadsIdRoute
+  '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings': typeof AppSettingsIndexRoute
 }
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
+  '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
 }
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/leads/$id'
+    | '/settings/company'
     | '/settings/integrations'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/leads/$id'
+    | '/settings/company'
     | '/settings/integrations'
     | '/settings'
   id:
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/register'
     | '/_app/leads/$id'
+    | '/_app/settings/company'
     | '/_app/settings/integrations'
     | '/_app/settings/'
   fileRoutesById: FileRoutesById
@@ -320,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/company': {
+      id: '/_app/settings/company'
+      path: '/company'
+      fullPath: '/settings/company'
+      preLoaderRoute: typeof AppSettingsCompanyRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/leads/$id': {
       id: '/_app/leads/$id'
       path: '/$id'
@@ -343,11 +362,13 @@ const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
 )
 
 interface AppSettingsRouteChildren {
+  AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
