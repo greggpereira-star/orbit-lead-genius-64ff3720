@@ -2,7 +2,8 @@
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
  import { AppSidebar } from '@/design-system/components/AppSidebar';
- import { Topbar } from '@/design-system/components/Topbar';
+import { Topbar } from '@/design-system/components/Topbar';
+import { CommandPalette } from '@/design-system/components/CommandPalette';
  
  export const Route = createFileRoute('/_app')({
    beforeLoad: ({ context }) => {
@@ -24,17 +25,18 @@
      throw redirect({ to: '/login' });
    }
  
-   return (
-     <SidebarProvider>
-       <AppSidebar />
-       <SidebarInset>
-         <div className="flex flex-col h-screen">
-           <Topbar />
-           <main className="flex-1 overflow-auto p-6">
-             <Outlet />
-           </main>
-         </div>
-       </SidebarInset>
-     </SidebarProvider>
-   );
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex flex-col h-screen">
+            <Topbar />
+            <main className="flex-1 overflow-auto p-6">
+              <Outlet />
+            </main>
+          </div>
+        </SidebarInset>
+        <CommandPalette />
+      </SidebarProvider>
+    );
  }
