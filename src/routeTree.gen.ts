@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -37,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/': typeof AppSettingsIndexRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/pipeline': typeof AppPipelineRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
+  '/signup': typeof AuthSignupRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings': typeof AppSettingsIndexRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/whatsapp': typeof AppWhatsappRoute
   '/_auth/login': typeof AuthLoginRoute
+  '/_auth/signup': typeof AuthSignupRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/whatsapp'
     | '/login'
+    | '/signup'
     | '/leads/$id'
     | '/settings/integrations'
     | '/settings/'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/whatsapp'
     | '/login'
+    | '/signup'
     | '/leads/$id'
     | '/settings/integrations'
     | '/settings'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/whatsapp'
     | '/_auth/login'
+    | '/_auth/signup'
     | '/_app/leads/$id'
     | '/_app/settings/integrations'
     | '/_app/settings/'
@@ -223,6 +235,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_auth/signup': {
+      id: '/_auth/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/login': {
       id: '/_auth/login'
@@ -363,10 +382,12 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface AuthRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -379,3 +400,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
