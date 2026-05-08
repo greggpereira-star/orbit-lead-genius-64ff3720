@@ -13,10 +13,12 @@
    History,
    Tags,
    MoreVertical,
-   Edit2
+   Edit2,
+   Target
  } from 'lucide-react';
  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
  import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+ import { LeadScoreCard } from '@/modules/ai/components/LeadScoreCard';
  
  export const Route = createFileRoute('/_app/leads/$id')({
    component: LeadDetailsPage,
@@ -114,44 +116,32 @@
              </CardContent>
            </Card>
  
-           <Card className="border-none shadow-sm">
-             <CardHeader>
-               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                 Lead Intelligence
-               </CardTitle>
-             </CardHeader>
-             <CardContent className="space-y-6">
-               <div>
-                 <div className="flex justify-between items-end mb-2">
-                   <span className="text-sm font-medium">Lead Score</span>
-                   <span className="text-2xl font-bold text-primary">{lead.score}</span>
-                 </div>
-                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                   <div 
-                     className="h-full bg-primary" 
-                     style={{ width: `${lead.score}%` }}
-                   />
-                 </div>
-               </div>
- 
-               <div className="space-y-3">
-                 <div className="flex justify-between text-xs">
-                   <span className="text-muted-foreground">Source</span>
-                   <span className="font-medium">{lead.source}</span>
-                 </div>
-                 <div className="flex justify-between text-xs">
-                   <span className="text-muted-foreground">Campaign</span>
-                   <span className="font-medium truncate ml-4 text-right">{lead.campaign}</span>
-                 </div>
-                 <div className="flex justify-between text-xs">
-                   <span className="text-muted-foreground">GCLID</span>
-                   <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded">
-                     {lead.metadata.gclid}
-                   </span>
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
+            <LeadScoreCard leadData={lead} />
+
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Marketing Attribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Source</span>
+                  <Badge variant="secondary" className="text-[10px] py-0">{lead.source}</Badge>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Campaign</span>
+                  <span className="font-medium truncate ml-4 text-right text-foreground/80">{lead.campaign}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">GCLID</span>
+                  <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground/70">
+                    {lead.metadata.gclid}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
          </div>
  
          <div className="lg:col-span-2 space-y-6">
