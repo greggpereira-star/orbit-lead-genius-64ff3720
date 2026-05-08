@@ -1,9 +1,11 @@
  import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+ import { useEffect } from 'react';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
  import { AppSidebar } from '@/design-system/components/AppSidebar';
-import { Topbar } from '@/design-system/components/Topbar';
-import { CommandPalette } from '@/design-system/components/CommandPalette';
+ import { Topbar } from '@/design-system/components/Topbar';
+ import { CommandPalette } from '@/design-system/components/CommandPalette';
+ import { tracker } from '@/core/tracking/tracker';
  
  export const Route = createFileRoute('/_app')({
    beforeLoad: ({ context }) => {
@@ -15,7 +17,13 @@ import { CommandPalette } from '@/design-system/components/CommandPalette';
  });
  
  function AppLayout() {
-   const { isAuthenticated, isLoading } = useAuth();
+   const { isAuthenticated, isLoading, company } = useAuth();
+ 
+   useEffect(() => {
+     if (isAuthenticated && company) {
+       tracker.init(company.id);
+     }
+   }, [isAuthenticated, company]);
  
    if (isLoading) {
      return <div className="flex h-screen items-center justify-center">Loading...</div>;
