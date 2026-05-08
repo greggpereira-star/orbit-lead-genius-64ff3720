@@ -16,6 +16,7 @@
    const { signup } = useAuth();
    const navigate = useNavigate();
    const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
    const [companyName, setCompanyName] = useState('');
    const [isLoading, setIsLoading] = useState(false);
  
@@ -23,8 +24,18 @@
      e.preventDefault();
      setIsLoading(true);
      try {
-       // Mock signup
-       await signup(email, companyName);
+       await signup(email, password, companyName);
+               <div className="space-y-2">
+                 <Label htmlFor="password">Password</Label>
+                 <Input 
+                   id="password" 
+                   type="password" 
+                   placeholder="••••••••" 
+                   required 
+                   value={password}
+                   onChange={(e) => setPassword(e.target.value)}
+                 />
+               </div>
        navigate({ to: '/dashboard' });
      } catch (error) {
        console.error(error);

@@ -15,13 +15,24 @@
    const { login } = useAuth();
    const navigate = useNavigate();
    const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
    const [isLoading, setIsLoading] = useState(false);
  
    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
      e.preventDefault();
      setIsLoading(true);
      try {
-       await login(email);
+       await login(email, password);
+             <div className="space-y-2">
+               <Label htmlFor="password">Password</Label>
+               <Input 
+                 id="password" 
+                 type="password" 
+                 required 
+                 value={password}
+                 onChange={(e) => setPassword(e.target.value)}
+               />
+             </div>
        navigate({ to: '/dashboard' });
      } catch (error) {
        console.error(error);
