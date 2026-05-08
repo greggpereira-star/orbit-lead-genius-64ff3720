@@ -19,10 +19,10 @@
    return (
      <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-primary/10">
        {/* Navigation */}
-       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+       <nav className="fixed top-0 w-full z-50 bg-[#f6f9fc]/80 backdrop-blur-md border-b border-slate-200/50">
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
            <div className="flex items-center gap-2">
-             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-xl">
+             <div className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-secondary/20">
                L
              </div>
              <span className="font-bold text-xl tracking-tight">Lovable CRM</span>
@@ -36,11 +36,11 @@
               <Link to="/login">
                 <Button variant="ghost" className="text-sm font-semibold">Sign in</Button>
               </Link>
-              <Link to="/register">
-                <Button className="text-sm font-semibold px-5 py-2.5 shadow-lg shadow-primary/20">
-                  Get Started
-                </Button>
-              </Link>
+               <Link to="/register">
+                 <Button className="bg-[#635bff] hover:bg-[#635bff]/90 text-sm font-semibold px-5 py-2.5 shadow-lg shadow-[#635bff]/20 text-white">
+                   Get Started
+                 </Button>
+               </Link>
             </div>
          </div>
        </nav>
@@ -54,19 +54,19 @@
                  <Zap className="h-3.5 w-3.5 fill-primary" />
                  Enterprise Lead Intelligence
                </div>
-               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150">
-                 Convert every <span className="text-primary italic font-serif">click</span> into revenue.
-               </h1>
+                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-[#0a2540] leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150">
+                  Convert every <span className="text-[#635bff] italic font-serif">click</span> into revenue.
+                </h1>
                <p className="text-xl text-slate-600 leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                  The modern CRM that combines deep lead intelligence, marketing attribution, and automated workflows to scale your sales team.
                </p>
                 <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
-                  <Link to="/register">
-                    <Button size="lg" className="h-14 px-8 text-lg font-bold gap-3 shadow-2xl shadow-primary/30 group">
-                      Start Free Trial
-                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
+                   <Link to="/register">
+                     <Button size="lg" className="h-14 px-8 text-lg font-bold gap-3 shadow-2xl shadow-[#635bff]/30 group bg-[#635bff] hover:bg-[#635bff]/90 text-white">
+                       Start Free Trial
+                       <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                     </Button>
+                   </Link>
                   <p className="text-sm text-slate-500 font-medium italic px-4">
                     Join 2,500+ high-growth companies.
                   </p>
