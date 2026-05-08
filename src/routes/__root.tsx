@@ -1,5 +1,7 @@
  import { AuthProvider } from "../core/auth/context/AuthContext";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+ import { useEffect } from "react";
+ import { initTracking } from "../core/tracking/pixel";
 import {
   Outlet,
   Link,
@@ -109,9 +111,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
+ function RootComponent() {
+   const { queryClient } = Route.useRouteContext();
+ 
+   useEffect(() => {
+     initTracking();
+   }, []);
+ 
    return (
      <QueryClientProvider client={queryClient}>
        <AuthProvider>
@@ -119,4 +125,4 @@ function RootComponent() {
        </AuthProvider>
      </QueryClientProvider>
    );
-}
+ }
