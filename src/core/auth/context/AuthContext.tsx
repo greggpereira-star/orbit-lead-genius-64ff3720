@@ -1,4 +1,6 @@
  import React, { createContext, useContext, useState, useEffect } from 'react';
+ import { supabase } from '@/lib/supabase';
+ import { User as SupabaseUser } from '@supabase/supabase-js';
  
  interface User {
    id: string;
@@ -17,8 +19,8 @@
    company: Company | null;
    isAuthenticated: boolean;
    isLoading: boolean;
-   login: (email: string) => Promise<void>;
-  signup: (email: string, companyName: string) => Promise<void>;
+    login: (email: string, password?: string) => Promise<void>;
+   signup: (email: string, password?: string, companyName?: string) => Promise<void>;
    logout: () => void;
    switchCompany: (companyId: string) => void;
  }
@@ -31,40 +33,87 @@
    const [isLoading, setIsLoading] = useState(true);
  
    useEffect(() => {
-     // Check local storage or session for mock user
-     const storedUser = localStorage.getItem('mock_user');
-     if (storedUser) {
-       setUser(JSON.parse(storedUser));
-       setCompany({ id: '1', name: 'Default Enterprise', slug: 'default' });
-     }
-     setIsLoading(false);
+     const initAuth = async () => {
+       const { data: { session } } = await supabase.auth.getSession();
+       if (session?.user) {
+         await handleUserSession(session.user);
+       }
+       setIsLoading(false);
+     };
+ 
+     initAuth();
+ 
+     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+       if (session?.user) {
+         await handleUserSession(session.user);
+       } else {
+         setUser(null);
+         setCompany(null);
+       }
+       setIsLoading(false);
+     });
+ 
+     return () => subscription.unsubscribe();
    }, []);
  
-   const login = async (email: string) => {
-     setIsLoading(true);
-     // Mock login delay
-     await new Promise(resolve => setTimeout(resolve, 1000));
-     const mockUser = { id: 'u1', email, name: email.split('@')[0] };
-     setUser(mockUser);
-     setCompany({ id: '1', name: 'Default Enterprise', slug: 'default' });
-     localStorage.setItem('mock_user', JSON.stringify(mockUser));
-     setIsLoading(false);
+   const handleUserSession = async (supabaseUser: SupabaseUser) => {
+     // Fetch membership and company
+     const { data: membership } = await supabase
+       .from('memberships')
+       .select('*, companies(*)')
+       .eq('user_id', supabaseUser.id)
+       .single();
+ 
+     setUser({
+       id: supabaseUser.id,
+       email: supabaseUser.email || '',
+       name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User'
+     });
+ 
+     if (membership?.companies) {
+       setCompany({
+         id: membership.companies.id,
+         name: membership.companies.name,
+         slug: membership.companies.slug
+       });
+     }
    };
  
-  const signup = async (email: string, companyName: string) => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const mockUser = { id: 'u1', email, name: email.split('@')[0] };
-    setUser(mockUser);
-    setCompany({ id: '1', name: companyName, slug: companyName.toLowerCase().replace(/\s+/g, '-') });
-    localStorage.setItem('mock_user', JSON.stringify(mockUser));
-    setIsLoading(false);
-  };
-
-   const logout = () => {
+   const login = async (email: string, password?: string) => {
+     setIsLoading(true);
+     try {
+       const { error } = await supabase.auth.signInWithPassword({
+         email,
+         password: password || 'password123', // Fallback for simple demo/mock
+       });
+       if (error) throw error;
+     } finally {
+       setIsLoading(false);
+     }
+   };
+ 
+   const signup = async (email: string, password?: string, companyName?: string) => {
+     setIsLoading(true);
+     try {
+       const { error } = await supabase.auth.signUp({
+         email,
+         password: password || 'password123',
+         options: {
+           data: {
+             company_name: companyName,
+           }
+         }
+       });
+       if (error) throw error;
+     } finally {
+       setIsLoading(false);
+     }
+   };
+ 
+   const logout = async () => {
+     await supabase.auth.signOut();
      setUser(null);
      setCompany(null);
-     localStorage.removeItem('mock_user');
    };
  
    const switchCompany = (companyId: string) => {

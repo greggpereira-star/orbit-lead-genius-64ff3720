@@ -1,4 +1,7 @@
- import React, { useState } from 'react';
+ import React, { useState, useEffect } from 'react';
+ import { supabase } from '@/lib/supabase';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
+ import { toast } from 'sonner';
  import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
  import { Card } from '@/components/ui/card';
  import { Badge } from '@/components/ui/badge';
@@ -52,9 +55,60 @@
  ];
  
  export function KanbanBoard() {
-   const [columns, setColumns] = useState<Column[]>(initialData);
+   const { company } = useAuth();
+   const [columns, setColumns] = useState<Column[]>([]);
+   const [isLoading, setIsLoading] = useState(true);
  
-   const onDragEnd = (result: DropResult) => {
+   useEffect(() => {
+     if (company) {
+       fetchData();
+     }
+   }, [company]);
+ 
+   const fetchData = async () => {
+     setIsLoading(true);
+     try {
+       // 1. Fetch stages
+       const { data: stagesData, error: stagesError } = await supabase
+         .from('stages')
+         .select('*')
+         .eq('company_id', company?.id)
+         .order('order_index');
+ 
+       if (stagesError) throw stagesError;
+ 
+       // 2. Fetch leads
+       const { data: leadsData, error: leadsError } = await supabase
+         .from('leads')
+         .select('*')
+         .eq('company_id', company?.id);
+ 
+       if (leadsError) throw leadsError;
+ 
+       // 3. Map leads to stages
+       const mappedColumns = (stagesData || []).map(stage => ({
+         id: stage.id,
+         title: stage.name,
+         leads: (leadsData || []).filter(lead => lead.stage_id === stage.id).map(lead => ({
+           id: lead.id,
+           name: lead.name || 'Unnamed Lead',
+           company: lead.metadata?.company_name,
+           value: lead.income ? `$${lead.income}` : undefined,
+           temperature: lead.temperature as 'cold' | 'warm' | 'hot',
+           score: lead.score || 0
+         }))
+       }));
+ 
+       setColumns(mappedColumns);
+     } catch (error) {
+       console.error('Error fetching Kanban data:', error);
+       toast.error('Failed to load pipeline');
+     } finally {
+       setIsLoading(false);
+     }
+   };
+ 
+   const onDragEnd = async (result: DropResult) => {
      const { destination, source, draggableId } = result;
  
      if (!destination) return;
@@ -91,6 +145,24 @@
          return col;
        });
        setColumns(newColumns);
+ 
+       // Update in database
+       const { error } = await supabase
+         .from('leads')
+         .update({ stage_id: destination.droppableId })
+         .eq('id', draggableId);
+ 
+       if (error) {
+         toast.error('Failed to move lead');
+         fetchData(); // Revert
+       } else {
+         // Log event
+         await supabase.from('lead_events').insert({
+           lead_id: draggableId,
+           event_type: 'stage_change',
+           description: `Moved from ${sourceCol.title} to ${destCol.title}`
+         });
+       }
      }
    };
  

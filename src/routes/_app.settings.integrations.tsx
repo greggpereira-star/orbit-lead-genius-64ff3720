@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Facebook, Chrome, MessageSquare, Database, AlertCircle, Code, Copy, CheckCircle2, Zap } from 'lucide-react';
+ import { MessageSquare, Database, AlertCircle, Code, Copy, CheckCircle2, Zap, Globe, Share2 } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -26,7 +26,7 @@ const integrations = [
     id: 'meta',
     name: 'Meta (Facebook & Instagram)',
     description: 'Sync leads from Lead Ads and send Conversion API (CAPI) events for attribution.',
-    icon: Facebook,
+     icon: Share2,
     color: 'bg-[#1877F2]',
     status: 'connected',
     features: ['Lead Ads Sync', 'Conversions API', 'Offline Conversions']
@@ -35,7 +35,7 @@ const integrations = [
     id: 'google',
     name: 'Google Ads',
     description: 'Import leads from Google Forms and track Enhanced Conversions.',
-    icon: Chrome,
+     icon: Globe,
     color: 'bg-[#EA4335]',
     status: 'disconnected',
     features: ['GCLID Tracking', 'Enhanced Conversions', 'Smart Bidding Sync']

@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+ import { toast } from 'sonner';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
+ import { captureService } from '../services/captureService';
+ import { tracker } from '@/core/tracking/tracker';
 
 export function WhatsAppWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,14 +21,41 @@ export function WhatsAppWidget() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success('Lead captured! Redirecting to WhatsApp...');
-    setIsOpen(false);
-    setTimeout(() => {
-      window.open('https://wa.me/5511999999999', '_blank');
-    }, 1000);
-  };
+   const { company } = useAuth();
+   const [name, setName] = useState('');
+   const [email, setEmail] = useState('');
+   const [isSubmitting, setIsSubmitting] = useState(false);
+ 
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!company) return;
+     
+     setIsSubmitting(true);
+     const trackingData = tracker.getTrackingParams();
+     
+     const result = await captureService.submitLead(company.id, {
+       name,
+       email,
+       metadata: { channel: 'whatsapp_widget' }
+     }, trackingData);
+ 
+     setIsSubmitting(false);
+ 
+     if (result.success) {
+       toast.success('Lead captured! Redirecting to WhatsApp...');
+       setIsOpen(false);
+       
+       // Simulate Round Robin for WhatsApp number
+       const waNumbers = ['5511999999999', '5511888888888'];
+       const selectedNumber = waNumbers[Math.floor(Math.random() * waNumbers.length)];
+       
+       setTimeout(() => {
+         window.open(`https://wa.me/${selectedNumber}?text=Hi, I am interested in more information.`, '_blank');
+       }, 1000);
+     } else {
+       toast.error('Error starting conversation');
+     }
+   };
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -62,14 +92,33 @@ export function WhatsAppWidget() {
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="wa-name" className="text-xs">Your Name</Label>
-                    <Input id="wa-name" placeholder="John Doe" required className="h-9" />
+                     <Label htmlFor="wa-name" className="text-xs">Your Name</Label>
+                     <Input 
+                       id="wa-name" 
+                       placeholder="John Doe" 
+                       required 
+                       className="h-9" 
+                       value={name}
+                       onChange={(e) => setName(e.target.value)}
+                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="wa-email" className="text-xs">Work Email</Label>
-                    <Input id="wa-email" type="email" placeholder="john@company.com" required className="h-9" />
+                     <Label htmlFor="wa-email" className="text-xs">Work Email</Label>
+                     <Input 
+                       id="wa-email" 
+                       type="email" 
+                       placeholder="john@company.com" 
+                       required 
+                       className="h-9" 
+                       value={email}
+                       onChange={(e) => setEmail(e.target.value)}
+                     />
                   </div>
-                  <Button type="submit" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 font-bold">
+                   <Button 
+                     type="submit" 
+                     className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 font-bold"
+                     disabled={isSubmitting}
+                   >
                     <Send className="h-4 w-4" />
                     Start Conversation
                   </Button>
