@@ -1,4 +1,4 @@
- import { createFileRoute } from '@tanstack/react-router';
+ import { createFileRoute, Link } from '@tanstack/react-router';
  import { 
    Table, 
    TableBody, 
@@ -60,12 +60,14 @@
              </TableRow>
            </TableHeader>
            <TableBody>
-             {mockLeads.map((lead) => (
-               <TableRow key={lead.id}>
-                 <TableCell className="font-medium">
-                   <div>{lead.name}</div>
-                   <div className="text-xs text-muted-foreground">{lead.email}</div>
-                 </TableCell>
+               {mockLeads.map((lead) => (
+                 <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                   <TableCell className="font-medium p-0">
+                     <Link to="/leads/$id" params={{ id: lead.id }} className="block p-4">
+                       <div>{lead.name}</div>
+                       <div className="text-xs text-muted-foreground">{lead.email}</div>
+                     </Link>
+                   </TableCell>
                  <TableCell>
                    <Badge variant="secondary" className="capitalize">{lead.status}</Badge>
                  </TableCell>
