@@ -1,4 +1,5 @@
- import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
  import { Button } from '@/components/ui/button';
  import { 
    ArrowRight, 
@@ -229,6 +230,7 @@
            </div>
          </div>
        </footer>
-     </div>
-   );
- }
+        <WhatsAppWidget />
+      </div>
+    );
+  }
