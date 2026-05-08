@@ -10,7 +10,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, Plus, MoreHorizontal, Chrome, Facebook, Globe } from 'lucide-react';
+ import { Search, Filter, Plus, MoreHorizontal, Globe, Share2 } from 'lucide-react';
 
 export const Route = createFileRoute('/_app/leads')({
   component: LeadsPage,
@@ -26,8 +26,8 @@ const mockLeads = [
 function LeadsPage() {
   const getSourceIcon = (source: string) => {
     switch (source.toLowerCase()) {
-      case 'google ads': return <Chrome className="h-3.5 w-3.5 text-blue-500" />;
-      case 'meta ads': return <Facebook className="h-3.5 w-3.5 text-blue-600" />;
+       case 'google ads': return <Globe className="h-3.5 w-3.5 text-blue-500" />;
+       case 'meta ads': return <Share2 className="h-3.5 w-3.5 text-blue-600" />;
       default: return <Globe className="h-3.5 w-3.5 text-slate-400" />;
     }
   };

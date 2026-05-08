@@ -9,8 +9,7 @@
    FormInput, 
    CheckCircle2,
    Globe,
-   Search,
-   Facebook
+     Search
  } from 'lucide-react';
  import { 
    AreaChart, 
