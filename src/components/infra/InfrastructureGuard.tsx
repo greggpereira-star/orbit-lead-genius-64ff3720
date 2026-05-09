@@ -1,7 +1,9 @@
  import React, { useEffect, useState, useMemo } from 'react';
  import { useRouterState } from '@tanstack/react-router';
-import { runInfrastructureCheck, HealthReport } from '@/core/runtime/health-checker';
-import { RefreshCw, ServerCrash } from 'lucide-react';
+ import { runInfrastructureCheck, HealthReport } from '@/core/runtime/health-checker';
+ import { RefreshCw, ServerCrash, CheckCircle2, XCircle, ShieldCheck, Activity } from 'lucide-react';
+ import { Badge } from '@/components/ui/badge';
+ import { getRuntimeConfig } from '@/core/config/runtime-config';
 import { Button } from '@/components/ui/button';
 
  export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -41,6 +43,8 @@ import { Button } from '@/components/ui/button';
    }
  
    if (report?.status === 'unhealthy') {
+     const config = getRuntimeConfig();
+     
     return (
       <div className="min-h-screen w-full bg-destructive/5 flex items-center justify-center p-6">
         <div className="max-w-lg w-full bg-background border border-destructive/20 rounded-2xl shadow-2xl p-8 space-y-8">
@@ -52,25 +56,73 @@ import { Button } from '@/components/ui/button';
             </div>
           </div>
 
-          <div className="space-y-4 bg-destructive/10 p-4 rounded-xl font-mono text-xs overflow-auto">
-            <div className="flex justify-between border-b border-destructive/10 pb-2">
-              <span className="text-destructive/80 font-bold">ENVIRONMENT (ENV)</span>
-              <span className={report.checks.env ? "text-emerald-600" : "text-destructive font-black"}>{report.checks.env ? "PASSED" : "FAILED"}</span>
-            </div>
-            <div className="flex justify-between border-b border-destructive/10 pb-2">
-              <span className="text-destructive/80 font-bold">SUPABASE AUTH</span>
-              <span className={report.checks.auth ? "text-emerald-600" : "text-destructive font-black"}>{report.checks.auth ? "CONNECTED" : "UNREACHABLE"}</span>
-            </div>
-            <div className="flex justify-between border-b border-destructive/10 pb-2">
-              <span className="text-destructive/80 font-bold">SUPABASE DATABASE</span>
-              <span className={report.checks.database ? "text-emerald-600" : "text-destructive font-black"}>{report.checks.database ? "CONNECTED" : "UNREACHABLE"}</span>
-            </div>
-            {report.details.error && (
-              <div className="pt-2 text-destructive font-bold break-all">
-                ERROR: {report.details.error}
-              </div>
-            )}
-          </div>
+           <div className="space-y-6">
+             <div className="grid gap-4">
+               <div className="p-4 rounded-xl border bg-muted/30 space-y-3">
+                 <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                     <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                     <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Variavéis de Ambiente</span>
+                   </div>
+                   <Badge variant={config.isValid ? "default" : "destructive"}>
+                     {config.isValid ? "Configuradas" : "Ausentes"}
+                   </Badge>
+                 </div>
+                 <div className="space-y-2 font-mono text-[10px]">
+                   <div className="flex items-center justify-between text-muted-foreground">
+                     <span>URL:</span>
+                     <span className="truncate max-w-[200px]">{config.supabaseUrl}</span>
+                   </div>
+                   <div className="flex items-center justify-between text-muted-foreground">
+                     <span>ANON_KEY:</span>
+                     <span>{config.supabaseAnonKey === 'placeholder-key' ? 'MISSING' : '********'}</span>
+                   </div>
+                 </div>
+               </div>
+
+               <div className="p-4 rounded-xl border bg-muted/30 space-y-4">
+                 <div className="flex items-center gap-2">
+                   <Activity className="h-4 w-4 text-muted-foreground" />
+                   <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Status da Conexão</span>
+                 </div>
+                 
+                 <div className="space-y-3">
+                   <div className="flex items-center justify-between text-sm">
+                     <span className="text-muted-foreground">Autenticação (Auth):</span>
+                     {report.checks.auth ? (
+                       <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                         <CheckCircle2 className="h-4 w-4" /> ATIVA
+                       </span>
+                     ) : (
+                       <span className="flex items-center gap-1.5 text-destructive font-bold">
+                         <XCircle className="h-4 w-4" /> FALHOU
+                       </span>
+                     )}
+                   </div>
+                   <div className="flex items-center justify-between text-sm">
+                     <span className="text-muted-foreground">Banco de Dados (DB):</span>
+                     {report.checks.database ? (
+                       <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                         <CheckCircle2 className="h-4 w-4" /> ATIVO
+                       </span>
+                     ) : (
+                       <span className="flex items-center gap-1.5 text-destructive font-bold">
+                         <XCircle className="h-4 w-4" /> FALHOU
+                       </span>
+                     )}
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             {report.details.error && (
+               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                 <p className="text-[11px] font-mono text-destructive leading-relaxed break-all">
+                   <span className="font-bold">STACK_TRACE:</span> {report.details.error}
+                 </p>
+               </div>
+             )}
+           </div>
 
            <div className="space-y-4">
              <Button onClick={check} className="w-full h-12 font-bold shadow-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
