@@ -120,10 +120,12 @@ export const formService = {
     return newForm;
   },
 
-  async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
+   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
+     const { id, tenant_id, created_at, updated_at, form_fields, ...updateData } = form as any;
+ 
     const { error: formError } = await supabase
       .from('forms')
-      .update(form)
+       .update(updateData)
       .eq('id', formId);
 
     if (formError) throw formError;

@@ -132,19 +132,19 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 
                 {field.type === 'textarea' ? (
                   <Textarea 
-                    {...register(field.name || field.label.toLowerCase(), { required: field.required })}
+                     {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
                     placeholder={field.placeholder}
                     className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
                   />
                 ) : (
                   <Input 
                     type={field.type === 'phone' ? 'tel' : field.type}
-                    {...register(field.name || field.label.toLowerCase(), { required: field.required })}
+                     {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
                     placeholder={field.placeholder}
                     className="h-12 bg-background/50 border-2 focus-visible:ring-primary/20 text-base"
                   />
                 )}
-                {errors[field.name || field.label.toLowerCase()] && (
+                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
                   <span className="text-xs font-bold text-destructive uppercase tracking-widest">This field is required</span>
                 )}
               </div>

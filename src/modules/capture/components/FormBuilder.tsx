@@ -31,7 +31,7 @@ interface FormBuilderProps {
 export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
-  const [fields, setFields] = useState<Partial<FormField>[]>([]);
+   const [fields, setFields] = useState<(Partial<FormField> & { tempId?: string })[]>([]);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
     slug: '',
@@ -55,12 +55,12 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   useEffect(() => {
     if (existingForm) {
       setFormConfig(existingForm);
-      setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order));
+       setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, tempId: f.id })));
     } else if (!formId) {
-      setFields([
-        { label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
-        { label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
-      ]);
+       setFields([
+         { tempId: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
+         { tempId: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
+       ]);
     }
   }, [existingForm, formId]);
 
@@ -85,7 +85,8 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   });
 
   const addField = () => {
-    const newField: Partial<FormField> = {
+     const newField: Partial<FormField> & { tempId: string } = {
+       tempId: Math.random().toString(36).substr(2, 9),
       label: 'New Field',
       type: 'text',
       required: false,
@@ -145,7 +146,7 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
             <CardContent className="space-y-3">
               {fields.map((field, index) => (
                 <div 
-                  key={index} 
+                   key={field.tempId || index} 
                   className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
                 >
                   <div className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors">
