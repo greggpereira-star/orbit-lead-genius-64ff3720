@@ -21,6 +21,12 @@ function AppLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.navigate({ to: '/login' });
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
     if (isAuthenticated && company) {
       tracker.init(company.id);
     }
@@ -37,6 +43,9 @@ function AppLayout() {
     );
   }
 
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider>
