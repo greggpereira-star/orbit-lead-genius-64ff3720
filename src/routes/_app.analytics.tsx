@@ -1,10 +1,29 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
- import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  Cell, AreaChart, Area, LineChart, Line, PieChart, Pie 
+} from 'recharts';
 import { Badge } from '@/components/ui/badge';
- import { LeadFunnelChart } from '@/design-system/components/charts/LeadFunnelChart';
- import { SankeyChart } from '@/design-system/components/charts/SankeyChart';
- const sankeyData = {
+import { LeadFunnelChart } from '@/design-system/components/charts/LeadFunnelChart';
+import { SankeyChart } from '@/design-system/components/charts/SankeyChart';
+import { 
+  TrendingUp, Users, Target, DollarSign, Clock, 
+  ArrowUpRight, ArrowDownRight, Filter, Zap 
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const kpis = [
+  { title: 'Total Leads', value: '2,845', change: '+12.5%', trend: 'up', icon: Users, color: 'text-blue-600' },
+  { title: 'Qualified', value: '842', change: '+18.2%', trend: 'up', icon: Target, color: 'text-emerald-600' },
+  { title: 'Conv. Rate', value: '29.6%', change: '+2.4%', trend: 'up', icon: TrendingUp, color: 'text-violet-600' },
+  { title: 'Avg. CPL', value: 'R$ 42,50', change: '-8.1%', trend: 'down', icon: DollarSign, color: 'text-amber-600' },
+  { title: 'CAC', value: 'R$ 1.250', change: '+4.2%', trend: 'up', icon: Zap, color: 'text-rose-600' },
+  { title: 'ROAS', value: '4.8x', change: '+0.5x', trend: 'up', icon: TrendingUp, color: 'text-indigo-600' },
+  { title: 'Response Time', value: '14m', change: '-5m', trend: 'down', icon: Clock, color: 'text-cyan-600' },
+];
+
+const sankeyData = {
    nodes: [
      { name: 'Google Ads' },
      { name: 'Meta Ads' },
