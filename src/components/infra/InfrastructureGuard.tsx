@@ -1,11 +1,19 @@
-import React, { useEffect, useState } from 'react';
+ import React, { useEffect, useState, useMemo } from 'react';
+ import { useRouterState } from '@tanstack/react-router';
 import { runInfrastructureCheck, HealthReport } from '@/core/runtime/health-checker';
 import { RefreshCw, ServerCrash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [report, setReport] = useState<HealthReport | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
+ export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+   const [report, setReport] = useState<HealthReport | null>(null);
+   const [isChecking, setIsChecking] = useState(true);
+   const routerState = useRouterState();
+   
+   // Paths that don't require infrastructure to be healthy (e.g. landing page)
+   const isBypassPath = useMemo(() => {
+     const bypassList = ['/'];
+     return bypassList.includes(routerState.location.pathname);
+   }, [routerState.location.pathname]);
 
   const check = async () => {
     setIsChecking(true);
@@ -27,7 +35,12 @@ export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ c
     );
   }
 
-  if (report?.status === 'unhealthy') {
+   // If healthy, or it's a bypass path, or it's just degraded, let it through
+   if (report?.status === 'healthy' || report?.status === 'degraded' || (report?.status === 'unhealthy' && isBypassPath)) {
+     return <>{children}</>;
+   }
+ 
+   if (report?.status === 'unhealthy') {
     return (
       <div className="min-h-screen w-full bg-destructive/5 flex items-center justify-center p-6">
         <div className="max-w-lg w-full bg-background border border-destructive/20 rounded-2xl shadow-2xl p-8 space-y-8">
@@ -59,14 +72,24 @@ export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ c
             )}
           </div>
 
-          <div className="space-y-4">
-            <Button onClick={check} className="w-full h-12 font-bold shadow-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
-              <RefreshCw className="mr-2 h-4 w-4" /> RE-VALIDATE INFRASTRUCTURE
-            </Button>
-            <p className="text-center text-[10px] text-muted-foreground italic">
-              Check your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in project settings.
-            </p>
-          </div>
+           <div className="space-y-4">
+             <Button onClick={check} className="w-full h-12 font-bold shadow-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
+               <RefreshCw className="mr-2 h-4 w-4" /> RE-VALIDATE INFRASTRUCTURE
+             </Button>
+             
+             <div className="p-4 bg-muted rounded-lg border text-[11px] space-y-2">
+               <p className="font-bold uppercase">Como resolver:</p>
+               <ul className="list-disc pl-4 space-y-1 opacity-80">
+                 <li>Verifique se o seu saldo no Lovable Cloud não expirou.</li>
+                 <li>Certifique-se de que a integração Supabase está habilitada no painel.</li>
+                 <li>Se estiver usando um projeto próprio, configure as chaves <code className="bg-background px-1">VITE_SUPABASE_URL</code> e <code className="bg-background px-1">VITE_SUPABASE_ANON_KEY</code>.</li>
+               </ul>
+             </div>
+             
+             <p className="text-center text-[10px] text-muted-foreground italic">
+               A infraestrutura é necessária para autenticação e persistência de dados.
+             </p>
+           </div>
         </div>
       </div>
     );
