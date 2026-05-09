@@ -164,10 +164,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             throw sessionError;
           }
           
-           if (session?.user && mounted) {
-             logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
-             await loadTenantContext(session.user);
-           } else if (mounted) {
+          if (session?.user && mounted) {
+            logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
+            await loadTenantContext(session.user);
+          } else if (mounted) {
+            const isRestoring = localStorage.getItem('supabase.auth.token') !== null;
+            if (isRestoring) {
+              setState('SESSION_LOADING');
+              return; 
+            }
             logger.info('AuthTrace: No session found', { traceId });
             setState('UNAUTHENTICATED');
           }
