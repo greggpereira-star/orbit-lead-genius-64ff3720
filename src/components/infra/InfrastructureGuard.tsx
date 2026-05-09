@@ -78,7 +78,7 @@ import { Button } from '@/components/ui/button';
                    )}
                    <div className="flex items-center justify-between text-muted-foreground">
                      <span>ANON_KEY:</span>
-                     <span>{config.supabaseAnonKey === 'placeholder-key' ? 'MISSING' : '********'}</span>
+                      <span>{config?.supabaseAnonKey === 'placeholder-key' ? 'MISSING' : '********'}</span>
                    </div>
                  </div>
                </div>
