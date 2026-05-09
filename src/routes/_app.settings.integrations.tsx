@@ -138,10 +138,14 @@ function IntegrationsSettings() {
                 <div className={`h-12 w-12 rounded-xl ${app.color} flex items-center justify-center text-white shadow-lg`}>
                   <app.icon className="h-6 w-6" />
                 </div>
-                {app.status === 'connected' ? (
-                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50">
-                    Active
-                  </Badge>
+                {app.id === 'cvcrm' ? (
+                  integrationStatus?.connection_status === 'connected' ? (
+                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Active</Badge>
+                  ) : (
+                    <Badge variant="outline">{integrationStatus?.connection_status || 'Disconnected'}</Badge>
+                  )
+                ) : app.status === 'connected' ? (
+                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Active</Badge>
                 ) : (
                   <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
                 )}
