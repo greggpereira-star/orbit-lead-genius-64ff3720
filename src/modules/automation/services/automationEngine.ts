@@ -26,7 +26,7 @@ export const automationEngine = {
     if (!rules || rules.length === 0) return;
 
     // 2. Process Rules Async using Promise.allSettled for isolation
-    await Promise.allSettled(rules.map(rule => this.executeRule(rule, trigger)));
+    await Promise.allSettled(rules.map((rule: any) => this.executeRule(rule, trigger)));
   },
 
   async executeRule(rule: any, trigger: AutomationTrigger) {
