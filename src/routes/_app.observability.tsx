@@ -35,7 +35,8 @@ function ObservabilityPage() {
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [automations, setAutomations] = useState<any[]>([]);
   const [health, setHealth] = useState<any[]>([]);
-  const [dlq, setDlq] = useState<any[]>([]);
+   const [triggerErrors, setTriggerErrors] = useState<any[]>([]);
+   const [systemLogs, setSystemLogs] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
