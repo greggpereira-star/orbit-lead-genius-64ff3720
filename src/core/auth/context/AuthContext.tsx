@@ -54,11 +54,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
      setState('TENANT_VALIDATING');
      
      try {
-       const result = await orchestratorRef.current.validateAndRepair(
-         supabaseUser.id,
-         supabaseUser.email || '',
-         supabaseUser.user_metadata || {}
-       );
+        const result = await (orchestratorRef.current as any).validateAndRepair(
+          supabaseUser.id,
+          supabaseUser.email || "",
+          supabaseUser.user_metadata || {},
+          (newState: AuthState) => setState(newState)
+        );
  
        if (result.state === 'ERROR') {
          setError(result.error);
