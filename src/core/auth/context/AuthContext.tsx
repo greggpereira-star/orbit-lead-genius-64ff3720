@@ -69,10 +69,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // 1. Profiles
       logger.info('AuthTrace: Fetching profile', { userId: supabaseUser.id, traceId, requestId });
-      const { data: profile, error: profileError } = await safeDb(
-        supabaseClient.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(),
-        'loadTenantContext:profile'
-      );
+      const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .maybeSingle();
 
       if (profileError) throw profileError;
 
@@ -85,10 +86,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 2. Memberships + Companies
       logger.info('AuthTrace: Fetching membership', { userId: supabaseUser.id, traceId, requestId });
-      const { data: membership, error: membershipError } = await safeDb(
-        supabaseClient.from('memberships').select('*, companies(*)').eq('user_id', supabaseUser.id).limit(1).maybeSingle(),
-        'loadTenantContext:membership'
-      );
+      const { data: membership, error: membershipError } = await supabaseClient
+        .from('memberships')
+        .select('*, companies(*)')
+        .eq('user_id', supabaseUser.id)
+        .limit(1)
+        .maybeSingle();
 
       if (membershipError) throw membershipError;
 
