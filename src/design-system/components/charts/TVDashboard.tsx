@@ -14,10 +14,10 @@ const data = [
 ];
 
 const channelData = [
-  { name: 'Google', value: 45, color: '#4285F4' },
-  { name: 'Meta', value: 30, color: '#1877F2' },
-  { name: 'Direct', value: 15, color: '#34A853' },
-  { name: 'Organic', value: 10, color: '#EA4335' },
+  { name: 'Google', value: 45, color: 'oklch(0.51 0.21 264)' }, // Blue
+  { name: 'Meta', value: 30, color: 'oklch(0.68 0.19 145)' }, // Success/Green
+  { name: 'Direct', value: 15, color: 'oklch(0.65 0.23 300)' }, // Purple
+  { name: 'Organic', value: 10, color: 'oklch(0.59 0.23 27)' }, // Red
 ];
 
 export function TVDashboard() {
@@ -76,8 +76,8 @@ export function TVDashboard() {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="time" stroke="#3f3f46" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#3f3f46" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="time" stroke="#71717a" fontSize={14} fontWeight="bold" tickLine={false} axisLine={false} />
+                <YAxis stroke="#71717a" fontSize={14} fontWeight="bold" tickLine={false} axisLine={false} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
                   itemStyle={{ color: '#10b981' }}
