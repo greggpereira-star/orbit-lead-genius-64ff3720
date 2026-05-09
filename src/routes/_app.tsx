@@ -37,15 +37,6 @@ function AppLayout() {
     );
   }
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.navigate({ to: '/login' });
-    }
-  }, [isLoading, isAuthenticated, router]);
-
-  if (!isAuthenticated && !isLoading) {
-    return null;
-  }
 
   return (
     <SidebarProvider>
