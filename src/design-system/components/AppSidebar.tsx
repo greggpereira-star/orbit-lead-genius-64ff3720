@@ -33,8 +33,9 @@
     { title: 'Forms', icon: FileText, to: '/forms' },
     { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
      { title: 'Automations', icon: Zap, to: '/automations' },
-     { title: 'Analytics', icon: BarChart3, to: '/analytics' },
-     { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
+    { title: 'Analytics', icon: BarChart3, to: '/analytics' },
+    { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
+    { title: 'Observability', icon: ShieldCheck, to: '/observability' },
  ];
  
  export function AppSidebar() {
