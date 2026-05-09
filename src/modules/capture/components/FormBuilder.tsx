@@ -231,13 +231,22 @@ import { FormPublish } from './FormPublish';
          throw new Error('Empresa não identificada. Por favor, recarregue a página.');
        }
  
+       const cleanedFields = (fields as FormField[]).map(f => ({
+         ...f,
+         label: f.label || 'Campo sem nome',
+         type: f.type || 'text',
+         required: !!f.required,
+         options: Array.isArray(f.options) ? f.options : [],
+         placeholder: f.placeholder || ''
+       }));
+ 
        const timeoutPromise = new Promise((_, reject) => 
          setTimeout(() => reject(new Error('Tempo limite de salvamento excedido (30s). Verifique sua conexão.')), 30000)
        );
  
        const savePromise = formId 
-         ? formService.updateForm(formId, formConfig, fields as FormField[])
-         : formService.createForm(company.id, formConfig, fields as FormField[]);
+         ? formService.updateForm(formId, formConfig, cleanedFields)
+         : formService.createForm(company.id, formConfig, cleanedFields);
  
        return Promise.race([savePromise, timeoutPromise]);
      },
