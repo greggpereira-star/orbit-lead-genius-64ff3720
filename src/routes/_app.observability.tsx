@@ -32,11 +32,11 @@ export const Route = createFileRoute('/_app/observability')({
 function ObservabilityPage() {
   const auth = useAuth();
   const { company } = auth;
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [automations, setAutomations] = useState<any[]>([]);
-  const [health, setHealth] = useState<any[]>([]);
-  const [dlq, setDlq] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+   const [webhooks, setWebhooks] = useState<any[]>([]);
+   const [health, setHealth] = useState<any[]>([]);
+   const [triggerErrors, setTriggerErrors] = useState<any[]>([]);
+   const [systemLogs, setSystemLogs] = useState<any[]>([]);
+   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     if (company) {
@@ -54,10 +54,9 @@ function ObservabilityPage() {
          supabase.from('system_logs').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(10)
        ]);
  
-       setWebhooks(whResult.data || []);
-       setDlq(dlqResult.data || []);
-       
-       // Simulated real-time metrics
+        setWebhooks(whResult.data || []);
+        
+        // Simulated real-time metrics
        setHealth([
          { component: 'CV.CRM API', status: 'healthy', latency: '42ms' },
          { component: 'Auth Guardian', status: 'healthy', latency: '15ms' },
