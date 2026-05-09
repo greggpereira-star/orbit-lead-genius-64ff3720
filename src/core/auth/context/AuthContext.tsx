@@ -188,21 +188,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
      const initSession = async () => {
        try {
          logger.info('AuthTrace: Initializing session', { traceId });
-         const supabaseClient = getSupabase();
-         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-         
-         if (sessionError) {
-           logger.error('AuthTrace: Session error', { error: sessionError.message, traceId });
-           throw sessionError;
-         }
-         
-         if (session?.user && mounted) {
-           logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
-           await loadTenantContext(session.user, supabaseClient);
-         } else if (mounted) {
-           logger.info('AuthTrace: No session found', { traceId });
-           setState('UNAUTHENTICATED');
-         }
+          console.log('DEBUG [Auth]: getSupabase() call start');
+          const supabaseClient = getSupabase();
+          console.log('DEBUG [Auth]: getSupabase() call end');
+
+          console.log('DEBUG [Auth]: auth.getSession() call start');
+          const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+          console.log('DEBUG [Auth]: auth.getSession() call end', { session: !!session, error: !!sessionError });
+          
+          if (sessionError) {
+            logger.error('AuthTrace: Session error', { error: sessionError.message, traceId });
+            throw sessionError;
+          }
+          
+          if (session?.user && mounted) {
+            logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
+            await loadTenantContext(session.user, supabaseClient);
+          } else if (mounted) {
+            logger.info('AuthTrace: No session found', { traceId });
+            setState('UNAUTHENTICATED');
+          }
        } catch (err: any) {
          logger.error('AuthTrace: Initialization failed', { error: err.message, traceId });
          if (err.message.includes('configuration missing') || err.message.includes('required')) {
@@ -368,24 +373,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     refreshContext
   };
 
-   if (envError) {
-     return (
-       <div className="flex h-screen items-center justify-center bg-background p-6">
-         <div className="max-w-md w-full p-8 rounded-2xl bg-destructive/5 border border-destructive/20 text-center space-y-6">
-           <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
-             <div className="w-8 h-8 text-destructive font-black text-2xl">!</div>
-           </div>
-           <div className="space-y-2">
-             <h2 className="text-xl font-bold text-destructive">System Configuration Error</h2>
-             <p className="text-sm text-muted-foreground">{envError}</p>
-           </div>
-           <p className="text-xs text-muted-foreground/60 italic">
-             Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.
-           </p>
-         </div>
-       </div>
-     );
-   }
 
   return (
     <AuthContext.Provider value={value}>
