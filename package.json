@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "audit:a11y": "bun scripts/audit-accessibility.ts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+     "format": "prettier --write .",
+     "test:e2e": "playwright test"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
