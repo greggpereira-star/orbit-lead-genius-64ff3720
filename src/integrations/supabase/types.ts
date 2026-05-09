@@ -1267,6 +1267,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_form_with_fields: {
+        Args: { p_fields: Json; p_form_data: Json; p_form_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
