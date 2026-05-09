@@ -235,7 +235,9 @@ import { FormPublish } from './FormPublish';
     },
     onError: (error: any) => {
       logger.error('Failed to save form', { error });
-      toast.error('Failed to save form');
+      const message = error.message || 'Unknown error';
+      logger.error('Failed to save form', { error });
+      toast.error(`Failed to save form: ${message}`);
     }
   });
 
