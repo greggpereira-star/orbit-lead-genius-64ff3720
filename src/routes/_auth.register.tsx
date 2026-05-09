@@ -31,34 +31,39 @@
       return strength;
     }, [password]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('!!! Register form submitted !!!', { email, companyName });
+    console.log('!!! Register form handleSubmit triggered !!!', { email, companyName });
     
+    if (isLoading) {
+      console.log('Registration already in progress, skipping');
+      return;
+    }
+
     if (passwordStrength !== null && passwordStrength < 2) {
       console.log('Password too weak');
       toast.error('Please choose a stronger password');
       return;
     }
     
-    console.log('Setting loading state to true');
     setIsLoading(true);
-    try {
-      console.log('Calling signup service in AuthContext...');
-      await signup(email, password, companyName);
-      console.log('Signup service call finished successfully');
-      toast.success('Account created! Redirecting to dashboard...');
-      
-      // Direct navigation
-      console.log('Navigating to dashboard...');
-      navigate({ to: '/dashboard' });
-    } catch (error: any) {
-      console.error('CRITICAL Registration error:', error);
-      toast.error(error.message || 'Failed to create account');
-    } finally {
-      console.log('Setting loading state to false');
-      setIsLoading(false);
-    }
+    
+    (async () => {
+      try {
+        console.log('Calling signup service in AuthContext...');
+        await signup(email, password, companyName);
+        console.log('Signup service call finished successfully');
+        toast.success('Account created! Redirecting to dashboard...');
+        
+        console.log('Navigating to dashboard...');
+        navigate({ to: '/dashboard' });
+      } catch (error: any) {
+        console.error('CRITICAL Registration error:', error);
+        toast.error(error.message || 'Failed to create account');
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   };
  
    return (

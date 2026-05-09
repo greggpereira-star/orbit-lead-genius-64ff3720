@@ -19,21 +19,33 @@
    const [password, setPassword] = useState('');
    const [isLoading, setIsLoading] = useState(false);
  
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      console.log('Login form submitted', { email });
-      setIsLoading(true);
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    console.log('!!! Login form handleSubmit triggered !!!');
+    
+    if (isLoading) {
+      console.log('Login already in progress, skipping');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    // Use a self-executing async function to handle the async login
+    (async () => {
       try {
+        console.log('Attempting login with:', email);
         await login(email, password);
+        console.log('Login successful, navigating...');
         toast.success('Successfully signed in');
         navigate({ to: '/dashboard' });
       } catch (error: any) {
-        console.error(error);
+        console.error('Login error:', error);
         toast.error(error.message || 'Invalid email or password');
       } finally {
         setIsLoading(false);
       }
-    };
+    })();
+  };
  
    return (
      <Card className="border-none shadow-xl">
@@ -79,7 +91,11 @@
           </CardContent>
          <CardFooter>
             <div className="w-full space-y-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+              <Button 
+                className="w-full h-11 text-base font-bold shadow-lg hover:shadow-xl transition-all" 
+                type="submit" 
+                disabled={isLoading}
+              >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
