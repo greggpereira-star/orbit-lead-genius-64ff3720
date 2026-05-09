@@ -60,10 +60,11 @@ export function FormPublish({ form }: FormPublishProps) {
 
   const getShortcode = () => {
     switch (mode) {
-      case 'inline': return \`[leadflow_form id="${form.id}"]\`;
-      case 'popup': return \`[leadflow_popup id="${form.id}" trigger="\${configs.trigger}"]\`;
-      case 'floating': return \`[leadflow_floating id="${form.id}" position="\${configs.position}" label="\${configs.buttonText}"]\`;
-      case 'ecommerce': return \`[leadflow_ecommerce_form id="${form.id}" product_context="true"]\`;
+      case 'inline': return `[leadflow_form id="${form.id}"]`;
+      case 'popup': return `[leadflow_popup id="${form.id}" trigger="${configs.trigger}"]`;
+      case 'floating': return `[leadflow_floating id="${form.id}" position="${configs.position}" label="${configs.buttonText}"]`;
+      case 'ecommerce': return `[leadflow_ecommerce_form id="${form.id}" product_context="true"]`;
+      default: return `[leadflow_form id="${form.id}"]`;
     }
   };
 
@@ -100,7 +101,7 @@ export function FormPublish({ form }: FormPublishProps) {
           <div className="flex items-center justify-between px-2">
              {[1, 2, 3, 4].map((s) => (
                <div key={s} className="flex items-center gap-2">
-                 <div className={\`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-all \${step === s ? 'bg-primary text-primary-foreground scale-110 shadow-lg' : step > s ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}\`}>
+                 <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${step === s ? 'bg-primary text-primary-foreground scale-110 shadow-lg' : step > s ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
                    {step > s ? <CheckCircle2 className="h-4 w-4" /> : s}
                  </div>
                  {s < 4 && <div className="w-12 h-[2px] bg-muted" />}
@@ -129,9 +130,9 @@ export function FormPublish({ form }: FormPublishProps) {
                     <div 
                       key={m.id}
                       onClick={() => { setMode(m.id as any); setStep(2); }}
-                      className={\`p-4 rounded-xl border-2 cursor-pointer transition-all hover:border-primary/50 group \${mode === m.id ? 'border-primary bg-primary/[0.03]' : 'bg-card'}\`}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:border-primary/50 group ${mode === m.id ? 'border-primary bg-primary/[0.03]' : 'bg-card'}`}
                     >
-                      <m.icon className={\`h-8 w-8 mb-3 transition-colors \${mode === m.id ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}\`} />
+                      <m.icon className={`h-8 w-8 mb-3 transition-colors ${mode === m.id ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
                       <h4 className="font-bold text-sm">{m.title}</h4>
                       <p className="text-[10px] text-muted-foreground">{m.desc}</p>
                     </div>
@@ -158,7 +159,7 @@ export function FormPublish({ form }: FormPublishProps) {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-xs">Gatilho (Trigger)</Label>
-                        <select className="w-full h-9 rounded-md border bg-background text-sm px-3" value={configs.trigger} onChange={(e) => setConfigs({...configs, trigger: e.target.value as any})}>
+                        <select className="w-full h-9 rounded-md border bg-background text-sm px-3" value={configs.trigger} onChange={(e) => setConfigs({...configs, trigger: e.target.value})}>
                           <option value="exit_intent">Intenção de Saída</option>
                           <option value="timer">Tempo na Página</option>
                           <option value="scroll">Profundidade de Rolagem</option>
@@ -207,11 +208,11 @@ export function FormPublish({ form }: FormPublishProps) {
                     <Label className="text-xs font-bold uppercase tracking-widest">Script Embed (Para outros sites)</Label>
                     <div className="relative group">
                       <pre className="bg-muted p-4 rounded-lg text-[10px] font-mono overflow-x-auto">
-                        {\`<script src="\${window.location.origin}/sdk.js"></script>\\n<script>\\n  LeadFlow.init("${form.id}", { mode: "\${mode}" });\\n</script>\`}
+                        {`<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  LeadFlow.init("${form.id}", { mode: "${mode}" });\n</script>`}
                       </pre>
                       <Button 
                         size="icon" variant="ghost" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => copyToClipboard(\`<script src="\${window.location.origin}/sdk.js"></script>\\n<script>\\n  LeadFlow.init("${form.id}", { mode: "\${mode}" });\\n</script>\`, 'script')}
+                        onClick={() => copyToClipboard(`<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  LeadFlow.init("${form.id}", { mode: "${mode}" });\n</script>`, 'script')}
                       >
                         {copied === 'script' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
@@ -265,7 +266,7 @@ export function FormPublish({ form }: FormPublishProps) {
 
                   <div className="grid grid-cols-2 gap-2 text-left bg-muted/30 p-4 rounded-xl">
                     <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
-                      <ShieldCheck className={\`h-3 w-3 \${form.status === 'published' ? 'text-green-500' : 'text-muted-foreground'}\`} /> Status: {form.status}
+                      <ShieldCheck className={`h-3 w-3 ${form.status === 'published' ? 'text-green-500' : 'text-muted-foreground'}`} /> Status: {form.status}
                     </div>
                     <div className="flex items-center gap-2 text-[10px] font-bold uppercase">
                       <ShieldCheck className="h-3 w-3 text-green-500" /> SDK v1.1.0
