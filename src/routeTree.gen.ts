@@ -19,6 +19,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/_auth.forgot-pa
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
+import { Route as AppObservabilityRouteImport } from './routes/_app.observability'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -79,6 +80,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppPipelineRoute = AppPipelineRouteImport.update({
   id: '/pipeline',
   path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppObservabilityRoute = AppObservabilityRouteImport.update({
+  id: '/observability',
+  path: '/observability',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLeadsRoute = AppLeadsRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
   '/leads': typeof AppLeadsRouteWithChildren
+  '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
   '/leads': typeof AppLeadsRouteWithChildren
+  '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/forms': typeof AppFormsRoute
   '/_app/leads': typeof AppLeadsRouteWithChildren
+  '/_app/observability': typeof AppObservabilityRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/whatsapp': typeof AppWhatsappRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forms'
     | '/leads'
+    | '/observability'
     | '/pipeline'
     | '/settings'
     | '/whatsapp'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forms'
     | '/leads'
+    | '/observability'
     | '/pipeline'
     | '/whatsapp'
     | '/forgot-password'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/forms'
     | '/_app/leads'
+    | '/_app/observability'
     | '/_app/pipeline'
     | '/_app/settings'
     | '/_app/whatsapp'
@@ -368,6 +380,13 @@ declare module '@tanstack/react-router' {
       path: '/pipeline'
       fullPath: '/pipeline'
       preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/observability': {
+      id: '/_app/observability'
+      path: '/observability'
+      fullPath: '/observability'
+      preLoaderRoute: typeof AppObservabilityRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/leads': {
@@ -516,6 +535,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppFormsRoute: typeof AppFormsRoute
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
+  AppObservabilityRoute: typeof AppObservabilityRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
@@ -527,6 +547,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppFormsRoute: AppFormsRoute,
   AppLeadsRoute: AppLeadsRouteWithChildren,
+  AppObservabilityRoute: AppObservabilityRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
@@ -558,3 +579,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
