@@ -6,8 +6,28 @@ let supabaseInstance: SupabaseClient | null = null;
 export const getSupabase = (): SupabaseClient => {
   if (supabaseInstance) return supabaseInstance;
 
-  const env = validateEnv();
-  
+   let env;
+   try {
+     env = validateEnv();
+   } catch (err) {
+     console.error('❌ Supabase Client Init Failed: Env Validation Error', err);
+     // Return a dummy client that throws on any method call to make it visible
+     return new Proxy({} as SupabaseClient, {
+       get: (target, prop) => {
+         return () => {
+           const msg = `CRITICAL: Supabase Client not initialized due to missing environment variables (${String(prop)})`;
+           console.error(msg);
+           if (typeof window !== 'undefined') {
+             window.dispatchEvent(new CustomEvent('supabase_config_error', { detail: { message: msg } }));
+           }
+           throw new Error(msg);
+         };
+       }
+     });
+   }
+
+   console.log('✅ Supabase Client Init: Attempting creation with URL:', env.VITE_SUPABASE_URL);
+
   supabaseInstance = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
