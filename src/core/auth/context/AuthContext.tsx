@@ -113,6 +113,8 @@
     };
  
     const signup = async (email: string, password?: string, companyName?: string) => {
+      console.log('Signup initiated in AuthContext', { email, companyName });
+      
       if (!supabase || !supabase.auth) {
         console.warn('Supabase not configured. Using mock signup.');
         setIsLoading(true);
