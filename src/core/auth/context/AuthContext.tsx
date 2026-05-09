@@ -41,7 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     return id;
   }, []);
     const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
-    const isInitialMount = useRef(true);
+    const isOrchestrating = useRef<string | null>(null);
 
     const SCHEMA_VERSION = 'v1';
     const CACHE_KEY = 'workspace_readiness_snapshot';
