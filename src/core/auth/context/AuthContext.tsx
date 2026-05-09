@@ -41,7 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     return id;
   }, []);
     const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
-    const isInitialMount = useRef(true);
+    const isOrchestrating = useRef<string | null>(null);
 
     const SCHEMA_VERSION = 'v1';
     const CACHE_KEY = 'workspace_readiness_snapshot';
@@ -91,13 +91,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     setCompany(null);
   }, [traceId]);
 
-   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
-     const client = getSupabase();
-     if (!orchestratorRef.current) {
-       orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
-     }
+    const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
+      if (isOrchestrating.current === supabaseUser.id) {
+        logger.info('AuthTrace: Orchestration already in progress for user, skipping.', { userId: supabaseUser.id });
+        return;
+      }
+
+      const client = getSupabase();
+      if (!orchestratorRef.current) {
+        orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
+      }
  
       try {
+        isOrchestrating.current = supabaseUser.id;
         // Determine if we should show the full bootstrap UI
         const isReadyCache = checkWorkspaceReadiness();
         
@@ -144,13 +150,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         setMembership(result.membership);
         setState('READY');
        
-       logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
-     } catch (err: any) {
-       logger.error('Failed to orchestrate workspace', { error: err.message, traceId });
-       setError(`Workspace bootstrap failed: ${err.message}`);
-       setState('ERROR');
-     }
-   }, [traceId]);
+        logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
+      } catch (err: any) {
+        logger.error('Failed to orchestrate workspace', { error: err.message, traceId });
+        setError(`Workspace bootstrap failed: ${err.message}`);
+        setState('ERROR');
+      } finally {
+        isOrchestrating.current = null;
+      }
+    }, [traceId, checkWorkspaceReadiness, markWorkspaceAsReady]);
 
   useEffect(() => {
     let mounted = true;

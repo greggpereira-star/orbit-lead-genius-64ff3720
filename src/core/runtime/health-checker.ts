@@ -39,7 +39,8 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
           signal: AbortSignal.timeout(5000)
         }).catch(err => ({ ok: false, status: 0, error: err.message })),
         fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
-          method: 'HEAD',
+          method: 'GET',
+          headers: { 'Range': '0-0' }, // Request minimal data
           signal: AbortSignal.timeout(5000)
         }).catch(err => ({ ok: false, status: 0, error: err.message }))
       ]);

@@ -898,6 +898,38 @@ export type Database = {
           },
         ]
       }
+      page_views: {
+        Row: {
+          created_at: string | null
+          id: string
+          session_id: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          session_id: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          session_id?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -918,6 +950,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sessions: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          fbclid: string | null
+          gclid: string | null
+          id: string
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visitor_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          fbclid?: string | null
+          gclid?: string | null
+          id?: string
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          fbclid?: string | null
+          gclid?: string | null
+          id?: string
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stages: {
         Row: {
