@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCompany(null);
   }, [traceId]);
 
-  const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
+  const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
     setState('TENANT_LOADING');
     const requestId = Math.random().toString(36).substring(2, 7);
     
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logger.info('Loading tenant context', { userId: supabaseUser.id, traceId, requestId });
       
       // 1. Profiles
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       // 2. Memberships + Companies
-      const { data: membership, error: membershipError } = await supabase
+      const { data: membership, error: membershipError } = await supabaseClient
         .from('memberships')
         .select('*, companies(*)')
         .eq('user_id', supabaseUser.id)
@@ -115,19 +115,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
     
-    if (!supabase) {
-      setState('ERROR');
-      setError('Supabase configuration missing');
-      return;
-    }
-
     const initSession = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const supabaseClient = getSupabase();
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
         if (sessionError) throw sessionError;
         
         if (session?.user && mounted) {
-          await loadTenantContext(session.user);
+          await loadTenantContext(session.user, supabaseClient);
         } else if (mounted) {
           setState('UNAUTHENTICATED');
         }
@@ -138,12 +133,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+    const supabaseClient = getSupabase();
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
       logger.info('Supabase Auth Event', { event, traceId });
       if (!mounted) return;
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user) await loadTenantContext(session.user);
+        if (session?.user) await loadTenantContext(session.user, supabaseClient);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setCompany(null);
@@ -162,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadingToast = toast.loading('Authenticating credentials...');
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await getSupabase().auth.signInWithPassword({
         email,
         password: password || '',
       });
@@ -184,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadingToast = toast.loading('Creating enterprise account...');
     
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error } = await getSupabase().auth.signUp({
         email,
         password: password || '',
         options: {
@@ -212,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     const loadingToast = toast.loading('Terminating session...');
     try {
-      await supabase.auth.signOut();
+      await getSupabase().auth.signOut();
       toast.success('Signed out successfully', { id: loadingToast });
     } catch (err: any) {
       toast.error('Sign out error', { id: loadingToast });
@@ -220,8 +216,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshContext = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) await loadTenantContext(session.user);
+    const supabaseClient = getSupabase();
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) await loadTenantContext(session.user, supabaseClient);
   };
 
   const value = {
