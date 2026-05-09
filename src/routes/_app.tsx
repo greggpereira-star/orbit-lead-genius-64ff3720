@@ -105,8 +105,26 @@ function AppLayout() {
     );
   }
 
-  // Deterministic Guard: We only reach here if state === READY and company exists
-  return (
+   // Final deterministic guards for roles/permissions
+   const userRole = membership?.role;
+   
+   // Block rendering if state is READY but context is incomplete (race condition protection)
+   if (state === 'READY' && (!company || !userRole)) {
+     return (
+       <div className="flex h-screen items-center justify-center bg-background">
+         <div className="flex flex-col items-center gap-4 text-center">
+           <Loader2 className="h-8 w-8 text-primary animate-spin" />
+           <div className="space-y-1">
+             <p className="text-sm font-bold">Finalizando autorização...</p>
+             <p className="text-xs text-muted-foreground">Validando permissões de acesso ao workspace.</p>
+           </div>
+         </div>
+       </div>
+     );
+   }
+ 
+   // Deterministic Guard: We only reach here if state === READY and all context exists
+   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
