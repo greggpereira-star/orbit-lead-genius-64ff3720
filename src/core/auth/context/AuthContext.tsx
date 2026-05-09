@@ -112,7 +112,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
   }, [traceId]);
 
    const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
-     setState('TENANT_BOOTSTRAPPING');
+     // The state is already set to TENANT_BOOTSTRAPPING or EMAIL_CONFIRMED by the caller
+     // but we ensure it's in a loading state
+     if (state !== 'TENANT_BOOTSTRAPPING') setState('TENANT_BOOTSTRAPPING');
     const requestId = Math.random().toString(36).substring(2, 7);
     
     try {
