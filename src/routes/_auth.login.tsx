@@ -13,42 +13,28 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
    component: LoginPage,
  });
  
- function LoginPage() {
-   const { login } = useAuth();
-   const navigate = useNavigate();
-   const [email, setEmail] = useState('');
-   const [password, setPassword] = useState('');
-   const [retryCount, setRetryCount] = useState(0);
-   const { login, state, error: authError } = useAuth();
-   const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
- 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log('!!! Login form handleSubmit triggered !!!');
-    
-    if (isLoading) {
-      console.log('Login already in progress, skipping');
-      return;
-    }
-
-    setIsLoading(true);
-    
-    // Use a self-executing async function to handle the async login
-    (async () => {
-      try {
-        console.log('Attempting login with:', email);
-        await login(email, password);
-        console.log('Login successful, navigating...');
-        toast.success('Successfully signed in');
-        navigate({ to: '/dashboard' });
-      } catch (error: any) {
-        console.error('Login error:', error);
-        toast.error(error.message || 'Invalid email or password');
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  };
+   function LoginPage() {
+     const navigate = useNavigate();
+     const [email, setEmail] = useState('');
+     const [password, setPassword] = useState('');
+     const [retryCount, setRetryCount] = useState(0);
+     const { login, state, error: authError } = useAuth();
+     const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
+   
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      
+      if (isLoading) return;
+  
+      (async () => {
+        try {
+          await login(email, password, retryCount);
+          navigate({ to: '/dashboard' });
+        } catch (error: any) {
+          setRetryCount(prev => prev + 1);
+        }
+      })();
+    };
  
    return (
      <Card className="border-none shadow-xl">
