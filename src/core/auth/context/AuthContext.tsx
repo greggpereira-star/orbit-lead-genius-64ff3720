@@ -373,24 +373,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     refreshContext
   };
 
-   if (envError) {
-     return (
-       <div className="flex h-screen items-center justify-center bg-background p-6">
-         <div className="max-w-md w-full p-8 rounded-2xl bg-destructive/5 border border-destructive/20 text-center space-y-6">
-           <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
-             <div className="w-8 h-8 text-destructive font-black text-2xl">!</div>
-           </div>
-           <div className="space-y-2">
-             <h2 className="text-xl font-bold text-destructive">System Configuration Error</h2>
-             <p className="text-sm text-muted-foreground">{envError}</p>
-           </div>
-           <p className="text-xs text-muted-foreground/60 italic">
-             Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.
-           </p>
-         </div>
-       </div>
-     );
-   }
 
   return (
     <AuthContext.Provider value={value}>
