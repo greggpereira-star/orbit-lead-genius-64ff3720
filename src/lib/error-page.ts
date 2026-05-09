@@ -1,4 +1,6 @@
-export function renderErrorPage(): string {
+export function renderErrorPage(diagnostic?: string): string {
+  const isConfigError = diagnostic?.includes('VITE_SUPABASE_URL') || diagnostic?.includes('VITE_SUPABASE_ANON_KEY');
+  
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -18,8 +20,14 @@ export function renderErrorPage(): string {
   </head>
   <body>
     <div class="card">
-      <h1>This page didn't load</h1>
-      <p>Something went wrong on our end. You can try refreshing or head back home.</p>
+      <h1>${isConfigError ? 'Configuration Fault' : "This page didn't load"}</h1>
+      <p>${isConfigError ? 'Critical environment variables are missing.' : 'Something went wrong on our end. You can try refreshing or head back home.'}</p>
+      ${diagnostic ? `
+      <div style="text-align: left; background: #fee2e2; border: 1px solid #fca5a5; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto;">
+        <div style="font-size: 10px; font-weight: bold; color: #991b1b; text-transform: uppercase; margin-bottom: 0.5rem;">Diagnostic Data</div>
+        <pre style="margin: 0; font-family: monospace; font-size: 11px; color: #b91c1c;">${diagnostic}</pre>
+      </div>
+      ` : ''}
       <div class="actions">
         <button class="primary" onclick="location.reload()">Try again</button>
         <a class="secondary" href="/">Go home</a>
