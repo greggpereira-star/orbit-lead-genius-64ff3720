@@ -13,7 +13,9 @@ import {
   Copy,
   Edit3,
   Eye,
-  BarChart3
+  BarChart3,
+  Code2,
+  ClipboardCheck
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -22,6 +24,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { logger } from '@/core/observability/logger';
