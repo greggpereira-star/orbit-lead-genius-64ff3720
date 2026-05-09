@@ -48,45 +48,68 @@
      }
    }
  
-   private async ensureProfile(userId: string, email: string, metadata: any): Promise<UserProfile> {
-     logger.info('WorkspaceOrchestrator: Ensuring profile', { userId });
-     
-     const { data: profile, error } = await this.client
-       .from('profiles')
-       .select('*')
-       .eq('id', userId)
-       .maybeSingle();
+  private async ensureProfile(userId: string, email: string, metadata: any): Promise<UserProfile> {
+    logger.info('WorkspaceOrchestrator: Ensuring profile integrity', { userId });
+    
+    let profileData: any = null;
+    
+    try {
+      const { data, error } = await this.client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (error) {
+        logger.error('Profile fetch failed (RLS or Schema)', { error: error.message, userId });
+        throw error;
+      }
+      profileData = data;
+    } catch (err: any) {
+       // If SELECT fails, we attempt repair immediately
+       logger.warn('AuthRecovery: SELECT failed, attempting profile repair/re-creation', { userId });
+       return this.repairProfile(userId, email, metadata);
+    }
  
-     if (error) throw new Error(`Profile check failed: ${error.message}`);
+    if (!profileData) {
+      logger.info('WorkspaceOrchestrator: Profile missing, initiating creation', { userId });
+      return this.repairProfile(userId, email, metadata);
+    }
  
-     if (!profile) {
-       logger.info('WorkspaceOrchestrator: Profile missing, creating...', { userId });
-       const { data: newProfile, error: createError } = await this.client
-         .from('profiles')
-         .insert({
-           id: userId,
-           full_name: metadata.full_name || email.split('@')[0],
-           avatar_url: metadata.avatar_url
-         })
-         .select()
-         .single();
- 
-       if (createError) throw new Error(`Profile creation failed: ${createError.message}`);
-       return {
-         id: newProfile.id,
-         email,
-         name: newProfile.full_name,
-         avatar_url: newProfile.avatar_url
-       };
-     }
- 
-     return {
-       id: profile.id,
-       email,
-       name: profile.full_name,
-       avatar_url: profile.avatar_url
-     };
-   }
+    return {
+      id: profileData.id,
+      email,
+      name: profileData.full_name,
+      avatar_url: profileData.avatar_url
+    };
+  }
+
+  private async repairProfile(userId: string, email: string, metadata: any): Promise<UserProfile> {
+    logger.info('AuthRecovery: Repairing user profile', { userId });
+    
+    const { data: newProfile, error: createError } = await this.client
+      .from('profiles')
+      .upsert({
+        id: userId,
+        full_name: metadata.full_name || email.split('@')[0],
+        avatar_url: metadata.avatar_url,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      logger.fatal('Critical Recovery Failure: Profile could not be repaired', { error: createError.message, userId });
+      throw new Error(`Critical Fault: Profile recovery failed: ${createError.message}`);
+    }
+
+    return {
+      id: newProfile.id,
+      email,
+      name: newProfile.full_name,
+      avatar_url: newProfile.avatar_url
+    };
+  }
  
   private async ensureWorkspace(userId: string, metadata: any, onProgress?: (state: AuthState) => void): Promise<{ company: Company; membership: Membership }> {
      logger.info('WorkspaceOrchestrator: Ensuring workspace integrity', { userId });
