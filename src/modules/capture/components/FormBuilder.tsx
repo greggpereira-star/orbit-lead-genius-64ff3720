@@ -5,18 +5,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { 
-  GripVertical, 
-  Plus, 
-  Trash2, 
-  Settings2, 
-  Eye, 
-  Code2,
-  CheckCircle2,
-  ArrowLeft,
-  Save,
-  Loader2,
-  Globe
-} from 'lucide-react';
+   GripVertical,
+   Plus,
+   Trash2,
+   Settings2,
+   Eye,
+   Code2,
+   CheckCircle2,
+   ArrowLeft,
+   Save,
+   Loader2,
+   Globe
+ } from 'lucide-react';
+ import {
+   DndContext,
+   closestCenter,
+   KeyboardSensor,
+   PointerSensor,
+   useSensor,
+   useSensors,
+   DragEndEvent
+ } from '@dnd-kit/core';
+ import {
+   arrayMove,
+   SortableContext,
+   sortableKeyboardCoordinates,
+   verticalListSortingStrategy,
+   useSortable
+ } from '@dnd-kit/sortable';
+ import { CSS } from '@dnd-kit/utilities';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,7 +51,7 @@ interface FormBuilderProps {
 export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
-  const [fields, setFields] = useState<(Partial<FormField> & { tempId?: string })[]>([]);
+   const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
     slug: '',
@@ -55,17 +72,17 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
     enabled: !!formId,
   });
 
-  useEffect(() => {
-    if (existingForm) {
-      setFormConfig(existingForm);
-      setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, tempId: f.id })));
-    } else if (!formId) {
-      setFields([
-        { tempId: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
-        { tempId: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
-      ]);
-    }
-  }, [existingForm, formId]);
+   useEffect(() => {
+     if (existingForm) {
+       setFormConfig(existingForm);
+       setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, id: f.id })));
+     } else if (!formId) {
+       setFields([
+         { id: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
+         { id: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
+       ]);
+     }
+   }, [existingForm, formId]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -87,22 +104,38 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
     }
   });
 
-  const addField = () => {
-    const newField: Partial<FormField> & { tempId: string } = {
-      tempId: Math.random().toString(36).substr(2, 9),
-      label: 'New Field',
-      type: 'text',
-      required: false,
-      placeholder: 'Enter text...'
-    };
-    setFields([...fields, newField]);
-  };
+   const addField = () => {
+     const newField: Partial<FormField> & { id: string } = {
+       id: Math.random().toString(36).substr(2, 9),
+       label: 'New Field',
+       type: 'text',
+       required: false,
+       placeholder: 'Enter text...'
+     };
+     setFields([...fields, newField]);
+   };
 
-  const removeField = (index: number) => {
-    const newFields = [...fields];
-    newFields.splice(index, 1);
-    setFields(newFields);
-  };
+   const removeField = (id: string) => {
+     setFields(fields.filter(f => f.id !== id));
+   };
+ 
+   const sensors = useSensors(
+     useSensor(PointerSensor),
+     useSensor(KeyboardSensor, {
+       coordinateGetter: sortableKeyboardCoordinates,
+     })
+   );
+ 
+   const handleDragEnd = (event: DragEndEvent) => {
+     const { active, over } = event;
+     if (over && active.id !== over.id) {
+       setFields((items) => {
+         const oldIndex = items.findIndex((i) => i.id === active.id);
+         const newIndex = items.findIndex((i) => i.id === over.id);
+         return arrayMove(items, oldIndex, newIndex);
+       });
+     }
+   };
 
   if (isLoading) {
     return (
