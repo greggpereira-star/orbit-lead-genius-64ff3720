@@ -155,6 +155,91 @@ export type Database = {
         }
         Relationships: []
       }
+      google_assets: {
+        Row: {
+          asset_type: string
+          company_id: string
+          created_at: string
+          external_id: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          asset_type: string
+          company_id: string
+          created_at?: string
+          external_id: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: string
+          company_id?: string
+          created_at?: string
+          external_id?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_webhooks: {
+        Row: {
+          company_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          last_event_at: string | null
+          provider: string
+          status: string | null
+          target_asset_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          last_event_at?: string | null
+          provider: string
+          status?: string | null
+          target_asset_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          last_event_at?: string | null
+          provider?: string
+          status?: string | null
+          target_asset_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_webhooks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrations: {
         Row: {
           company_id: string
@@ -188,6 +273,50 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_capture_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          error_message: string | null
+          external_lead_id: string | null
+          id: string
+          payload: Json | null
+          provider: string
+          status: string | null
+          trace_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          external_lead_id?: string | null
+          id?: string
+          payload?: Json | null
+          provider: string
+          status?: string | null
+          trace_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          external_lead_id?: string | null
+          id?: string
+          payload?: Json | null
+          provider?: string
+          status?: string | null
+          trace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_capture_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           company_id: string
@@ -195,6 +324,8 @@ export type Database = {
           cvcrm_id: string | null
           device_info: Json | null
           email: string | null
+          event_id: string | null
+          external_id: string | null
           fbclid: string | null
           gclid: string | null
           id: string
@@ -223,6 +354,8 @@ export type Database = {
           cvcrm_id?: string | null
           device_info?: Json | null
           email?: string | null
+          event_id?: string | null
+          external_id?: string | null
           fbclid?: string | null
           gclid?: string | null
           id?: string
@@ -251,6 +384,8 @@ export type Database = {
           cvcrm_id?: string | null
           device_info?: Json | null
           email?: string | null
+          event_id?: string | null
+          external_id?: string | null
           fbclid?: string | null
           gclid?: string | null
           id?: string
@@ -300,6 +435,103 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "memberships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_assets: {
+        Row: {
+          asset_type: string
+          company_id: string
+          created_at: string
+          external_id: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          asset_type: string
+          company_id: string
+          created_at?: string
+          external_id: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: string
+          company_id?: string
+          created_at?: string
+          external_id?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oauth_connections: {
+        Row: {
+          access_token: string
+          company_id: string
+          created_at: string
+          expires_at: string | null
+          external_id: string | null
+          id: string
+          metadata: Json | null
+          provider: string
+          refresh_token: string | null
+          scopes: string[] | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          company_id: string
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          provider: string
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          company_id?: string
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_connections_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
