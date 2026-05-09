@@ -15,7 +15,7 @@ export const attributionService = {
 
     const firstTouch = touchpoints[0];
     const lastTouch = touchpoints[touchpoints.length - 1];
-    const conversionTouch = touchpoints.find(t => t.type === 'form_submit') || lastTouch;
+    const conversionTouch = touchpoints.find((t: any) => t.type === 'form_submit') || lastTouch;
 
     await supabase.from('lead_attribution').upsert({
       lead_id: leadId,
@@ -25,7 +25,7 @@ export const attributionService = {
       attribution_model: 'linear',
       data: {
         all_touchpoints: touchpoints.length,
-        sources: Array.from(new Set(touchpoints.map(t => t.source).filter(Boolean)))
+        sources: Array.from(new Set(touchpoints.map((t: any) => t.source).filter(Boolean)))
       }
     }, { onConflict: 'lead_id' });
 

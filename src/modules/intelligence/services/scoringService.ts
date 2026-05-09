@@ -27,21 +27,21 @@ export const scoringService = {
     }
 
     // 2. Behavior Analysis (Touchpoints)
-    const touchpoints = lead.lead_touchpoints || [];
+    const touchpoints = (lead as any).lead_touchpoints || [];
     
-    const whatsappClicks = touchpoints.filter(t => t.type === 'whatsapp').length;
+    const whatsappClicks = touchpoints.filter((t: any) => t.type === 'whatsapp').length;
     if (whatsappClicks > 0) {
       score += 30;
       reasons.push('Clicked WhatsApp');
     }
 
-    const pricingViews = touchpoints.filter(t => t.url?.includes('pricing') || t.url?.includes('financiamento')).length;
+    const pricingViews = touchpoints.filter((t: any) => t.url?.includes('pricing') || t.url?.includes('financiamento')).length;
     if (pricingViews > 0) {
       score += 20;
       reasons.push('Visited pricing/financing page');
     }
 
-    const sessions = new Set(touchpoints.map(t => t.metadata?.session_id)).size;
+    const sessions = new Set(touchpoints.map((t: any) => t.metadata?.session_id)).size;
     if (sessions > 2) {
       score += 15;
       reasons.push('Returned more than 2x');
