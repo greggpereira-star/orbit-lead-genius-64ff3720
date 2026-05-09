@@ -188,21 +188,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
      const initSession = async () => {
        try {
          logger.info('AuthTrace: Initializing session', { traceId });
-         const supabaseClient = getSupabase();
-         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-         
-         if (sessionError) {
-           logger.error('AuthTrace: Session error', { error: sessionError.message, traceId });
-           throw sessionError;
-         }
-         
-         if (session?.user && mounted) {
-           logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
-           await loadTenantContext(session.user, supabaseClient);
-         } else if (mounted) {
-           logger.info('AuthTrace: No session found', { traceId });
-           setState('UNAUTHENTICATED');
-         }
+          console.log('DEBUG [Auth]: getSupabase() call start');
+          const supabaseClient = getSupabase();
+          console.log('DEBUG [Auth]: getSupabase() call end');
+
+          console.log('DEBUG [Auth]: auth.getSession() call start');
+          const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+          console.log('DEBUG [Auth]: auth.getSession() call end', { session: !!session, error: !!sessionError });
+          
+          if (sessionError) {
+            logger.error('AuthTrace: Session error', { error: sessionError.message, traceId });
+            throw sessionError;
+          }
+          
+          if (session?.user && mounted) {
+            logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
+            await loadTenantContext(session.user, supabaseClient);
+          } else if (mounted) {
+            logger.info('AuthTrace: No session found', { traceId });
+            setState('UNAUTHENTICATED');
+          }
        } catch (err: any) {
          logger.error('AuthTrace: Initialization failed', { error: err.message, traceId });
          if (err.message.includes('configuration missing') || err.message.includes('required')) {
