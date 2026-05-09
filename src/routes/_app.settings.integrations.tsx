@@ -156,16 +156,38 @@ function IntegrationsSettings() {
                       </div>
                     </div>
                     
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="pixel-id" className="text-xs uppercase font-bold text-muted-foreground">Account ID / Pixel ID</Label>
-                        <Input id="pixel-id" placeholder="Ex: 123456789" defaultValue={app.status === 'connected' ? '728394102938475' : ''} />
+                      <div className="space-y-4">
+                        {app.id === 'cvcrm' ? (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="cv-domain" className="text-xs uppercase font-bold text-muted-foreground">Domain Subdomain</Label>
+                              <div className="flex items-center gap-2">
+                                <Input id="cv-domain" placeholder="mycompany" />
+                                <span className="text-xs font-medium text-muted-foreground">.cvcrm.com.br</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="cv-email" className="text-xs uppercase font-bold text-muted-foreground">Integration Email</Label>
+                              <Input id="cv-email" type="email" placeholder="api@company.com" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="cv-token" className="text-xs uppercase font-bold text-muted-foreground">API Token</Label>
+                              <Input id="cv-token" type="password" placeholder="••••••••" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="pixel-id" className="text-xs uppercase font-bold text-muted-foreground">Account ID / Pixel ID</Label>
+                              <Input id="pixel-id" placeholder="Ex: 123456789" defaultValue={app.status === 'connected' ? '728394102938475' : ''} />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="access-token" className="text-xs uppercase font-bold text-muted-foreground">Access Token (Bearer)</Label>
+                              <Input id="access-token" type="password" placeholder="EAAB..." defaultValue={app.status === 'connected' ? '••••••••••••••••' : ''} />
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="access-token" className="text-xs uppercase font-bold text-muted-foreground">Access Token (Bearer)</Label>
-                        <Input id="access-token" type="password" placeholder="EAAB..." defaultValue={app.status === 'connected' ? '••••••••••••••••' : ''} />
-                      </div>
-                    </div>
 
                     <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100 text-amber-800 text-[11px] leading-relaxed font-medium">
                       <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
