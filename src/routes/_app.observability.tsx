@@ -34,10 +34,10 @@ function ObservabilityPage() {
   const { company } = auth;
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [automations, setAutomations] = useState<any[]>([]);
-  const [health, setHealth] = useState<any[]>([]);
+   const [health, setHealth] = useState<any[]>([]);
    const [triggerErrors, setTriggerErrors] = useState<any[]>([]);
    const [systemLogs, setSystemLogs] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     if (company) {
