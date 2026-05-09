@@ -189,3 +189,35 @@ CREATE POLICY "Lead events access" ON lead_events FOR ALL USING (
 
 DROP POLICY IF EXISTS "Integrations access" ON integrations;
 CREATE POLICY "Integrations access" ON integrations FOR ALL USING (check_membership(company_id));
+
+-- CV.CRM Integration Tables
+CREATE TABLE IF NOT EXISTS cvcrm_integrations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+    cvcrm_base_url TEXT NOT NULL,
+    api_user TEXT NOT NULL,
+    api_token TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    connection_status TEXT DEFAULT 'disconnected',
+    last_sync_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE(company_id)
+);
+
+CREATE TABLE IF NOT EXISTS cvcrm_sync_queue (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id UUID NOT NULL,
+    status TEXT DEFAULT 'pending',
+    retry_count INTEGER DEFAULT 0,
+    last_error TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    processed_at TIMESTAMPTZ
+);
+
+ALTER TABLE cvcrm_integrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cvcrm_sync_queue ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "CV CRM integrations access" ON cvcrm_integrations FOR ALL USING (check_membership(company_id));
+CREATE POLICY "CV CRM sync queue access" ON cvcrm_sync_queue FOR ALL USING (check_membership(company_id));
