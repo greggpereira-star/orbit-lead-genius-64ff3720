@@ -33,6 +33,8 @@
    const [isLoading, setIsLoading] = useState(true);
  
   useEffect(() => {
+    let mounted = true;
+    
     if (!supabase) {
       setIsLoading(false);
       return;
@@ -40,20 +42,28 @@
 
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        if (session?.user && mounted) {
           await handleUserSession(session.user);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Auth initialization failed:', err);
+        // Log critical auth failure
+        if (err?.message !== 'Auth session missing!') {
+           // Silent warn as getSession can fail naturally if no cookie
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      
       if (session?.user) {
         await handleUserSession(session.user);
       } else {
@@ -63,7 +73,10 @@
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
  
    const handleUserSession = async (supabaseUser: SupabaseUser) => {
