@@ -5,13 +5,16 @@ import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
 
 export type AuthState = 
-  | 'INITIALIZING'
-  | 'UNAUTHENTICATED'
-  | 'AUTHENTICATING'
-  | 'AUTHENTICATED'
-  | 'TENANT_LOADING'
-  | 'READY'
-  | 'ERROR';
+   | 'INITIALIZING'
+   | 'UNAUTHENTICATED'
+   | 'AUTHENTICATING'
+   | 'AUTHENTICATED'
+   | 'TENANT_LOADING'
+   | 'ROLE_LOADING'
+   | 'PERMISSIONS_LOADING'
+   | 'SELF_HEALING'
+   | 'READY'
+   | 'ERROR';
 
 interface User {
   id: string;
