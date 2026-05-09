@@ -33,17 +33,22 @@
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      console.log('Register form submitted', { email, companyName });
+      
       if (passwordStrength !== null && passwordStrength < 2) {
         toast.error('Please choose a stronger password');
         return;
       }
+      
       setIsLoading(true);
       try {
         await signup(email, password, companyName);
         toast.success('Account created! Please check your email to verify.');
-        navigate({ to: '/dashboard' });
+        setTimeout(() => {
+          navigate({ to: '/dashboard' });
+        }, 1500);
       } catch (error: any) {
-        console.error(error);
+        console.error('Registration error:', error);
         toast.error(error.message || 'Failed to create account');
       } finally {
         setIsLoading(false);
