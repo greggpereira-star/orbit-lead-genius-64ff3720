@@ -4,27 +4,34 @@ import { logger } from '../observability/logger';
 
 export class SafeSupabaseClientFactory {
   private static instance: SupabaseClient | null = null;
-  private static initializationPromise: Promise<SupabaseClient> | null = null;
 
-  static getInstanceSync(): SupabaseClient {
+  static getInstance(): SupabaseClient {
     if (this.instance) return this.instance;
     
     const config = getRuntimeConfig();
+    
+    // Ensure only one client exists with strict persistence settings
     this.instance = createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storageKey: 'enterprise-auth-v1',
+        flowType: 'pkce',
       },
       global: {
-        headers: { 'x-client-info': 'resilient-enterprise-factory-sync' },
+        headers: { 
+          'x-client-info': 'leadflow-enterprise-singleton',
+        },
       },
     });
+
+    logger.info('Supabase Factory: Singleton instance established');
     return this.instance;
   }
 
-  static async getInstance(): Promise<SupabaseClient> {
-    return this.getInstanceSync();
+  // Kept for backward compatibility with existing code
+  static getInstanceSync(): SupabaseClient {
+    return this.getInstance();
   }
 }
