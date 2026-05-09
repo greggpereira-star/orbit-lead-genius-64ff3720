@@ -4,7 +4,7 @@ export const oauthService = {
   async getAuthUrl(provider: 'meta' | 'google', companyId: string) {
     const { data: { publicUrl } } = supabase.storage.from('system').getPublicUrl('oauth'); // Just to get base URL
     const baseUrl = window.location.origin;
-    const redirectUri = \`\${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-callback\`;
+    const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-callback`;
     
     const state = btoa(JSON.stringify({ companyId, provider, origin: baseUrl }));
     
@@ -19,7 +19,7 @@ export const oauthService = {
         'pages_manage_metadata'
       ].join(',');
       
-      return \`https://www.facebook.com/v18.0/dialog/oauth?client_id=\${appId}&redirect_uri=\${redirectUri}&state=\${state}&scope=\${scopes}&response_type=code\`;
+      return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&state=${state}&scope=${scopes}&response_type=code`;
     } else {
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const scopes = [
@@ -29,7 +29,7 @@ export const oauthService = {
         'profile'
       ].join(' ');
       
-      return \`https://accounts.google.com/o/oauth2/v2/auth?client_id=\${clientId}&redirect_uri=\${redirectUri}&state=\${state}&scope=\${scopes}&response_type=code&access_type=offline&prompt=consent\`;
+      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}&scope=${scopes}&response_type=code&access_type=offline&prompt=consent`;
     }
   },
 
