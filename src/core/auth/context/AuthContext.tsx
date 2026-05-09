@@ -34,7 +34,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
    const [company, setCompany] = useState<Company | null>(null);
     const [membership, setMembership] = useState<Membership | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const traceId = useMemo(() => Math.random().toString(36).substring(2, 15), []);
+  const traceId = useMemo(() => {
+    if (typeof window !== 'undefined' && (window as any)._traceId) return (window as any)._traceId;
+    const id = Math.random().toString(36).substring(2, 15);
+    if (typeof window !== 'undefined') (window as any)._traceId = id;
+    return id;
+  }, []);
     const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
     const isInitialMount = useRef(true);
 
