@@ -18,8 +18,8 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-function brandedErrorResponse(): Response {
-  return new Response(renderErrorPage(), {
+function brandedErrorResponse(diagnostic?: string): Response {
+  return new Response(renderErrorPage(diagnostic), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
   });
@@ -62,8 +62,10 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return brandedErrorResponse();
+  const captured = consumeLastCapturedError();
+  const diagnostic = captured instanceof Error ? captured.message : (captured ? String(captured) : \`h3 swallowed SSR error: \${body}\`);
+  console.error(captured ?? new Error(diagnostic));
+  return brandedErrorResponse(diagnostic);
 }
 
 export default {
@@ -72,9 +74,9 @@ export default {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      return brandedErrorResponse();
+      return brandedErrorResponse(error?.message || String(error));
     }
   },
 };
