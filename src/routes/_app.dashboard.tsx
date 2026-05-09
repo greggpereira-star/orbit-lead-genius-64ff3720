@@ -18,10 +18,8 @@
    YAxis, 
    CartesianGrid, 
    Tooltip, 
-   ResponsiveContainer,
-   BarChart,
-   Bar,
-   Cell
+   ResponsiveContainer
+ import ReactECharts from 'echarts-for-react';
  } from 'recharts';
  
  export const Route = createFileRoute('/_app/dashboard')({
@@ -108,11 +106,49 @@
                      contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                      itemStyle={{ fontSize: '12px', fontWeight: 500, color: 'var(--foreground)' }}
                    />
-                   <Area type="monotone" dataKey="leads" stroke="var(--primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
-                </AreaChart>
-              </ResponsiveContainer>
-           </CardContent>
-         </Card>
+                     <Area type="monotone" dataKey="leads" stroke="var(--primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+             </CardContent>
+           </Card>
+ 
+           <Card className="col-span-4 border-none shadow-sm">
+             <CardHeader>
+               <CardTitle>Conversion Funnel Intelligence</CardTitle>
+               <CardDescription>Visualizing lead conversion through the sales pipeline</CardDescription>
+             </CardHeader>
+             <CardContent className="h-[350px]">
+               <ReactECharts 
+                 option={{
+                   tooltip: { trigger: 'item', formatter: '{b} : {c}%' },
+                   series: [{
+                     name: 'Funnel',
+                     type: 'funnel',
+                     left: '10%',
+                     top: 20,
+                     bottom: 20,
+                     width: '80%',
+                     min: 0,
+                     max: 100,
+                     minSize: '0%',
+                     maxSize: '100%',
+                     sort: 'descending',
+                     gap: 2,
+                     label: { show: true, position: 'inside', color: '#fff' },
+                     itemStyle: { borderColor: '#fff', borderWidth: 1 },
+                     data: [
+                       { value: 100, name: 'Visits' },
+                       { value: 60, name: 'Leads' },
+                       { value: 40, name: 'Qualified' },
+                       { value: 20, name: 'Deals' },
+                       { value: 10, name: 'Closed' }
+                     ]
+                   }]
+                 }} 
+                 style={{ height: '100%', width: '100%' }}
+               />
+             </CardContent>
+           </Card>
           <Card className="col-span-3 border-none shadow-sm flex flex-col">
            <CardHeader>
              <CardTitle>Recent Activity</CardTitle>
