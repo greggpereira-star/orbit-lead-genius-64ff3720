@@ -11,7 +11,16 @@ interface LogContext {
 }
 
 class EnterpriseLogger {
-  private correlationId: string = crypto.randomUUID();
+  private _correlationId: string | null = null;
+
+  private get correlationId(): string {
+    if (!this._correlationId) {
+      this._correlationId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : Math.random().toString(36).substring(2, 15);
+    }
+    return this._correlationId;
+  }
 
   private async log(level: LogLevel, message: string, context: LogContext = {}) {
     const payload = {
