@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
   Users, 
@@ -11,7 +12,8 @@ import {
   FormInput, 
   CheckCircle2,
   Globe,
-  Search
+  Search,
+  Plus
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -237,5 +239,3 @@ function DashboardPage() {
 }
 
 // Fixed missing imports
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';

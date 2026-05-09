@@ -4,7 +4,12 @@ class EnterpriseTracker {
   private companyId: string | null = null;
   private sessionId: string | null = null;
   private visitorId: string | null = null;
-  private startTime: number = Date.now();
+  private _startTime: number | null = null;
+
+  private get startTime(): number {
+    if (this._startTime === null) this._startTime = Date.now();
+    return this._startTime;
+  }
   private maxScroll: number = 0;
 
   init(companyId: string) {
