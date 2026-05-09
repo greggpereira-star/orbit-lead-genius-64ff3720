@@ -1,3 +1,4 @@
+ import { enrichmentService } from '@/modules/ai/services/enrichment';
  export interface LeadSubmission {
    name: string;
    email?: string;
@@ -74,6 +75,9 @@
  
       // 3. Auto-route lead
       await routingService.assignLead(lead.id, companyId);
+ 
+      // 4. Enrich Lead in background
+      enrichmentService.enrichLead(lead.id).catch(console.error);
  
       return { success: true, leadId: lead.id };
    }
