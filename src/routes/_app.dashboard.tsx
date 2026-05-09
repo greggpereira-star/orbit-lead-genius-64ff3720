@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
   Users, 
@@ -58,6 +60,13 @@ const liveEvents = [
 ];
 
 function DashboardPage() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -78,7 +87,21 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="border-none shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          stats.map((stat) => (
           <Card key={stat.title} className="border-none shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -94,7 +117,8 @@ function DashboardPage() {
               </p>
             </CardContent>
           </Card>
-        ))}
+          ))
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -103,7 +127,10 @@ function DashboardPage() {
             <CardTitle>Lead Performance</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
-             <ResponsiveContainer width="100%" height="100%">
+            {isLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
                <AreaChart data={chartData}>
                  <defs>
                   <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
@@ -121,6 +148,7 @@ function DashboardPage() {
                     <Area type="monotone" dataKey="leads" stroke="var(--primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
                  </AreaChart>
              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
