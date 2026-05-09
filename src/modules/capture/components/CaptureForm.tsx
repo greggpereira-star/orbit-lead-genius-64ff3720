@@ -1,4 +1,4 @@
- import React from 'react';
+ import React, { useState } from 'react';
  import { useForm } from 'react-hook-form';
  import { zodResolver } from '@hookform/resolvers/zod';
  import * as z from 'zod';
@@ -25,6 +25,7 @@
  });
  
  export function CaptureForm() {
+   const [step, setStep] = useState(1);
    const form = useForm<z.infer<typeof formSchema>>({
      resolver: zodResolver(formSchema),
      defaultValues: {
@@ -61,66 +62,101 @@
      }
    };
  
+   const nextStep = () => {
+     const fieldsToValidate = step === 1 ? ['name', 'email'] : ['phone', 'company'];
+     form.trigger(fieldsToValidate as any).then(isValid => {
+       if (isValid) setStep(s => s + 1);
+     });
+   };
+ 
    return (
      <Form {...form}>
-       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-         <FormField
-           control={form.control}
-           name="name"
-           render={({ field }) => (
-             <FormItem>
-               <FormLabel>Full Name</FormLabel>
-               <FormControl>
-                 <Input placeholder="John Doe" {...field} />
-               </FormControl>
-               <FormMessage />
-             </FormItem>
-           )}
-         />
-         <FormField
-           control={form.control}
-           name="email"
-           render={({ field }) => (
-             <FormItem>
-               <FormLabel>Email</FormLabel>
-               <FormControl>
-                 <Input placeholder="john@example.com" {...field} />
-               </FormControl>
-               <FormMessage />
-             </FormItem>
-           )}
-         />
-         <div className="grid grid-cols-2 gap-4">
-           <FormField
-             control={form.control}
-             name="phone"
-             render={({ field }) => (
-               <FormItem>
-                 <FormLabel>Phone (optional)</FormLabel>
-                 <FormControl>
-                   <Input placeholder="+55..." {...field} />
-                 </FormControl>
-                 <FormMessage />
-               </FormItem>
-             )}
-           />
-           <FormField
-             control={form.control}
-             name="company"
-             render={({ field }) => (
-               <FormItem>
-                 <FormLabel>Company (optional)</FormLabel>
-                 <FormControl>
-                   <Input placeholder="Acme Inc" {...field} />
-                 </FormControl>
-                 <FormMessage />
-               </FormItem>
-             )}
-           />
+       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+         <div className="flex justify-between mb-8">
+           {[1, 2].map((i) => (
+             <div key={i} className="flex items-center gap-2">
+               <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step >= i ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted text-muted-foreground border'}`}>
+                 {i}
+               </div>
+               <span className={`text-xs font-medium ${step >= i ? 'text-foreground' : 'text-muted-foreground'}`}>
+                 {i === 1 ? 'Information' : 'Business'}
+               </span>
+             </div>
+           ))}
          </div>
-         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-           {form.formState.isSubmitting ? 'Sending...' : 'Request Contact'}
-         </Button>
+ 
+         {step === 1 && (
+           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+             <FormField
+               control={form.control}
+               name="name"
+               render={({ field }) => (
+                 <FormItem>
+                   <FormLabel className="text-sm font-semibold">What is your full name?</FormLabel>
+                   <FormControl>
+                     <Input placeholder="John Doe" className="h-12 text-lg focus-visible:ring-2" {...field} />
+                   </FormControl>
+                   <FormMessage />
+                 </FormItem>
+               )}
+             />
+             <FormField
+               control={form.control}
+               name="email"
+               render={({ field }) => (
+                 <FormItem>
+                   <FormLabel className="text-sm font-semibold">Your work email address</FormLabel>
+                   <FormControl>
+                     <Input placeholder="john@example.com" className="h-12 text-lg focus-visible:ring-2" {...field} />
+                   </FormControl>
+                   <FormMessage />
+                 </FormItem>
+               )}
+             />
+             <Button type="button" onClick={nextStep} className="w-full h-12 text-base font-bold shadow-md hover:shadow-lg transition-all">
+               Continue to next step
+             </Button>
+           </div>
+         )}
+ 
+         {step === 2 && (
+           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+             <FormField
+               control={form.control}
+               name="phone"
+               render={({ field }) => (
+                 <FormItem>
+                   <FormLabel className="text-sm font-semibold">Phone number (optional)</FormLabel>
+                   <FormControl>
+                     <Input placeholder="+1..." className="h-12 text-lg focus-visible:ring-2" {...field} />
+                   </FormControl>
+                   <FormMessage />
+                 </FormItem>
+               )}
+             />
+             <FormField
+               control={form.control}
+               name="company"
+               render={({ field }) => (
+                 <FormItem>
+                   <FormLabel className="text-sm font-semibold">Company name (optional)</FormLabel>
+                   <FormControl>
+                     <Input placeholder="Acme Inc" className="h-12 text-lg focus-visible:ring-2" {...field} />
+                   </FormControl>
+                   <FormMessage />
+                 </FormItem>
+               )}
+             />
+             <div className="flex gap-3">
+               <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1 h-12">
+                 Back
+               </Button>
+               <Button type="submit" className="flex-[2] h-12 text-base font-bold bg-primary hover:bg-primary/90 shadow-md transition-all" disabled={form.formState.isSubmitting}>
+                 {form.formState.isSubmitting ? 'Processing...' : 'Complete Registration'}
+               </Button>
+             </div>
+           </div>
+         )}
        </form>
      </Form>
    );
