@@ -219,14 +219,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logger.info('AuthTrace: Signup successful', { email, traceId });
       toast.success('Account created successfully', { id: loadingToast });
       
-      // If auto-confirm is enabled, session will be returned. 
-      // If not, data.user will exist but session will be null.
       if (data.session) {
         await loadTenantContext(data.user!, getSupabase());
       } else {
         setState('UNAUTHENTICATED');
       }
       return data;
+    } catch (err: any) {
+      handleAuthFailure(err.message, false);
+      throw err;
+    }
+  };
+
   const loginWithGoogle = async () => {
     setState('AUTHENTICATING');
     try {
@@ -255,14 +259,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
     } catch (err: any) {
       handleAuthFailure(`Meta OAuth failed: ${err.message}`);
-    }
-  };
-
-    loginWithGoogle,
-    loginWithMeta,
-    } catch (err: any) {
-      handleAuthFailure(err.message, false);
-      throw err;
     }
   };
 
