@@ -1,4 +1,5 @@
-import { AuthProvider } from "@/core/auth/context/AuthContext";
+ import { AuthProvider } from "@/core/auth/context/AuthContext";
+ import { Toaster } from "sonner";
 import { AuthErrorBoundary } from "@/components/error/AuthErrorBoundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -136,15 +137,16 @@ function RootComponent() {
     };
   }, []);
 
-  return (
-    <ErrorBoundary name="GlobalRoot">
-      <QueryClientProvider client={queryClient}>
-        <AuthErrorBoundary name="GlobalAuthProvider">
-          <AuthProvider>
-            <Outlet />
-          </AuthProvider>
-        </AuthErrorBoundary>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
+   return (
+     <ErrorBoundary name="GlobalRoot">
+       <QueryClientProvider client={queryClient}>
+         <AuthErrorBoundary name="GlobalAuthProvider">
+           <AuthProvider>
+             <Outlet />
+             <Toaster richColors position="top-right" closeButton />
+           </AuthProvider>
+         </AuthErrorBoundary>
+       </QueryClientProvider>
+     </ErrorBoundary>
+   );
 }
