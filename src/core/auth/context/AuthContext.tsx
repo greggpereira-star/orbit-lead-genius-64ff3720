@@ -57,11 +57,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       }
     }, [SCHEMA_VERSION]);
 
-    const markWorkspaceAsReady = useCallback((userId: string, tenantId: string, membershipId: string) => {
+    const markWorkspaceAsReady = useCallback((userId: string, tenant_id: string, membership_id: string) => {
+      if (typeof window === 'undefined') return;
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         user_id: userId,
-        tenant_id: tenantId,
-        membership_id: membershipId,
+        tenant_id,
+        membership_id,
         workspace_ready: true,
         onboarding_completed: true,
         permissions_ready: true,
