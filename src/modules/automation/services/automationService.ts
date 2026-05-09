@@ -23,7 +23,7 @@ export const automationService = {
     if (!automations || automations.length === 0) return;
 
     // Process automations in parallel with error isolation
-    await Promise.allSettled(automations.map(async (automation) => {
+    await Promise.allSettled(automations.map(async (automation: any) => {
       try {
         await this.executeAutomation(automation, trigger.data);
         
