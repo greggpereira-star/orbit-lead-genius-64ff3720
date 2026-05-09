@@ -14,60 +14,46 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
    component: SignupPage,
  });
  
- function SignupPage() {
-   const { signup } = useAuth();
-   const navigate = useNavigate();
-   const [email, setEmail] = useState('');
-   const [password, setPassword] = useState('');
-   const [companyName, setCompanyName] = useState('');
-   const [isLoading, setIsLoading] = useState(false);
- 
-    const passwordStrength = useMemo(() => {
-      if (!password) return null;
-      let strength = 0;
-      if (password.length >= 8) strength++;
-      if (/[A-Z]/.test(password)) strength++;
-      if (/[0-9]/.test(password)) strength++;
-      if (/[^A-Za-z0-9]/.test(password)) strength++;
-      return strength;
-    }, [password]);
-
-   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log('!!! Register form handleSubmit triggered !!!', { email, companyName });
-    
-    if (isLoading) {
-      console.log('Registration already in progress, skipping');
-      return;
-    }
-
-    if (passwordStrength !== null && passwordStrength < 2) {
-      console.log('Password too weak');
-      toast.error('Please choose a stronger password');
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      console.log('AuthTrace: Calling signup service', { email, companyName });
-      const result = await signup(email, password, companyName);
-      console.log('AuthTrace: Signup response received', result);
+   function SignupPage() {
+     const navigate = useNavigate();
+     const [email, setEmail] = useState('');
+     const [password, setPassword] = useState('');
+     const [companyName, setCompanyName] = useState('');
+     const [retryCount, setRetryCount] = useState(0);
+     const { signup, state, error: authError } = useAuth();
+     const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
+   
+      const passwordStrength = useMemo(() => {
+        if (!password) return null;
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        return strength;
+      }, [password]);
+  
+     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
       
-      if (result?.session) {
-        toast.success('Account created! Entering workspace...');
-        navigate({ to: '/dashboard' });
-      } else {
-        toast.success('Enterprise account pending verification. Check your email.');
-        // Stay on page or redirect to a "check email" page if we had one
+      if (isLoading) return;
+  
+      if (passwordStrength !== null && passwordStrength < 2) {
+        toast.error('Escolha uma senha mais forte.');
+        return;
       }
-    } catch (error: any) {
-      console.error('AuthTrace: CRITICAL Registration error:', error);
-      toast.error(error.message || 'Failed to initialize enterprise account');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      
+      (async () => {
+        try {
+          const result = await signup(email, password, companyName, retryCount);
+          if (result?.session) {
+            navigate({ to: '/dashboard' });
+          }
+        } catch (error: any) {
+          setRetryCount(prev => prev + 1);
+        }
+      })();
+    };
  
    return (
      <div className="space-y-6">
