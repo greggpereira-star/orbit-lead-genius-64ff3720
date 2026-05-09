@@ -35,8 +35,10 @@ interface AuthContextType {
   isReady: boolean;
   error: string | null;
   traceId: string;
-  login: (email: string, password?: string) => Promise<void>;
-  signup: (email: string, password?: string, companyName?: string) => Promise<void>;
+  login: (email: string, password?: string) => Promise<any>;
+  signup: (email: string, password?: string, companyName?: string) => Promise<any>;
+  loginWithGoogle: () => Promise<void>;
+  loginWithMeta: () => Promise<void>;
   logout: () => Promise<void>;
   refreshContext: () => Promise<void>;
 }
@@ -66,11 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logger.info('Loading tenant context', { userId: supabaseUser.id, traceId, requestId });
       
       // 1. Profiles
-      const { data: profile, error: profileError } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .maybeSingle();
+      logger.info('AuthTrace: Fetching profile', { userId: supabaseUser.id, traceId, requestId });
+      const { data: profile, error: profileError } = await safeDb(
+        supabaseClient.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle(),
+        'loadTenantContext:profile'
+      );
 
       if (profileError) throw profileError;
 
@@ -82,18 +84,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       // 2. Memberships + Companies
-      const { data: membership, error: membershipError } = await supabaseClient
-        .from('memberships')
-        .select('*, companies(*)')
-        .eq('user_id', supabaseUser.id)
-        .limit(1)
-        .maybeSingle();
+      logger.info('AuthTrace: Fetching membership', { userId: supabaseUser.id, traceId, requestId });
+      const { data: membership, error: membershipError } = await safeDb(
+        supabaseClient.from('memberships').select('*, companies(*)').eq('user_id', supabaseUser.id).limit(1).maybeSingle(),
+        'loadTenantContext:membership'
+      );
 
       if (membershipError) throw membershipError;
 
-      if (!membership || !membership.companies) {
-        logger.warn('User has no company membership', { userId: supabaseUser.id, traceId });
-        setState('READY'); // User is authenticated but has no tenant. UI handles this.
+      if (!membership || !membership.companies || (Array.isArray(membership.companies) && membership.companies.length === 0)) {
+        logger.warn('AuthTrace: No membership found', { userId: supabaseUser.id, traceId });
+        
+        // Try a fallback: check if there are ANY companies this user can see
+        const { data: companies } = await supabaseClient.from('companies').select('*').limit(1);
+        if (companies && companies.length > 0) {
+          logger.info('AuthTrace: Found company via fallback', { companyId: companies[0].id, traceId });
+          setCompany({
+            id: companies[0].id,
+            name: companies[0].name,
+            slug: companies[0].slug
+          });
+          setState('READY');
+          return;
+        }
+
+        // If still no company, it's a "Partial Auth" state
+        logger.error('AuthTrace: User authenticated but no tenant context', { userId: supabaseUser.id, traceId });
+        setState('READY'); // We set READY but company is null, UI will show "System Fault" or "Create Company"
         return;
       }
 
@@ -153,12 +170,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [loadTenantContext, handleAuthFailure, traceId]);
 
-  const login = async (email: string, password?: string) => {
+  const login = async (email: string, password?: string): Promise<any> => {
     setState('AUTHENTICATING');
     const loadingToast = toast.loading('Authenticating credentials...');
     
     try {
-      const { error } = await getSupabase().auth.signInWithPassword({
+      const { data, error } = await getSupabase().auth.signInWithPassword({
         email,
         password: password || '',
       });
@@ -168,19 +185,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
+      logger.info('AuthTrace: Login successful', { email, traceId });
       toast.success('Successfully signed in', { id: loadingToast });
+      return data;
     } catch (err: any) {
       handleAuthFailure(err.message, false);
       throw err;
     }
   };
 
-  const signup = async (email: string, password?: string, companyName?: string) => {
+  const signup = async (email: string, password?: string, companyName?: string): Promise<any> => {
     setState('AUTHENTICATING');
     const loadingToast = toast.loading('Creating enterprise account...');
     
     try {
-      const { error } = await getSupabase().auth.signUp({
+      const { data, error } = await getSupabase().auth.signUp({
         email,
         password: password || '',
         options: {
@@ -197,8 +216,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      toast.success('Account created. Please check your email.', { id: loadingToast });
-      setState('UNAUTHENTICATED'); // Wait for verification
+      logger.info('AuthTrace: Signup successful', { email, traceId });
+      toast.success('Account created successfully', { id: loadingToast });
+      
+      // If auto-confirm is enabled, session will be returned. 
+      // If not, data.user will exist but session will be null.
+      if (data.session) {
+        await loadTenantContext(data.user!, getSupabase());
+      } else {
+        setState('UNAUTHENTICATED');
+      }
+      return data;
+  const loginWithGoogle = async () => {
+    setState('AUTHENTICATING');
+    try {
+      const { error } = await getSupabase().auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+          queryParams: { access_type: 'offline', prompt: 'consent' }
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      handleAuthFailure(`Google OAuth failed: ${err.message}`);
+    }
+  };
+
+  const loginWithMeta = async () => {
+    setState('AUTHENTICATING');
+    try {
+      const { error } = await getSupabase().auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: window.location.origin + '/dashboard'
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      handleAuthFailure(`Meta OAuth failed: ${err.message}`);
+    }
+  };
+
+    loginWithGoogle,
+    loginWithMeta,
     } catch (err: any) {
       handleAuthFailure(err.message, false);
       throw err;
