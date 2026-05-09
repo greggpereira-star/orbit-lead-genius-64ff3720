@@ -236,3 +236,64 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Audit logs access" ON audit_logs FOR ALL USING (check_membership(company_id));
+
+-- Trigger Error Logs
+CREATE TABLE IF NOT EXISTS trigger_error_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trigger_name TEXT NOT NULL,
+    user_id UUID,
+    payload JSONB,
+    error_message TEXT,
+    error_stack TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- Improved trigger with error handling
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_company_id UUID;
+    comp_name TEXT;
+BEGIN
+    -- 1. Create profile
+    BEGIN
+        INSERT INTO public.profiles (id, email, full_name)
+        VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name')
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            full_name = COALESCE(EXCLUDED.full_name, profiles.full_name);
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO trigger_error_logs (trigger_name, user_id, error_message, error_stack)
+        VALUES ('handle_new_user:profiles', NEW.id, SQLERRM, '');
+    END;
+
+    -- 2. Create company
+    BEGIN
+        comp_name := COALESCE(NEW.raw_user_meta_data->>'company_name', 'My Company');
+        
+        INSERT INTO public.companies (name, slug)
+        VALUES (comp_name, lower(regexp_replace(comp_name, '[^a-zA-Z0-9]', '-', 'g')) || '-' || floor(random()*10000)::text)
+        RETURNING id INTO new_company_id;
+
+        -- 3. Create membership
+        INSERT INTO public.memberships (company_id, user_id, role)
+        VALUES (new_company_id, NEW.id, 'owner');
+
+        -- 4. Setup default stages
+        INSERT INTO public.stages (company_id, name, order_index, color)
+        VALUES 
+            (new_company_id, 'New', 0, '#3b82f6'),
+            (new_company_id, 'Contacted', 1, '#8b5cf6'),
+            (new_company_id, 'Qualified', 2, '#10b981'),
+            (new_company_id, 'Negotiation', 3, '#f59e0b'),
+            (new_company_id, 'Closed Won', 4, '#10b981'),
+            (new_company_id, 'Closed Lost', 5, '#ef4444');
+            
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO trigger_error_logs (trigger_name, user_id, error_message, error_stack)
+        VALUES ('handle_new_user:company_setup', NEW.id, SQLERRM, '');
+    END;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
