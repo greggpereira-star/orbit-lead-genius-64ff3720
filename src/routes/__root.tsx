@@ -141,12 +141,14 @@ function RootComponent() {
    return (
      <ErrorBoundary name="GlobalRoot">
        <QueryClientProvider client={queryClient}>
-         <AuthErrorBoundary name="GlobalAuthProvider">
-           <AuthProvider>
-             <Outlet />
-             <Toaster richColors position="top-right" closeButton />
-           </AuthProvider>
-         </AuthErrorBoundary>
+         <InfrastructureGuard>
+           <AuthErrorBoundary name="GlobalAuthProvider">
+             <AuthProvider>
+               <Outlet />
+               <Toaster richColors position="top-right" closeButton />
+             </AuthProvider>
+           </AuthErrorBoundary>
+         </InfrastructureGuard>
        </QueryClientProvider>
      </ErrorBoundary>
    );
