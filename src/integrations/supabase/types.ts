@@ -155,6 +155,60 @@ export type Database = {
         }
         Relationships: []
       }
+      export_audit_logs: {
+        Row: {
+          created_at: string
+          export_type: string
+          file_url: string | null
+          filters: Json | null
+          form_id: string | null
+          id: string
+          row_count: number | null
+          status: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          export_type: string
+          file_url?: string | null
+          filters?: Json | null
+          form_id?: string | null
+          id?: string
+          row_count?: number | null
+          status: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          export_type?: string
+          file_url?: string | null
+          filters?: Json | null
+          form_id?: string | null
+          id?: string
+          row_count?: number | null
+          status?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_audit_logs_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_analytics: {
         Row: {
           created_at: string
@@ -193,6 +247,123 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_events: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device: string | null
+          ecommerce_context: Json | null
+          embed_mode: string | null
+          event_name: string
+          event_type: string | null
+          fbclid: string | null
+          form_id: string | null
+          form_slug: string | null
+          gbraid: string | null
+          gclid: string | null
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          os: string | null
+          page_url: string | null
+          referrer: string | null
+          session_id: string | null
+          source: string | null
+          submission_id: string | null
+          tenant_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visitor_id: string | null
+          wbraid: string | null
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device?: string | null
+          ecommerce_context?: Json | null
+          embed_mode?: string | null
+          event_name: string
+          event_type?: string | null
+          fbclid?: string | null
+          form_id?: string | null
+          form_slug?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          os?: string | null
+          page_url?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          source?: string | null
+          submission_id?: string | null
+          tenant_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string | null
+          wbraid?: string | null
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device?: string | null
+          ecommerce_context?: Json | null
+          embed_mode?: string | null
+          event_name?: string
+          event_type?: string | null
+          fbclid?: string | null
+          form_id?: string | null
+          form_slug?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          os?: string | null
+          page_url?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          source?: string | null
+          submission_id?: string | null
+          tenant_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string | null
+          wbraid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_events_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
