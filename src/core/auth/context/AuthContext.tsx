@@ -3,8 +3,8 @@
  import { User as SupabaseUser } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
- import { AuthState, UserProfile, Company, Membership } from '../types';
- import { WorkspaceOrchestrator } from '../services/WorkspaceOrchestrator';
+  import { AuthState, UserProfile, Company, Membership } from '../types/index';
+  import { WorkspaceOrchestrator } from '../services/WorkspaceOrchestrator';
 
 interface AuthContextType {
   state: AuthState;
@@ -98,10 +98,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             throw sessionError;
           }
           
-          if (session?.user && mounted) {
-            logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
-            await loadTenantContext(session.user, supabaseClient);
-          } else if (mounted) {
+           if (session?.user && mounted) {
+             logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
+             await loadTenantContext(session.user);
+           } else if (mounted) {
             logger.info('AuthTrace: No session found', { traceId });
             setState('UNAUTHENTICATED');
           }
@@ -125,9 +125,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
          logger.info('Supabase Auth Event', { event, traceId });
          if (!mounted) return;
  
-         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-           if (session?.user) await loadTenantContext(session.user, supabaseClient);
-         } else if (event === 'SIGNED_OUT') {
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (session?.user) await loadTenantContext(session.user);
+          } else if (event === 'SIGNED_OUT') {
            setUser(null);
            setCompany(null);
            setState('UNAUTHENTICATED');
@@ -210,11 +210,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
          traceId 
        });
  
-       if (data.session) {
-         toast.success('Conta criada com sucesso!', { id: loadingToast });
-         setState('EMAIL_CONFIRMED');
-         await loadTenantContext(data.user!, getSupabase());
-       } else {
+        if (data.session) {
+          toast.success('Conta criada com sucesso!', { id: loadingToast });
+          setState('EMAIL_CONFIRMED');
+          await loadTenantContext(data.user!);
+        } else {
          toast.success('Verifique seu e-mail para continuar', { id: loadingToast });
          setState('EMAIL_SENT');
        }
@@ -285,7 +285,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
   const refreshContext = async () => {
     const supabaseClient = getSupabase();
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session?.user) await loadTenantContext(session.user, supabaseClient);
+    if (session?.user) await loadTenantContext(session.user);
   };
 
   const value = {
