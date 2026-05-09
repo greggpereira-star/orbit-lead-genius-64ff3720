@@ -6,8 +6,10 @@
    FileText, 
    BarChart3, 
    Settings, 
-   Zap,
-   MessageSquare
+    Zap,
+    MessageSquare,
+    Monitor,
+    ShieldCheck
  } from 'lucide-react';
  import {
    Sidebar,
@@ -30,8 +32,9 @@
     { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
     { title: 'Forms', icon: FileText, to: '/forms' },
     { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
-    { title: 'Automations', icon: Zap, to: '/automations' },
-    { title: 'Analytics', icon: BarChart3, to: '/analytics' },
+     { title: 'Automations', icon: Zap, to: '/automations' },
+     { title: 'Analytics', icon: BarChart3, to: '/analytics' },
+     { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
  ];
  
  export function AppSidebar() {
