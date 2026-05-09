@@ -174,16 +174,18 @@ function RootShell({ children }: { children: React.ReactNode }) {
     };
    }, [state]);
  
-   const isBootstrapping = [
-     'TENANT_VALIDATING', 
-     'TENANT_RECOVERING', 
-     'MEMBERSHIP_RECOVERING', 
-     'ROLE_RECOVERING', 
-     'PERMISSIONS_RECOVERING',
-     'WORKSPACE_READY'
-   ].includes(state as string);
-
-   if (isBootstrapping) {
+    // Only show bootstrap UI if we ARE in a bootstrap state AND we don't have a workspace ready cache
+    // Note: AUTHENTICATED means "we have a session and a cache hit", so we skip bootstrap.
+    const isBootstrapping = [
+      'TENANT_VALIDATING', 
+      'TENANT_RECOVERING', 
+      'MEMBERSHIP_RECOVERING', 
+      'ROLE_RECOVERING', 
+      'PERMISSIONS_RECOVERING',
+      'WORKSPACE_READY'
+    ].includes(state as string);
+ 
+    if (isBootstrapping) {
      const statusMap: Record<string, any> = {
        TENANT_VALIDATING: 'BOOTSTRAPPING',
        TENANT_RECOVERING: 'BOOTSTRAPPING',

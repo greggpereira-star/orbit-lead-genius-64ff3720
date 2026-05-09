@@ -20,7 +20,8 @@
    | 'PERMISSIONS_RECOVERING'
    | 'WORKSPACE_READY'
    | 'DASHBOARD_BOOTSTRAP'
-   | 'READY'
+    | 'READY'
+    | 'AUTHENTICATED'
    | 'ERROR';
  
  export interface UserProfile {
