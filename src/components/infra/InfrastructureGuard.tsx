@@ -125,8 +125,13 @@ import { Button } from '@/components/ui/button';
            </div>
 
            <div className="space-y-4">
-             <Button onClick={check} className="w-full h-12 font-bold shadow-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors">
-               <RefreshCw className="mr-2 h-4 w-4" /> RE-VALIDATE INFRASTRUCTURE
+             <Button 
+               onClick={check} 
+               disabled={isChecking}
+               className="w-full h-12 font-bold shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95"
+             >
+               <RefreshCw className={`mr-2 h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} /> 
+               {isChecking ? 'TESTANDO CONEXÃO...' : 'TESTAR CONEXÃO AGORA'}
              </Button>
              
              <div className="p-4 bg-muted rounded-lg border text-[11px] space-y-2">
