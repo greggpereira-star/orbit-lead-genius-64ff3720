@@ -150,13 +150,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         setMembership(result.membership);
         setState('READY');
        
-       logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
-     } catch (err: any) {
-       logger.error('Failed to orchestrate workspace', { error: err.message, traceId });
-       setError(`Workspace bootstrap failed: ${err.message}`);
-       setState('ERROR');
-     }
-   }, [traceId]);
+        logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
+      } catch (err: any) {
+        logger.error('Failed to orchestrate workspace', { error: err.message, traceId });
+        setError(`Workspace bootstrap failed: ${err.message}`);
+        setState('ERROR');
+      } finally {
+        isOrchestrating.current = null;
+      }
+    }, [traceId, checkWorkspaceReadiness, markWorkspaceAsReady]);
 
   useEffect(() => {
     let mounted = true;
