@@ -35,7 +35,19 @@
   useEffect(() => {
     let mounted = true;
     
-    if (!supabase) {
+    // Ensure we are in a browser environment
+    if (typeof window === 'undefined') {
+      setIsLoading(false);
+      return;
+    }
+
+    if (!supabase || !supabase.auth) {
+      console.warn('Supabase not fully initialized. Falling back to mock auth.');
+      // Use mock session for development/preview if supabase is unavailable
+      if (process.env.NODE_ENV === 'development') {
+        setUser({ id: 'mock-user', email: 'test@example.com', name: 'Test User' });
+        setCompany({ id: 'mock-company', name: 'Mock Company', slug: 'mock-company' });
+      }
       setIsLoading(false);
       return;
     }
@@ -50,10 +62,6 @@
         }
       } catch (err: any) {
         console.warn('Auth initialization failed:', err);
-        // Log critical auth failure
-        if (err?.message !== 'Auth session missing!') {
-           // Silent warn as getSession can fail naturally if no cookie
-        }
       } finally {
         if (mounted) setIsLoading(false);
       }
