@@ -1,4 +1,7 @@
-import { useIntegration } from '../hooks/useIntegration';
+ import { useIntegration } from '../hooks/useIntegration';
+ import { Search } from 'lucide-react';
+ import { Input } from '@/components/ui/input';
+ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -17,7 +20,8 @@ import {
 } from '@/components/ui/dialog';
 
 export function MetaIntegration({ companyId }: { companyId: string }) {
-  const { connection, assets, isLoading, connect, discover, toggleAsset } = useIntegration(companyId, 'meta');
+   const { connection, assets, isLoading, connect, discover, toggleAsset } = useIntegration(companyId, 'meta');
+   const [searchTerm, setSearchTerm] = useState('');
 
   return (
     <Card className="border shadow-none hover:border-primary/20 transition-colors">
@@ -74,8 +78,18 @@ export function MetaIntegration({ companyId }: { companyId: string }) {
                   </Button>
                 </div>
 
-                <Tabs defaultValue="pages" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
+                 <div className="relative mb-4">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                   <Input 
+                     placeholder="Search assets..." 
+                     className="pl-9 text-xs h-9"
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                   />
+                 </div>
+
+                 <Tabs defaultValue="pages" className="w-full">
+                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="pages" className="text-[10px] font-bold uppercase">Pages</TabsTrigger>
                     <TabsTrigger value="ad_accounts" className="text-[10px] font-bold uppercase">Ad Accounts</TabsTrigger>
                     <TabsTrigger value="forms" className="text-[10px] font-bold uppercase">Lead Forms</TabsTrigger>
@@ -87,14 +101,14 @@ export function MetaIntegration({ companyId }: { companyId: string }) {
                         {type.replace('_', ' ')}s
                       </Label>
                       
-                      {assets.filter(a => a.asset_type === type).length === 0 ? (
+                       {assets.filter(a => a.asset_type === type && a.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
                         <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
                           <p className="text-sm text-muted-foreground">No {type.replace('_', ' ')}s found.</p>
                           <Button variant="link" onClick={discover} className="text-xs font-bold text-primary">Discover</Button>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {assets.filter(a => a.asset_type === type).map(asset => (
+                           {assets.filter(a => a.asset_type === type && a.name.toLowerCase().includes(searchTerm.toLowerCase())).map(asset => (
                             <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 hover:border-primary/30 transition-all">
                               <div className="flex items-center gap-3">
                                 <div className={`w-8 h-8 rounded bg-muted flex items-center justify-center`}>
