@@ -42,6 +42,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const CACHE_KEY = 'workspace_readiness_snapshot';
 
     const checkWorkspaceReadiness = useCallback((tenantId?: string) => {
+      if (typeof window === 'undefined') return false;
       const cached = localStorage.getItem(CACHE_KEY);
       if (!cached) return false;
       
