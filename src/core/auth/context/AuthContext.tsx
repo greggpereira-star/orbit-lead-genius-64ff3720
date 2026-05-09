@@ -33,6 +33,11 @@
    const [isLoading, setIsLoading] = useState(true);
  
   useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -40,7 +45,7 @@
           await handleUserSession(session.user);
         }
       } catch (err) {
-        console.warn('Auth initialization failed, likely due to missing Supabase credentials:', err);
+        console.warn('Auth initialization failed:', err);
       } finally {
         setIsLoading(false);
       }
@@ -48,7 +53,7 @@
 
     initAuth();
 
-    const authListener = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       if (session?.user) {
         await handleUserSession(session.user);
       } else {
@@ -58,11 +63,7 @@
       setIsLoading(false);
     });
 
-    const subscription = authListener.data?.subscription;
-
-    return () => {
-      subscription?.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
  
    const handleUserSession = async (supabaseUser: SupabaseUser) => {
