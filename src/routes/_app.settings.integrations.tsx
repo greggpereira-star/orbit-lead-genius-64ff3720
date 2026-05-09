@@ -66,6 +66,13 @@ function IntegrationsSettings() {
       api_token: cvConfig.api_token,
       subdomain: cvConfig.cvcrm_base_url
     });
+    if (result.success) {
+      const status = await cvcrmService.getStatus(company.id);
+      setIntegrationStatus(status);
+    }
+    setIsSaving(false);
+  };
+
   const handleSendTestLead = async () => {
     if (!company) return;
     setIsTestingLead(true);
@@ -76,13 +83,6 @@ function IntegrationsSettings() {
       toast.error('Failed to send test lead: ' + (result.error || 'Unknown error'));
     }
     setIsTestingLead(false);
-  };
-
-    if (result.success) {
-      const status = await cvcrmService.getStatus(company.id);
-      setIntegrationStatus(status);
-    }
-    setIsSaving(false);
   };
 
   const trackingScript = `<script>
