@@ -243,9 +243,7 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
               <Button variant="outline" size="sm" className="flex-1 text-[10px] uppercase font-bold tracking-wider h-8 gap-1.5" onClick={() => window.open(`/f/${form.slug}`, '_blank')}>
                 <Eye className="h-3 w-3" /> Preview
               </Button>
-              <Button variant="outline" size="sm" className="flex-1 text-[10px] uppercase font-bold tracking-wider h-8 gap-1.5">
-                <ExternalLink className="h-3 w-3" /> Embed
-              </Button>
+              <EmbedDialog form={form} />
             </div>
           </CardContent>
         </Card>
