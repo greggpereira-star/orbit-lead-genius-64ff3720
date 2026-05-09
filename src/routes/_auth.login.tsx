@@ -1,6 +1,7 @@
- import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+  import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
  import * as React from 'react';
- import { useState } from 'react';
+  import { useState } from 'react';
+  import { toast } from 'sonner';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
@@ -18,28 +19,20 @@
    const [password, setPassword] = useState('');
    const [isLoading, setIsLoading] = useState(false);
  
-   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-     e.preventDefault();
-     setIsLoading(true);
-     try {
-       await login(email, password);
-             <div className="space-y-2">
-               <Label htmlFor="password">Password</Label>
-               <Input 
-                 id="password" 
-                 type="password" 
-                 required 
-                 value={password}
-                 onChange={(e) => setPassword(e.target.value)}
-               />
-             </div>
-       navigate({ to: '/dashboard' });
-     } catch (error) {
-       console.error(error);
-     } finally {
-       setIsLoading(false);
-     }
-   };
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setIsLoading(true);
+      try {
+        await login(email, password);
+        toast.success('Successfully signed in');
+        navigate({ to: '/dashboard' });
+      } catch (error: any) {
+        console.error(error);
+        toast.error(error.message || 'Invalid email or password');
+      } finally {
+        setIsLoading(false);
+      }
+    };
  
    return (
      <Card className="border-none shadow-xl">
@@ -50,19 +43,37 @@
          </CardDescription>
        </CardHeader>
        <form onSubmit={handleSubmit}>
-         <CardContent className="space-y-4">
-           <div className="space-y-2">
-             <Label htmlFor="email">Email</Label>
-             <Input 
-               id="email" 
-               type="email" 
-               placeholder="name@company.com" 
-               required 
-               value={email}
-               onChange={(e) => setEmail(e.target.value)}
-             />
-           </div>
-         </CardContent>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="name@company.com" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-xs text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </CardContent>
          <CardFooter>
             <div className="w-full space-y-4">
               <Button className="w-full" type="submit" disabled={isLoading}>

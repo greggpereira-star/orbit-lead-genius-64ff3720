@@ -89,36 +89,40 @@
      }
    };
  
-   const login = async (email: string, password?: string) => {
-     setIsLoading(true);
-     try {
-       const { error } = await supabase.auth.signInWithPassword({
-         email,
-         password: password || 'password123', // Fallback for simple demo/mock
-       });
-       if (error) throw error;
-     } finally {
-       setIsLoading(false);
-     }
-   };
+    const login = async (email: string, password?: string) => {
+      if (!supabase) throw new Error('Supabase client not initialized');
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password: password || '',
+        });
+        if (error) throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    };
  
-   const signup = async (email: string, password?: string, companyName?: string) => {
-     setIsLoading(true);
-     try {
-       const { error } = await supabase.auth.signUp({
-         email,
-         password: password || 'password123',
-         options: {
-           data: {
-             company_name: companyName,
-           }
-         }
-       });
-       if (error) throw error;
-     } finally {
-       setIsLoading(false);
-     }
-   };
+    const signup = async (email: string, password?: string, companyName?: string) => {
+      if (!supabase) throw new Error('Supabase client not initialized');
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: password || '',
+          options: {
+            data: {
+              full_name: email.split('@')[0],
+              company_name: companyName,
+            },
+            emailRedirectTo: window.location.origin + '/dashboard',
+          }
+        });
+        if (error) throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    };
  
    const logout = async () => {
      await supabase.auth.signOut();
