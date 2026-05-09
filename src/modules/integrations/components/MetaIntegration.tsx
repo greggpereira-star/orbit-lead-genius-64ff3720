@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Share2, RefreshCcw, AlertCircle } from 'lucide-react';
 import { 
   Dialog, 
@@ -73,33 +74,53 @@ export function MetaIntegration({ companyId }: { companyId: string }) {
                   </Button>
                 </div>
 
-                <div className="space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Discovered Assets</Label>
-                  {assets.length === 0 ? (
-                    <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
-                      <p className="text-sm text-muted-foreground">No assets discovered yet.</p>
-                      <Button variant="link" onClick={discover} className="text-xs font-bold text-primary">Click to discover</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {assets.map(asset => (
-                        <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="text-[9px] uppercase font-bold">{asset.asset_type.replace('_', ' ')}</Badge>
-                            <div>
-                              <p className="text-sm font-bold">{asset.name}</p>
-                              <p className="text-[10px] font-mono text-muted-foreground">{asset.external_id}</p>
-                            </div>
-                          </div>
-                          <Switch 
-                            checked={asset.is_active} 
-                            onCheckedChange={(checked) => toggleAsset(asset.id, checked)}
-                          />
+                <Tabs defaultValue="pages" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="pages" className="text-[10px] font-bold uppercase">Pages</TabsTrigger>
+                    <TabsTrigger value="ad_accounts" className="text-[10px] font-bold uppercase">Ad Accounts</TabsTrigger>
+                    <TabsTrigger value="forms" className="text-[10px] font-bold uppercase">Lead Forms</TabsTrigger>
+                  </TabsList>
+                  
+                  {['page', 'ad_account', 'form'].map((type) => (
+                    <TabsContent key={type} value={type === 'page' ? 'pages' : type === 'ad_account' ? 'ad_accounts' : 'forms'} className="space-y-4 mt-4">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        {type.replace('_', ' ')}s
+                      </Label>
+                      
+                      {assets.filter(a => a.asset_type === type).length === 0 ? (
+                        <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
+                          <p className="text-sm text-muted-foreground">No {type.replace('_', ' ')}s found.</p>
+                          <Button variant="link" onClick={discover} className="text-xs font-bold text-primary">Discover</Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {assets.filter(a => a.asset_type === type).map(asset => (
+                            <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 hover:border-primary/30 transition-all">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded bg-muted flex items-center justify-center`}>
+                                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold truncate max-w-[200px]">{asset.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[9px] font-mono text-muted-foreground">{asset.external_id}</p>
+                                    {asset.metadata?.status && (
+                                      <Badge variant="outline" className="text-[8px] h-3 px-1">{asset.metadata.status}</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <Switch 
+                                checked={asset.is_active} 
+                                onCheckedChange={(checked) => toggleAsset(asset.id, checked)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+                  ))}
+                </Tabs>
 
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />

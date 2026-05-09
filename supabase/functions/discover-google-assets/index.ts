@@ -42,16 +42,70 @@ serve(async (req) => {
     
     const adAccData = await adAccRes.json()
 
-    if (adAccData.resourceNames) {
-      for (const resName of adAccData.resourceNames) {
+    // 2. Fetch Google Ads Customers (Enterprise Discovery)
+    const customersRes = await fetch("https://googleads.googleapis.com/v15/customers:listAccessibleCustomers", {
+      headers: {
+        'Authorization': `Bearer ${connection.access_token}`,
+        'developer-token': devToken || ""
+      }
+    })
+    
+    const customersData = await customersRes.json()
+
+    if (customersData.resourceNames) {
+      for (const resName of customersData.resourceNames) {
         const customerId = resName.split('/')[1]
+        
+        // Fetch detail for each customer
+        const detailRes = await fetch(`https://googleads.googleapis.com/v15/${resName}`, {
+           headers: {
+             'Authorization': `Bearer ${connection.access_token}`,
+             'developer-token': devToken || ""
+           }
+        })
+        const detail = await detailRes.json()
+
         await supabaseAdmin.from('google_assets').upsert({
           company_id: companyId,
           asset_type: 'ad_account',
           external_id: customerId,
-          name: `Ad Account ${customerId}`,
-          metadata: { resourceName: resName }
+          name: detail.descriptiveName || `Ad Account ${customerId}`,
+          metadata: { 
+            resourceName: resName, 
+            currencyCode: detail.currencyCode,
+            timeZone: detail.timeZone,
+            is_mcc: detail.manager
+          }
         }, { onConflict: 'company_id,asset_type,external_id' })
+
+        // 3. Discover Conversion Actions for each account
+        // Enterprise Requirement: GCLID Uploads need Conversion Actions
+        const query = "SELECT conversion_action.id, conversion_action.name, conversion_action.type, conversion_action.status FROM conversion_action"
+        const convRes = await fetch(`https://googleads.googleapis.com/v15/customers/${customerId}/googleAds:search`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${connection.access_token}`,
+            'developer-token': devToken || "",
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ query })
+        })
+        const convData = await convRes.json()
+        if (convData.results) {
+          for (const row of convData.results) {
+            await supabaseAdmin.from('google_assets').upsert({
+              company_id: companyId,
+              asset_type: 'conversion_action',
+              external_id: row.conversionAction.id,
+              name: row.conversionAction.name,
+              metadata: { 
+                account_id: customerId,
+                type: row.conversionAction.type,
+                status: row.conversionAction.status
+              }
+            }, { onConflict: 'company_id,asset_type,external_id' })
+          }
+        }
       }
     }
 

@@ -317,6 +317,47 @@ export type Database = {
           },
         ]
       }
+      lead_sync_logs: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          error_message: string | null
+          external_lead_id: string
+          id: string
+          payload: Json | null
+          provider: string
+          status: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          error_message?: string | null
+          external_lead_id: string
+          id?: string
+          payload?: Json | null
+          provider: string
+          status?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          external_lead_id?: string
+          id?: string
+          payload?: Json | null
+          provider?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_sync_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           company_id: string
