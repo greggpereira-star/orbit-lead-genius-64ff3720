@@ -23,24 +23,69 @@ import { formService, Form, FormField } from '../services/formService';
 import { toast } from 'sonner';
 import { logger } from '@/core/observability/logger';
  
- interface FormField {
-   id: string;
-   label: string;
-   type: 'text' | 'email' | 'phone' | 'select' | 'textarea';
-   required: boolean;
-   placeholder: string;
+ interface FormBuilderProps {
+   formId?: string;
+   onBack: () => void;
  }
  
- export function FormBuilder() {
-   const [fields, setFields] = useState<FormField[]>([
-     { id: '1', label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
-     { id: '2', label: 'Work Email', type: 'email', required: true, placeholder: 'Ex: john@company.com' },
-     { id: '3', label: 'Phone Number', type: 'phone', required: false, placeholder: 'Ex: +1...' },
-   ]);
+ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
+   const { company } = useAuth();
+   const queryClient = useQueryClient();
+   const [fields, setFields] = useState<Partial<FormField>[]>([]);
+   const [formConfig, setFormConfig] = useState<Partial<Form>>({
+     name: 'Untitled Form',
+     slug: '',
+     status: 'draft',
+     type: 'traditional',
+     settings: {
+       submit_label: 'Submit',
+       success_message: 'Thank you!',
+       theme: 'premium-light',
+       cv_crm_integration: false,
+       capture_utms: true
+     }
+   });
+ 
+   const { data: existingForm, isLoading } = useQuery({
+     queryKey: ['form', formId],
+     queryFn: () => formService.getFormById(formId!),
+     enabled: !!formId,
+   });
+ 
+   useEffect(() => {
+     if (existingForm) {
+       setFormConfig(existingForm);
+       setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order));
+     } else if (!formId) {
+       setFields([
+         { label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
+         { label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
+       ]);
+     }
+   }, [existingForm, formId]);
+ 
+   const saveMutation = useMutation({
+     mutationFn: async () => {
+       if (!company?.id) return;
+       if (formId) {
+         return formService.updateForm(formId, formConfig, fields as FormField[]);
+       } else {
+         return formService.createForm(company.id, formConfig, fields as FormField[]);
+       }
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ['forms'] });
+       toast.success(formId ? 'Form updated' : 'Form created');
+       onBack();
+     },
+     onError: (error: any) => {
+       logger.error('Failed to save form', { error });
+       toast.error('Failed to save form');
+     }
+   });
  
    const addField = () => {
-     const newField: FormField = {
-       id: Math.random().toString(36).substr(2, 9),
+     const newField: Partial<FormField> = {
        label: 'New Field',
        type: 'text',
        required: false,
@@ -49,8 +94,10 @@ import { logger } from '@/core/observability/logger';
      setFields([...fields, newField]);
    };
  
-   const removeField = (id: string) => {
-     setFields(fields.filter(f => f.id !== id));
+   const removeField = (index: number) => {
+     const newFields = [...fields];
+     newFields.splice(index, 1);
+     setFields(newFields);
    };
  
    return (
