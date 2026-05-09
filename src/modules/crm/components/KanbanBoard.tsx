@@ -86,10 +86,10 @@
        if (leadsError) throw leadsError;
  
        // 3. Map leads to stages
-       const mappedColumns = (stagesData || []).map(stage => ({
+       const mappedColumns = (stagesData || []).map((stage: any) => ({
          id: stage.id,
          title: stage.name,
-         leads: (leadsData || []).filter(lead => lead.stage_id === stage.id).map(lead => ({
+           leads: (leadsData || []).filter((lead: any) => lead.stage_id === stage.id).map((lead: any) => ({
            id: lead.id,
            name: lead.name || 'Unnamed Lead',
            company: lead.metadata?.company_name,
