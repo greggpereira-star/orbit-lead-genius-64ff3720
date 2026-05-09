@@ -22,6 +22,9 @@
    | 'DASHBOARD_BOOTSTRAP'
     | 'READY'
     | 'AUTHENTICATED'
+    | 'WORKSPACE_HYDRATING'
+    | 'WORKSPACE_READY'
+    | 'READY'
    | 'ERROR';
  
  export interface UserProfile {
