@@ -16,10 +16,13 @@ import { Button } from '@/components/ui/button';
      return unsubscribe;
    }, []);
  
-   const isBypassPath = useMemo(() => {
-     const bypassList = ['/', '/auth', '/login', '/signup'];
-     return bypassList.includes(routerState.location.pathname);
-   }, [routerState.location.pathname]);
+    const isBypassPath = useMemo(() => {
+      const path = routerState.location.pathname;
+      const bypassList = ['/', '/auth', '/login', '/signup'];
+      if (bypassList.includes(path)) return true;
+      if (path.startsWith('/f/')) return true; // Public forms bypass
+      return false;
+    }, [routerState.location.pathname]);
  
     const isChecking = state.status !== 'ready' && state.status !== 'failed' && state.status !== 'idle';
     
