@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -34,6 +35,11 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
 
+const DiagnosticsRoute = DiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
@@ -156,6 +162,7 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/diagnostics': typeof DiagnosticsRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/diagnostics'
     | '/analytics'
     | '/automations'
     | '/dashboard'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/diagnostics'
     | '/analytics'
     | '/automations'
     | '/dashboard'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/diagnostics'
     | '/_app/analytics'
     | '/_app/automations'
     | '/_app/dashboard'
@@ -308,10 +320,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  DiagnosticsRoute: typeof DiagnosticsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -575,6 +595,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  DiagnosticsRoute: DiagnosticsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

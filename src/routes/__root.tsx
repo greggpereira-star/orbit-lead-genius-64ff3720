@@ -6,7 +6,8 @@ import { useEffect, useMemo } from "react";
  import { initTracking } from "../core/tracking/pixel";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { logger } from "@/core/observability/logger";
- import { InfrastructureGuard } from "@/components/infra/InfrastructureGuard";
+  import { InfrastructureGuard } from "@/components/infra/InfrastructureGuard";
+  import { RuntimeStatus } from "@/components/infra/RuntimeStatus";
 import {
   Outlet,
   Link,
@@ -144,8 +145,9 @@ function RootComponent() {
          <InfrastructureGuard>
            <AuthErrorBoundary name="GlobalAuthProvider">
              <AuthProvider>
-               <Outlet />
-               <Toaster richColors position="top-right" closeButton />
+                <Outlet />
+                <RuntimeStatus />
+                <Toaster richColors position="top-right" closeButton />
              </AuthProvider>
            </AuthErrorBoundary>
          </InfrastructureGuard>

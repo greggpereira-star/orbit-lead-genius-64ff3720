@@ -1,34 +1,29 @@
  import React, { useEffect, useState, useMemo } from 'react';
  import { useRouterState } from '@tanstack/react-router';
- import { runInfrastructureCheck, HealthReport } from '@/core/runtime/health-checker';
- import { RefreshCw, ServerCrash, CheckCircle2, XCircle, ShieldCheck, Activity } from 'lucide-react';
+ import { BootstrapEngine, BootstrapState } from '@/core/bootstrap/bootstrap-engine';
+ import { RefreshCw, ServerCrash, CheckCircle2, XCircle, ShieldCheck, Activity, AlertTriangle } from 'lucide-react';
  import { Badge } from '@/components/ui/badge';
  import { getRuntimeConfig } from '@/core/config/runtime-config';
 import { Button } from '@/components/ui/button';
 
  export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-   const [report, setReport] = useState<HealthReport | null>(null);
-   const [isChecking, setIsChecking] = useState(true);
+   const [state, setState] = useState<BootstrapState>(BootstrapEngine.getState());
    const routerState = useRouterState();
    
-   // Paths that don't require infrastructure to be healthy (e.g. landing page)
+   useEffect(() => {
+     const unsubscribe = BootstrapEngine.subscribe(setState);
+     BootstrapEngine.run();
+     return unsubscribe;
+   }, []);
+ 
    const isBypassPath = useMemo(() => {
-     const bypassList = ['/'];
+     const bypassList = ['/', '/auth', '/login', '/signup'];
      return bypassList.includes(routerState.location.pathname);
    }, [routerState.location.pathname]);
-
-  const check = async () => {
-    setIsChecking(true);
-    const result = await runInfrastructureCheck();
-    setReport(result);
-    setIsChecking(false);
-  };
-
-  useEffect(() => {
-    check();
-  }, []);
-
-  if (isChecking) {
+ 
+   const isChecking = state.status !== 'ready' && state.status !== 'failed';
+ 
+   if (isChecking) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-background space-y-4">
         <RefreshCw className="h-10 w-10 animate-spin text-primary" />
@@ -37,15 +32,15 @@ import { Button } from '@/components/ui/button';
     );
   }
 
-   // If healthy, or it's a bypass path, or it's just degraded, let it through
-   if (report?.status === 'healthy' || report?.status === 'degraded' || (report?.status === 'unhealthy' && isBypassPath)) {
+   if (state.status === 'ready' || (state.status === 'failed' && isBypassPath) || state.health?.status === 'degraded') {
      return <>{children}</>;
    }
  
-   if (report?.status === 'unhealthy') {
-     const config = getRuntimeConfig();
-     
-    return (
+   if (state.status === 'failed') {
+     const config = state.config;
+     const report = state.health;
+ 
+     return (
       <div className="min-h-screen w-full bg-destructive/5 flex items-center justify-center p-6">
         <div className="max-w-lg w-full bg-background border border-destructive/20 rounded-2xl shadow-2xl p-8 space-y-8">
           <div className="flex items-center gap-4 text-destructive">
@@ -64,18 +59,26 @@ import { Button } from '@/components/ui/button';
                      <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                      <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Variavéis de Ambiente</span>
                    </div>
-                   <Badge variant={config.isValid ? "default" : "destructive"}>
-                     {config.isValid ? "Configuradas" : "Ausentes"}
+                    <Badge variant={config?.isValid ? "default" : "destructive"}>
+                      {config?.isValid ? "Configuradas" : "Ausentes"}
                    </Badge>
                  </div>
                  <div className="space-y-2 font-mono text-[10px]">
-                   <div className="flex items-center justify-between text-muted-foreground">
-                     <span>URL:</span>
-                     <span className="truncate max-w-[200px]">{config.supabaseUrl}</span>
-                   </div>
+                   {config && (
+                     <>
+                       <div className="flex items-center justify-between text-muted-foreground">
+                         <span>URL:</span>
+                         <span className="truncate max-w-[200px]">{config.supabaseUrl}</span>
+                       </div>
+                       <div className="flex items-center justify-between text-muted-foreground">
+                         <span>ENV:</span>
+                         <span className="uppercase">{config.environment}</span>
+                       </div>
+                     </>
+                   )}
                    <div className="flex items-center justify-between text-muted-foreground">
                      <span>ANON_KEY:</span>
-                     <span>{config.supabaseAnonKey === 'placeholder-key' ? 'MISSING' : '********'}</span>
+                      <span>{config?.supabaseAnonKey === 'placeholder-key' ? 'MISSING' : '********'}</span>
                    </div>
                  </div>
                </div>
@@ -87,35 +90,39 @@ import { Button } from '@/components/ui/button';
                  </div>
                  
                  <div className="space-y-3">
-                   <div className="flex items-center justify-between text-sm">
-                     <span className="text-muted-foreground">Autenticação (Auth):</span>
-                     {report.checks.auth ? (
-                       <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                         <CheckCircle2 className="h-4 w-4" /> ATIVA
-                       </span>
-                     ) : (
-                       <span className="flex items-center gap-1.5 text-destructive font-bold">
-                         <XCircle className="h-4 w-4" /> FALHOU
-                       </span>
-                     )}
-                   </div>
-                   <div className="flex items-center justify-between text-sm">
-                     <span className="text-muted-foreground">Banco de Dados (DB):</span>
-                     {report.checks.database ? (
-                       <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                         <CheckCircle2 className="h-4 w-4" /> ATIVO
-                       </span>
-                     ) : (
-                       <span className="flex items-center gap-1.5 text-destructive font-bold">
-                         <XCircle className="h-4 w-4" /> FALHOU
-                       </span>
-                     )}
-                   </div>
+                   {report && (
+                     <>
+                       <div className="flex items-center justify-between text-sm">
+                         <span className="text-muted-foreground">Autenticação (Auth):</span>
+                         {report.checks.auth ? (
+                           <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                             <CheckCircle2 className="h-4 w-4" /> ATIVA
+                           </span>
+                         ) : (
+                           <span className="flex items-center gap-1.5 text-destructive font-bold">
+                             <XCircle className="h-4 w-4" /> FALHOU
+                           </span>
+                         )}
+                       </div>
+                       <div className="flex items-center justify-between text-sm">
+                         <span className="text-muted-foreground">Banco de Dados (DB):</span>
+                         {report.checks.database ? (
+                           <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                             <CheckCircle2 className="h-4 w-4" /> ATIVO
+                           </span>
+                         ) : (
+                           <span className="flex items-center gap-1.5 text-destructive font-bold">
+                             <XCircle className="h-4 w-4" /> FALHOU
+                           </span>
+                         )}
+                       </div>
+                     </>
+                   )}
                  </div>
                </div>
              </div>
 
-             {report.details.error && (
+             {report?.details.error && (
                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
                  <p className="text-[11px] font-mono text-destructive leading-relaxed break-all">
                    <span className="font-bold">STACK_TRACE:</span> {report.details.error}
@@ -126,12 +133,12 @@ import { Button } from '@/components/ui/button';
 
            <div className="space-y-4">
              <Button 
-               onClick={check} 
+               onClick={() => BootstrapEngine.retry()} 
                disabled={isChecking}
                className="w-full h-12 font-bold shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95"
              >
                <RefreshCw className={`mr-2 h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} /> 
-               {isChecking ? 'TESTANDO CONEXÃO...' : 'TESTAR CONEXÃO AGORA'}
+               {isChecking ? 'REINICIANDO RUNTIME...' : 'TENTAR RECONECTAR AGORA'}
              </Button>
              
              <div className="p-4 bg-muted rounded-lg border text-[11px] space-y-2">
