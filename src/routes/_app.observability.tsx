@@ -47,18 +47,23 @@ function ObservabilityPage() {
   const fetchObservabilityData = async () => {
     setIsLoadingData(true);
     try {
-      const { data: whData } = await supabase.from('webhook_events').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(5);
-      setWebhooks(whData || []);
-
-      setHealth([
-        { component: 'CV.CRM API', status: 'healthy', latency: '45ms' },
-        { component: 'Event Bus', status: 'healthy', latency: '2ms' },
-        { component: 'Rule Engine', status: 'healthy', latency: '12ms' },
-        { component: 'Database', status: 'healthy', latency: '8ms' },
-      ]);
-
-      const { data: dlqData } = await supabase.from('dead_letter_queue').select('*').eq('company_id', company?.id).limit(5);
-      setDlq(dlqData || []);
+       // Batch telemetry fetching
+       const [whResult, dlqResult, logsResult] = await Promise.all([
+         supabase.from('webhook_events').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(5),
+         supabase.from('trigger_error_logs').select('*').eq('user_id', auth.user?.id).limit(5),
+         supabase.from('system_logs').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(10)
+       ]);
+ 
+       setWebhooks(whResult.data || []);
+       setDlq(dlqResult.data || []);
+       
+       // Simulated real-time metrics
+       setHealth([
+         { component: 'CV.CRM API', status: 'healthy', latency: '42ms' },
+         { component: 'Auth Guardian', status: 'healthy', latency: '15ms' },
+         { component: 'RLS Evaluator', status: 'healthy', latency: '3ms' },
+         { component: 'Database Cluster', status: 'healthy', latency: '9ms' },
+       ]);
     } catch (error) {
       console.error('Error fetching observability data:', error);
     } finally {
