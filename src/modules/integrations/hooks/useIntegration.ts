@@ -47,10 +47,19 @@ export function useIntegration(companyId: string | undefined, provider: 'meta' |
     setIsLoading(false);
   };
 
-  const toggleAsset = async (assetId: string, isActive: boolean) => {
-    await discoveryService.toggleAsset(assetId, isActive, provider);
-    await fetchAssets();
-  };
+   const toggleAsset = async (assetId: string, isActive: boolean) => {
+     await discoveryService.toggleAsset(assetId, isActive, provider);
+     await fetchAssets();
+   };
 
-  return { connection, assets, isLoading, connect, discover, toggleAsset };
+   const updateMapping = async (assetId: string, mapping: any) => {
+     const table = provider === 'meta' ? 'meta_assets' : 'google_assets';
+     await supabase
+       .from(table)
+       .update({ conversion_mapping: mapping })
+       .eq('id', assetId);
+     await fetchAssets();
+   };
+
+   return { connection, assets, isLoading, connect, discover, toggleAsset, updateMapping };
 }

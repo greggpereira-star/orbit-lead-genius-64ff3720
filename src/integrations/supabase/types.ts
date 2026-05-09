@@ -159,6 +159,7 @@ export type Database = {
         Row: {
           asset_type: string
           company_id: string
+          conversion_mapping: Json | null
           created_at: string
           external_id: string
           id: string
@@ -170,6 +171,7 @@ export type Database = {
         Insert: {
           asset_type: string
           company_id: string
+          conversion_mapping?: Json | null
           created_at?: string
           external_id: string
           id?: string
@@ -181,6 +183,7 @@ export type Database = {
         Update: {
           asset_type?: string
           company_id?: string
+          conversion_mapping?: Json | null
           created_at?: string
           external_id?: string
           id?: string
@@ -192,6 +195,109 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "google_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_audit_logs: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          payload: Json | null
+          provider: string
+          status: string
+          trace_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          provider: string
+          status: string
+          trace_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          provider?: string
+          status?: string
+          trace_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_jobs: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          id: string
+          last_error: string | null
+          max_retries: number | null
+          next_retry_at: string | null
+          payload: Json
+          queue_name: string
+          retries: number | null
+          status: string
+          trace_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          max_retries?: number | null
+          next_retry_at?: string | null
+          payload: Json
+          queue_name: string
+          retries?: number | null
+          status?: string
+          trace_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          max_retries?: number | null
+          next_retry_at?: string | null
+          payload?: Json
+          queue_name?: string
+          retries?: number | null
+          status?: string
+          trace_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_jobs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -487,6 +593,7 @@ export type Database = {
         Row: {
           asset_type: string
           company_id: string
+          conversion_mapping: Json | null
           created_at: string
           external_id: string
           id: string
@@ -498,6 +605,7 @@ export type Database = {
         Insert: {
           asset_type: string
           company_id: string
+          conversion_mapping?: Json | null
           created_at?: string
           external_id: string
           id?: string
@@ -509,6 +617,7 @@ export type Database = {
         Update: {
           asset_type?: string
           company_id?: string
+          conversion_mapping?: Json | null
           created_at?: string
           external_id?: string
           id?: string

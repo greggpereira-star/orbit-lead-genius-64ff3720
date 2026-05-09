@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Globe, RefreshCcw, AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Dialog, 
   DialogContent, 
@@ -16,7 +17,9 @@ import {
 } from '@/components/ui/dialog';
 
 export function GoogleIntegration({ companyId }: { companyId: string }) {
-  const { connection, assets, isLoading, connect, discover, toggleAsset } = useIntegration(companyId, 'google');
+   const { connection, assets, isLoading, connect, discover, toggleAsset } = useIntegration(companyId, 'google');
+   const adAccounts = assets.filter(a => a.asset_type === 'ad_account');
+   const conversionActions = assets.filter(a => a.asset_type === 'conversion_action');
 
   return (
     <Card className="border shadow-none hover:border-primary/20 transition-colors">
@@ -73,33 +76,66 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
                   </Button>
                 </div>
 
-                <div className="space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ad Accounts Discovery</Label>
-                  {assets.length === 0 ? (
-                    <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
-                      <p className="text-sm text-muted-foreground">No Google Ads accounts found.</p>
-                      <Button variant="link" onClick={discover} className="text-xs font-bold text-primary">Sync with Google API</Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {assets.map(asset => (
-                        <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="text-[9px] uppercase font-bold">Account</Badge>
-                            <div>
-                              <p className="text-sm font-bold">{asset.name}</p>
-                              <p className="text-[10px] font-mono text-muted-foreground">{asset.external_id}</p>
-                            </div>
-                          </div>
-                          <Switch 
-                            checked={asset.is_active} 
-                            onCheckedChange={(checked) => toggleAsset(asset.id, checked)}
-                          />
+                 <Tabs defaultValue="accounts" className="w-full">
+                   <TabsList className="grid w-full grid-cols-2">
+                     <TabsTrigger value="accounts" className="text-[10px] font-bold uppercase">Accounts</TabsTrigger>
+                     <TabsTrigger value="conversions" className="text-[10px] font-bold uppercase">Conversions</TabsTrigger>
+                   </TabsList>
+
+                   <TabsContent value="accounts" className="space-y-4 mt-4">
+                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ad Accounts</Label>
+                     {adAccounts.length === 0 ? (
+                        <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
+                          <p className="text-sm text-muted-foreground">No Google Ads accounts found.</p>
+                          <Button variant="link" onClick={discover} className="text-xs font-bold text-primary">Sync with Google API</Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {adAccounts.map(asset => (
+                            <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                              <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-[9px] uppercase font-bold">Account</Badge>
+                                <div>
+                                  <p className="text-sm font-bold">{asset.name}</p>
+                                  <p className="text-[10px] font-mono text-muted-foreground">{asset.external_id}</p>
+                                </div>
+                              </div>
+                              <Switch 
+                                checked={asset.is_active} 
+                                onCheckedChange={(checked) => toggleAsset(asset.id, checked)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                   </TabsContent>
+
+                   <TabsContent value="conversions" className="space-y-4 mt-4">
+                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Conversion Mapping</Label>
+                     {conversionActions.length === 0 ? (
+                        <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
+                          <p className="text-sm text-muted-foreground">No conversion actions found.</p>
+                        </div>
+                     ) : (
+                        <div className="space-y-2">
+                          {conversionActions.map(action => (
+                            <div key={action.id} className="p-3 rounded-lg border bg-muted/20 flex flex-col gap-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-bold">{action.name}</p>
+                                  <p className="text-[9px] text-muted-foreground uppercase">{action.metadata?.type}</p>
+                                </div>
+                                <Switch 
+                                  checked={action.is_active} 
+                                  onCheckedChange={(checked) => toggleAsset(action.id, checked)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                     )}
+                   </TabsContent>
+                 </Tabs>
 
                 <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex gap-3">
                   <AlertCircle className="h-5 w-5 text-primary shrink-0" />
