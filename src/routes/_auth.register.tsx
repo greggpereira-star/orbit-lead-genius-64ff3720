@@ -33,27 +33,37 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
         return strength;
       }, [password]);
   
-     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      
-      if (isLoading) return;
-  
-      if (passwordStrength !== null && passwordStrength < 2) {
-        toast.error('Escolha uma senha mais forte.');
-        return;
-      }
-      
-      (async () => {
-        try {
-          const result = await signup(email, password, companyName, retryCount);
-          if (result?.session) {
-            navigate({ to: '/dashboard' });
-          }
-        } catch (error: any) {
-          setRetryCount(prev => prev + 1);
-        }
-      })();
-    };
+      const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+       console.log('Signup: Form submitted');
+       e.preventDefault();
+       
+       if (isLoading) {
+         console.log('Signup: Still loading, ignoring submit');
+         return;
+       }
+   
+       if (passwordStrength !== null && passwordStrength < 2) {
+         toast.error('Escolha uma senha mais forte.');
+         return;
+       }
+       
+       try {
+         console.log('Signup: Calling signup function for', email);
+         const result = await signup(email, password, companyName);
+         console.log('Signup: Success result', result);
+         if (result?.session) {
+           console.log('Signup: Session found, navigating to dashboard');
+           navigate({ to: '/dashboard' });
+         } else {
+           console.log('Signup: No session (likely email confirmation needed)');
+           toast.info('Conta criada! Verifique seu e-mail para confirmar o cadastro.', { duration: 6000 });
+         }
+       } catch (error: any) {
+         console.error('Signup: Error occurred', error);
+         setRetryCount(prev => prev + 1);
+         toast.error(error.message || 'Falha no cadastro');
+       }
+     };
  
    return (
      <div className="space-y-6">

@@ -21,20 +21,26 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
      const { login, state, error: authError } = useAuth();
      const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
    
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      
-      if (isLoading) return;
-  
-      (async () => {
-        try {
-          await login(email, password, retryCount);
-          navigate({ to: '/dashboard' });
-        } catch (error: any) {
-          setRetryCount(prev => prev + 1);
-        }
-      })();
-    };
+     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+       console.log('Login: Form submitted');
+       e.preventDefault();
+       
+       if (isLoading) {
+         console.log('Login: Still loading, ignoring submit');
+         return;
+       }
+   
+       try {
+         console.log('Login: Calling login function for', email);
+         await login(email, password);
+         console.log('Login: Success, navigating to dashboard');
+         navigate({ to: '/dashboard' });
+       } catch (error: any) {
+         console.error('Login: Error occurred', error);
+         setRetryCount(prev => prev + 1);
+         toast.error(error.message || 'Falha na autenticação');
+       }
+     };
  
    return (
      <Card className="border-none shadow-xl">
