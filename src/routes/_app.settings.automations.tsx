@@ -3,7 +3,42 @@ import { createFileRoute } from '@tanstack/react-router';
  import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
- import { Zap, Users, Shield, ArrowRightLeft } from 'lucide-react';
+ import { Zap, Users, Shield, ArrowRightLeft, History, CheckCircle2, XCircle, Clock } from 'lucide-react';
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Recent Automation Runs
+            </CardTitle>
+            <CardDescription>Monitor the execution status of your automated workflows.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[
+                { id: 1, name: 'Sync to CV.CRM', lead: 'John Doe', status: 'success', time: '2 mins ago' },
+                { id: 2, name: 'Google Conversion Upload', lead: 'Sarah Miller', status: 'success', time: '15 mins ago' },
+                { id: 3, name: 'Meta CAPI Event', lead: 'Robert Wilson', status: 'failed', error: 'Invalid Access Token', time: '1 hour ago' },
+                { id: 4, name: 'Slack Notification', lead: 'Emma Davis', status: 'success', time: '2 hours ago' },
+              ].map((run) => (
+                <div key={run.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/10">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${run.status === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                      {run.status === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{run.name}</p>
+                      <p className="text-[10px] text-muted-foreground">Lead: {run.lead} • {run.status === 'failed' ? <span className="text-rose-600 font-semibold">{run.error}</span> : 'Completed'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {run.time}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 import { toast } from 'sonner';
 
 export const Route = createFileRoute('/_app/settings/automations')({
