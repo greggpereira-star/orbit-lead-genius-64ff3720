@@ -35,7 +35,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const [membership, setMembership] = useState<Membership | null>(null);
   const [error, setError] = useState<string | null>(null);
   const traceId = useMemo(() => Math.random().toString(36).substring(2, 15), []);
-   const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
+    const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
+    const isInitialMount = useRef(true);
+
+    const checkWorkspaceReadiness = useCallback(() => {
+      return localStorage.getItem('workspace_ready_v1') === 'true';
+    }, []);
+
+    const markWorkspaceAsReady = useCallback(() => {
+      localStorage.setItem('workspace_ready_v1', 'true');
+    }, []);
+
+    const clearWorkspaceReady = useCallback(() => {
+      localStorage.removeItem('workspace_ready_v1');
+    }, []);
 
   const handleAuthFailure = useCallback((msg: string, logError = true) => {
     if (logError) logger.error(msg, { traceId });
@@ -51,7 +64,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
      }
  
-     setState('TENANT_VALIDATING');
+      // Determine if we should show the full bootstrap UI
+      const isReadyCache = checkWorkspaceReadiness();
+      
+      if (isReadyCache) {
+        logger.info('WorkspaceReadinessCache: Hit. Skipping blocking bootstrap UI.', { traceId });
+        setState('AUTHENTICATED');
+      } else {
+        setState('TENANT_VALIDATING');
+      }
      
      try {
         const result = await (orchestratorRef.current as any).validateAndRepair(
@@ -74,7 +95,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        setUser(result.user);
        setCompany(result.company);
        setMembership(result.membership);
-       setState('READY');
+        markWorkspaceAsReady();
+        setState('READY');
        
        logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
      } catch (err: any) {
@@ -281,12 +303,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
   const logout = async () => {
     const loadingToast = toast.loading('Terminating session...');
-    try {
-      await getSupabase().auth.signOut();
-      toast.success('Signed out successfully', { id: loadingToast });
-    } catch (err: any) {
-      toast.error('Sign out error', { id: loadingToast });
-    }
+      try {
+        clearWorkspaceReady();
+        await getSupabase().auth.signOut();
+        toast.success('Signed out successfully', { id: loadingToast });
+      } catch (err: any) {
+        toast.error('Sign out error', { id: loadingToast });
+      }
   };
 
   const refreshContext = async () => {
@@ -300,17 +323,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     user,
      company,
      membership,
-    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP'].includes(state as string),
-    isReady: state === 'READY',
+    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP', 'AUTHENTICATED'].includes(state as string),
+    isReady: state === 'READY' || state === 'AUTHENTICATED',
     isLoading: [
       'BOOTSTRAP_START',
       'INITIALIZING',
       'SESSION_LOADING',
       'AUTHENTICATING',
       'PROFILE_LOADING',
-      'TENANT_VALIDATING',
-      'TENANT_RECOVERING',
-      'MEMBERSHIP_RECOVERING'
     ].includes(state as string),
     error: envError || error,
     traceId,
