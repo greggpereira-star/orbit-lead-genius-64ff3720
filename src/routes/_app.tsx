@@ -32,30 +32,45 @@ function AppLayout() {
     }
   }, [state, company?.id]);
 
-  // Loading States
-  if (state === 'INITIALIZING' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING') {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
-          <div className="relative">
-             <div className="h-12 w-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-             <div className="absolute inset-0 flex items-center justify-center">
-               <div className="h-2 w-2 rounded-full bg-primary animate-ping" />
+   // Enhanced Loading States with deterministic category messages
+   const isLoadingState = ['INITIALIZING', 'AUTHENTICATING', 'TENANT_LOADING', 'ROLE_LOADING', 'PERMISSIONS_LOADING', 'SELF_HEALING'].includes(state);
+ 
+   if (isLoadingState) {
+     const getMessage = () => {
+       switch (state) {
+         case 'AUTHENTICATING': return 'Autenticando credenciais seguras...';
+         case 'TENANT_LOADING': return 'Resolvendo contexto multi-tenant...';
+         case 'ROLE_LOADING': return 'Carregando papéis de acesso...';
+         case 'SELF_HEALING': return 'Reparando inconsistências de onboarding...';
+         default: return 'Sincronizando sessão enterprise...';
+       }
+     };
+ 
+     return (
+       <div className="flex h-screen items-center justify-center bg-background">
+         <div className="flex flex-col items-center gap-6 max-w-sm text-center animate-in fade-in duration-700">
+           <div className="relative">
+              <div className="h-16 w-16 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-3 w-3 rounded-full bg-primary animate-pulse" />
+              </div>
+           </div>
+           <div className="space-y-2">
+             <p className="text-base font-black tracking-tighter uppercase">Enterprise Integrity Check</p>
+             <p className="text-xs text-muted-foreground font-medium animate-pulse">
+               {getMessage()}
+             </p>
+           </div>
+           <div className="flex flex-col gap-2 items-center">
+             <div className="px-3 py-1 rounded-md bg-muted/50 border text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
+               State: {state}
              </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold tracking-tight">Enterprise Session Hydration</p>
-            <p className="text-[11px] text-muted-foreground font-medium animate-pulse italic">
-              {state === 'TENANT_LOADING' ? 'Synchronizing multi-tenant context...' : 'Validating secure identity...'}
-            </p>
-          </div>
-          <div className="pt-4 px-3 py-1.5 rounded-full bg-muted/50 border text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
-            TraceID: {traceId}
-          </div>
-        </div>
-      </div>
-    );
-  }
+             <div className="text-[9px] font-mono text-muted-foreground/40">Trace: {traceId}</div>
+           </div>
+         </div>
+       </div>
+     );
+   }
 
   // Error States
   if (state === 'ERROR' || (state === 'READY' && !company)) {
