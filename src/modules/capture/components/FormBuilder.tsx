@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   ArrowLeft,
   Save,
-  Loader2
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -22,6 +23,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formService, Form, FormField } from '../services/formService';
 import { toast } from 'sonner';
 import { logger } from '@/core/observability/logger';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FormPublish } from './FormPublish';
 
 interface FormBuilderProps {
   formId?: string;
@@ -31,7 +34,7 @@ interface FormBuilderProps {
 export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
-   const [fields, setFields] = useState<(Partial<FormField> & { tempId?: string })[]>([]);
+  const [fields, setFields] = useState<(Partial<FormField> & { tempId?: string })[]>([]);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
     slug: '',
@@ -55,12 +58,12 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   useEffect(() => {
     if (existingForm) {
       setFormConfig(existingForm);
-       setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, tempId: f.id })));
+      setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, tempId: f.id })));
     } else if (!formId) {
-       setFields([
-         { tempId: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
-         { tempId: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
-       ]);
+      setFields([
+        { tempId: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
+        { tempId: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
+      ]);
     }
   }, [existingForm, formId]);
 
@@ -85,8 +88,8 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   });
 
   const addField = () => {
-     const newField: Partial<FormField> & { tempId: string } = {
-       tempId: Math.random().toString(36).substr(2, 9),
+    const newField: Partial<FormField> & { tempId: string } = {
+      tempId: Math.random().toString(36).substr(2, 9),
       label: 'New Field',
       type: 'text',
       required: false,
@@ -130,193 +133,217 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 space-y-4">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <div>
-                <CardTitle className="text-lg font-semibold">Form Structure</CardTitle>
-                <CardDescription>Drag and drop fields to reorder</CardDescription>
-              </div>
-              <Button onClick={addField} size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Field
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {fields.map((field, index) => (
-                <div 
-                   key={field.tempId || index} 
-                  className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
-                >
-                  <div className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors">
-                    <GripVertical className="h-5 w-5" />
+      <Tabs defaultValue="builder" className="w-full">
+        <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-12 p-0 gap-8">
+          <TabsTrigger 
+            value="builder" 
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+          >
+            <Settings2 className="h-4 w-4" /> Builder
+          </TabsTrigger>
+          <TabsTrigger 
+            value="publish" 
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+            disabled={!formId}
+          >
+            <Globe className="h-4 w-4" /> Publicação
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="builder" className="pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 space-y-4">
+              <Card className="border-none shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <div>
+                    <CardTitle className="text-lg font-semibold">Form Structure</CardTitle>
+                    <CardDescription>Drag and drop fields to reorder</CardDescription>
                   </div>
-                  
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Field Label</Label>
+                  <Button onClick={addField} size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Field
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {fields.map((field, index) => (
+                    <div 
+                      key={field.tempId || index} 
+                      className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
+                    >
+                      <div className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors">
+                        <GripVertical className="h-5 w-5" />
+                      </div>
+                      
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Field Label</Label>
+                          <Input 
+                            value={field.label} 
+                            onChange={(e) => {
+                              const newFields = [...fields];
+                              newFields[index].label = e.target.value;
+                              setFields(newFields);
+                            }}
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Field Type</Label>
+                          <select 
+                            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={field.type}
+                            onChange={(e) => {
+                              const newFields = [...fields];
+                              newFields[index].type = e.target.value as any;
+                              setFields(newFields);
+                            }}
+                          >
+                            <option value="text">Text Input</option>
+                            <option value="email">Email</option>
+                            <option value="phone">Phone</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="select">Dropdown</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-4 pt-6">
+                          <div className="flex items-center gap-2">
+                            <Switch 
+                              checked={field.required} 
+                              onCheckedChange={(val) => {
+                                const newFields = [...fields];
+                                newFields[index].required = val;
+                                setFields(newFields);
+                              }}
+                            />
+                            <span className="text-xs font-medium">Required</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeField(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="lg:col-span-4 space-y-6">
+              <Card className="border-none shadow-sm sticky top-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Form Settings</CardTitle>
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Form Name</Label>
                       <Input 
-                        value={field.label} 
-                        onChange={(e) => {
-                          const newFields = [...fields];
-                          newFields[index].label = e.target.value;
-                          setFields(newFields);
-                        }}
-                        className="h-9"
+                        value={formConfig.name} 
+                        onChange={(e) => setFormConfig({...formConfig, name: e.target.value})}
+                        placeholder="E.g. Enterprise Contact" 
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Field Type</Label>
-                      <select 
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        value={field.type}
-                        onChange={(e) => {
-                          const newFields = [...fields];
-                          newFields[index].type = e.target.value as any;
-                          setFields(newFields);
-                        }}
-                      >
-                        <option value="text">Text Input</option>
-                        <option value="email">Email</option>
-                        <option value="phone">Phone</option>
-                        <option value="textarea">Textarea</option>
-                        <option value="select">Dropdown</option>
-                      </select>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Slug</Label>
+                      <Input 
+                        value={formConfig.slug} 
+                        onChange={(e) => setFormConfig({...formConfig, slug: e.target.value})}
+                        placeholder="e-g-enterprise-contact" 
+                      />
                     </div>
-                    <div className="flex items-center gap-4 pt-6">
-                      <div className="flex items-center gap-2">
-                        <Switch 
-                          checked={field.required} 
-                          onCheckedChange={(val) => {
-                            const newFields = [...fields];
-                            newFields[index].required = val;
-                            setFields(newFields);
-                          }}
-                        />
-                        <span className="text-xs font-medium">Required</span>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Submit Button Text</Label>
+                      <Input 
+                        value={formConfig.settings?.submit_label} 
+                        onChange={(e) => setFormConfig({
+                          ...formConfig, 
+                          settings: { ...formConfig.settings!, submit_label: e.target.value }
+                        })}
+                        placeholder="E.g. Send" 
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">Track UTMs</Label>
+                        <p className="text-[10px] text-muted-foreground">Automatically capture marketing data</p>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeField(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Switch 
+                        checked={formConfig.settings?.capture_utms} 
+                        onCheckedChange={(val) => setFormConfig({
+                          ...formConfig, 
+                          settings: { ...formConfig.settings!, capture_utms: val }
+                        })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">Published</Label>
+                        <p className="text-[10px] text-muted-foreground">Make form public</p>
+                      </div>
+                      <Switch 
+                        checked={formConfig.status === 'published'} 
+                        onCheckedChange={(val) => setFormConfig({
+                          ...formConfig, 
+                          status: val ? 'published' : 'draft'
+                        })}
+                      />
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-70">Post-Submission</Label>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Success Message</Label>
+                        <Input 
+                          value={formConfig.settings?.success_message} 
+                          onChange={(e) => setFormConfig({
+                            ...formConfig, 
+                            settings: { ...formConfig.settings!, success_message: e.target.value }
+                          })}
+                          placeholder="Thank you for your interest!" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Redirect URL (Optional)</Label>
+                        <Input 
+                          value={formConfig.settings?.redirect_url || ''} 
+                          onChange={(e) => setFormConfig({
+                            ...formConfig, 
+                            settings: { ...formConfig.settings!, redirect_url: e.target.value }
+                          })}
+                          placeholder="https://example.com/thanks" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">WhatsApp (Optional)</Label>
+                        <Input 
+                          value={formConfig.settings?.whatsapp_number || ''} 
+                          onChange={(e) => setFormConfig({
+                            ...formConfig, 
+                            settings: { ...formConfig.settings!, whatsapp_number: e.target.value }
+                          })}
+                          placeholder="5511999999999" 
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
-        <div className="lg:col-span-4 space-y-6">
-          <Card className="border-none shadow-sm sticky top-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Form Settings</CardTitle>
-                <Settings2 className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Form Name</Label>
-                  <Input 
-                    value={formConfig.name} 
-                    onChange={(e) => setFormConfig({...formConfig, name: e.target.value})}
-                    placeholder="E.g. Enterprise Contact" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Slug</Label>
-                  <Input 
-                    value={formConfig.slug} 
-                    onChange={(e) => setFormConfig({...formConfig, slug: e.target.value})}
-                    placeholder="e-g-enterprise-contact" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Submit Button Text</Label>
-                  <Input 
-                    value={formConfig.settings?.submit_label} 
-                    onChange={(e) => setFormConfig({
-                      ...formConfig, 
-                      settings: { ...formConfig.settings!, submit_label: e.target.value }
-                    })}
-                    placeholder="E.g. Send" 
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs">Track UTMs</Label>
-                    <p className="text-[10px] text-muted-foreground">Automatically capture marketing data</p>
-                  </div>
-                  <Switch 
-                    checked={formConfig.settings?.capture_utms} 
-                    onCheckedChange={(val) => setFormConfig({
-                      ...formConfig, 
-                      settings: { ...formConfig.settings!, capture_utms: val }
-                    })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs">Published</Label>
-                    <p className="text-[10px] text-muted-foreground">Make form public</p>
-                  </div>
-                  <Switch 
-                    checked={formConfig.status === 'published'} 
-                    onCheckedChange={(val) => setFormConfig({
-                      ...formConfig, 
-                      status: val ? 'published' : 'draft'
-                    })}
-                  />
-                </div>
-
-                <div className="space-y-4 pt-4 border-t">
-                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-70">Post-Submission</Label>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Success Message</Label>
-                    <Input 
-                      value={formConfig.settings?.success_message} 
-                      onChange={(e) => setFormConfig({
-                        ...formConfig, 
-                        settings: { ...formConfig.settings!, success_message: e.target.value }
-                      })}
-                      placeholder="Thank you for your interest!" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Redirect URL (Optional)</Label>
-                    <Input 
-                      value={formConfig.settings?.redirect_url || ''} 
-                      onChange={(e) => setFormConfig({
-                        ...formConfig, 
-                        settings: { ...formConfig.settings!, redirect_url: e.target.value }
-                      })}
-                      placeholder="https://example.com/thanks" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">WhatsApp (Optional)</Label>
-                    <Input 
-                      value={formConfig.settings?.whatsapp_number || ''} 
-                      onChange={(e) => setFormConfig({
-                        ...formConfig, 
-                        settings: { ...formConfig.settings!, whatsapp_number: e.target.value }
-                      })}
-                      placeholder="5511999999999" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        <TabsContent value="publish" className="pt-6">
+          {existingForm && <FormPublish form={existingForm} />}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
