@@ -11,8 +11,8 @@
      this.traceId = traceId;
    }
  
-   async validateAndRepair(userId: string, email: string, metadata: any, onProgress?: (state: AuthState) => void): Promise<WorkspaceContext> {
-     logger.info('WorkspaceOrchestrator: Starting validation', { userId, traceId: this.traceId });
+    async validateAndRepair(userId: string, email: string, metadata: any, onProgress?: (state: AuthState) => void): Promise<WorkspaceContext> {
+      logger.info('WorkspaceOrchestrator: Starting enterprise validation sequence', { userId, traceId: this.traceId });
      
      const context: WorkspaceContext = {
        user: null,
@@ -23,9 +23,11 @@
        traceId: this.traceId
      };
  
-     try {
-        onProgress?.('TENANT_VALIDATING');
-        context.user = await this.ensureProfile(userId, email, metadata);
+      try {
+         onProgress?.('TENANT_VALIDATING');
+         logger.info('AuthRecovery: Initializing profile hydration', { userId });
+         context.user = await this.ensureProfile(userId, email, metadata);
+         logger.info('AuthRecovery: Profile hydrated successfully', { userId });
 
         onProgress?.('TENANT_RECOVERING');
         const workspace = await this.ensureWorkspace(userId, metadata, onProgress);
