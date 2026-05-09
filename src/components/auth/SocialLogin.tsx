@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/core/auth/hooks/useAuth";
-import { Chrome, Facebook } from "lucide-react";
+import { Globe, Zap } from "lucide-react";
 import { useState } from "react";
 
 export function SocialLogin() {
@@ -30,7 +30,7 @@ export function SocialLogin() {
         {pending === 'google' ? (
           <div className="h-4 w-4 border-2 border-primary/20 border-t-primary animate-spin rounded-full" />
         ) : (
-          <Chrome className="h-4 w-4 text-rose-500" />
+          <Globe className="h-4 w-4 text-blue-500" />
         )}
         Google
       </Button>
@@ -43,7 +43,7 @@ export function SocialLogin() {
         {pending === 'meta' ? (
           <div className="h-4 w-4 border-2 border-primary/20 border-t-primary animate-spin rounded-full" />
         ) : (
-          <Facebook className="h-4 w-4 text-blue-600 fill-blue-600" />
+          <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
         )}
         Meta
       </Button>
