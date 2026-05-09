@@ -202,7 +202,7 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
                        <ArrowRight className="h-6 w-6" />
                      </Button>
                    </Link>
-                    <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-white/20 text-white hover:bg-white hover:text-slate-900 transition-all duration-300">
+                    <Button size="lg" variant="outline" className="h-16 px-10 text-xl font-bold border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300">
                      Book a Demo
                    </Button>
                 </div>
