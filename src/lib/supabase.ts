@@ -1,40 +1,12 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { getRuntimeConfig } from '@/core/config/runtime-config';
-
-let supabaseInstance: SupabaseClient | null = null;
-
-export const getSupabase = (): SupabaseClient => {
-  if (supabaseInstance) return supabaseInstance;
-
-  const config = getRuntimeConfig();
-
-  if (typeof window !== 'undefined') {
-    console.log('DEBUG [Supabase]: Initializing Singleton Client', { 
-      url: config.supabaseUrl, 
-      timestamp: new Date().toISOString() 
-    });
-  }
-
-  supabaseInstance = createClient(config.supabaseUrl, config.supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: 'lovable-crm-auth-token',
-    },
-    global: {
-      headers: { 'x-application-name': 'crm-enterprise-resilient' },
-    },
-    db: {
-      schema: 'public',
-    },
-  });
-
-  return supabaseInstance;
-};
-
-// Keep exported for compatibility, but recommend getSupabase()
-export const supabase = typeof window !== 'undefined' ? getSupabase() : (null as any);
+ import { SupabaseClient } from '@supabase/supabase-js';
+ import { SafeSupabaseClientFactory } from '@/core/infrastructure/supabase-factory';
+ 
+ export const getSupabase = (): SupabaseClient => {
+   return SafeSupabaseClientFactory.getInstanceSync();
+ };
+ 
+ // Keep exported for compatibility
+ export const supabase = typeof window !== 'undefined' ? getSupabase() : ({} as any);
 
 export const safeDb = async <T>(promise: Promise<T>, context: string): Promise<T> => {
   try {
