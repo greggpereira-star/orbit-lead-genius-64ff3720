@@ -24,8 +24,8 @@ let configInstance: RuntimeConfig | null = null;
    if (configInstance) return configInstance;
  
    const rawConfig = {
-     supabaseUrl: import.meta.env.VITE_SUPABASE_URL || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_URL : process.env.VITE_SUPABASE_URL) || '',
-     supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_ANON_KEY : process.env.VITE_SUPABASE_ANON_KEY) || '',
+     supabaseUrl: import.meta.env.VITE_SUPABASE_URL || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_URL : process.env.VITE_SUPABASE_URL) || 'https://placeholder-project.supabase.co',
+     supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_ANON_KEY : process.env.VITE_SUPABASE_ANON_KEY) || 'placeholder-key',
      isDevelopment: typeof import.meta.env.DEV !== 'undefined' ? import.meta.env.DEV : true,
      isProduction: typeof import.meta.env.PROD !== 'undefined' ? import.meta.env.PROD : false,
      appName: 'Enterprise Resilient CRM',
