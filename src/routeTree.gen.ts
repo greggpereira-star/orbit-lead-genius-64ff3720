@@ -29,6 +29,7 @@ import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.setti
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
+import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -129,10 +130,15 @@ const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppLeadsRoute,
 } as any)
+const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
+  id: '/tv',
+  path: '/tv',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analytics': typeof AppAnalyticsRoute
+  '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
+  '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/company': typeof AppSettingsCompanyRoute
@@ -152,7 +159,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analytics': typeof AppAnalyticsRoute
+  '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/whatsapp': typeof AppWhatsappRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
+  '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/company': typeof AppSettingsCompanyRoute
@@ -174,7 +182,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
-  '/_app/analytics': typeof AppAnalyticsRoute
+  '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/forms': typeof AppFormsRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/_app/whatsapp': typeof AppWhatsappRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
+  '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/whatsapp'
     | '/login'
     | '/register'
+    | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
     | '/settings/company'
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/whatsapp'
     | '/login'
     | '/register'
+    | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
     | '/settings/company'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/_app/whatsapp'
     | '/_auth/login'
     | '/_auth/register'
+    | '/_app/analytics/tv'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
     | '/_app/settings/company'
@@ -404,8 +416,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsIdRouteImport
       parentRoute: typeof AppLeadsRoute
     }
+    '/_app/analytics/tv': {
+      id: '/_app/analytics/tv'
+      path: '/tv'
+      fullPath: '/analytics/tv'
+      preLoaderRoute: typeof AppAnalyticsTvRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
   }
 }
+
+interface AppAnalyticsRouteChildren {
+  AppAnalyticsTvRoute: typeof AppAnalyticsTvRoute
+}
+
+const AppAnalyticsRouteChildren: AppAnalyticsRouteChildren = {
+  AppAnalyticsTvRoute: AppAnalyticsTvRoute,
+}
+
+const AppAnalyticsRouteWithChildren = AppAnalyticsRoute._addFileChildren(
+  AppAnalyticsRouteChildren,
+)
 
 interface AppLeadsRouteChildren {
   AppLeadsIdRoute: typeof AppLeadsIdRoute
@@ -442,7 +473,7 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppAnalyticsRoute: typeof AppAnalyticsRoute
+  AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppFormsRoute: typeof AppFormsRoute
@@ -453,7 +484,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAnalyticsRoute: AppAnalyticsRoute,
+  AppAnalyticsRoute: AppAnalyticsRouteWithChildren,
   AppAutomationsRoute: AppAutomationsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppFormsRoute: AppFormsRoute,
@@ -485,3 +516,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
