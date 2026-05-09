@@ -54,10 +54,9 @@ function ObservabilityPage() {
          supabase.from('system_logs').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(10)
        ]);
  
-       setWebhooks(whResult.data || []);
-       setDlq(dlqResult.data || []);
-       
-       // Simulated real-time metrics
+        setWebhooks(whResult.data || []);
+        
+        // Simulated real-time metrics
        setHealth([
          { component: 'CV.CRM API', status: 'healthy', latency: '42ms' },
          { component: 'Auth Guardian', status: 'healthy', latency: '15ms' },
