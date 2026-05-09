@@ -54,11 +54,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
      setState('TENANT_VALIDATING');
      
      try {
-       const result = await orchestratorRef.current.validateAndRepair(
-         supabaseUser.id,
-         supabaseUser.email || '',
-         supabaseUser.user_metadata || {}
-       );
+        const result = await (orchestratorRef.current as any).validateAndRepair(
+          supabaseUser.id,
+          supabaseUser.email || "",
+          supabaseUser.user_metadata || {},
+          (newState: AuthState) => setState(newState)
+        );
  
        if (result.state === 'ERROR') {
          setError(result.error);
@@ -293,9 +294,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     user,
      company,
      membership,
-   isAuthenticated: state === 'AUTHENTICATED' || state === 'TENANT_LOADING' || state === 'READY',
+   isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP'].includes(state as string),
    isReady: state === 'READY',
-   isLoading: state === 'INITIALIZING' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING',
+   isLoading: ['INITIALIZING', 'AUTHENTICATING', 'TENANT_VALIDATING', 'TENANT_RECOVERING', 'MEMBERSHIP_RECOVERING'].includes(state as string),
     error: envError || error,
     traceId,
      login,

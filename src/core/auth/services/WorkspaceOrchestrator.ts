@@ -11,7 +11,7 @@
      this.traceId = traceId;
    }
  
-   async validateAndRepair(userId: string, email: string, metadata: any): Promise<WorkspaceContext> {
+   async validateAndRepair(userId: string, email: string, metadata: any, onProgress?: (state: AuthState) => void): Promise<WorkspaceContext> {
      logger.info('WorkspaceOrchestrator: Starting validation', { userId, traceId: this.traceId });
      
      const context: WorkspaceContext = {
@@ -24,11 +24,11 @@
      };
  
      try {
-       // 1. Validate Profile
-       context.user = await this.ensureProfile(userId, email, metadata);
-       
-       // 2. Validate/Repair Company & Membership
-       const workspace = await this.ensureWorkspace(userId, metadata);
+        onProgress?.('TENANT_VALIDATING');
+        context.user = await this.ensureProfile(userId, email, metadata);
+
+        onProgress?.('TENANT_RECOVERING');
+        const workspace = await this.ensureWorkspace(userId, metadata, onProgress);
        context.company = workspace.company;
        context.membership = workspace.membership;
        
@@ -86,7 +86,7 @@
      };
    }
  
-   private async ensureWorkspace(userId: string, metadata: any): Promise<{ company: Company; membership: Membership }> {
+  private async ensureWorkspace(userId: string, metadata: any, onProgress?: (state: AuthState) => void): Promise<{ company: Company; membership: Membership }> {
      logger.info('WorkspaceOrchestrator: Ensuring workspace integrity', { userId });
  
      // Check existing membership
@@ -118,33 +118,57 @@
      const uniqueSlug = `${baseSlug}-${userId.substring(0, 5)}-${Math.floor(Math.random() * 1000)}`;
  
      // Atomic recovery transaction (emulated via JS as we don't have Rpc here)
-     const { data: newCompany, error: compError } = await this.client
-       .from('companies')
-       .insert({ name: companyName, slug: uniqueSlug })
-       .select()
-       .single();
- 
-     if (compError) throw new Error(`Company recovery failed: ${compError.message}`);
- 
-     const { data: newMembership, error: newMemError } = await this.client
-       .from('memberships')
-       .insert({
-         company_id: newCompany.id,
-         user_id: userId,
-         role: 'owner'
-       })
-       .select()
-       .single();
- 
-     if (newMemError) {
-       // Cleanup orphan company if membership fails
-       await this.client.from('companies').delete().eq('id', newCompany.id);
-       throw new Error(`Membership recovery failed: ${newMemError.message}`);
-     }
- 
-     return {
-       company: newCompany,
-       membership: newMembership
-     };
+      const { data: newCompany, error: compError } = await this.client.rpc('get_or_create_company', {
+        p_name: companyName,
+        p_slug: uniqueSlug,
+        p_user_id: userId
+      });
+
+      if (compError) {
+        logger.warn('RPC get_or_create_company missing, falling back to manual creation');
+        const { data, error } = await this.client
+          .from('companies')
+          .insert({ name: companyName, slug: uniqueSlug, created_by: userId })
+          .select()
+          .single();
+        if (error) throw new Error(`Company recovery failed: ${error.message}`);
+        return this.finishWorkspaceSetup(userId, data, onProgress);
+      }
+
+      return this.finishWorkspaceSetup(userId, newCompany, onProgress);
+    }
+
+    private async finishWorkspaceSetup(userId: string, company: Company, onProgress?: (state: AuthState) => void): Promise<{ company: Company; membership: Membership }> {
+      onProgress?.('MEMBERSHIP_RECOVERING');
+      
+      const { data: membership, error: memError } = await this.client
+        .from('memberships')
+        .insert({
+          company_id: company.id,
+          user_id: userId,
+          role: 'owner'
+        })
+        .select()
+        .single();
+
+      if (memError && !memError.message.includes('unique_user_company_membership')) {
+         throw new Error(`Membership recovery failed: ${memError.message}`);
+      }
+
+      const finalMembership = membership || await this.client
+        .from('memberships')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('company_id', company.id)
+        .single()
+        .then(res => res.data);
+
+      onProgress?.('ROLE_RECOVERING');
+      onProgress?.('WORKSPACE_READY');
+      return {
+        company,
+        membership: finalMembership
+      };
+    }
    }
- }
+}

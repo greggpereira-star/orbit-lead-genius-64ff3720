@@ -21,7 +21,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
      const [companyName, setCompanyName] = useState('');
      const [retryCount, setRetryCount] = useState(0);
      const { signup, state, error: authError } = useAuth();
-      const isLoading = state === 'CREATING_ACCOUNT' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
+      const isLoading = ['CREATING_ACCOUNT', 'AUTHENTICATING', 'INITIALIZING', 'TENANT_VALIDATING', 'TENANT_RECOVERING'].includes(state as string);
    
       const passwordStrength = useMemo(() => {
         if (!password) return null;
