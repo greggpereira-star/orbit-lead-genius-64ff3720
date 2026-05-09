@@ -1,3 +1,8 @@
+ import { metaCapiService } from '@/modules/meta/services/capi';
+       case 'meta_capi':
+         await metaCapiService.sendLeadEvent(automation.company_id, data);
+         break;
+ 
  import { supabase } from '@/lib/supabase';
  import { cvService } from '@/modules/cvcrm/services/cvService';
  import { googleAdsService } from '@/modules/google/services/googleAds';
