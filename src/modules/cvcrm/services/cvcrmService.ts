@@ -4,30 +4,37 @@ import { toast } from 'sonner';
 
 /**
  * CV.CRM Integration Service
- * Follows the principle: Frontend -> API Gateway (Edge Function) -> CV.CRM
+ * Follows the principle: Frontend -> API Gateway (Edge Function) -> Queue -> CV.CRM
  */
 export const cvcrmService = {
   /**
    * Saves CV.CRM integration settings securely.
    */
-  async saveConfig(companyId: string, config: { domain: string; email: string; api_token: string }) {
+  async saveConfig(companyId: string, config: { cvcrm_base_url: string; api_user: string; api_token: string }) {
     try {
       const { error } = await supabase
-        .from('integrations')
+        .from('cvcrm_integrations')
         .upsert({
           company_id: companyId,
-          provider: 'cvcrm',
-          status: 'connected',
-          config: {
-            domain: config.domain,
-            email: config.email,
-            api_token: config.api_token
-          },
+          cvcrm_base_url: config.cvcrm_base_url,
+          api_user: config.api_user,
+          api_token: config.api_token,
+          is_active: true,
+          connection_status: 'connected',
           updated_at: new Date().toISOString()
-        }, { onConflict: 'company_id,provider' });
+        });
 
       if (error) throw error;
-      
+
+      // Also sync to generic integrations table for UI consistency
+      await supabase.from('integrations').upsert({
+        company_id: companyId,
+        provider: 'cvcrm',
+        status: 'connected',
+        config: { domain: config.cvcrm_base_url },
+        last_sync_at: new Date().toISOString()
+      }, { onConflict: 'company_id,provider' });
+
       toast.success('CV.CRM configuration saved successfully');
       return { success: true };
     } catch (err: any) {
@@ -37,13 +44,24 @@ export const cvcrmService = {
     }
   },
 
+  async getStatus(companyId: string) {
+    const { data, error } = await supabase
+      .from('cvcrm_integrations')
+      .select('*')
+      .eq('company_id', companyId)
+      .maybeSingle();
+    
+    if (error) return null;
+    return data;
+  },
+
   /**
    * Triggers real-time synchronization of a lead to CV.CRM.
    * Uses a Supabase Edge Function to protect tokens and handle integration logic.
    */
   async syncLead(companyId: string, leadId: string): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
-      // 1. Log start of sync for auditability
+      // 1. Log sync request
       await supabase.from('audit_logs').insert({
         company_id: companyId,
         action: 'cvcrm_sync_triggered',
@@ -51,47 +69,28 @@ export const cvcrmService = {
         entity_id: leadId
       });
 
-      // 2. Invoke the Edge Function (Internal API Gateway)
-      // This ensures tokens (api_token, email) are never exposed to the client
+      // 2. Add to Queue (Event-Driven)
+      const { error: queueError } = await supabase
+        .from('cvcrm_sync_queue')
+        .insert({
+          company_id: companyId,
+          entity_type: 'lead',
+          entity_id: leadId,
+          status: 'pending'
+        });
+
+      if (queueError) throw queueError;
+
+      // 3. Optional: Trigger immediate processing via Edge Function
       const { data, error } = await supabase.functions.invoke('sync-cvcrm', {
         body: { leadId, companyId }
       });
 
-      if (data?.success === false) {
-         await healthService.logIntegrationError(companyId, 'cvcrm', data.error);
-      }
-
-      if (error) {
-        console.error('Edge Function Error:', error);
-        
-        // Log failure
-        await supabase.from('integration_logs').insert({
-          company_id: companyId,
-          integration_name: 'cvcrm',
-          status: 'error',
-          payload: { error: error.message, leadId }
-        });
-
-        return { success: false, error: error.message };
-      }
-
-      // 3. Update local lead with external reference if available
-      if (data?.success && data?.data?.id_lead) {
-        await supabase
-          .from('leads')
-          .update({
-            metadata: { 
-              cv_lead_id: data.data.id_lead,
-              last_sync: new Date().toISOString()
-            }
-          })
-          .eq('id', leadId);
-      }
-
-      return { success: true, data };
+      return { success: !error && data?.success, data, error };
 
     } catch (err: any) {
-      console.error('CV.CRM Sync Exception:', err);
+      console.error('CV.CRM Sync Error:', err);
+      await healthService.logIntegrationError(companyId, 'cvcrm', err.message);
       return { success: false, error: err.message };
     }
   }

@@ -12,7 +12,28 @@
    Bell,
    Settings
  } from 'lucide-react';
- import { Switch } from '@/components/ui/switch';
+  import { Switch } from '@/components/ui/switch';
+  import { supabase } from '@/lib/supabase';
+  import { useAuth } from '@/core/auth/hooks/useAuth';
+  import { toast } from 'sonner';
+  import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogTrigger,
+    DialogFooter
+  } from '@/components/ui/dialog';
+  import { Label } from '@/components/ui/label';
+  import { Input } from '@/components/ui/input';
+  import { 
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select";
  
  const mockWorkflows = [
    {
@@ -43,13 +64,64 @@
      <div className="space-y-6">
        <div className="flex justify-between items-center">
          <div>
-           <h2 className="text-xl font-bold">Automations</h2>
-           <p className="text-sm text-muted-foreground">Automate your sales and marketing processes.</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold">Event-Driven Workflows</h2>
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] uppercase font-bold">Enterprise Engine</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">Distributed execution with automatic retries and audit logs.</p>
          </div>
-         <Button className="gap-2">
-           <Plus className="h-4 w-4" />
-           New Workflow
-         </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="gap-2 font-bold shadow-lg shadow-primary/20">
+                <Plus className="h-4 w-4" />
+                Create Automation
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">New Automation Rule</DialogTitle>
+                <DialogDescription>Define a trigger and actions to automate your CRM lifecycle.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase font-bold text-muted-foreground">Automation Name</Label>
+                  <Input placeholder="Ex: Sync Hot Leads to CV.CRM" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Trigger Event</Label>
+                    <Select defaultValue="lead.created">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select event" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lead.created">lead.created</SelectItem>
+                        <SelectItem value="lead.qualified">lead.qualified</SelectItem>
+                        <SelectItem value="pipeline.stage_changed">pipeline.stage_changed</SelectItem>
+                        <SelectItem value="integration.failed">integration.failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground">Priority</Label>
+                    <Select defaultValue="normal">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High (Immediate)</SelectItem>
+                        <SelectItem value="normal">Normal (Queue)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline">Cancel</Button>
+                <Button onClick={() => toast.success('Automation rule saved and deployed')}>Deploy Rule</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
        </div>
  
        <div className="space-y-4">

@@ -6,22 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Validation Layer
+const validateLead = (lead: any) => {
+  const errors = [];
+  if (!lead.name) errors.push('Name is required');
+  if (!lead.email && !lead.phone) errors.push('Email or Phone is required');
+  return { isValid: errors.length === 0, errors };
+}
+
 serve(async (req) => {
-  // Handle CORS
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { leadId, companyId } = await req.json()
-
-    // 1. Initialize Supabase Admin Client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 2. Fetch Lead Data
+    const { leadId, companyId } = await req.json()
+    const startTime = Date.now()
+
+    // 1. Fetch Lead Data
     const { data: lead, error: leadError } = await supabaseAdmin
       .from('leads')
       .select('*')
@@ -30,61 +35,88 @@ serve(async (req) => {
 
     if (leadError || !lead) throw new Error('Lead not found')
 
-    // 3. Fetch Company Integration Config
+    // 2. Validation Layer
+    const validation = validateLead(lead);
+    if (!validation.isValid) throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+
+    // 3. Fetch Company CV.CRM Integration Config
     const { data: integration, error: intError } = await supabaseAdmin
-      .from('integrations')
-      .select('config')
+      .from('cvcrm_integrations')
+      .select('*')
       .eq('company_id', companyId)
-      .eq('provider', 'cvcrm')
-      .eq('status', 'connected')
+      .eq('is_active', true)
       .single()
 
-    if (intError || !integration) throw new Error('CV.CRM integration not configured')
+    if (intError || !integration) throw new Error('CV.CRM integration not configured or inactive')
 
-    const { api_token, email, domain } = integration.config
-
-    // 4. Prepare Payload according to CV.CRM official spec
+    // 4. Prepare Payload (CV.CRM SPEC)
     const cvPayload = {
       nome: lead.name,
       email: lead.email,
       telefone: lead.phone,
       id_empreendimento: lead.metadata?.id_empreendimento || lead.metadata?.product_id,
       origem: lead.utm_source || lead.metadata?.source || 'Lovable_CRM',
-      // Fields requested by some versions of CV.CRM
-      email_corretor: lead.metadata?.corretor_email,
-      id_situacao: lead.metadata?.id_situacao || 1, // Default initial status
+      utm_source: lead.utm_source,
+      utm_medium: lead.utm_medium,
+      utm_campaign: lead.utm_campaign,
+      utm_content: lead.utm_content,
+      utm_term: lead.utm_term,
+      gclid: lead.gclid,
+      fbclid: lead.fbclid,
+      id_situacao: lead.metadata?.id_situacao || 1,
     }
 
-    console.log(`Sending lead ${leadId} to CV.CRM domain: ${domain}`)
+    const domain = integration.cvcrm_base_url;
+    const apiUrl = `https://${domain}.cvcrm.com.br/api/cv/lead`;
 
     // 5. Call CV.CRM API
-    const response = await fetch(`https://${domain}.cvcrm.com.br/api/cv/lead`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'token': api_token,
-        'email': email
+        'token': integration.api_token,
+        'email': integration.api_user
       },
       body: JSON.stringify(cvPayload)
     })
 
-    const result = await response.json()
+    const result = await response.json();
+    const latency = Date.now() - startTime;
 
-    if (!response.ok) {
-      throw new Error(`CV.CRM API Error: ${JSON.stringify(result)}`)
-    }
-
-    // 6. Log success and update lead
-    await supabaseAdmin.from('lead_events').insert({
+    // 6. Audit Logs & Sync Logs
+    await supabaseAdmin.from('cvcrm_sync_logs').insert({
+      company_id: companyId,
       lead_id: leadId,
-      event_type: 'integration_sync',
-      description: 'Lead synced successfully to CV.CRM via Edge Function',
-      metadata: { provider: 'cvcrm', external_response: result }
+      direction: 'outbound',
+      payload_sent: cvPayload,
+      payload_received: result,
+      status_code: response.status,
+      request_id: crypto.randomUUID(),
+      latency_ms: latency,
+      error_message: response.ok ? null : JSON.stringify(result)
     })
 
-    return new Response(JSON.stringify({ success: true, data: result }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    if (!response.ok) throw new Error(`CV.CRM API Error: ${JSON.stringify(result)}`);
+
+    // 7. Update Lead Status
+    await supabaseAdmin
+      .from('leads')
+      .update({
+        cvcrm_id: result.id_lead || result.id,
+        sync_status: 'synced',
+        last_sync_at: new Date().toISOString()
+      })
+      .eq('id', leadId)
+
+    // 8. Update Queue Status
+    await supabaseAdmin
+      .from('cvcrm_sync_queue')
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .eq('entity_id', leadId)
+      .eq('status', 'pending')
+
+    return new Response(JSON.stringify({ success: true, data: result }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
 
   } catch (error) {

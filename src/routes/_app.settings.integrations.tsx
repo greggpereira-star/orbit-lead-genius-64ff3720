@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -56,13 +56,33 @@ const integrations = [
 
 function IntegrationsSettings() {
   const { company } = useAuth();
-  const [cvConfig, setCvConfig] = useState({ domain: '', email: '', api_token: '' });
+  const [cvConfig, setCvConfig] = useState({ cvcrm_base_url: '', api_user: '', api_token: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [integrationStatus, setIntegrationStatus] = useState<any>(null);
+
+  useEffect(() => {
+    if (company) {
+      cvcrmService.getStatus(company.id).then(status => {
+        if (status) {
+          setIntegrationStatus(status);
+          setCvConfig({
+            cvcrm_base_url: status.cvcrm_base_url,
+            api_user: status.api_user,
+            api_token: status.api_token
+          });
+        }
+      });
+    }
+  }, [company]);
 
   const handleSaveCV = async () => {
     if (!company) return;
     setIsSaving(true);
-    await cvcrmService.saveConfig(company.id, cvConfig);
+    const result = await cvcrmService.saveConfig(company.id, cvConfig);
+    if (result.success) {
+      const status = await cvcrmService.getStatus(company.id);
+      setIntegrationStatus(status);
+    }
     setIsSaving(false);
   };
 
@@ -174,25 +194,24 @@ function IntegrationsSettings() {
                         {app.id === 'cvcrm' ? (
                           <>
                             <div className="space-y-2">
-                              <Label htmlFor="cv-domain" className="text-xs uppercase font-bold text-muted-foreground">Domain Subdomain</Label>
+                              <Label htmlFor="cv-domain" className="text-xs uppercase font-bold text-muted-foreground">Base URL (Ex: mycompany)</Label>
                               <div className="flex items-center gap-2">
                                 <Input 
                                   id="cv-domain" 
                                   placeholder="mycompany" 
-                                  value={cvConfig.domain}
-                                  onChange={(e) => setCvConfig({ ...cvConfig, domain: e.target.value })}
+                                  value={cvConfig.cvcrm_base_url}
+                                  onChange={(e) => setCvConfig({ ...cvConfig, cvcrm_base_url: e.target.value })}
                                 />
                                 <span className="text-xs font-medium text-muted-foreground">.cvcrm.com.br</span>
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="cv-email" className="text-xs uppercase font-bold text-muted-foreground">Integration Email</Label>
+                              <Label htmlFor="cv-user" className="text-xs uppercase font-bold text-muted-foreground">Integration User</Label>
                               <Input 
-                                id="cv-email" 
-                                type="email" 
-                                placeholder="api@company.com" 
-                                value={cvConfig.email}
-                                onChange={(e) => setCvConfig({ ...cvConfig, email: e.target.value })}
+                                id="cv-user" 
+                                placeholder="api_user" 
+                                value={cvConfig.api_user}
+                                onChange={(e) => setCvConfig({ ...cvConfig, api_user: e.target.value })}
                               />
                             </div>
                             <div className="space-y-2">
@@ -226,6 +245,22 @@ function IntegrationsSettings() {
                         Enterprise Grade: All data is encrypted via AES-256 before being stored. Integration logs are audited every 24 hours.
                       </p>
                     </div>
+
+                    {integrationStatus && (
+                      <div className="space-y-2 p-4 rounded-xl border bg-primary/[0.02]">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Integration Health</p>
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Status:</span>
+                          <Badge className={integrationStatus.connection_status === 'connected' ? 'bg-emerald-500' : 'bg-rose-500'}>
+                            {integrationStatus.connection_status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Last Sync:</span>
+                          <span className="font-medium">{integrationStatus.last_sync_at ? new Date(integrationStatus.last_sync_at).toLocaleString() : 'Never'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <DialogFooter className="gap-2 sm:gap-0">
