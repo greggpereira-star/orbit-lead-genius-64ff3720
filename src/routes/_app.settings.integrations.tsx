@@ -39,6 +39,7 @@ function IntegrationsSettings() {
   const { company } = useAuth();
   const [cvConfig, setCvConfig] = useState({ cvcrm_base_url: '', api_user: '', api_token: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [isTestingLead, setIsTestingLead] = useState(false);
   const [integrationStatus, setIntegrationStatus] = useState<any>(null);
 
   useEffect(() => {
@@ -47,9 +48,9 @@ function IntegrationsSettings() {
         if (status) {
           setIntegrationStatus(status);
           setCvConfig({
-            cvcrm_base_url: status.cvcrm_base_url,
-            api_user: status.api_user,
-            api_token: status.api_token
+            cvcrm_base_url: status.base_url || '',
+            api_user: status.integration_user || '',
+            api_token: status.encrypted_api_token || ''
           });
         }
       });
@@ -59,12 +60,29 @@ function IntegrationsSettings() {
   const handleSaveCV = async () => {
     if (!company) return;
     setIsSaving(true);
-    const result = await cvcrmService.saveConfig(company.id, cvConfig);
+    const result = await cvcrmService.saveConfig(company.id, {
+      cvcrm_base_url: cvConfig.cvcrm_base_url,
+      api_user: cvConfig.api_user,
+      api_token: cvConfig.api_token,
+      subdomain: cvConfig.cvcrm_base_url
+    });
     if (result.success) {
       const status = await cvcrmService.getStatus(company.id);
       setIntegrationStatus(status);
     }
     setIsSaving(false);
+  };
+
+  const handleSendTestLead = async () => {
+    if (!company) return;
+    setIsTestingLead(true);
+    const result = await cvcrmService.sendTestLead(company.id);
+    if (result.success) {
+      toast.success('Test lead sent successfully! Check your CV.CRM dashboard.');
+    } else {
+      toast.error('Failed to send test lead: ' + (result.error || 'Unknown error'));
+    }
+    setIsTestingLead(false);
   };
 
   const trackingScript = `<script>
@@ -158,9 +176,29 @@ function IntegrationsSettings() {
                         <Label className="text-sm font-bold">Automatic Lead Forwarding</Label>
                         <p className="text-[11px] text-muted-foreground">Send leads directly to CV.CRM as soon as they are captured.</p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch checked={integrationStatus?.is_active} />
                     </div>
                   </div>
+
+                  {integrationStatus?.connection_status === 'connected' && (
+                    <div className="space-y-4 border rounded-xl p-4 bg-emerald-50/50 border-emerald-100">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-emerald-900">Test Delivery</Label>
+                          <p className="text-[11px] text-emerald-700">Push a sample lead into CV.CRM to verify the full pipeline.</p>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 text-[10px] font-bold uppercase tracking-wider bg-white"
+                          onClick={handleSendTestLead}
+                          disabled={isTestingLead}
+                        >
+                          {isTestingLead ? 'Sending...' : 'Send Test Lead'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="space-y-4">
                     <div className="space-y-2">

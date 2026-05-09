@@ -38,6 +38,196 @@ export type Database = {
         }
         Relationships: []
       }
+      cvcrm_dead_letter_queue: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          delivery_log_id: string | null
+          failure_reason: string | null
+          id: string
+          last_error: string | null
+          lead_id: string
+          payload: Json | null
+          resolved_at: string | null
+          retry_count: number | null
+          trace_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          delivery_log_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          last_error?: string | null
+          lead_id: string
+          payload?: Json | null
+          resolved_at?: string | null
+          retry_count?: number | null
+          trace_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          delivery_log_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          last_error?: string | null
+          lead_id?: string
+          payload?: Json | null
+          resolved_at?: string | null
+          retry_count?: number | null
+          trace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cvcrm_dead_letter_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cvcrm_dead_letter_queue_delivery_log_id_fkey"
+            columns: ["delivery_log_id"]
+            isOneToOne: false
+            referencedRelation: "cvcrm_delivery_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cvcrm_dead_letter_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cvcrm_delivery_logs: {
+        Row: {
+          attempt_count: number | null
+          company_id: string
+          created_at: string | null
+          cvcrm_lead_id: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          lead_id: string
+          next_retry_at: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          sent_at: string | null
+          status: string
+          status_code: number | null
+          trace_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          company_id: string
+          created_at?: string | null
+          cvcrm_lead_id?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          lead_id: string
+          next_retry_at?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          sent_at?: string | null
+          status: string
+          status_code?: number | null
+          trace_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          company_id?: string
+          created_at?: string | null
+          cvcrm_lead_id?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          lead_id?: string
+          next_retry_at?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          sent_at?: string | null
+          status?: string
+          status_code?: number | null
+          trace_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cvcrm_delivery_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cvcrm_delivery_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cvcrm_field_mappings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          cvcrm_custom_field_id: string | null
+          cvcrm_field: string
+          cvcrm_integration_id: string
+          id: string
+          is_custom_field: boolean | null
+          leadflow_field: string
+          required: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          cvcrm_custom_field_id?: string | null
+          cvcrm_field: string
+          cvcrm_integration_id: string
+          id?: string
+          is_custom_field?: boolean | null
+          leadflow_field: string
+          required?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          cvcrm_custom_field_id?: string | null
+          cvcrm_field?: string
+          cvcrm_integration_id?: string
+          id?: string
+          is_custom_field?: boolean | null
+          leadflow_field?: string
+          required?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cvcrm_field_mappings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cvcrm_field_mappings_cvcrm_integration_id_fkey"
+            columns: ["cvcrm_integration_id"]
+            isOneToOne: false
+            referencedRelation: "cvcrm_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cvcrm_integrations: {
         Row: {
           api_token: string
@@ -840,6 +1030,48 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_timeline_events: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          event_type: string
+          id: string
+          lead_id: string
+          metadata: Json | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_timeline_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_timeline_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

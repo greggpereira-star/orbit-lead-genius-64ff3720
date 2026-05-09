@@ -84,10 +84,10 @@ serve(async (req) => {
       trace_id: traceId
     })
 
-    // 5. Trigger delivery to CV.CRM
+    // 5. Trigger delivery to CV.CRM (Enterprise spec)
     if (newLead) {
-       await supabaseAdmin.functions.invoke('sync-cvcrm', {
-         body: { leadId: newLead.id, companyId: asset.company_id }
+       await supabaseAdmin.functions.invoke('send-cvcrm-lead', {
+         body: { lead_id: newLead.id, tenant_id: asset.company_id }
        })
     }
 
