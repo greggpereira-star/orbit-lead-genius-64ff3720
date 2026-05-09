@@ -197,72 +197,32 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
                     Add Field
                   </Button>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {fields.map((field, index) => (
-                    <div 
-                      key={field.tempId || index} 
-                      className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
-                    >
-                      <div className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors">
-                        <GripVertical className="h-5 w-5" />
-                      </div>
-                      
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Field Label</Label>
-                          <Input 
-                            value={field.label} 
-                            onChange={(e) => {
-                              const newFields = [...fields];
-                              newFields[index].label = e.target.value;
-                              setFields(newFields);
-                            }}
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Field Type</Label>
-                          <select 
-                            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            value={field.type}
-                            onChange={(e) => {
-                              const newFields = [...fields];
-                              newFields[index].type = e.target.value as any;
-                              setFields(newFields);
-                            }}
-                          >
-                            <option value="text">Text Input</option>
-                            <option value="email">Email</option>
-                            <option value="phone">Phone</option>
-                            <option value="textarea">Textarea</option>
-                            <option value="select">Dropdown</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-4 pt-6">
-                          <div className="flex items-center gap-2">
-                            <Switch 
-                              checked={field.required} 
-                              onCheckedChange={(val) => {
-                                const newFields = [...fields];
-                                newFields[index].required = val;
-                                setFields(newFields);
-                              }}
-                            />
-                            <span className="text-xs font-medium">Required</span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeField(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
+                 <CardContent className="space-y-3">
+                   <DndContext 
+                     sensors={sensors}
+                     collisionDetection={closestCenter}
+                     onDragEnd={handleDragEnd}
+                   >
+                     <SortableContext 
+                       items={fields.map(f => f.id)}
+                       strategy={verticalListSortingStrategy}
+                     >
+                       {fields.map((field, index) => (
+                         <SortableField 
+                           key={field.id} 
+                           field={field} 
+                           index={index}
+                           onRemove={removeField}
+                           onUpdate={(idx, data) => {
+                             const newFields = [...fields];
+                             newFields[idx] = { ...newFields[idx], ...data };
+                             setFields(newFields);
+                           }}
+                         />
+                       ))}
+                     </SortableContext>
+                   </DndContext>
+                 </CardContent>
               </Card>
             </div>
 
