@@ -128,10 +128,20 @@
                ))}
              </div>
            </CardContent>
-           <CardFooter className="flex flex-col gap-4">
-             <Button className="w-full" type="submit" disabled={isLoading}>
-               {isLoading ? 'Creating account...' : 'Get Started Free'}
-             </Button>
+            <CardFooter className="flex flex-col gap-4 pt-4">
+              <Button 
+                className="w-full h-11 text-base font-bold shadow-lg hover:shadow-xl transition-all" 
+                type="submit" 
+                disabled={isLoading}
+                onClick={() => console.log('Button clicked')}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creating account...
+                  </div>
+                ) : 'Get Started Free'}
+              </Button>
              <p className="text-xs text-center text-muted-foreground">
                Already have an account?{' '}
                <Link to="/login" className="text-primary hover:underline font-medium">
