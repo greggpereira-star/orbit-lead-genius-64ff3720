@@ -26,7 +26,9 @@ export const getSupabase = (): SupabaseClient => {
      });
    }
 
-   console.log('✅ Supabase Client Init: Attempting creation with URL:', env.VITE_SUPABASE_URL);
+   if (typeof window !== 'undefined') {
+     console.log('✅ Supabase Client Init: Attempting creation with URL:', env.VITE_SUPABASE_URL);
+   }
 
   supabaseInstance = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, {
     auth: {
