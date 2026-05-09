@@ -39,31 +39,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const isInitialMount = useRef(true);
 
     const SCHEMA_VERSION = 'v1';
-    const CACHE_KEY = `workspace_ready_${SCHEMA_VERSION}`;
+    const CACHE_KEY = 'workspace_readiness_snapshot';
 
     const checkWorkspaceReadiness = useCallback((tenantId?: string) => {
       const cached = localStorage.getItem(CACHE_KEY);
       if (!cached) return false;
       
       try {
-        const { tenantId: cachedId, timestamp } = JSON.parse(cached);
-        // Invalidate if tenantId changed (if provided) or if cache is older than 24h (optional security measure)
-        if (tenantId && cachedId !== tenantId) return false;
-        return true;
+        const snapshot = JSON.parse(cached);
+        if (snapshot.version !== SCHEMA_VERSION) return false;
+        if (tenantId && snapshot.tenant_id !== tenantId) return false;
+        if (snapshot.expires_at && Date.now() > snapshot.expires_at) return false;
+        return snapshot.workspace_ready === true;
       } catch {
         return false;
       }
-    }, []);
+    }, [SCHEMA_VERSION]);
 
-    const markWorkspaceAsReady = useCallback((tenantId: string) => {
+    const markWorkspaceAsReady = useCallback((userId: string, tenantId: string, membershipId: string) => {
       localStorage.setItem(CACHE_KEY, JSON.stringify({
-        tenantId,
-        timestamp: Date.now(),
-        ready: true
+        user_id: userId,
+        tenant_id: tenantId,
+        membership_id: membershipId,
+        workspace_ready: true,
+        onboarding_completed: true,
+        permissions_ready: true,
+        validated_at: Date.now(),
+        expires_at: Date.now() + (1000 * 60 * 60 * 24 * 7), // 7 days
+        version: SCHEMA_VERSION
       }));
-    }, []);
+    }, [SCHEMA_VERSION]);
 
     const clearWorkspaceReady = useCallback(() => {
+      localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem('workspace_ready_v1');
     }, []);
 
@@ -105,24 +113,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
              logger.fatal('Security Infrastructure Fault', { error: result.error, traceId });
           }
           
-          // If we have a cache hit but orchestration failed, enter recovery mode instead of hard error
-          if (checkWorkspaceReadiness()) {
-            logger.warn('Orchestration failed with cache hit. Entering Recovery Mode.', { traceId });
+          // If we have a cache hit but orchestration failed, check if we should show recovery or onboarding
+          const hasWorkspaceEvidence = checkWorkspaceReadiness() || result.membership !== null;
+          
+          if (hasWorkspaceEvidence) {
+            logger.warn('Orchestration failed but workspace evidence exists. Entering Recovery Mode.', { traceId });
             setState('RECOVERY_MODE');
             setError(result.error);
-            return;
+          } else {
+            logger.info('No workspace found after validation. Requiring onboarding.', { traceId });
+            setState('ONBOARDING_REQUIRED');
           }
-
-          setError(result.error);
-          setState('ERROR');
           return;
         }
  
-        if (result.company?.id) {
-          // Re-validate cache with the actual tenant ID
-          if (!checkWorkspaceReadiness(result.company.id)) {
-             markWorkspaceAsReady(result.company.id);
-          }
+        if (result.company?.id && result.user?.id && result.membership?.id) {
+          markWorkspaceAsReady(result.user.id, result.company.id, result.membership.id);
         }
 
         setUser(result.user);
@@ -159,10 +165,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             throw sessionError;
           }
           
-           if (session?.user && mounted) {
-             logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
-             await loadTenantContext(session.user);
-           } else if (mounted) {
+          if (session?.user && mounted) {
+            logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
+            await loadTenantContext(session.user);
+          } else if (mounted) {
+            const isRestoring = localStorage.getItem('supabase.auth.token') !== null;
+            if (isRestoring) {
+              setState('SESSION_LOADING');
+              return; 
+            }
             logger.info('AuthTrace: No session found', { traceId });
             setState('UNAUTHENTICATED');
           }
@@ -180,24 +191,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     initSession();
 
     const supabaseClient = getSupabase();
-     let subscription: any = null;
-     try {
-       const res = supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
-         logger.info('Supabase Auth Event', { event, traceId });
-         if (!mounted) return;
- 
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            if (session?.user) await loadTenantContext(session.user);
-          } else if (event === 'SIGNED_OUT') {
-           setUser(null);
-           setCompany(null);
-           setState('UNAUTHENTICATED');
-         }
-       });
-       subscription = res.data.subscription;
-     } catch (e) {
-       logger.error('AuthTrace: Failed to setup auth listener', { traceId });
-     }
+    let subscription: any = null;
+    
+    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      logger.info('Supabase Auth Event', { event, traceId });
+      if (!mounted) return;
+
+      switch (event) {
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+          if (session?.user) {
+            await loadTenantContext(session.user);
+          }
+          break;
+        case 'SIGNED_OUT':
+          clearWorkspaceReady();
+          setUser(null);
+          setCompany(null);
+          setMembership(null);
+          setState('UNAUTHENTICATED');
+          break;
+        case 'USER_UPDATED':
+          if (session?.user) await loadTenantContext(session.user);
+          break;
+      }
+    });
+    subscription = authSubscription;
 
     return () => {
       mounted = false;
@@ -355,8 +374,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     user,
      company,
      membership,
-    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP', 'AUTHENTICATED'].includes(state as string),
-    isReady: state === 'READY' || state === 'AUTHENTICATED' || state === 'RECOVERY_MODE',
+    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP', 'AUTHENTICATED', 'RECOVERY_MODE', 'TENANT_VALIDATING'].includes(state as string),
+    isReady: ['READY', 'AUTHENTICATED', 'RECOVERY_MODE', 'WORKSPACE_READY'].includes(state as string),
     isLoading: [
       'BOOTSTRAP_START',
       'INITIALIZING',
