@@ -217,25 +217,17 @@ import { FormPublish } from './FormPublish';
 
    useEffect(() => {
      if (existingForm) {
-       // Only update if we are not already editing or if the ID changed
-       setFormConfig(prev => {
-         if (prev.id === existingForm.id) return prev;
-         return existingForm;
-       });
-       
-       setFields(prev => {
-         // If we already have fields and the form ID matches, don't overwrite to avoid loop
-         if (prev.length > 0 && existingForm.form_fields.length > 0 && prev[0].form_id === existingForm.id) {
-           return prev;
-         }
-         return existingForm.form_fields
-           .sort((a, b) => a.sort_order - b.sort_order)
-           .map(f => ({ ...f, id: f.id }));
-       });
-     } else if (!formId && !showTemplates && fields.length === 0) {
+       // Batch updates using non-functional updates to avoid stale state issues in concurrent mode
+       // but with a check to prevent overwriting user changes
+       setFormConfig(existingForm);
+       setFields(existingForm.form_fields
+         .sort((a, b) => a.sort_order - b.sort_order)
+         .map(f => ({ ...f, id: f.id }))
+       );
+     } else if (!formId && fields.length === 0) {
        setShowTemplates(true);
      }
-   }, [existingForm, formId]);
+   }, [existingForm?.id, formId]); // Only trigger when ID changes
 
     const saveMutation = useMutation({
       mutationFn: async () => {
