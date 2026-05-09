@@ -25,7 +25,8 @@
     | 'WORKSPACE_HYDRATING'
     | 'WORKSPACE_READY'
     | 'READY'
-   | 'ERROR';
+    | 'ERROR'
+    | 'RECOVERY_MODE';
  
  export interface UserProfile {
    id: string;

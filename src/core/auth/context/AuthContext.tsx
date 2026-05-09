@@ -38,12 +38,29 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
     const isInitialMount = useRef(true);
 
-    const checkWorkspaceReadiness = useCallback(() => {
-      return localStorage.getItem('workspace_ready_v1') === 'true';
+    const SCHEMA_VERSION = 'v1';
+    const CACHE_KEY = `workspace_ready_${SCHEMA_VERSION}`;
+
+    const checkWorkspaceReadiness = useCallback((tenantId?: string) => {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return false;
+      
+      try {
+        const { tenantId: cachedId, timestamp } = JSON.parse(cached);
+        // Invalidate if tenantId changed (if provided) or if cache is older than 24h (optional security measure)
+        if (tenantId && cachedId !== tenantId) return false;
+        return true;
+      } catch {
+        return false;
+      }
     }, []);
 
-    const markWorkspaceAsReady = useCallback(() => {
-      localStorage.setItem('workspace_ready_v1', 'true');
+    const markWorkspaceAsReady = useCallback((tenantId: string) => {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        tenantId,
+        timestamp: Date.now(),
+        ready: true
+      }));
     }, []);
 
     const clearWorkspaceReady = useCallback(() => {
@@ -64,17 +81,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
      }
  
-      // Determine if we should show the full bootstrap UI
-      const isReadyCache = checkWorkspaceReadiness();
-      
-      if (isReadyCache) {
-        logger.info('WorkspaceReadinessCache: Hit. Skipping blocking bootstrap UI.', { traceId });
-        setState('AUTHENTICATED');
-      } else {
-        setState('TENANT_VALIDATING');
-      }
-     
-     try {
+      try {
+        // Determine if we should show the full bootstrap UI
+        const isReadyCache = checkWorkspaceReadiness();
+        
+        if (isReadyCache) {
+          logger.info('WorkspaceReadinessCache: Hit. Skipping blocking bootstrap UI.', { traceId });
+          setState('AUTHENTICATED');
+        } else {
+          setState('TENANT_VALIDATING');
+        }
+
         const result = await (orchestratorRef.current as any).validateAndRepair(
           supabaseUser.id,
           supabaseUser.email || "",
@@ -87,15 +104,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
           if (result.error?.includes('row-level security policy') || result.error?.includes('schema cache')) {
              logger.fatal('Security Infrastructure Fault', { error: result.error, traceId });
           }
+          
+          // If we have a cache hit but orchestration failed, enter recovery mode instead of hard error
+          if (checkWorkspaceReadiness()) {
+            logger.warn('Orchestration failed with cache hit. Entering Recovery Mode.', { traceId });
+            setState('RECOVERY_MODE');
+            setError(result.error);
+            return;
+          }
+
           setError(result.error);
           setState('ERROR');
           return;
         }
  
-       setUser(result.user);
-       setCompany(result.company);
-       setMembership(result.membership);
-        markWorkspaceAsReady();
+        if (result.company?.id) {
+          // Re-validate cache with the actual tenant ID
+          if (!checkWorkspaceReadiness(result.company.id)) {
+             markWorkspaceAsReady(result.company.id);
+          }
+        }
+
+        setUser(result.user);
+        setCompany(result.company);
+        setMembership(result.membership);
         setState('READY');
        
        logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
