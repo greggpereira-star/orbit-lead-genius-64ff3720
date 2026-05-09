@@ -176,7 +176,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
    }, [state]);
  
     // Only show bootstrap UI if we ARE in a bootstrap state AND we don't have a workspace ready cache
-    // Note: AUTHENTICATED means "we have a session and a cache hit", so we skip bootstrap.
+    // This prevents background re-validations (e.g. on tab focus) from unmounting the active UI.
     const isBootstrapping = [
       'TENANT_VALIDATING', 
       'TENANT_RECOVERING', 
@@ -186,7 +186,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
       'WORKSPACE_READY'
     ].includes(state as string);
  
-    if (isBootstrapping) {
+    const hasWorkspaceCache = typeof window !== 'undefined' && !!localStorage.getItem('workspace_readiness_snapshot');
+
+    if (isBootstrapping && !hasWorkspaceCache) {
      const statusMap: Record<string, any> = {
        TENANT_VALIDATING: 'BOOTSTRAPPING',
        TENANT_RECOVERING: 'BOOTSTRAPPING',
@@ -194,8 +196,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
        WORKSPACE_READY: 'FINALIZING',
      };
      
-     // Double check: if we are AUTHENTICATED (cached), this component won't even reach here 
-     // because AuthWrapper is re-rendered on state change.
      return <TenantBootstrap status={statusMap[state as string] || 'BOOTSTRAPPING'} />;
    }
 
