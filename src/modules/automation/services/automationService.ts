@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { cvService } from '@/modules/cvcrm/services/cvService';
+import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
 import { googleAdsService } from '@/modules/google/services/googleAds';
 import { metaCapiService } from '@/modules/meta/services/capi';
 
@@ -52,7 +52,7 @@ export const automationService = {
 
     switch (action_type) {
       case 'sync_cvcrm':
-        await cvService.syncLead(automation.company_id, data.id);
+        await cvcrmService.syncLead(automation.company_id, data.id);
         break;
       
       case 'google_conversion':
