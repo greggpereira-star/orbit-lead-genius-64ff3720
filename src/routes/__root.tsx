@@ -1,4 +1,5 @@
-import { AuthProvider } from "../core/auth/context/AuthContext";
+import { AuthProvider } from "@/core/auth/context/AuthContext";
+import { AuthErrorBoundary } from "@/components/error/AuthErrorBoundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
  import { initTracking } from "../core/tracking/pixel";
@@ -138,9 +139,11 @@ function RootComponent() {
   return (
     <ErrorBoundary name="GlobalRoot">
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Outlet />
-        </AuthProvider>
+        <AuthErrorBoundary name="GlobalAuthProvider">
+          <AuthProvider>
+            <Outlet />
+          </AuthProvider>
+        </AuthErrorBoundary>
       </QueryClientProvider>
     </ErrorBoundary>
   );
