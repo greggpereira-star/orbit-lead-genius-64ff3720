@@ -11,7 +11,7 @@
  
  function AuthLayout() {
    return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Abstract background elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -23,7 +23,7 @@
           <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
             L
           </div>
-          <span className="font-bold text-2xl tracking-tight text-slate-900">Lovable CRM</span>
+           <span className="font-bold text-2xl tracking-tight text-foreground">Lovable CRM</span>
         </Link>
          <Outlet />
        </div>
