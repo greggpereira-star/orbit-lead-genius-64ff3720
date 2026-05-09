@@ -15,9 +15,13 @@ import {
    ArrowLeft,
    Save,
    Loader2,
-   Globe,
-   ListPlus,
-   X
+    Globe,
+    ListPlus,
+    X,
+    Activity,
+    BarChart3,
+    FileText,
+    Workflow
  } from 'lucide-react';
  import {
    DndContext,
@@ -408,6 +412,27 @@ import { FormPublish } from './FormPublish';
             disabled={!formId}
           >
             <Globe className="h-4 w-4" /> Publicação
+          </TabsTrigger>
+          <TabsTrigger 
+            value="events" 
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+            disabled={!formId}
+          >
+            <Activity className="h-4 w-4" /> Eventos
+          </TabsTrigger>
+          <TabsTrigger 
+            value="analytics" 
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+            disabled={!formId}
+          >
+            <BarChart3 className="h-4 w-4" /> Analytics
+          </TabsTrigger>
+          <TabsTrigger 
+            value="submissions" 
+            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+            disabled={!formId}
+          >
+            <FileText className="h-4 w-4" /> Submissões
           </TabsTrigger>
         </TabsList>
 
