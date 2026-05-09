@@ -33,10 +33,14 @@ export const analyticsEngine = {
     // Cálculo de CPL médio via sync logs
     const { data: costs } = await supabase.from('cvcrm_sync_logs').select('latency_ms').eq('company_id', companyId);
 
+    const avgLatency = (costs && costs.length > 0) 
+      ? costs.reduce((acc: number, curr: any) => acc + (curr.latency_ms || 0), 0) / costs.length 
+      : 0;
+
     return {
       totalLeads: leads?.count || 0,
       qualifiedLeads: qualified?.count || 0,
-      avgLatency: costs?.reduce((acc, curr) => acc + curr.latency_ms, 0) / (costs?.length || 1)
+      avgLatency
     };
   }
 };
