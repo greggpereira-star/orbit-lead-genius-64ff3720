@@ -6,14 +6,24 @@ import {
   Table, 
   TableBody, 
   TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+   TableHead,
+   TableHeader,
+   TableRow
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
- import { Search, Filter, Plus, MoreHorizontal, Globe, Share2 } from 'lucide-react';
+  import { Search, Filter, Plus, MoreHorizontal, Globe, Share2, UserPlus, X } from 'lucide-react';
+  import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter
+  } from '@/components/ui/dialog';
+  import { Label } from '@/components/ui/label';
 
   export const Route = createFileRoute('/_app/leads')({
     component: LeadsPage,
@@ -56,10 +66,64 @@ import { Badge } from '@/components/ui/badge';
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Leads</h1>
           <p className="text-muted-foreground text-sm">Manage and track your potential customers with attribution intelligence.</p>
         </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Lead
-        </Button>
+         <Dialog>
+           <DialogTrigger asChild>
+             <Button className="flex items-center gap-2 font-bold h-10 shadow-lg shadow-primary/20">
+               <Plus className="h-4 w-4" />
+               Add Lead
+             </Button>
+           </DialogTrigger>
+           <DialogContent className="sm:max-w-[500px]">
+             <DialogHeader>
+               <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                 <UserPlus className="h-5 w-5 text-primary" />
+                 Create New Lead
+               </DialogTitle>
+               <DialogDescription>
+                 Add a lead manually to your CDP. All automated intelligence will trigger after creation.
+               </DialogDescription>
+             </DialogHeader>
+             <div className="space-y-4 py-4">
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label className="text-xs font-bold uppercase text-muted-foreground">Full Name</Label>
+                   <Input placeholder="John Doe" />
+                 </div>
+                 <div className="space-y-2">
+                   <Label className="text-xs font-bold uppercase text-muted-foreground">Work Email</Label>
+                   <Input type="email" placeholder="john@company.com" />
+                 </div>
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label className="text-xs font-bold uppercase text-muted-foreground">Phone Number</Label>
+                   <Input placeholder="+1..." />
+                 </div>
+                 <div className="space-y-2">
+                   <Label className="text-xs font-bold uppercase text-muted-foreground">Company</Label>
+                   <Input placeholder="Acme Inc" />
+                 </div>
+               </div>
+               <div className="space-y-2">
+                 <Label className="text-xs font-bold uppercase text-muted-foreground">Lead Source (Manual Override)</Label>
+                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+                   <option value="direct">Direct / Manual</option>
+                   <option value="referral">Referral</option>
+                   <option value="inbound">Inbound Content</option>
+                   <option value="cold_outreach">Cold Outreach</option>
+                 </select>
+               </div>
+             </div>
+             <DialogFooter>
+               <Button variant="outline" className="font-bold">Cancel</Button>
+               <Button className="font-bold gap-2" onClick={() => {
+                 toast.success('Lead created and intelligence processing started.');
+               }}>
+                 Create & Analyze Lead
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
       </div>
 
       <div className="flex items-center gap-4">
