@@ -38,6 +38,243 @@ export type Database = {
         }
         Relationships: []
       }
+      cvcrm_integrations: {
+        Row: {
+          api_token: string
+          api_user: string
+          company_id: string
+          connection_status: string | null
+          created_at: string
+          cvcrm_base_url: string
+          id: string
+          is_active: boolean | null
+          last_health_check: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_token: string
+          api_user: string
+          company_id: string
+          connection_status?: string | null
+          created_at?: string
+          cvcrm_base_url: string
+          id?: string
+          is_active?: boolean | null
+          last_health_check?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_token?: string
+          api_user?: string
+          company_id?: string
+          connection_status?: string | null
+          created_at?: string
+          cvcrm_base_url?: string
+          id?: string
+          is_active?: boolean | null
+          last_health_check?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cvcrm_sync_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          direction: string | null
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          lead_id: string | null
+          payload_received: Json | null
+          payload_sent: Json | null
+          request_id: string | null
+          status_code: number | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          direction?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          lead_id?: string | null
+          payload_received?: Json | null
+          payload_sent?: Json | null
+          request_id?: string | null
+          status_code?: number | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          direction?: string | null
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          lead_id?: string | null
+          payload_received?: Json | null
+          payload_sent?: Json | null
+          request_id?: string | null
+          status_code?: number | null
+        }
+        Relationships: []
+      }
+      cvcrm_sync_queue: {
+        Row: {
+          company_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          last_error: string | null
+          retry_count: number | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_error?: string | null
+          retry_count?: number | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_error?: string | null
+          retry_count?: number | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          company_id: string
+          config: Json | null
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          provider: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          provider: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          provider?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          company_id: string
+          created_at: string
+          cvcrm_id: string | null
+          device_info: Json | null
+          email: string | null
+          fbclid: string | null
+          gclid: string | null
+          id: string
+          landing_page: string | null
+          last_sync_at: string | null
+          lead_score: number | null
+          lead_temperature: string | null
+          location_info: Json | null
+          metadata: Json | null
+          name: string | null
+          phone: string | null
+          referrer: string | null
+          source: string | null
+          status: string | null
+          sync_status: string | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          cvcrm_id?: string | null
+          device_info?: Json | null
+          email?: string | null
+          fbclid?: string | null
+          gclid?: string | null
+          id?: string
+          landing_page?: string | null
+          last_sync_at?: string | null
+          lead_score?: number | null
+          lead_temperature?: string | null
+          location_info?: Json | null
+          metadata?: Json | null
+          name?: string | null
+          phone?: string | null
+          referrer?: string | null
+          source?: string | null
+          status?: string | null
+          sync_status?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          cvcrm_id?: string | null
+          device_info?: Json | null
+          email?: string | null
+          fbclid?: string | null
+          gclid?: string | null
+          id?: string
+          landing_page?: string | null
+          last_sync_at?: string | null
+          lead_score?: number | null
+          lead_temperature?: string | null
+          location_info?: Json | null
+          metadata?: Json | null
+          name?: string | null
+          phone?: string | null
+          referrer?: string | null
+          source?: string | null
+          status?: string | null
+          sync_status?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       memberships: {
         Row: {
           company_id: string

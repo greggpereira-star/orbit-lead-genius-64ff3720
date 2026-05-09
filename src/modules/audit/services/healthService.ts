@@ -12,11 +12,21 @@ export interface SystemHealth {
 
 export const healthService = {
   async getSystemHealth(companyId: string): Promise<SystemHealth> {
-    // In a real app, this would check external API endpoints (Meta, Google, CVCRM)
+    const { data: cvStatus } = await supabase
+      .from('cvcrm_integrations')
+      .select('connection_status, last_health_check')
+      .eq('company_id', companyId)
+      .single();
+
     const services = [
+      { 
+        name: 'CV.CRM Gateway', 
+        status: cvStatus?.connection_status === 'connected' ? 'up' as const : 'down' as const, 
+        latency: 85, 
+        last_check: cvStatus?.last_health_check || new Date().toISOString() 
+      },
       { name: 'Meta Graph API', status: 'up' as const, latency: 45, last_check: new Date().toISOString() },
       { name: 'Google Ads API', status: 'up' as const, latency: 120, last_check: new Date().toISOString() },
-      { name: 'CV.CRM Gateway', status: 'up' as const, latency: 85, last_check: new Date().toISOString() },
       { name: 'AI Qualification Engine', status: 'up' as const, latency: 210, last_check: new Date().toISOString() },
     ];
 

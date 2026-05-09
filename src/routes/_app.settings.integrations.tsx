@@ -46,11 +46,11 @@ const integrations = [
   {
     id: 'cvcrm',
     name: 'CV.CRM',
-    description: 'Enterprise integration with legacy real estate CRM systems.',
+    description: 'One-way enterprise delivery pipeline with UTM enrichment and attribution mapping.',
     icon: Database,
     color: 'bg-[#0a2540]',
     status: 'disconnected',
-    features: ['Bi-directional Sync', 'Status Mapping', 'Webhook Gateway']
+    features: ['One-Way Delivery', 'UTM Mapping', 'Lead Enrichment', 'Sync Audit']
   },
 ];
 
@@ -138,10 +138,14 @@ function IntegrationsSettings() {
                 <div className={`h-12 w-12 rounded-xl ${app.color} flex items-center justify-center text-white shadow-lg`}>
                   <app.icon className="h-6 w-6" />
                 </div>
-                {app.status === 'connected' ? (
-                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50">
-                    Active
-                  </Badge>
+                {app.id === 'cvcrm' ? (
+                  integrationStatus?.connection_status === 'connected' ? (
+                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Active</Badge>
+                  ) : (
+                    <Badge variant="outline">{integrationStatus?.connection_status || 'Disconnected'}</Badge>
+                  )
+                ) : app.status === 'connected' ? (
+                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Active</Badge>
                 ) : (
                   <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
                 )}
@@ -162,10 +166,16 @@ function IntegrationsSettings() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button 
-                    variant={app.status === 'connected' ? 'outline' : 'default'} 
+                    variant={
+                      (app.id === 'cvcrm' && integrationStatus?.connection_status === 'connected') || 
+                      (app.id !== 'cvcrm' && app.status === 'connected') 
+                      ? 'outline' : 'default'
+                    } 
                     className="w-full text-xs h-10 font-bold"
                   >
-                    {app.status === 'connected' ? 'Configure Integration' : 'Connect Account'}
+                    {(app.id === 'cvcrm' && integrationStatus?.connection_status === 'connected') || 
+                     (app.id !== 'cvcrm' && app.status === 'connected') 
+                     ? 'Configure Integration' : 'Connect Account'}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">

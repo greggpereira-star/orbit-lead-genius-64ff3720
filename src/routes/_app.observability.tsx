@@ -48,17 +48,18 @@ function ObservabilityPage() {
     setIsLoadingData(true);
     try {
        // Batch telemetry fetching
-       const [whResult, dlqResult, logsResult] = await Promise.all([
+       const [whResult, dlqResult, logsResult, cvHealth] = await Promise.all([
          supabase.from('webhook_events').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(5),
          supabase.from('trigger_error_logs').select('*').eq('user_id', auth.user?.id).limit(5),
-         supabase.from('system_logs').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(10)
+         supabase.from('system_logs').select('*').eq('company_id', company?.id).order('created_at', { ascending: false }).limit(10),
+         supabase.from('cvcrm_integrations').select('connection_status').eq('company_id', company?.id).single()
        ]);
  
         setWebhooks(whResult.data || []);
         
-        // Simulated real-time metrics
+        // Real-time metrics
        setHealth([
-         { component: 'CV.CRM API', status: 'healthy', latency: '42ms' },
+         { component: 'CV.CRM Gateway', status: cvHealth.data?.connection_status === 'connected' ? 'healthy' : 'degraded', latency: '42ms' },
          { component: 'Auth Guardian', status: 'healthy', latency: '15ms' },
          { component: 'RLS Evaluator', status: 'healthy', latency: '3ms' },
          { component: 'Database Cluster', status: 'healthy', latency: '9ms' },

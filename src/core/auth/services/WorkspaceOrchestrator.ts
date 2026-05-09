@@ -138,9 +138,10 @@
       return this.finishWorkspaceSetup(userId, newCompany, onProgress);
     }
 
-    private async finishWorkspaceSetup(userId: string, company: Company, onProgress?: (state: AuthState) => void): Promise<{ company: Company; membership: Membership }> {
-      onProgress?.('MEMBERSHIP_RECOVERING');
-      
+  private async finishWorkspaceSetup(userId: string, company: Company, onProgress?: (state: AuthState) => void): Promise<{ company: Company; membership: Membership }> {
+    onProgress?.('MEMBERSHIP_RECOVERING');
+
+    try {
       const { data: membership, error: memError } = await this.client
         .from('memberships')
         .insert({
@@ -152,7 +153,7 @@
         .single();
 
       if (memError && !memError.message.includes('unique_user_company_membership')) {
-         throw new Error(`Membership recovery failed: ${memError.message}`);
+        throw new Error(`Membership recovery failed: ${memError.message}`);
       }
 
       const finalMembership = membership || await this.client
@@ -169,6 +170,9 @@
         company,
         membership: finalMembership
       };
+    } catch (error: any) {
+      console.error('Workspace recovery failed:', error);
+      throw error;
     }
-   }
+  }
 }

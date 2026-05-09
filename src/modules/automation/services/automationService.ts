@@ -53,7 +53,13 @@ export const automationService = {
 
     switch (action_type) {
       case 'sync_cvcrm':
-        await cvcrmService.syncLead(automation.company_id, data.id);
+        // LeadFlow One-Way Integration: Ensure data is enriched before delivery
+        await cvcrmService.syncLead(automation.company_id, {
+          ...data,
+          source: data.source || 'LeadFlow Automation',
+          lead_score: data.lead_score || 50, // Auto-score if coming from automation
+          lead_temperature: 'warm'
+        });
         break;
       
       case 'google_conversion':
