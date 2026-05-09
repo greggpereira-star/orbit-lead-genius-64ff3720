@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
     
     // Pass through immediately if workspace is already ready in cache
     const hasWorkspaceCache = useMemo(() => {
+      if (typeof window === 'undefined') return false;
       return !!localStorage.getItem('workspace_readiness_snapshot');
     }, []);
  
