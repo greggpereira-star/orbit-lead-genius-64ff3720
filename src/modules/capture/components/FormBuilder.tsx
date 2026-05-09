@@ -23,8 +23,6 @@ import { formService, Form, FormField } from '../services/formService';
 import { toast } from 'sonner';
 import { logger } from '@/core/observability/logger';
 
-export function FormBuilder({ formId, onBack }: FormBuilderProps) {
- 
  export function FormBuilder({ formId, onBack }: FormBuilderProps) {
    const { company } = useAuth();
    const queryClient = useQueryClient();
