@@ -373,8 +373,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     user,
      company,
      membership,
-    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP', 'AUTHENTICATED'].includes(state as string),
-    isReady: state === 'READY' || state === 'AUTHENTICATED' || state === 'RECOVERY_MODE',
+    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP', 'AUTHENTICATED', 'RECOVERY_MODE', 'TENANT_VALIDATING'].includes(state as string),
+    isReady: ['READY', 'AUTHENTICATED', 'RECOVERY_MODE', 'WORKSPACE_READY'].includes(state as string),
     isLoading: [
       'BOOTSTRAP_START',
       'INITIALIZING',
