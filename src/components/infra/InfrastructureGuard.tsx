@@ -21,7 +21,16 @@ import { Button } from '@/components/ui/button';
      return bypassList.includes(routerState.location.pathname);
    }, [routerState.location.pathname]);
  
-   const isChecking = state.status !== 'ready' && state.status !== 'failed';
+    const isChecking = state.status !== 'ready' && state.status !== 'failed' && state.status !== 'idle';
+    
+    // Pass through immediately if workspace is already ready in cache
+    const hasWorkspaceCache = useMemo(() => {
+      return !!localStorage.getItem('workspace_readiness_snapshot');
+    }, []);
+ 
+    if (hasWorkspaceCache && state.status !== 'failed') {
+      return <>{children}</>;
+    }
  
    if (isChecking) {
     return (
