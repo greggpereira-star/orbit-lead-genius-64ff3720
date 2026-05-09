@@ -37,7 +37,9 @@
          </div>
        </div>
  
-       <KanbanBoard />
+        <ErrorBoundary name="KanbanBoard">
+          <KanbanBoard />
+        </ErrorBoundary>
      </div>
    );
  }
