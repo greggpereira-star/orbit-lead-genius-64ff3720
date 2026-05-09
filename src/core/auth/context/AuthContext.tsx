@@ -44,10 +44,8 @@
     if (!supabase || !supabase.auth) {
       console.warn('Supabase not fully initialized. Falling back to mock auth.');
       // Use mock session for development/preview if supabase is unavailable
-      if (process.env.NODE_ENV === 'development') {
-        setUser({ id: 'mock-user', email: 'test@example.com', name: 'Test User' });
-        setCompany({ id: 'mock-company', name: 'Mock Company', slug: 'mock-company' });
-      }
+      setUser({ id: 'mock-user', email: 'test@example.com', name: 'Test User' });
+      setCompany({ id: 'mock-company', name: 'Mock Company', slug: 'mock-company' });
       setIsLoading(false);
       return;
     }
