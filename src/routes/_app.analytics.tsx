@@ -1,8 +1,29 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { LeadFunnelChart } from '@/design-system/components/charts/LeadFunnelChart';
+ import { LeadFunnelChart } from '@/design-system/components/charts/LeadFunnelChart';
+ import { SankeyChart } from '@/design-system/components/charts/SankeyChart';
+ const sankeyData = {
+   nodes: [
+     { name: 'Google Ads' },
+     { name: 'Meta Ads' },
+     { name: 'Direct' },
+     { name: 'Leads' },
+     { name: 'Qualified' },
+     { name: 'Opportunity' },
+     { name: 'Closed Won' }
+   ],
+   links: [
+     { source: 'Google Ads', target: 'Leads', value: 120 },
+     { source: 'Meta Ads', target: 'Leads', value: 80 },
+     { source: 'Direct', target: 'Leads', value: 40 },
+     { source: 'Leads', target: 'Qualified', value: 150 },
+     { source: 'Qualified', target: 'Opportunity', value: 60 },
+     { source: 'Opportunity', target: 'Closed Won', value: 30 }
+   ]
+ };
+ 
 
 export const Route = createFileRoute('/_app/analytics')({
   component: AnalyticsPage,
@@ -66,7 +87,17 @@ function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3 border-none shadow-sm">
+         <Card className="lg:col-span-3 border-none shadow-sm">
+           <CardHeader>
+             <CardTitle>Lead Attribution Flow</CardTitle>
+             <CardDescription>Visualizing how leads move from initial touchpoint to final conversion</CardDescription>
+           </CardHeader>
+           <CardContent>
+             <SankeyChart data={sankeyData} />
+           </CardContent>
+         </Card>
+ 
+         <Card className="lg:col-span-3 border-none shadow-sm">
           <CardHeader>
             <CardTitle>Conversions by Channel</CardTitle>
             <CardDescription>Estimated revenue based on attribution model</CardDescription>
