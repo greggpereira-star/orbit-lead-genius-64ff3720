@@ -20,30 +20,37 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
     timestamp: new Date().toISOString(),
   };
 
-  try {
-    const config = getRuntimeConfig();
-    report.checks.env = true;
-
-    const authRes = await fetch(`${config.supabaseUrl}/auth/v1/settings`, {
-      headers: { apikey: config.supabaseAnonKey }
-    });
-    report.checks.auth = authRes.ok;
-    if (!authRes.ok) report.details.auth = `Auth failed with status: ${authRes.status}`;
-
-    const dbRes = await fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
-      method: 'HEAD'
-    });
-    report.checks.database = dbRes.ok;
-    if (!dbRes.ok) report.details.database = `Database REST failed with status: ${dbRes.status}`;
-
-    if (!report.checks.auth || !report.checks.database) {
-      report.status = report.checks.auth || report.checks.database ? 'degraded' : 'unhealthy';
-    }
-
-  } catch (err: any) {
-    report.status = 'unhealthy';
-    report.details.error = err.message;
-  }
+   try {
+     const config = getRuntimeConfig();
+     report.checks.env = config.isValid;
+ 
+     if (!config.isValid || !config.supabaseUrl) {
+       report.status = 'unhealthy';
+       report.details.error = "Configuration missing: " + (config.errors?.join(', ') || 'VITE_SUPABASE_URL not found');
+       return report;
+     }
+ 
+     const authRes = await fetch(`${config.supabaseUrl}/auth/v1/settings`, {
+       headers: { apikey: config.supabaseAnonKey },
+       signal: AbortSignal.timeout(5000)
+     });
+     report.checks.auth = authRes.ok;
+     if (!authRes.ok) report.details.auth = `Auth failed with status: ${authRes.status}`;
+ 
+     const dbRes = await fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
+       method: 'HEAD',
+       signal: AbortSignal.timeout(5000)
+     });
+     report.checks.database = dbRes.ok;
+     if (!dbRes.ok) report.details.database = `Database REST failed with status: ${dbRes.status}`;
+ 
+     if (!report.checks.auth || !report.checks.database) {
+       report.status = report.checks.auth || report.checks.database ? 'degraded' : 'unhealthy';
+     }
+   } catch (err: any) {
+     report.status = 'unhealthy';
+     report.details.error = err.name === 'TimeoutError' ? "Connection Timeout" : err.message;
+   }
 
   return report;
 };
