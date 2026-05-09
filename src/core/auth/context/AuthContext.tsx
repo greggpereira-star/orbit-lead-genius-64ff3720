@@ -32,29 +32,39 @@
    const [company, setCompany] = useState<Company | null>(null);
    const [isLoading, setIsLoading] = useState(true);
  
-   useEffect(() => {
-     const initAuth = async () => {
-       const { data: { session } } = await supabase.auth.getSession();
-       if (session?.user) {
-         await handleUserSession(session.user);
-       }
-       setIsLoading(false);
-     };
- 
-     initAuth();
- 
-     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
-       if (session?.user) {
-         await handleUserSession(session.user);
-       } else {
-         setUser(null);
-         setCompany(null);
-       }
-       setIsLoading(false);
-     });
- 
-     return () => subscription.unsubscribe();
-   }, []);
+  useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await handleUserSession(session.user);
+        }
+      } catch (err) {
+        console.warn('Auth initialization failed:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+      if (session?.user) {
+        await handleUserSession(session.user);
+      } else {
+        setUser(null);
+        setCompany(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
  
    const handleUserSession = async (supabaseUser: SupabaseUser) => {
      // Fetch membership and company

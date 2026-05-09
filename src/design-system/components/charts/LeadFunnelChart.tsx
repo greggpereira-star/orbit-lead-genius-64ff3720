@@ -1,23 +1,28 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 
+interface FunnelData {
+  value: number;
+  name: string;
+}
+
 interface LeadFunnelChartProps {
-  data: { value: number; name: string }[];
+  data: FunnelData[];
 }
 
 export function LeadFunnelChart({ data }: LeadFunnelChartProps) {
   const option = {
     tooltip: {
       trigger: 'item',
-      formatter: '{b} : {c}'
+      formatter: '{b} : {c}%'
     },
     series: [
       {
         name: 'Funnel',
         type: 'funnel',
         left: '10%',
-        top: 60,
-        bottom: 60,
+        top: 20,
+        bottom: 20,
         width: '80%',
         min: 0,
         max: 100,
@@ -28,7 +33,6 @@ export function LeadFunnelChart({ data }: LeadFunnelChartProps) {
         label: {
           show: true,
           position: 'inside',
-          formatter: '{b}: {c}',
           color: '#fff',
           fontSize: 12,
           fontWeight: 'bold'
@@ -38,26 +42,18 @@ export function LeadFunnelChart({ data }: LeadFunnelChartProps) {
         },
         itemStyle: {
           borderColor: '#fff',
-          borderWidth: 1
+          borderWidth: 1,
+          borderRadius: 8
         },
         emphasis: {
           label: {
-            fontSize: 20
+            fontSize: 14
           }
         },
         data: data
       }
-    ],
-    color: ['#0a2540', '#635bff', '#00d4ff', '#f6f9fc', '#425466']
+    ]
   };
 
-  return (
-    <div className="w-full h-[400px]">
-      <ReactECharts 
-        option={option} 
-        style={{ height: '100%', width: '100%' }}
-        opts={{ renderer: 'svg' }}
-      />
-    </div>
-  );
+  return <ReactECharts option={option} style={{ height: '350px', width: '100%' }} />;
 }
