@@ -39,31 +39,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const isInitialMount = useRef(true);
 
     const SCHEMA_VERSION = 'v1';
-    const CACHE_KEY = `workspace_ready_${SCHEMA_VERSION}`;
+    const CACHE_KEY = 'workspace_readiness_snapshot';
 
     const checkWorkspaceReadiness = useCallback((tenantId?: string) => {
       const cached = localStorage.getItem(CACHE_KEY);
       if (!cached) return false;
       
       try {
-        const { tenantId: cachedId, timestamp } = JSON.parse(cached);
-        // Invalidate if tenantId changed (if provided) or if cache is older than 24h (optional security measure)
-        if (tenantId && cachedId !== tenantId) return false;
-        return true;
+        const snapshot = JSON.parse(cached);
+        if (snapshot.version !== SCHEMA_VERSION) return false;
+        if (tenantId && snapshot.tenant_id !== tenantId) return false;
+        if (snapshot.expires_at && Date.now() > snapshot.expires_at) return false;
+        return snapshot.workspace_ready === true;
       } catch {
         return false;
       }
-    }, []);
+    }, [SCHEMA_VERSION]);
 
-    const markWorkspaceAsReady = useCallback((tenantId: string) => {
+    const markWorkspaceAsReady = useCallback((userId: string, tenantId: string, membershipId: string) => {
       localStorage.setItem(CACHE_KEY, JSON.stringify({
-        tenantId,
-        timestamp: Date.now(),
-        ready: true
+        user_id: userId,
+        tenant_id: tenantId,
+        membership_id: membershipId,
+        workspace_ready: true,
+        onboarding_completed: true,
+        permissions_ready: true,
+        validated_at: Date.now(),
+        expires_at: Date.now() + (1000 * 60 * 60 * 24 * 7), // 7 days
+        version: SCHEMA_VERSION
       }));
-    }, []);
+    }, [SCHEMA_VERSION]);
 
     const clearWorkspaceReady = useCallback(() => {
+      localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem('workspace_ready_v1');
     }, []);
 
