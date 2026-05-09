@@ -111,8 +111,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     }
   }, [traceId]);
 
-  const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
-    setState('TENANT_LOADING');
+   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
+     setState('TENANT_BOOTSTRAPPING');
     const requestId = Math.random().toString(36).substring(2, 7);
     
     try {
@@ -182,7 +182,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       });
 
       setState('READY');
-      logger.info('Auth lifecycle complete: READY', { companyId: membership.companies.id, traceId });
+       setState('READY');
+       logger.info('Auth lifecycle complete: READY', { companyId: membership.companies.id, traceId });
     } catch (err: any) {
       logger.error('Failed to load tenant context', { error: err.message, traceId });
       setError(`Context load failed: ${err.message}`);
