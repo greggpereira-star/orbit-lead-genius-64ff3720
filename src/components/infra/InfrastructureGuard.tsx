@@ -59,8 +59,8 @@ import { Button } from '@/components/ui/button';
                      <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                      <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Variavéis de Ambiente</span>
                    </div>
-                   <Badge variant={config.isValid ? "default" : "destructive"}>
-                     {config.isValid ? "Configuradas" : "Ausentes"}
+                    <Badge variant={config?.isValid ? "default" : "destructive"}>
+                      {config?.isValid ? "Configuradas" : "Ausentes"}
                    </Badge>
                  </div>
                  <div className="space-y-2 font-mono text-[10px]">
@@ -90,35 +90,39 @@ import { Button } from '@/components/ui/button';
                  </div>
                  
                  <div className="space-y-3">
-                   <div className="flex items-center justify-between text-sm">
-                     <span className="text-muted-foreground">Autenticação (Auth):</span>
-                     {report.checks.auth ? (
-                       <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                         <CheckCircle2 className="h-4 w-4" /> ATIVA
-                       </span>
-                     ) : (
-                       <span className="flex items-center gap-1.5 text-destructive font-bold">
-                         <XCircle className="h-4 w-4" /> FALHOU
-                       </span>
-                     )}
-                   </div>
-                   <div className="flex items-center justify-between text-sm">
-                     <span className="text-muted-foreground">Banco de Dados (DB):</span>
-                     {report.checks.database ? (
-                       <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                         <CheckCircle2 className="h-4 w-4" /> ATIVO
-                       </span>
-                     ) : (
-                       <span className="flex items-center gap-1.5 text-destructive font-bold">
-                         <XCircle className="h-4 w-4" /> FALHOU
-                       </span>
-                     )}
-                   </div>
+                   {report && (
+                     <>
+                       <div className="flex items-center justify-between text-sm">
+                         <span className="text-muted-foreground">Autenticação (Auth):</span>
+                         {report.checks.auth ? (
+                           <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                             <CheckCircle2 className="h-4 w-4" /> ATIVA
+                           </span>
+                         ) : (
+                           <span className="flex items-center gap-1.5 text-destructive font-bold">
+                             <XCircle className="h-4 w-4" /> FALHOU
+                           </span>
+                         )}
+                       </div>
+                       <div className="flex items-center justify-between text-sm">
+                         <span className="text-muted-foreground">Banco de Dados (DB):</span>
+                         {report.checks.database ? (
+                           <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                             <CheckCircle2 className="h-4 w-4" /> ATIVO
+                           </span>
+                         ) : (
+                           <span className="flex items-center gap-1.5 text-destructive font-bold">
+                             <XCircle className="h-4 w-4" /> FALHOU
+                           </span>
+                         )}
+                       </div>
+                     </>
+                   )}
                  </div>
                </div>
              </div>
 
-             {report.details.error && (
+             {report?.details.error && (
                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
                  <p className="text-[11px] font-mono text-destructive leading-relaxed break-all">
                    <span className="font-bold">STACK_TRACE:</span> {report.details.error}
