@@ -1,3 +1,4 @@
+import { SocialLogin } from '@/components/auth/SocialLogin';
   import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
  import * as React from 'react';
   import { useState, useMemo } from 'react';
@@ -31,7 +32,7 @@
       return strength;
     }, [password]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('!!! Register form handleSubmit triggered !!!', { email, companyName });
     
@@ -48,22 +49,24 @@
     
     setIsLoading(true);
     
-    (async () => {
-      try {
-        console.log('Calling signup service in AuthContext...');
-        await signup(email, password, companyName);
-        console.log('Signup service call finished successfully');
-        toast.success('Account created! Redirecting to dashboard...');
-        
-        console.log('Navigating to dashboard...');
+    try {
+      console.log('AuthTrace: Calling signup service', { email, companyName });
+      const result = await signup(email, password, companyName);
+      console.log('AuthTrace: Signup response received', result);
+      
+      if (result?.session) {
+        toast.success('Account created! Entering workspace...');
         navigate({ to: '/dashboard' });
-      } catch (error: any) {
-        console.error('CRITICAL Registration error:', error);
-        toast.error(error.message || 'Failed to create account');
-      } finally {
-        setIsLoading(false);
+      } else {
+        toast.success('Enterprise account pending verification. Check your email.');
+        // Stay on page or redirect to a "check email" page if we had one
       }
-    })();
+    } catch (error: any) {
+      console.error('AuthTrace: CRITICAL Registration error:', error);
+      toast.error(error.message || 'Failed to initialize enterprise account');
+    } finally {
+      setIsLoading(false);
+    }
   };
  
    return (
@@ -157,7 +160,20 @@
                </Link>
              </p>
            </CardFooter>
-         </form>
+      </form>
+      <div className="px-6 pb-6 space-y-4">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or register with enterprise identity
+            </span>
+          </div>
+        </div>
+        <SocialLogin />
+      </div>
        </Card>
        <p className="text-[10px] text-center text-muted-foreground px-6 leading-relaxed">
          By clicking "Get Started Free", you agree to our Terms of Service and Privacy Policy.
