@@ -225,15 +225,22 @@ import { FormPublish } from './FormPublish';
      }
    }, [existingForm, formId, fields.length]);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!company?.id) return;
-      if (formId) {
-        return formService.updateForm(formId, formConfig, fields as FormField[]);
-      } else {
-        return formService.createForm(company.id, formConfig, fields as FormField[]);
-      }
-    },
+   const saveMutation = useMutation({
+     mutationFn: async () => {
+       if (!company?.id) {
+         throw new Error('Empresa não identificada. Por favor, recarregue a página.');
+       }
+ 
+       const timeoutPromise = new Promise((_, reject) => 
+         setTimeout(() => reject(new Error('Tempo limite de salvamento excedido (30s). Verifique sua conexão.')), 30000)
+       );
+ 
+       const savePromise = formId 
+         ? formService.updateForm(formId, formConfig, fields as FormField[])
+         : formService.createForm(company.id, formConfig, fields as FormField[]);
+ 
+       return Promise.race([savePromise, timeoutPromise]);
+     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forms'] });
       toast.success(formId ? 'Form updated' : 'Form created');
@@ -248,14 +255,16 @@ import { FormPublish } from './FormPublish';
   });
 
    const addField = () => {
+     const id = Math.random().toString(36).substr(2, 9);
      const newField: Partial<FormField> & { id: string } = {
-       id: Math.random().toString(36).substr(2, 9),
-       label: 'New Field',
+       id,
+       label: 'Novo Campo',
        type: 'text',
        required: false,
-       placeholder: 'Enter text...'
+       placeholder: 'Digite aqui...',
+       options: []
      };
-     setFields([...fields, newField]);
+     setFields(prev => [...prev, newField]);
    };
 
    const removeField = (id: string) => {

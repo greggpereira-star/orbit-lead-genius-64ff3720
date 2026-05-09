@@ -1251,6 +1251,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_form_with_fields: {
+        Args: { p_fields: Json; p_form_data: Json; p_tenant_id: string }
+        Returns: string
+      }
       get_or_create_company: {
         Args: { p_name: string; p_slug: string; p_user_id: string }
         Returns: {
@@ -1266,6 +1270,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_form_with_fields: {
+        Args: { p_fields: Json; p_form_data: Json; p_form_id: string }
+        Returns: undefined
       }
     }
     Enums: {

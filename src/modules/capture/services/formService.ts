@@ -83,87 +83,76 @@ export const formService = {
   },
 
    async createForm(tenantId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<Form> {
-     const { data: newForm, error: formError } = await supabase
-       .from('forms')
-       .insert({
-         tenant_id: tenantId,
-         name: form.name || 'Untitled Form',
-         slug: form.slug || `form-${Math.random().toString(36).substr(2, 9)}`,
-         type: form.type || 'traditional',
-         settings: form.settings || {
-           submit_label: 'Submit',
-           success_message: 'Thank you!',
-           theme: 'premium-light',
-           cv_crm_integration: false,
-           capture_utms: true
-         }
-       })
-       .select()
-       .single();
+     const processedFields = fields.map((f, index) => ({
+       label: f.label || 'Untitled Field',
+       name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+       type: f.type || 'text',
+       required: !!f.required,
+       placeholder: f.placeholder || '',
+       options: f.options || [],
+       sort_order: index,
+       step_number: f.step_number || 1,
+       validation_rules: f.validation_rules || {},
+       logic_rules: f.logic_rules || {},
+       score_rules: f.score_rules || {}
+     }));
  
-     if (formError) throw formError;
+     const { data: newFormId, error } = await supabase.rpc('create_form_with_fields', {
+       p_tenant_id: tenantId,
+       p_form_data: {
+         name: form.name,
+         slug: form.slug,
+         status: form.status,
+         type: form.type,
+         settings: form.settings,
+         description: form.description
+       },
+       p_fields: processedFields
+     });
  
-     if (fields.length > 0) {
-       const fieldsWithFormId = fields.map((f, index) => ({
-         label: f.label,
-         name: f.name || f.label?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-         type: f.type,
-         required: !!f.required,
-          placeholder: f.placeholder || '',
-          options: f.options || [],
-          form_id: newForm.id,
-          sort_order: index,
-          step_number: f.step_number || 1,
-          validation_rules: f.validation_rules || {},
-          logic_rules: f.logic_rules || {},
-          score_rules: f.score_rules || {}
-       }));
- 
-       const { error: fieldsError } = await supabase
-         .from('form_fields')
-         .insert(fieldsWithFormId);
- 
-       if (fieldsError) throw fieldsError;
+     if (error) {
+       logger.error('Failed to create form with RPC', { error });
+       throw error;
      }
  
-     return newForm;
+     const formResult = await this.getFormById(newFormId);
+     if (!formResult) throw new Error('Failed to retrieve created form');
+     return formResult;
    },
-
-   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
-     const { id, tenant_id, created_at, updated_at, form_fields, ...updateData } = form as any;
  
-    const { error: formError } = await supabase
-      .from('forms')
-       .update(updateData)
-      .eq('id', formId);
-
-    if (formError) throw formError;
-
-    if (fields && fields.length > 0) {
-      await supabase.from('form_fields').delete().eq('form_id', formId);
-      
-        const fieldsWithFormId = fields.map((f, index) => ({
-          label: f.label,
-          name: f.name || f.label?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-          type: f.type,
-          required: !!f.required,
-          placeholder: f.placeholder || '',
-          options: f.options || [],
-          form_id: formId,
-          sort_order: index,
-          step_number: f.step_number || 1,
-          validation_rules: f.validation_rules || {},
-          logic_rules: f.logic_rules || {},
-          score_rules: f.score_rules || {}
-        }));
-
-      const { error: fieldsError } = await supabase
-        .from('form_fields')
-        .insert(fieldsWithFormId);
-
-      if (fieldsError) throw fieldsError;
-    }
-  },
+   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
+     const processedFields = fields.map((f, index) => ({
+       label: f.label || 'Untitled Field',
+       name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+       type: f.type || 'text',
+       required: !!f.required,
+       placeholder: f.placeholder || '',
+       options: f.options || [],
+       sort_order: index,
+       step_number: f.step_number || 1,
+       validation_rules: f.validation_rules || {},
+       logic_rules: f.logic_rules || {},
+       score_rules: f.score_rules || {}
+     }));
+ 
+     const { error } = await supabase.rpc('update_form_with_fields', {
+       p_form_id: formId,
+       p_form_data: {
+         name: form.name,
+         slug: form.slug,
+         status: form.status,
+         type: form.type,
+         settings: form.settings,
+         description: form.description
+       },
+       p_fields: processedFields
+     });
+ 
+     if (error) {
+       logger.error('Failed to update form with RPC', { error });
+       throw error;
+     }
+   },
 
   async deleteForm(formId: string): Promise<void> {
     const { error } = await supabase.from('forms').delete().eq('id', formId);
