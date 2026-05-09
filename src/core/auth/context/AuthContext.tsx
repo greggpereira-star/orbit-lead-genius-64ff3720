@@ -4,12 +4,19 @@ import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
 
-export type AuthState = 
+ export type AuthState = 
+   | 'IDLE'
    | 'INITIALIZING'
    | 'UNAUTHENTICATED'
    | 'AUTHENTICATING'
+   | 'CREATING_ACCOUNT'
+   | 'ACCOUNT_CREATED'
+   | 'EMAIL_SENT'
+   | 'WAITING_EMAIL_CONFIRMATION'
+   | 'EMAIL_CONFIRMED'
    | 'AUTHENTICATED'
    | 'TENANT_LOADING'
+   | 'TENANT_BOOTSTRAPPING'
    | 'ROLE_LOADING'
    | 'PERMISSIONS_LOADING'
    | 'SELF_HEALING'
@@ -40,7 +47,8 @@ interface AuthContextType {
   error: string | null;
   traceId: string;
    login: (email: string, password?: string, retryCount?: number) => Promise<any>;
-   signup: (email: string, password?: string, companyName?: string, retryCount?: number) => Promise<any>;
+    signup: (email: string, password: string, companyName: string) => Promise<any>;
+    resendVerificationEmail: (email: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   loginWithMeta: () => Promise<void>;
   logout: () => Promise<void>;
@@ -51,7 +59,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
  export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
    const [envError, setEnvError] = useState<string | null>(null);
-  const [state, setState] = useState<AuthState>('INITIALIZING');
+   const [state, setState] = useState<AuthState>('IDLE');
   const [user, setUser] = useState<User | null>(null);
    const [company, setCompany] = useState<Company | null>(null);
    const [membership, setMembership] = useState<any | null>(null);
@@ -103,8 +111,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     }
   }, [traceId]);
 
-  const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
-    setState('TENANT_LOADING');
+   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
+     // The state is already set to TENANT_BOOTSTRAPPING or EMAIL_CONFIRMED by the caller
+     // but we ensure it's in a loading state
+     if (state !== 'TENANT_BOOTSTRAPPING') setState('TENANT_BOOTSTRAPPING');
     const requestId = Math.random().toString(36).substring(2, 7);
     
     try {
@@ -174,7 +184,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       });
 
       setState('READY');
-      logger.info('Auth lifecycle complete: READY', { companyId: membership.companies.id, traceId });
+       setState('READY');
+       logger.info('Auth lifecycle complete: READY', { companyId: membership.companies.id, traceId });
     } catch (err: any) {
       logger.error('Failed to load tenant context', { error: err.message, traceId });
       setError(`Context load failed: ${err.message}`);
@@ -247,66 +258,102 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     };
   }, [loadTenantContext, handleAuthFailure, traceId]);
 
-  const login = async (email: string, password?: string): Promise<any> => {
-    setState('AUTHENTICATING');
-    const loadingToast = toast.loading('Authenticating credentials...');
-    
-    try {
-      const { data, error } = await getSupabase().auth.signInWithPassword({
-        email,
-        password: password || '',
-      });
-      
-      if (error) {
-        toast.error(error.message, { id: loadingToast });
-        throw error;
-      }
-      
-      logger.info('AuthTrace: Login successful', { email, traceId });
-      toast.success('Successfully signed in', { id: loadingToast });
-      return data;
-    } catch (err: any) {
-      handleAuthFailure(err.message, false);
-      throw err;
-    }
-  };
+   const login = async (email: string, password?: string): Promise<any> => {
+     setState('AUTHENTICATING');
+     const loadingToast = toast.loading('Autenticando credenciais...');
+     
+     try {
+       const { data, error } = await getSupabase().auth.signInWithPassword({
+         email,
+         password: password || '',
+       });
+       
+       if (error) {
+         if (error.message.includes('Email not confirmed')) {
+           toast.info('E-mail ainda não confirmado. Verifique sua caixa de entrada.', { id: loadingToast });
+           setState('EMAIL_SENT');
+           // Set the user email for the verify screen even if not logged in
+           setUser({ id: '', email, name: email.split('@')[0] });
+           throw error;
+         }
+         toast.error(error.message, { id: loadingToast });
+         throw error;
+       }
+       
+       logger.info('AuthTrace: Login successful', { email, traceId });
+       toast.success('Acesso liberado!', { id: loadingToast });
+       return data;
+     } catch (err: any) {
+       if (err.message.includes('Email not confirmed')) {
+         throw err;
+       }
+       handleAuthFailure(err.message, false);
+       throw err;
+     }
+   };
 
-  const signup = async (email: string, password?: string, companyName?: string): Promise<any> => {
-    setState('AUTHENTICATING');
-    const loadingToast = toast.loading('Creating enterprise account...');
-    
-    try {
-      const { data, error } = await getSupabase().auth.signUp({
-        email,
-        password: password || '',
-        options: {
-          data: {
-            full_name: email.split('@')[0],
-            company_name: companyName,
-          },
-          emailRedirectTo: window.location.origin + '/dashboard',
-        }
-      });
-      
-      if (error) {
-        toast.error(error.message, { id: loadingToast });
-        throw error;
-      }
-      
-      logger.info('AuthTrace: Signup successful', { email, traceId });
-      toast.success('Account created successfully', { id: loadingToast });
-      
-      if (data.session) {
-        await loadTenantContext(data.user!, getSupabase());
-      } else {
-        setState('UNAUTHENTICATED');
-      }
-      return data;
-    } catch (err: any) {
-      handleAuthFailure(err.message, false);
-      throw err;
-    }
-  };
+   const signup = async (email: string, password: string, companyName: string): Promise<any> => {
+     setState('CREATING_ACCOUNT');
+     const loadingToast = toast.loading('Iniciando seu workspace enterprise...');
+     
+     try {
+       logger.info('AuthTrace: Initiating signup sequence', { email, companyName, traceId });
+       
+       const { data, error } = await getSupabase().auth.signUp({
+         email,
+         password,
+         options: {
+           data: {
+             full_name: email.split('@')[0],
+             company_name: companyName,
+           },
+           emailRedirectTo: window.location.origin + '/auth/verify-email',
+         }
+       });
+       
+       if (error) {
+         logger.error('AuthTrace: Signup failed', { error: error.message, traceId });
+         toast.error(error.message, { id: loadingToast });
+         setState('ERROR');
+         throw error;
+       }
+       
+       logger.info('AuthTrace: Signup success', { 
+         userId: data.user?.id, 
+         session: !!data.session,
+         traceId 
+       });
+ 
+       if (data.session) {
+         toast.success('Conta criada com sucesso!', { id: loadingToast });
+         setState('EMAIL_CONFIRMED');
+         await loadTenantContext(data.user!, getSupabase());
+       } else {
+         toast.success('Verifique seu e-mail para continuar', { id: loadingToast });
+         setState('EMAIL_SENT');
+       }
+       
+       return data;
+     } catch (err: any) {
+       handleAuthFailure(err.message, false);
+       throw err;
+     }
+   };
+ 
+   const resendVerificationEmail = async (email: string) => {
+     logger.info('AuthTrace: Resending verification email', { email, traceId });
+     try {
+       const { error } = await getSupabase().auth.resend({
+         type: 'signup',
+         email,
+       });
+       if (error) throw error;
+       toast.success('E-mail de verificação reenviado!');
+     } catch (err: any) {
+       logger.error('AuthTrace: Resend failed', { error: err.message, traceId });
+       toast.error(`Falha ao reenviar: ${err.message}`);
+     }
+   };
 
   const loginWithGoogle = async () => {
     setState('AUTHENTICATING');
@@ -365,13 +412,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
    isLoading: state === 'INITIALIZING' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING',
     error: envError || error,
     traceId,
-    login,
-    signup,
-    loginWithGoogle,
-    loginWithMeta,
-    logout,
-    refreshContext
-  };
+     login,
+     signup,
+     resendVerificationEmail,
+     loginWithGoogle,
+     loginWithMeta,
+     logout,
+     refreshContext
+   };
 
 
   return (

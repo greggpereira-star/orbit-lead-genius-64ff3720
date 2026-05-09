@@ -1,4 +1,4 @@
- import { AuthProvider } from "@/core/auth/context/AuthContext";
+ import { AuthProvider, useAuth } from "@/core/auth/context/AuthContext";
  import { Toaster } from "sonner";
 import { AuthErrorBoundary } from "@/components/error/AuthErrorBoundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,8 +6,9 @@ import { useEffect, useMemo } from "react";
  import { initTracking } from "../core/tracking/pixel";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { logger } from "@/core/observability/logger";
-  import { InfrastructureGuard } from "@/components/infra/InfrastructureGuard";
-  import { RuntimeStatus } from "@/components/infra/RuntimeStatus";
+ import { InfrastructureGuard } from "@/components/infra/InfrastructureGuard";
+ import { RuntimeStatus } from "@/components/infra/RuntimeStatus";
+ import { TenantBootstrap } from "@/components/auth/TenantBootstrap";
 import {
   Outlet,
   Link,
@@ -121,10 +122,23 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
-  useEffect(() => {
+ function RootComponent() {
+   const { queryClient } = Route.useRouteContext();
+   return (
+     <ErrorBoundary name="GlobalRoot">
+       <QueryClientProvider client={queryClient}>
+         <AuthProvider>
+           <AuthWrapper />
+         </AuthProvider>
+       </QueryClientProvider>
+     </ErrorBoundary>
+   );
+ }
+ 
+ function AuthWrapper() {
+   const { state } = useAuth();
+ 
+   useEffect(() => {
     console.log("!!! Application Root Mounted !!!");
     logger.info("Application Root Mounted");
     initTracking();
@@ -137,21 +151,19 @@ function RootComponent() {
     window.onunhandledrejection = (event) => {
       console.error("!!! UNHANDLED REJECTION !!!", event.reason);
     };
-  }, []);
-
+   }, [state]);
+ 
+   if (state === 'TENANT_BOOTSTRAPPING') {
+     return <TenantBootstrap status="BOOTSTRAPPING" />;
+   }
+ 
    return (
-     <ErrorBoundary name="GlobalRoot">
-       <QueryClientProvider client={queryClient}>
-         <InfrastructureGuard>
-           <AuthErrorBoundary name="GlobalAuthProvider">
-             <AuthProvider>
-                <Outlet />
-                <RuntimeStatus />
-                <Toaster richColors position="top-right" closeButton />
-             </AuthProvider>
-           </AuthErrorBoundary>
-         </InfrastructureGuard>
-       </QueryClientProvider>
-     </ErrorBoundary>
+     <InfrastructureGuard>
+       <AuthErrorBoundary name="GlobalAuthProvider">
+         <Outlet />
+         <RuntimeStatus />
+         <Toaster richColors position="top-right" closeButton />
+       </AuthErrorBoundary>
+     </InfrastructureGuard>
    );
-}
+ }

@@ -13,6 +13,7 @@ import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
@@ -52,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
+  '/verify-email': typeof AuthVerifyEmailRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
+  '/verify-email': typeof AuthVerifyEmailRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
+  '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/reset-password'
+    | '/verify-email'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -279,6 +289,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/reset-password'
+    | '/verify-email'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/register'
     | '/_auth/reset-password'
+    | '/_auth/verify-email'
     | '/_app/analytics/tv'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
@@ -352,6 +364,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_auth/verify-email': {
+      id: '/_auth/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/_auth/reset-password': {
       id: '/_auth/reset-password'
@@ -580,6 +599,7 @@ interface AuthRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
@@ -587,6 +607,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)

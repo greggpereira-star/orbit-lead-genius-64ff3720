@@ -19,7 +19,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
      const [password, setPassword] = useState('');
      const [retryCount, setRetryCount] = useState(0);
      const { login, state, error: authError } = useAuth();
-     const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
+      const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING' || state === 'TENANT_BOOTSTRAPPING';
    
      const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
        console.log('Login: Form submitted');
@@ -30,16 +30,16 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
          return;
        }
    
-       try {
-         console.log('Login: Calling login function for', email);
-         await login(email, password);
-         console.log('Login: Success, navigating to dashboard');
-         navigate({ to: '/dashboard' });
-       } catch (error: any) {
-         console.error('Login: Error occurred', error);
-         setRetryCount(prev => prev + 1);
-         toast.error(error.message || 'Falha na autenticação');
-       }
+        try {
+          await login(email, password);
+          navigate({ to: '/dashboard' });
+        } catch (error: any) {
+          if (error.message.includes('Email not confirmed')) {
+            navigate({ to: '/auth/verify-email' });
+            return;
+          }
+          setRetryCount(prev => prev + 1);
+        }
      };
  
    return (

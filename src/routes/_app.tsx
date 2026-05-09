@@ -19,12 +19,15 @@ function AppLayout() {
   const router = useRouter();
   const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    if (state === 'UNAUTHENTICATED') {
-      logger.info('User is unauthenticated, redirecting to login', { traceId });
-      router.navigate({ to: '/login' });
-    }
-  }, [state, router, traceId]);
+   useEffect(() => {
+     if (state === 'UNAUTHENTICATED') {
+       logger.info('User is unauthenticated, redirecting to login', { traceId });
+       router.navigate({ to: '/login' });
+     } else if (state === 'EMAIL_SENT' || state === 'WAITING_EMAIL_CONFIRMATION') {
+       logger.info('Email verification required, redirecting', { traceId });
+       router.navigate({ to: '/auth/verify-email' });
+     }
+   }, [state, router, traceId]);
 
   useEffect(() => {
     if (state === 'READY' && company) {
@@ -33,7 +36,7 @@ function AppLayout() {
   }, [state, company?.id]);
 
    // Enhanced Loading States with deterministic category messages
-   const isLoadingState = ['INITIALIZING', 'AUTHENTICATING', 'TENANT_LOADING', 'ROLE_LOADING', 'PERMISSIONS_LOADING', 'SELF_HEALING'].includes(state);
+    const isLoadingState = ['INITIALIZING', 'AUTHENTICATING', 'TENANT_LOADING', 'TENANT_BOOTSTRAPPING', 'ROLE_LOADING', 'PERMISSIONS_LOADING', 'SELF_HEALING'].includes(state);
  
    if (isLoadingState) {
      const getMessage = () => {

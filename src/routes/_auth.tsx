@@ -10,8 +10,17 @@
    component: AuthLayout,
  });
  
- function AuthLayout() {
-   return (
+  function AuthLayout() {
+    const { state } = useAuth();
+    const navigate = useNavigate();
+ 
+    useEffect(() => {
+      if (state === 'READY') {
+        navigate({ to: '/dashboard' });
+      }
+    }, [state, navigate]);
+ 
+    return (
      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Abstract background elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
