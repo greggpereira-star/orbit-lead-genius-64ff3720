@@ -36,8 +36,8 @@ interface AuthContextType {
   isReady: boolean;
   error: string | null;
   traceId: string;
-  login: (email: string, password?: string) => Promise<any>;
-  signup: (email: string, password?: string, companyName?: string) => Promise<any>;
+   login: (email: string, password?: string, retryCount?: number) => Promise<any>;
+   signup: (email: string, password?: string, companyName?: string, retryCount?: number) => Promise<any>;
   loginWithGoogle: () => Promise<void>;
   loginWithMeta: () => Promise<void>;
   logout: () => Promise<void>;
