@@ -6,6 +6,8 @@ import { useEffect, useMemo } from "react";
  import { initTracking } from "../core/tracking/pixel";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { logger } from "@/core/observability/logger";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
  import { InfrastructureGuard } from "@/components/infra/InfrastructureGuard";
  import { RuntimeStatus } from "@/components/infra/RuntimeStatus";
  import { TenantBootstrap } from "@/components/auth/TenantBootstrap";
