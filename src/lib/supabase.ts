@@ -8,43 +8,18 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.en
  }
  
  // Advanced Enterprise Supabase Client with Resiliency and Logging
- export const supabase = (() => {
-   if (!supabaseUrl || !supabaseAnonKey) {
-     // Return a proxy that logs warnings instead of crashing when credentials are missing
-     return new Proxy({} as any, {
-       get: (target, prop) => {
-         if (prop === 'auth') {
-           return {
-             getSession: async () => ({ data: { session: null }, error: null }),
-             onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-             signInWithPassword: async () => { throw new Error('Supabase credentials missing'); },
-             signUp: async () => { throw new Error('Supabase credentials missing'); },
-             signOut: async () => {},
-           };
-         }
-         return () => ({
-           from: () => ({
-             select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }), order: () => ({ limit: async () => ({ data: [], error: null }) }) }) }),
-             insert: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }),
-             update: () => ({ eq: async () => ({ data: null, error: null }) }),
-             delete: () => ({ eq: async () => ({ data: null, error: null }) }),
-           }),
-         });
+ export const supabase = supabaseUrl && supabaseAnonKey
+   ? createClient(supabaseUrl, supabaseAnonKey, {
+       auth: {
+         persistSession: true,
+         autoRefreshToken: true,
+         detectSessionInUrl: true,
+       },
+       global: {
+         headers: { 'x-application-name': 'crm-enterprise-resilient' },
        }
-     });
-   }
- 
-   return createClient(supabaseUrl, supabaseAnonKey, {
-     auth: {
-       persistSession: true,
-       autoRefreshToken: true,
-       detectSessionInUrl: true,
-     },
-     global: {
-       headers: { 'x-application-name': 'crm-enterprise-resilient' },
-     }
-   });
- })();
+     })
+   : (null as any);
 
 export const safeDb = async <T>(promise: Promise<T>, context: string): Promise<T> => {
   try {
