@@ -79,9 +79,13 @@
           </CardContent>
          <CardFooter>
             <div className="w-full space-y-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+              <button 
+                className="w-full h-10 px-4 py-2 bg-primary text-primary-foreground shadow hover:bg-primary/90 rounded-[12px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 cursor-pointer" 
+                type="submit" 
+                disabled={isLoading}
+              >
                 {isLoading ? 'Signing in...' : 'Sign in'}
-              </Button>
+              </button>
               <p className="text-xs text-center text-muted-foreground">
                 Don't have an account?{' '}
                 <Link to="/register" className="text-primary hover:underline font-medium">
