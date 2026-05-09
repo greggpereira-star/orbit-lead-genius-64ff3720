@@ -15,7 +15,9 @@ import {
    ArrowLeft,
    Save,
    Loader2,
-   Globe
+   Globe,
+   ListPlus,
+   X
  } from 'lucide-react';
  import {
    DndContext,
@@ -74,57 +76,110 @@ import { FormPublish } from './FormPublish';
      <div 
        ref={setNodeRef}
        style={style}
-       className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
+       className="group flex flex-col gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
      >
-       <div 
-         {...attributes} 
-         {...listeners}
-         className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors p-1"
-       >
-         <GripVertical className="h-5 w-5" />
-       </div>
-       
-       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-         <div className="space-y-1.5">
-           <Label className="text-xs">Field Label</Label>
-           <Input 
-             value={field.label} 
-             onChange={(e) => onUpdate(index, { label: e.target.value })}
-             className="h-9"
-           />
+       <div className="flex items-center gap-4 w-full">
+         <div 
+           {...attributes} 
+           {...listeners}
+           className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors p-1"
+         >
+           <GripVertical className="h-5 w-5" />
          </div>
-         <div className="space-y-1.5">
-           <Label className="text-xs">Field Type</Label>
-           <select 
-             className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-             value={field.type}
-             onChange={(e) => onUpdate(index, { type: e.target.value })}
-           >
-             <option value="text">Text Input</option>
-             <option value="email">Email</option>
-             <option value="phone">Phone</option>
-             <option value="textarea">Textarea</option>
-             <option value="select">Dropdown</option>
-           </select>
-         </div>
-         <div className="flex items-center gap-4 pt-6">
-           <div className="flex items-center gap-2">
-             <Switch 
-               checked={field.required} 
-               onCheckedChange={(val) => onUpdate(index, { required: val })}
+         
+         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+           <div className="space-y-1.5">
+             <Label className="text-xs">Field Label</Label>
+             <Input 
+               value={field.label} 
+               onChange={(e) => onUpdate(index, { label: e.target.value })}
+               className="h-9"
              />
-             <span className="text-xs font-medium">Required</span>
            </div>
-           <Button 
-             variant="ghost" 
-             size="icon" 
-             className="h-8 w-8 text-muted-foreground hover:text-destructive"
-             onClick={() => onRemove(field.id)}
-           >
-             <Trash2 className="h-4 w-4" />
-           </Button>
+           <div className="space-y-1.5">
+             <Label className="text-xs">Field Type</Label>
+             <select 
+               className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+               value={field.type}
+               onChange={(e) => onUpdate(index, { type: e.target.value })}
+             >
+               <option value="text">Text Input</option>
+               <option value="email">Email</option>
+               <option value="phone">Phone</option>
+               <option value="textarea">Textarea</option>
+               <option value="select">Dropdown</option>
+             </select>
+           </div>
+           <div className="flex items-center gap-4 pt-6">
+             <div className="flex items-center gap-2">
+               <Switch 
+                 checked={field.required} 
+                 onCheckedChange={(val) => onUpdate(index, { required: val })}
+               />
+               <span className="text-xs font-medium">Required</span>
+             </div>
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               className="h-8 w-8 text-muted-foreground hover:text-destructive"
+               onClick={() => onRemove(field.id)}
+             >
+               <Trash2 className="h-4 w-4" />
+             </Button>
+           </div>
          </div>
        </div>
+ 
+       {field.type === 'select' && (
+         <div className="mt-2 pl-10 space-y-3 bg-muted/30 p-4 rounded-lg border border-dashed animate-in slide-in-from-top-2">
+           <div className="flex items-center justify-between">
+             <Label className="text-[10px] uppercase font-bold tracking-widest text-primary">Opções do Dropdown</Label>
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               className="h-7 text-[10px] gap-1 px-2"
+               onClick={() => {
+                 const currentOptions = field.options || [];
+                 onUpdate(index, { options: [...currentOptions, `Opção ${currentOptions.length + 1}`] });
+               }}
+             >
+               <Plus className="h-3 w-3" /> Adicionar Opção
+             </Button>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+             {(field.options || ['Opção 1', 'Opção 2']).map((option: string, optIndex: number) => (
+               <div key={optIndex} className="flex gap-2 items-center">
+                 <Input 
+                   value={option}
+                   onChange={(e) => {
+                     const newOptions = [...(field.options || ['Opção 1', 'Opção 2'])];
+                     newOptions[optIndex] = e.target.value;
+                     onUpdate(index, { options: newOptions });
+                   }}
+                   placeholder={`Opção ${optIndex + 1}`}
+                   className="h-8 text-xs"
+                 />
+                 <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                   onClick={() => {
+                     const newOptions = [...(field.options || ['Opção 1', 'Opção 2'])];
+                     newOptions.splice(optIndex, 1);
+                     onUpdate(index, { options: newOptions });
+                   }}
+                 >
+                   <X className="h-3 w-3" />
+                 </Button>
+               </div>
+             ))}
+           </div>
+           {(!field.options || field.options.length === 0) && (
+             <p className="text-[10px] text-muted-foreground italic">Nenhuma opção cadastrada. Clique em adicionar para começar.</p>
+           )}
+         </div>
+       )}
      </div>
    );
  }
