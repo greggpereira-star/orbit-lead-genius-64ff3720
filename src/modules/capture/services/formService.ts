@@ -109,10 +109,14 @@ export const formService = {
          name: f.name || f.label?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
          type: f.type,
          required: !!f.required,
-         placeholder: f.placeholder,
-         form_id: newForm.id,
-         sort_order: index,
-         step_number: f.step_number || 1
+          placeholder: f.placeholder || '',
+          options: f.options || [],
+          form_id: newForm.id,
+          sort_order: index,
+          step_number: f.step_number || 1,
+          validation_rules: f.validation_rules || {},
+          logic_rules: f.logic_rules || {},
+          score_rules: f.score_rules || {}
        }));
  
        const { error: fieldsError } = await supabase
