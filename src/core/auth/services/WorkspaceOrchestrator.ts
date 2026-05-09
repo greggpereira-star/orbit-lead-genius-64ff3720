@@ -169,6 +169,9 @@
         company,
         membership: finalMembership
       };
+    } catch (error: any) {
+      console.error('Workspace recovery failed:', error);
+      throw error;
     }
-   }
+  }
 }
