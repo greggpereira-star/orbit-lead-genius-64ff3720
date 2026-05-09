@@ -32,8 +32,7 @@ export const Route = createFileRoute('/_app/observability')({
 function ObservabilityPage() {
   const auth = useAuth();
   const { company } = auth;
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [automations, setAutomations] = useState<any[]>([]);
+   const [webhooks, setWebhooks] = useState<any[]>([]);
    const [health, setHealth] = useState<any[]>([]);
    const [triggerErrors, setTriggerErrors] = useState<any[]>([]);
    const [systemLogs, setSystemLogs] = useState<any[]>([]);
