@@ -33,17 +33,22 @@
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      console.log('Register form submitted', { email, companyName });
+      
       if (passwordStrength !== null && passwordStrength < 2) {
         toast.error('Please choose a stronger password');
         return;
       }
+      
       setIsLoading(true);
       try {
         await signup(email, password, companyName);
         toast.success('Account created! Please check your email to verify.');
-        navigate({ to: '/dashboard' });
+        setTimeout(() => {
+          navigate({ to: '/dashboard' });
+        }, 1500);
       } catch (error: any) {
-        console.error(error);
+        console.error('Registration error:', error);
         toast.error(error.message || 'Failed to create account');
       } finally {
         setIsLoading(false);
@@ -65,6 +70,7 @@
                <Label htmlFor="company">Company Name</Label>
                <Input 
                  id="company" 
+                name="company"
                  placeholder="Acme Inc" 
                  required 
                  value={companyName}
@@ -75,6 +81,7 @@
                 <Label htmlFor="email">Work Email</Label>
                 <Input 
                   id="email" 
+                name="email"
                   type="email" 
                   placeholder="name@company.com" 
                   required 
@@ -86,6 +93,7 @@
                 <Label htmlFor="password">Password</Label>
                 <Input 
                   id="password" 
+                name="password"
                   type="password" 
                   placeholder="••••••••" 
                   required 
@@ -123,10 +131,20 @@
                ))}
              </div>
            </CardContent>
-           <CardFooter className="flex flex-col gap-4">
-             <Button className="w-full" type="submit" disabled={isLoading}>
-               {isLoading ? 'Creating account...' : 'Get Started Free'}
-             </Button>
+            <CardFooter className="flex flex-col gap-4 pt-4">
+              <Button 
+                className="w-full h-11 text-base font-bold shadow-lg hover:shadow-xl transition-all" 
+                type="submit" 
+                disabled={isLoading}
+                onClick={() => console.log('Button clicked')}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creating account...
+                  </div>
+                ) : 'Get Started Free'}
+              </Button>
              <p className="text-xs text-center text-muted-foreground">
                Already have an account?{' '}
                <Link to="/login" className="text-primary hover:underline font-medium">

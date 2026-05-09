@@ -21,6 +21,7 @@
  
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      console.log('Login form submitted', { email });
       setIsLoading(true);
       try {
         await login(email, password);
@@ -48,6 +49,7 @@
               <Label htmlFor="email">Email</Label>
               <Input 
                 id="email" 
+                name="email"
                 type="email" 
                 placeholder="name@company.com" 
                 required 
@@ -67,6 +69,7 @@
               </div>
               <Input 
                 id="password" 
+                name="password"
                 type="password" 
                 required 
                 value={password}

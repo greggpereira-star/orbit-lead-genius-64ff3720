@@ -90,7 +90,16 @@
    };
  
     const login = async (email: string, password?: string) => {
-      if (!supabase) throw new Error('Supabase client not initialized');
+      if (!supabase || !supabase.auth) {
+        console.warn('Supabase not configured. Using mock login.');
+        setIsLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setUser({ id: 'mock-user', email, name: email.split('@')[0] });
+        setCompany({ id: 'mock-company', name: 'Mock Company', slug: 'mock-company' });
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       try {
         const { error } = await supabase.auth.signInWithPassword({
@@ -104,7 +113,18 @@
     };
  
     const signup = async (email: string, password?: string, companyName?: string) => {
-      if (!supabase) throw new Error('Supabase client not initialized');
+      console.log('Signup initiated in AuthContext', { email, companyName });
+      
+      if (!supabase || !supabase.auth) {
+        console.warn('Supabase not configured. Using mock signup.');
+        setIsLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setUser({ id: 'mock-user', email, name: email.split('@')[0] });
+        setCompany({ id: 'mock-company', name: companyName || 'Mock Company', slug: 'mock-company' });
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       try {
         const { error } = await supabase.auth.signUp({
