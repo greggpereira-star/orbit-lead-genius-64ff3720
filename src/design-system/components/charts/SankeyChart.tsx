@@ -37,13 +37,13 @@ export function SankeyChart({ data }: SankeyChartProps) {
           curveness: 0.5
         },
         itemStyle: {
-          borderWidth: 1,
-          borderColor: '#aaa',
-          borderRadius: 4
+          borderWidth: 0,
+          borderRadius: 6
         },
         label: {
-          fontSize: 11,
-          color: '#666'
+          fontSize: 12,
+          fontWeight: 'bold',
+          color: 'inherit'
         }
       }
     ]

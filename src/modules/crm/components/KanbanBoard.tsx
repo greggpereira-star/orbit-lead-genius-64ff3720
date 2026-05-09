@@ -174,9 +174,9 @@
              <div className="flex items-center justify-between mb-3 px-1">
                <div className="flex items-center gap-2">
                  <h3 className="font-semibold text-sm">{column.title}</h3>
-                 <Badge variant="secondary" className="bg-muted text-muted-foreground font-normal">
-                   {column.leads.length}
-                 </Badge>
+                  <Badge variant="secondary" className="bg-secondary text-secondary-foreground font-bold">
+                    {column.leads.length}
+                  </Badge>
                </div>
                <Button variant="ghost" size="icon" className="h-8 w-8">
                  <MoreHorizontal className="h-4 w-4" />
@@ -185,24 +185,24 @@
  
              <Droppable droppableId={column.id}>
                {(provided, snapshot) => (
-                 <div
-                   {...provided.droppableProps}
-                   ref={provided.innerRef}
-                   className={`flex-1 rounded-lg transition-colors p-2 space-y-3 ${
-                     snapshot.isDraggingOver ? 'bg-muted/50' : 'bg-muted/20'
-                   }`}
-                 >
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className={`flex-1 rounded-lg transition-colors p-2 space-y-3 border border-dashed border-border/40 ${
+                      snapshot.isDraggingOver ? 'bg-secondary/50 border-primary/30' : 'bg-secondary/20'
+                    }`}
+                  >
                    {column.leads.map((lead, index) => (
                      <Draggable key={lead.id} draggableId={lead.id} index={index}>
                        {(provided, snapshot) => (
-                         <Card
-                           ref={provided.innerRef}
-                           {...provided.draggableProps}
-                           onClick={() => window.location.href = `/leads/${lead.id}`}
-                           className={`p-3 shadow-sm border-none group cursor-pointer hover:ring-1 hover:ring-primary/20 transition-all ${
-                             snapshot.isDragging ? 'shadow-lg rotate-2' : ''
-                           }`}
-                         >
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            onClick={() => window.location.href = `/leads/${lead.id}`}
+                            className={`p-3 shadow-sm border border-border group cursor-pointer hover:ring-2 hover:ring-primary/40 hover:border-primary/40 transition-all ${
+                              snapshot.isDragging ? 'shadow-xl rotate-2 ring-2 ring-primary bg-card z-50' : 'bg-card'
+                            }`}
+                          >
                            <div className="flex items-start justify-between mb-2">
                              <div className="flex-1">
                                <div className="flex items-center gap-2">

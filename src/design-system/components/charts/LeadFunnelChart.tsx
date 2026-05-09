@@ -41,9 +41,12 @@ export function LeadFunnelChart({ data }: LeadFunnelChartProps) {
           show: false
         },
         itemStyle: {
-          borderColor: '#fff',
-          borderWidth: 1,
-          borderRadius: 8
+          borderColor: 'transparent',
+          borderWidth: 0,
+          borderRadius: 12,
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.1)',
+          opacity: 0.9
         },
         emphasis: {
           label: {

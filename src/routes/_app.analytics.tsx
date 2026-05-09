@@ -49,10 +49,10 @@ export const Route = createFileRoute('/_app/analytics')({
 });
 
 const channelData = [
-  { name: 'Google Ads', value: 4500, color: '#4285F4' },
-  { name: 'Meta Ads', value: 3200, color: '#1877F2' },
-  { name: 'Organic', value: 2100, color: '#34A853' },
-  { name: 'Direct', value: 1200, color: '#EA4335' },
+  { name: 'Google Ads', value: 4500, color: 'var(--primary)' },
+  { name: 'Meta Ads', value: 3200, color: 'oklch(0.68 0.19 145)' },
+  { name: 'Organic', value: 2100, color: 'oklch(0.65 0.23 300)' },
+  { name: 'Direct', value: 1200, color: 'oklch(0.59 0.23 27)' },
 ];
 
 const funnelData = [
@@ -155,12 +155,14 @@ function AnalyticsPage() {
           <CardContent className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={channelData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(0.92 0.01 255)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 600 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 600 }} />
                 <Tooltip 
-                  cursor={{ fill: 'oklch(0.92 0.01 255)', opacity: 0.4 }}
-                  contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.2)' }}
+                  itemStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                  labelStyle={{ color: 'var(--foreground)', fontWeight: 700 }}
                 />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                   {channelData.map((entry, index) => (

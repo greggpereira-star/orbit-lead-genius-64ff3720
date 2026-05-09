@@ -105,7 +105,7 @@
          </Button>
          <div className="flex-1">
            <div className="flex items-center gap-3">
-             <h1 className="text-2xl font-bold tracking-tight">{lead.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{lead.name}</h1>
              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 capitalize">
                {lead.status}
              </Badge>
@@ -120,7 +120,7 @@
                {lead.temperature || 'cold'}
              </Badge>
            </div>
-           <p className="text-muted-foreground text-sm">{lead.role} at {lead.company}</p>
+            <p className="text-muted-foreground text-sm font-semibold">{lead.role} at {lead.company}</p>
          </div>
          <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" className="gap-2">
@@ -146,10 +146,10 @@
                </CardTitle>
              </CardHeader>
              <CardContent className="space-y-4">
-               <div className="flex items-center gap-3 text-sm">
-                 <Mail className="h-4 w-4 text-muted-foreground" />
-                 <span className="text-foreground">{lead.email}</span>
-               </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <span className="text-foreground font-bold">{lead.email}</span>
+                </div>
                <div className="flex items-center gap-3 text-sm">
                  <Phone className="h-4 w-4 text-muted-foreground" />
                  <span className="text-foreground">{lead.phone}</span>
@@ -243,10 +243,10 @@
                            <Activity className="h-4 w-4 text-primary" />
                          </div>
                          <div className="flex-1 ml-10">
-                           <div className="flex items-center justify-between">
-                             <h4 className="text-sm font-semibold capitalize">{event.event_type.replace('_', ' ')}</h4>
-                             <span className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span>
-                           </div>
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-bold capitalize text-foreground">{event.event_type.replace('_', ' ')}</h4>
+                              <span className="text-xs text-muted-foreground font-bold">{new Date(event.created_at).toLocaleString()}</span>
+                            </div>
                            <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
                          </div>
                        </div>

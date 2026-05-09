@@ -68,14 +68,14 @@ export function WhatsAppWidget() {
             className="mb-4 w-80"
           >
             <Card className="shadow-2xl border-none">
-              <CardHeader className="bg-[#25D366] text-white rounded-t-xl py-4">
+              <CardHeader className="bg-[#128C7E] text-white rounded-t-xl py-4 shadow-[inset_0_-4px_10px_rgba(0,0,0,0.1)]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-full bg-white/30 flex items-center justify-center shadow-lg">
                       <MessageSquare className="h-6 w-6" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm">Speak with an agent</CardTitle>
+                      <CardTitle className="text-sm font-bold">Speak with an agent</CardTitle>
                       <p className="text-[10px] opacity-80">Usually replies in minutes</p>
                     </div>
                   </div>

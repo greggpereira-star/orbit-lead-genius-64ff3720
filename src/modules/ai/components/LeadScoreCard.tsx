@@ -34,15 +34,15 @@
                <CardDescription className="text-xs">AI-driven predictive scoring</CardDescription>
              </div>
            </div>
-           <Badge className={`${getGradeColor(result.grade)} border-none text-white text-lg px-3 py-0.5`}>
-             Grade {result.grade}
-           </Badge>
+              <Badge className={`${getGradeColor(result.grade)} border-none text-white text-lg px-3 py-0.5 font-bold shadow-md`}>
+                Grade {result.grade}
+              </Badge>
          </div>
        </CardHeader>
        <CardContent className="pt-6 space-y-6">
          <div className="flex items-center justify-between">
            <div className="space-y-1">
-             <span className="text-sm font-medium text-muted-foreground">Overall Score</span>
+              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Overall Score</span>
              <div className="text-3xl font-bold text-foreground">{result.totalScore}<span className="text-lg text-muted-foreground">/100</span></div>
            </div>
            <div className="h-16 w-16 rounded-full border-4 border-primary/10 flex items-center justify-center relative">
@@ -60,13 +60,13 @@
          <div className="space-y-4">
            {result.dimensions.map((dim) => (
              <div key={dim.label} className="space-y-1.5">
-               <div className="flex justify-between text-xs">
-                 <span className="font-medium text-foreground flex items-center gap-1.5">
-                   {dim.label}
-                   <Info className="h-3 w-3 text-muted-foreground" />
-                 </span>
-                 <span className="text-muted-foreground">{dim.score}%</span>
-               </div>
+                <div className="flex justify-between text-xs">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    {dim.label}
+                    <Info className="h-3 w-3 text-primary" />
+                  </span>
+                  <span className="text-foreground font-bold">{dim.score}%</span>
+                </div>
                <Progress value={dim.score} className="h-1.5" />
              </div>
            ))}
