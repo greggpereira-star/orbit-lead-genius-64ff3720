@@ -133,7 +133,7 @@ import { FormPublish } from './FormPublish';
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
-   const [showTemplates, setShowTemplates] = useState(!formId && !existingForm);
+    const [showTemplates, setShowTemplates] = useState(!formId);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
     slug: '',
