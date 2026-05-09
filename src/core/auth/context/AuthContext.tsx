@@ -60,6 +60,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCompany(null);
   }, [traceId]);
 
+  const ensureTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
+    logger.info('AuthTrace: Self-healing tenant context', { userId: supabaseUser.id, traceId });
+    
+    try {
+      const compName = supabaseUser.user_metadata?.company_name || 'My Enterprise';
+      const compSlug = `workspace-${supabaseUser.id.substring(0, 5)}-${Math.floor(Math.random() * 1000)}`;
+      
+      const { data: companyData, error: companyError } = await supabaseClient
+        .from('companies')
+        .insert({ name: compName, slug: compSlug })
+        .select()
+        .single();
+
+      if (companyError) {
+        const { data: existingMemb } = await supabaseClient.from('memberships').select('company_id').eq('user_id', supabaseUser.id).maybeSingle();
+        if (existingMemb) return true;
+        throw companyError;
+      }
+
+      const { error: memberError } = await supabaseClient
+        .from('memberships')
+        .insert({
+          company_id: companyData.id,
+          user_id: supabaseUser.id,
+          role: 'owner'
+        });
+
+      if (memberError) throw memberError;
+
+      logger.info('AuthTrace: Self-healing complete', { companyId: companyData.id, traceId });
+      return true;
+    } catch (err: any) {
+      logger.error('AuthTrace: Self-healing failed', { error: err.message, traceId });
+      return false;
+    }
+  }, [traceId]);
+
   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
     setState('TENANT_LOADING');
     const requestId = Math.random().toString(36).substring(2, 7);
