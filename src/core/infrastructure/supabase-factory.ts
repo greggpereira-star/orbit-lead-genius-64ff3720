@@ -9,7 +9,6 @@ export class SafeSupabaseClientFactory {
   static getInstanceSync(): SupabaseClient {
     if (this.instance) return this.instance;
     
-    // Fallback to sync creation if needed, but warning
     const config = getRuntimeConfig();
     this.instance = createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: {
