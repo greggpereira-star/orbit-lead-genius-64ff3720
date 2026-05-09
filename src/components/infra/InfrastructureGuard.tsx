@@ -32,15 +32,15 @@ import { Button } from '@/components/ui/button';
     );
   }
 
-   // If healthy, or it's a bypass path, or it's just degraded, let it through
-   if (report?.status === 'healthy' || report?.status === 'degraded' || (report?.status === 'unhealthy' && isBypassPath)) {
+   if (state.status === 'ready' || (state.status === 'failed' && isBypassPath) || state.health?.status === 'degraded') {
      return <>{children}</>;
    }
  
-   if (report?.status === 'unhealthy') {
-     const config = getRuntimeConfig();
-     
-    return (
+   if (state.status === 'failed') {
+     const config = state.config;
+     const report = state.health;
+ 
+     return (
       <div className="min-h-screen w-full bg-destructive/5 flex items-center justify-center p-6">
         <div className="max-w-lg w-full bg-background border border-destructive/20 rounded-2xl shadow-2xl p-8 space-y-8">
           <div className="flex items-center gap-4 text-destructive">
@@ -64,10 +64,18 @@ import { Button } from '@/components/ui/button';
                    </Badge>
                  </div>
                  <div className="space-y-2 font-mono text-[10px]">
-                   <div className="flex items-center justify-between text-muted-foreground">
-                     <span>URL:</span>
-                     <span className="truncate max-w-[200px]">{config.supabaseUrl}</span>
-                   </div>
+                   {config && (
+                     <>
+                       <div className="flex items-center justify-between text-muted-foreground">
+                         <span>URL:</span>
+                         <span className="truncate max-w-[200px]">{config.supabaseUrl}</span>
+                       </div>
+                       <div className="flex items-center justify-between text-muted-foreground">
+                         <span>ENV:</span>
+                         <span className="uppercase">{config.environment}</span>
+                       </div>
+                     </>
+                   )}
                    <div className="flex items-center justify-between text-muted-foreground">
                      <span>ANON_KEY:</span>
                      <span>{config.supabaseAnonKey === 'placeholder-key' ? 'MISSING' : '********'}</span>
@@ -121,12 +129,12 @@ import { Button } from '@/components/ui/button';
 
            <div className="space-y-4">
              <Button 
-               onClick={check} 
+               onClick={() => BootstrapEngine.retry()} 
                disabled={isChecking}
                className="w-full h-12 font-bold shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95"
              >
                <RefreshCw className={`mr-2 h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} /> 
-               {isChecking ? 'TESTANDO CONEXÃO...' : 'TESTAR CONEXÃO AGORA'}
+               {isChecking ? 'REINICIANDO RUNTIME...' : 'TENTAR RECONECTAR AGORA'}
              </Button>
              
              <div className="p-4 bg-muted rounded-lg border text-[11px] space-y-2">
