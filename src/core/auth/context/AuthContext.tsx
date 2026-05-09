@@ -121,7 +121,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
           supabaseUser.id,
           supabaseUser.email || "",
           supabaseUser.user_metadata || {},
-          (newState: AuthState) => setState(newState)
+          (newState: AuthState) => {
+            // If we have a cache hit, avoid flashing the loading UI
+            // Only set state if we are moving to a definitive state (READY/ERROR)
+            // or if we didn't have a cache hit.
+            if (!isReadyCache || newState === 'READY' || newState === 'ERROR') {
+              setState(newState);
+            } else {
+              logger.info(`AuthTrace: Background revalidation state suppressed: ${newState}`, { traceId });
+            }
+          }
         );
  
         if (result.state === 'ERROR') {
