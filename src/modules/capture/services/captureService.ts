@@ -1,3 +1,4 @@
+ import { automationService } from '@/modules/automation/services/automationService';
  import { enrichmentService } from '@/modules/ai/services/enrichment';
  export interface LeadSubmission {
    name: string;
@@ -78,6 +79,12 @@
  
       // 4. Enrich Lead in background
       enrichmentService.enrichLead(lead.id).catch(console.error);
+ 
+      // 5. Trigger automations
+      automationService.processTrigger(companyId, {
+        type: 'lead_created',
+        data: { ...lead, ...trackingData }
+      }).catch(console.error);
  
       return { success: true, leadId: lead.id };
    }
