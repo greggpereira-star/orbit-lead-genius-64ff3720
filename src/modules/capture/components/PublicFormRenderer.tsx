@@ -168,30 +168,25 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                      placeholder={field.placeholder}
                      className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
                    />
-                 ) : field.type === 'select' ? (
-                   <div className="relative group">
-                     <select
-                       {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                       className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
-                       style={{ 
-                         borderColor: 'var(--border)',
-                         '--tw-ring-color': 'var(--primary)',
-                       } as any}
-                     >
-                       <option value="">Selecione uma opção...</option>
-                       {(field.options || []).map((option: string, i: number) => (
-                         <option key={i} value={option}>{option}</option>
-                       ))}
-                     </select>
-                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-                       <ChevronRight className="h-4 w-4 rotate-90" />
-                     </div>
-                   </div>
-                     <option value="">Selecione uma opção...</option>
-                     {(field.options || []).map((option: string, i: number) => (
-                       <option key={i} value={option}>{option}</option>
-                     ))}
-                   </select>
+                  ) : field.type === 'select' ? (
+                    <div className="relative group">
+                      <select
+                        {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+                        className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
+                        style={{ 
+                          borderColor: 'var(--border)',
+                          '--tw-ring-color': 'var(--primary)',
+                        } as any}
+                      >
+                        <option value="">Selecione uma opção...</option>
+                        {(field.options || []).map((option: string, i: number) => (
+                          <option key={i} value={option}>{option}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                        <ChevronRight className="h-4 w-4 rotate-90" />
+                      </div>
+                    </div>
                  ) : (
                     <Input
                       type={field.type === 'phone' ? 'tel' : field.type}
