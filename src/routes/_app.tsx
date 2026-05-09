@@ -29,10 +29,10 @@ function AppLayout() {
   }, [isAuthLoading]);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isAuthLoading && !isAuthenticated) {
       router.navigate({ to: '/login' });
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, router]);
 
   useEffect(() => {
     if (isAuthenticated && company) {
