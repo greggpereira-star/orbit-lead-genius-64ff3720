@@ -1,7 +1,11 @@
- export type AuthState = 
-   | 'IDLE'
-   | 'INITIALIZING'
-   | 'UNAUTHENTICATED'
+  export type AuthState =
+    | 'IDLE'
+    | 'BOOTSTRAP_START'
+    | 'INITIALIZING'
+    | 'SESSION_LOADING'
+    | 'AUTHENTICATING'
+    | 'UNAUTHENTICATED'
+    | 'PROFILE_LOADING'
    | 'AUTHENTICATING'
    | 'CREATING_ACCOUNT'
    | 'ACCOUNT_CREATED'

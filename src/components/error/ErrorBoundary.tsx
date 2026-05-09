@@ -27,6 +27,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Auto-repair for Dynamic Import Failures (Stale Chunks)
+    if (error.message?.includes('Failed to fetch dynamically imported module') || 
+        error.message?.includes('chunk load failed')) {
+      logger.warn('AuthRecovery: Stale chunk detected, initiating auto-reload', { error: error.message });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      return;
+    }
+
     const correlationId = logger.getCorrelationId();
     logger.fatal(`CRASH in [${this.props.name || 'Anonymous'}]: ${error.message}`, {
       stack: error.stack,
