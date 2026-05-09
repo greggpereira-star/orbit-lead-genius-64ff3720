@@ -83,6 +83,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       if (typeof window === 'undefined') return;
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem('workspace_ready_v1');
+      logger.info('WorkspaceReadinessCache: Cleared snapshot');
     }, []);
 
   const handleAuthFailure = useCallback((msg: string, logError = true) => {
