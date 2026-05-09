@@ -153,8 +153,23 @@ function RootShell({ children }: { children: React.ReactNode }) {
     };
    }, [state]);
  
-   if (state === 'TENANT_BOOTSTRAPPING') {
-     return <TenantBootstrap status="BOOTSTRAPPING" />;
+   const isBootstrapping = [
+     'TENANT_VALIDATING', 
+     'TENANT_RECOVERING', 
+     'MEMBERSHIP_RECOVERING', 
+     'ROLE_RECOVERING', 
+     'PERMISSIONS_RECOVERING',
+     'WORKSPACE_READY'
+   ].includes(state as string);
+
+   if (isBootstrapping) {
+     const statusMap: Record<string, any> = {
+       TENANT_VALIDATING: 'BOOTSTRAPPING',
+       TENANT_RECOVERING: 'BOOTSTRAPPING',
+       MEMBERSHIP_RECOVERING: 'BOOTSTRAPPING',
+       WORKSPACE_READY: 'FINALIZING',
+     };
+     return <TenantBootstrap status={statusMap[state as string] || 'BOOTSTRAPPING'} />;
    }
  
    return (

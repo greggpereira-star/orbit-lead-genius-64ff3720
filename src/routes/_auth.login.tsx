@@ -19,7 +19,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
      const [password, setPassword] = useState('');
      const [retryCount, setRetryCount] = useState(0);
      const { login, state, error: authError } = useAuth();
-      const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING' || state === 'TENANT_BOOTSTRAPPING';
+      const isLoading = ['AUTHENTICATING', 'INITIALIZING', 'TENANT_VALIDATING', 'TENANT_RECOVERING'].includes(state as string);
    
      const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
        console.log('Login: Form submitted');

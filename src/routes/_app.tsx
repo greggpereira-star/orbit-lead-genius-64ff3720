@@ -36,18 +36,16 @@ function AppLayout() {
   }, [state, company?.id]);
 
    // Enhanced Loading States with deterministic category messages
-    const isLoadingState = ['INITIALIZING', 'AUTHENTICATING', 'TENANT_LOADING', 'TENANT_BOOTSTRAPPING', 'ROLE_LOADING', 'PERMISSIONS_LOADING', 'SELF_HEALING'].includes(state);
+    const isLoadingState = ['INITIALIZING', 'AUTHENTICATING', 'TENANT_VALIDATING', 'TENANT_RECOVERING', 'MEMBERSHIP_RECOVERING', 'ROLE_RECOVERING', 'PERMISSIONS_RECOVERING', 'DASHBOARD_BOOTSTRAP'].includes(state as string);
  
    if (isLoadingState) {
-     const getMessage = () => {
-       switch (state) {
-         case 'AUTHENTICATING': return 'Autenticando credenciais seguras...';
-         case 'TENANT_LOADING': return 'Resolvendo contexto multi-tenant...';
-         case 'ROLE_LOADING': return 'Carregando papéis de acesso...';
-         case 'SELF_HEALING': return 'Reparando inconsistências de onboarding...';
-         default: return 'Sincronizando sessão enterprise...';
-       }
-     };
+      const getMessage = () => {
+        if (state === 'AUTHENTICATING') return 'Autenticando credenciais seguras...';
+        if (state === 'TENANT_VALIDATING') return 'Validando workspace...';
+        if (state === 'TENANT_RECOVERING') return 'Recuperando workspace...';
+        if (state === 'MEMBERSHIP_RECOVERING') return 'Verificando acesso...';
+        return 'Sincronizando sessão enterprise...';
+      };
  
      return (
        <div className="flex h-screen items-center justify-center bg-background">
