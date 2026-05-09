@@ -42,6 +42,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const CACHE_KEY = 'workspace_readiness_snapshot';
 
     const checkWorkspaceReadiness = useCallback((tenantId?: string) => {
+      if (typeof window === 'undefined') return false;
       const cached = localStorage.getItem(CACHE_KEY);
       if (!cached) return false;
       
@@ -56,11 +57,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       }
     }, [SCHEMA_VERSION]);
 
-    const markWorkspaceAsReady = useCallback((userId: string, tenantId: string, membershipId: string) => {
+    const markWorkspaceAsReady = useCallback((userId: string, tenant_id: string, membership_id: string) => {
+      if (typeof window === 'undefined') return;
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         user_id: userId,
-        tenant_id: tenantId,
-        membership_id: membershipId,
+        tenant_id,
+        membership_id,
         workspace_ready: true,
         onboarding_completed: true,
         permissions_ready: true,
@@ -71,6 +73,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     }, [SCHEMA_VERSION]);
 
     const clearWorkspaceReady = useCallback(() => {
+      if (typeof window === 'undefined') return;
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem('workspace_ready_v1');
     }, []);
@@ -169,7 +172,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
             await loadTenantContext(session.user);
           } else if (mounted) {
-            const isRestoring = localStorage.getItem('supabase.auth.token') !== null;
+            const isRestoring = typeof window !== 'undefined' && localStorage.getItem('supabase.auth.token') !== null;
             if (isRestoring) {
               setState('SESSION_LOADING');
               return; 
