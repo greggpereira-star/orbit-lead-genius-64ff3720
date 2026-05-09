@@ -1,8 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
+
+export type AuthState = 
+  | 'INITIALIZING'
+  | 'UNAUTHENTICATED'
+  | 'AUTHENTICATING'
+  | 'AUTHENTICATED'
+  | 'TENANT_LOADING'
+  | 'READY'
+  | 'ERROR';
 
 interface User {
   id: string;
@@ -18,45 +27,52 @@ interface Company {
 }
 
 interface AuthContextType {
+  state: AuthState;
   user: User | null;
   company: Company | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  configError: string | null;
+  isReady: boolean;
+  error: string | null;
+  traceId: string;
   login: (email: string, password?: string) => Promise<void>;
   signup: (email: string, password?: string, companyName?: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshSession: () => Promise<void>;
+  refreshContext: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, setState] = useState<AuthState>('INITIALIZING');
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [configError, setConfigError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const traceId = useMemo(() => Math.random().toString(36).substring(2, 15), []);
 
-  const handleUserSession = useCallback(async (supabaseUser: SupabaseUser | null) => {
-    if (!supabaseUser) {
-      setUser(null);
-      setCompany(null);
-      return;
-    }
+  const handleAuthFailure = useCallback((msg: string, logError = true) => {
+    if (logError) logger.error(msg, { traceId });
+    setError(msg);
+    setState('UNAUTHENTICATED');
+    setUser(null);
+    setCompany(null);
+  }, [traceId]);
 
+  const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
+    setState('TENANT_LOADING');
+    const requestId = Math.random().toString(36).substring(2, 7);
+    
     try {
-      logger.info('Syncing user session with database', { userId: supabaseUser.id });
+      logger.info('Loading tenant context', { userId: supabaseUser.id, traceId, requestId });
       
-      // 1. Fetch Profile
+      // 1. Profiles
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError) {
-        logger.warn('Profile not found, user may be new or sync failed', { error: profileError });
-      }
+      if (profileError) throw profileError;
 
       setUser({
         id: supabaseUser.id,
@@ -65,82 +81,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar_url: profile?.avatar_url || supabaseUser.user_metadata?.avatar_url
       });
 
-      // 2. Fetch primary membership and company
+      // 2. Memberships + Companies
       const { data: membership, error: membershipError } = await supabase
         .from('memberships')
         .select('*, companies(*)')
         .eq('user_id', supabaseUser.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (membershipError) {
-        logger.warn('No membership found for user', { userId: supabaseUser.id, error: membershipError });
-        setCompany(null);
-      } else if (membership?.companies) {
-        setCompany({
-          id: membership.companies.id,
-          name: membership.companies.name,
-          slug: membership.companies.slug
-        });
-        logger.info('Company context loaded', { companyId: membership.companies.id });
+      if (membershipError) throw membershipError;
+
+      if (!membership || !membership.companies) {
+        logger.warn('User has no company membership', { userId: supabaseUser.id, traceId });
+        setState('READY'); // User is authenticated but has no tenant. UI handles this.
+        return;
       }
-    } catch (err: any) {
-      logger.error('Critical failure in handleUserSession', { error: err.message, stack: err.stack });
-    }
-  }, []);
 
-  const refreshSession = useCallback(async () => {
-    if (!supabase) return;
-    setIsLoading(true);
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      await handleUserSession(session?.user || null);
+      setCompany({
+        id: membership.companies.id,
+        name: membership.companies.name,
+        slug: membership.companies.slug
+      });
+
+      setState('READY');
+      logger.info('Auth lifecycle complete: READY', { companyId: membership.companies.id, traceId });
     } catch (err: any) {
-      logger.error('Session refresh failed', { error: err.message });
-    } finally {
-      setIsLoading(false);
+      logger.error('Failed to load tenant context', { error: err.message, traceId });
+      setError(`Context load failed: ${err.message}`);
+      setState('ERROR');
     }
-  }, [handleUserSession]);
+  }, [traceId]);
 
   useEffect(() => {
     let mounted = true;
     
     if (!supabase) {
-      logger.warn('Supabase client missing - check environment variables');
-      setConfigError('Supabase credentials missing. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
-      // Mock for sandbox stability if needed, but the user requested no fake fallbacks
-      // We will show the error state instead.
-      setIsLoading(false);
+      setState('ERROR');
+      setError('Supabase configuration missing');
       return;
     }
 
-    const init = async () => {
+    const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        if (mounted) {
-          await handleUserSession(session?.user || null);
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        if (session?.user && mounted) {
+          await loadTenantContext(session.user);
+        } else if (mounted) {
+          setState('UNAUTHENTICATED');
         }
       } catch (err: any) {
-        logger.error('Auth initialization failed', { error: err.message });
-      } finally {
-        if (mounted) setIsLoading(false);
+        handleAuthFailure(`Initialization error: ${err.message}`);
       }
     };
 
-    init();
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      logger.info('Auth state changed', { event });
-      if (mounted) {
-        if (session?.user) {
-          await handleUserSession(session.user);
-        } else {
-          setUser(null);
-          setCompany(null);
-        }
-        setIsLoading(false);
+      logger.info('Supabase Auth Event', { event, traceId });
+      if (!mounted) return;
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) await loadTenantContext(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setCompany(null);
+        setState('UNAUTHENTICATED');
       }
     });
 
@@ -148,30 +155,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [handleUserSession]);
+  }, [loadTenantContext, handleAuthFailure, traceId]);
 
   const login = async (email: string, password?: string) => {
-    logger.info('Login attempt', { email });
-    setIsLoading(true);
+    setState('AUTHENTICATING');
+    const loadingToast = toast.loading('Authenticating credentials...');
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password: password || '',
       });
-      if (error) throw error;
-      logger.info('Login successful');
+      
+      if (error) {
+        toast.error(error.message, { id: loadingToast });
+        throw error;
+      }
+      
+      toast.success('Successfully signed in', { id: loadingToast });
     } catch (err: any) {
-      logger.error('Login failed', { email, error: err.message });
-      toast.error(err.message || 'Invalid credentials');
+      handleAuthFailure(err.message, false);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const signup = async (email: string, password?: string, companyName?: string) => {
-    logger.info('Signup attempt', { email, companyName });
-    setIsLoading(true);
+    setState('AUTHENTICATING');
+    const loadingToast = toast.loading('Creating enterprise account...');
+    
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -184,42 +195,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailRedirectTo: window.location.origin + '/dashboard',
         }
       });
-      if (error) throw error;
-      logger.info('Signup request sent');
-      toast.success('Registration successful. Please verify your email.');
+      
+      if (error) {
+        toast.error(error.message, { id: loadingToast });
+        throw error;
+      }
+      
+      toast.success('Account created. Please check your email.', { id: loadingToast });
+      setState('UNAUTHENTICATED'); // Wait for verification
     } catch (err: any) {
-      logger.error('Signup failed', { email, error: err.message });
-      toast.error(err.message || 'Signup failed');
+      handleAuthFailure(err.message, false);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    logger.info('Logout requested');
+    const loadingToast = toast.loading('Terminating session...');
     try {
       await supabase.auth.signOut();
-      setUser(null);
-      setCompany(null);
-      logger.info('Logout successful');
+      toast.success('Signed out successfully', { id: loadingToast });
     } catch (err: any) {
-      logger.error('Logout error', { error: err.message });
+      toast.error('Sign out error', { id: loadingToast });
     }
   };
 
+  const refreshContext = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) await loadTenantContext(session.user);
+  };
+
+  const value = {
+    state,
+    user,
+    company,
+    isAuthenticated: state === 'AUTHENTICATED' || state === 'TENANT_LOADING' || state === 'READY',
+    isReady: state === 'READY',
+    isLoading: state === 'INITIALIZING' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING',
+    error,
+    traceId,
+    login,
+    signup,
+    logout,
+    refreshContext
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      company, 
-      isAuthenticated: !!user, 
-      isLoading, 
-      configError,
-      login, 
-      signup,
-      logout,
-      refreshSession
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
