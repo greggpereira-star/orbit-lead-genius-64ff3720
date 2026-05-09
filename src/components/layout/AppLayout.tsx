@@ -150,17 +150,19 @@ export function AppLayout() {
    }
 
    return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-col h-screen overflow-hidden">
-          <Topbar />
-          <main className="flex-1 overflow-auto p-6 bg-background/50">
-            <Outlet />
-          </main>
-        </div>
-      </SidebarInset>
-      <CommandPalette />
-    </SidebarProvider>
+     <SidebarProvider>
+       <AppSidebar />
+       <SidebarInset>
+         <div className="flex flex-col h-screen max-w-[100vw] overflow-hidden">
+           <Topbar />
+           <main className="flex-1 overflow-hidden p-6 bg-background/50">
+             <div className="h-full w-full overflow-auto scrollbar-hide">
+               <Outlet />
+             </div>
+           </main>
+         </div>
+       </SidebarInset>
+       <CommandPalette />
+     </SidebarProvider>
   );
 }
