@@ -22,7 +22,7 @@ serve(async (req) => {
     
     let tokenUrl = ""
     let body = new URLSearchParams()
-    const redirectUri = \`\${Deno.env.get('SUPABASE_URL')}/functions/v1/oauth-callback\`
+    const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/oauth-callback`
 
     if (provider === 'meta') {
       tokenUrl = "https://graph.facebook.com/v18.0/oauth/access_token"
@@ -68,7 +68,7 @@ serve(async (req) => {
     if (upsertError) throw upsertError
 
     // Redirect back to the app
-    return Response.redirect(\`\${origin}/settings/integrations?provider=\${provider}&status=success\`, 302)
+    return Response.redirect(`${origin}/settings/integrations?provider=${provider}&status=success`, 302)
 
   } catch (error) {
     console.error("OAuth Error:", error.message)

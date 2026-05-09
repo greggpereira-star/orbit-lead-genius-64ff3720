@@ -35,7 +35,7 @@ serve(async (req) => {
     
     const adAccRes = await fetch("https://googleads.googleapis.com/v15/customers:listAccessibleCustomers", {
       headers: {
-        'Authorization': \`Bearer \${connection.access_token}\`,
+        'Authorization': `Bearer ${connection.access_token}`,
         'developer-token': devToken || ""
       }
     })
@@ -49,7 +49,7 @@ serve(async (req) => {
           company_id: companyId,
           asset_type: 'ad_account',
           external_id: customerId,
-          name: \`Ad Account \${customerId}\`,
+          name: `Ad Account ${customerId}`,
           metadata: { resourceName: resName }
         }, { onConflict: 'company_id,asset_type,external_id' })
       }

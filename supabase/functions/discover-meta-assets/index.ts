@@ -27,7 +27,7 @@ serve(async (req) => {
     if (connError || !connection) throw new Error("Meta connection not found")
 
     // 2. Fetch Pages
-    const pagesRes = await fetch(\`https://graph.facebook.com/v18.0/me/accounts?access_token=\${connection.access_token}\`)
+    const pagesRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${connection.access_token}`)
     const pagesData = await pagesRes.json()
     
     if (pagesData.data) {
@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     // 3. Fetch Ad Accounts
-    const adAccRes = await fetch(\`https://graph.facebook.com/v18.0/me/adaccounts?fields=name,account_id,status&access_token=\${connection.access_token}\`)
+    const adAccRes = await fetch(`https://graph.facebook.com/v18.0/me/adaccounts?fields=name,account_id,status&access_token=${connection.access_token}`)
     const adAccData = await adAccRes.json()
 
     if (adAccData.data) {
