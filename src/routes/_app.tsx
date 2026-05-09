@@ -15,7 +15,7 @@ export const Route = createFileRoute('/_app')({
 });
 
 function AppLayout() {
-  const { state, company, user, logout, refreshContext, error, traceId } = useAuth();
+   const { state, company, membership, user, logout, refreshContext, error, traceId } = useAuth();
   const router = useRouter();
   const [retryCount, setRetryCount] = useState(0);
 
