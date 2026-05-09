@@ -44,7 +44,28 @@ export class ErrorBoundary extends Component<Props, State> {
       name: this.props.name,
       correlationId
     });
-    this.setState({ errorInfo });
+    
+    // Pass more data to the state for the diagnostic display
+    this.setState({ 
+      errorInfo,
+      hasError: true,
+      error: error || new Error('Unknown rendering error')
+    });
+  }
+
+  private getDiagnostics() {
+    const { error, errorInfo } = this.state;
+    const correlationId = logger.getCorrelationId();
+    
+    return {
+      trace_id: correlationId || 'ERR-' + Math.random().toString(36).substring(2, 9),
+      route: window.location.pathname,
+      timestamp: new Date().toISOString(),
+      captured_error: error?.message || String(error),
+      stack: error?.stack,
+      component_stack: errorInfo?.componentStack,
+      fallback_reason: error ? undefined : "No diagnostic payload provided"
+    };
   }
 
   private handleReset = () => {
@@ -56,7 +77,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
 
-      const correlationId = logger.getCorrelationId();
+      const diagnostics = this.getDiagnostics();
 
       return (
         <div className="flex flex-col items-center justify-center min-h-[500px] p-8 text-center bg-card rounded-xl border border-destructive/20 shadow-2xl animate-in fade-in duration-500">
@@ -97,22 +118,36 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="p-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
                 <div>
                   <label className="text-[9px] font-bold text-muted-foreground uppercase">Correlation ID</label>
-                  <div className="text-[11px] font-mono font-bold text-primary select-all">{correlationId}</div>
+                  <div className="text-[11px] font-mono font-bold text-primary select-all">{diagnostics.trace_id}</div>
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-bold text-muted-foreground uppercase">Environment Context</label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div className="bg-slate-900/50 p-2 rounded border border-white/5">
+                      <span className="text-[8px] text-muted-foreground block uppercase">Route</span>
+                      <span className="text-[10px] font-mono truncate block">{diagnostics.route}</span>
+                    </div>
+                    <div className="bg-slate-900/50 p-2 rounded border border-white/5">
+                      <span className="text-[8px] text-muted-foreground block uppercase">Timestamp</span>
+                      <span className="text-[10px] font-mono truncate block">{diagnostics.timestamp}</span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div>
                   <label className="text-[9px] font-bold text-muted-foreground uppercase">Exception Signature</label>
                   <pre className="mt-1 p-3 bg-slate-950 rounded text-rose-400 text-[10px] overflow-auto max-h-40 font-mono border border-white/5">
-                    {this.state.error?.message}
+                    {diagnostics.captured_error}
                     {"\n\n"}
-                    {this.state.error?.stack}
+                    {diagnostics.stack}
                   </pre>
                 </div>
 
                 <div>
                   <label className="text-[9px] font-bold text-muted-foreground uppercase">Component Trace</label>
                   <pre className="mt-1 p-3 bg-slate-950 rounded text-slate-400 text-[10px] overflow-auto max-h-40 font-mono border border-white/5">
-                    {this.state.errorInfo?.componentStack}
+                    {diagnostics.component_stack}
                   </pre>
                 </div>
               </div>
