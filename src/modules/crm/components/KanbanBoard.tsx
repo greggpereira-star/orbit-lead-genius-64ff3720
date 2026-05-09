@@ -2,7 +2,7 @@
  import { supabase } from '@/lib/supabase';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { toast } from 'sonner';
- import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
  import { Card } from '@/components/ui/card';
  import { Badge } from '@/components/ui/badge';
  import { MoreHorizontal, GripVertical } from 'lucide-react';
@@ -59,11 +59,13 @@
    const [columns, setColumns] = useState<Column[]>([]);
    const [isLoading, setIsLoading] = useState(true);
  
-   useEffect(() => {
-     if (company) {
-       fetchData();
-     }
-   }, [company]);
+  useEffect(() => {
+    let mounted = true;
+    if (company && mounted) {
+      fetchData();
+    }
+    return () => { mounted = false; };
+  }, [company?.id]);
  
    const fetchData = async () => {
      setIsLoading(true);
