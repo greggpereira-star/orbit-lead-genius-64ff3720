@@ -324,6 +324,8 @@ export type Database = {
           cvcrm_id: string | null
           device_info: Json | null
           email: string | null
+          event_id: string | null
+          external_id: string | null
           fbclid: string | null
           gclid: string | null
           id: string
@@ -352,6 +354,8 @@ export type Database = {
           cvcrm_id?: string | null
           device_info?: Json | null
           email?: string | null
+          event_id?: string | null
+          external_id?: string | null
           fbclid?: string | null
           gclid?: string | null
           id?: string
@@ -380,6 +384,8 @@ export type Database = {
           cvcrm_id?: string | null
           device_info?: Json | null
           email?: string | null
+          event_id?: string | null
+          external_id?: string | null
           fbclid?: string | null
           gclid?: string | null
           id?: string

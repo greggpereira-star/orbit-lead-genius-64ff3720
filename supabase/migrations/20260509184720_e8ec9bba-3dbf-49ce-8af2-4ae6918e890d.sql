@@ -1,0 +1,3 @@
+ALTER TABLE public.leads 
+ADD COLUMN IF NOT EXISTS event_id TEXT,
+ADD COLUMN IF NOT EXISTS external_id TEXT;
