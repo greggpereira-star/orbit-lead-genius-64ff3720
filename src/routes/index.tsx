@@ -1,4 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+ import { createFileRoute, Link } from '@tanstack/react-router';
+ import { useState, useEffect } from 'react';
+ import { runInfrastructureCheck } from '@/core/runtime/health-checker';
+ import { AlertCircle } from 'lucide-react';
 import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
  import { Button } from '@/components/ui/button';
  import { 
@@ -16,11 +19,26 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
    component: LandingPage,
  });
  
- function LandingPage() {
+  function LandingPage() {
+    const [isUnhealthy, setIsUnhealthy] = useState(false);
+
+    useEffect(() => {
+      runInfrastructureCheck().then(report => {
+        if (report.status === 'unhealthy') setIsUnhealthy(true);
+      });
+    }, []);
+
     return (
       <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
+        {isUnhealthy && (
+          <div className="fixed top-0 w-full z-[100] bg-destructive text-destructive-foreground py-2 px-4 text-center text-xs font-bold animate-in fade-in slide-in-from-top duration-500">
+            <AlertCircle className="inline-block mr-2 h-3.5 w-3.5" />
+            SISTEMA EM MANUTENÇÃO: Conexão com o banco de dados pendente. Algumas funcionalidades podem estar indisponíveis.
+          </div>
+        )}
+
         {/* Navigation */}
-        <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
+        <nav className={`fixed top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-border/50 transition-all duration-300 ${isUnhealthy ? 'mt-8' : ''}`}>
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary/20">
