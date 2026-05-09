@@ -61,11 +61,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
           (newState: AuthState) => setState(newState)
         );
  
-       if (result.state === 'ERROR') {
-         setError(result.error);
-         setState('ERROR');
-         return;
-       }
+        if (result.state === 'ERROR') {
+          // Enhanced forensic logging for RLS failures
+          if (result.error?.includes('row-level security policy') || result.error?.includes('schema cache')) {
+             logger.fatal('Security Infrastructure Fault', { error: result.error, traceId });
+          }
+          setError(result.error);
+          setState('ERROR');
+          return;
+        }
  
        setUser(result.user);
        setCompany(result.company);
@@ -296,9 +300,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     user,
      company,
      membership,
-   isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP'].includes(state as string),
-   isReady: state === 'READY',
-   isLoading: ['INITIALIZING', 'AUTHENTICATING', 'TENANT_VALIDATING', 'TENANT_RECOVERING', 'MEMBERSHIP_RECOVERING'].includes(state as string),
+    isAuthenticated: ['READY', 'WORKSPACE_READY', 'DASHBOARD_BOOTSTRAP'].includes(state as string),
+    isReady: state === 'READY',
+    isLoading: [
+      'BOOTSTRAP_START',
+      'INITIALIZING',
+      'SESSION_LOADING',
+      'AUTHENTICATING',
+      'PROFILE_LOADING',
+      'TENANT_VALIDATING',
+      'TENANT_RECOVERING',
+      'MEMBERSHIP_RECOVERING'
+    ].includes(state as string),
     error: envError || error,
     traceId,
      login,
