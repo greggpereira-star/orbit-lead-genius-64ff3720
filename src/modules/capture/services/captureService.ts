@@ -15,6 +15,7 @@
  
  import { supabase } from '@/lib/supabase';
  import { calculateLeadScore } from '@/modules/ai/services/scoring';
+import { qualificationService } from '@/modules/ai/services/qualification';
  import { routingService } from '@/modules/crm/services/routingService';
  
  export const captureService = {
@@ -74,13 +75,29 @@
         })
         .eq('id', lead.id);
  
-      // 3. Auto-route lead
-      await routingService.assignLead(lead.id, companyId);
+      // 3. Detailed AI Analysis
+      const analysis = await qualificationService.analyzeLead(lead.id, scoreResult);
+
+      // 4. Update Lead with deep analysis
+      await supabase
+        .from('leads')
+        .update({
+          metadata: { 
+            ...lead.metadata,
+            ...analysis,
+            ai_summary: analysis.summary,
+            buying_intent: analysis.buying_intent
+          }
+        })
+        .eq('id', lead.id);
+
+      // 5. Intelligence-based routing
+      await routingService.assignLead(lead.id, companyId, scoreResult);
  
-      // 4. Enrich Lead in background
+      // 6. Enrich Lead in background
       enrichmentService.enrichLead(lead.id).catch(console.error);
  
-      // 5. Trigger automations
+      // 7. Trigger automations
       automationService.processTrigger(companyId, {
         type: 'lead_created',
         data: { ...lead, ...trackingData }
