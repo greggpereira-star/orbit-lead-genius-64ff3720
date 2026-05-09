@@ -29,7 +29,8 @@ interface Company {
 interface AuthContextType {
   state: AuthState;
   user: User | null;
-  company: Company | null;
+   company: Company | null;
+   membership: any | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isReady: boolean;
@@ -48,7 +49,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>('INITIALIZING');
   const [user, setUser] = useState<User | null>(null);
-  const [company, setCompany] = useState<Company | null>(null);
+   const [company, setCompany] = useState<Company | null>(null);
+   const [membership, setMembership] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const traceId = useMemo(() => Math.random().toString(36).substring(2, 15), []);
 
@@ -328,7 +330,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     state,
     user,
-    company,
+     company,
+     membership,
    isAuthenticated: state === 'AUTHENTICATED' || state === 'TENANT_LOADING' || state === 'READY',
    isReady: state === 'READY',
    isLoading: state === 'INITIALIZING' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING',
