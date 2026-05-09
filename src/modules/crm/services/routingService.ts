@@ -1,7 +1,8 @@
  import { supabase } from '@/lib/supabase';
+import { LeadScoreResult } from '@/modules/ai/services/scoring';
  
  export const routingService = {
-   async assignLead(leadId: string, companyId: string) {
+  async assignLead(leadId: string, companyId: string, score?: LeadScoreResult) {
      // 1. Find active routing config
      const { data: config } = await supabase
        .from('routing_configs')
@@ -12,15 +13,22 @@
  
      if (!config) return null;
  
-     // 2. Find next member (Round Robin - oldest last_assigned_at)
-     const { data: member } = await supabase
-       .from('routing_members')
-       .select('id, user_id')
-       .eq('config_id', config.id)
-       .eq('is_available', true)
-       .order('last_assigned_at', { ascending: true, nullsFirst: true })
-       .limit(1)
-       .single();
+    // 2. Intelligence Layer: Route high-score leads to top performers
+    let memberQuery = supabase
+      .from('routing_members')
+      .select('id, user_id, performance_score')
+      .eq('config_id', config.id)
+      .eq('is_available', true);
+
+    // High value leads (A/B grade) go to high-performance reps (> 80)
+    if (score && (score.grade === 'A' || score.grade === 'B')) {
+      memberQuery = memberQuery.gte('performance_score', 80);
+    }
+
+    const { data: member } = await memberQuery
+      .order('last_assigned_at', { ascending: true, nullsFirst: true })
+      .limit(1)
+      .single();
  
      if (!member) return null;
  
