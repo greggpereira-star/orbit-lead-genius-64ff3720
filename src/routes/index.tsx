@@ -56,19 +56,19 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
                  <Zap className="h-3.5 w-3.5 fill-primary" />
                  Enterprise Lead Intelligence
                </div>
-                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-[#0a2540] leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150">
-                  Convert every <span className="text-[#635bff] italic font-serif">click</span> into revenue.
-                </h1>
-               <p className="text-xl text-slate-600 leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+                 <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-150">
+                   Convert every <span className="text-primary italic font-serif">click</span> into revenue.
+                 </h1>
+                <p className="text-xl text-muted-foreground font-medium leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                  The modern CRM that combines deep lead intelligence, marketing attribution, and automated workflows to scale your sales team.
                </p>
                 <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
-                   <Link to="/register">
-                     <Button size="lg" className="h-14 px-8 text-lg font-bold gap-3 shadow-2xl shadow-[#635bff]/30 group bg-[#635bff] hover:bg-[#635bff]/90 text-white">
-                       Start Free Trial
-                       <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                     </Button>
-                   </Link>
+                    <Link to="/register">
+                      <Button size="lg" className="h-14 px-8 text-lg font-bold gap-3 shadow-2xl shadow-primary/30 group bg-primary hover:bg-primary-hover text-white rounded-[12px]">
+                        Start Free Trial
+                        <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </Link>
                   <p className="text-sm text-slate-500 font-medium italic px-4">
                     Join 2,500+ high-growth companies.
                   </p>
