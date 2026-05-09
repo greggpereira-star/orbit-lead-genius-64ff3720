@@ -1,3 +1,20 @@
+   private startTime: number = Date.now();
+   private maxScroll: number = 0;
+ 
+   init(companyId: string) {
+     this.companyId = companyId;
+     this.visitorId = this.getOrCreateVisitorId();
+     this.startSession();
+     this.setupInteractions();
+   }
+ 
+   private setupInteractions() {
+     window.addEventListener('scroll', () => {
+       const scrolled = (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight;
+       this.maxScroll = Math.max(this.maxScroll, Math.round(scrolled * 100));
+     });
+   }
+ 
  import { supabase } from '@/lib/supabase';
  
  class EnterpriseTracker {
@@ -59,6 +76,7 @@
    }
  
    getTrackingParams() {
+     const timeOnPage = Math.round((Date.now() - this.startTime) / 1000);
      const urlParams = new URLSearchParams(window.location.search);
      return {
        utm_source: urlParams.get('utm_source'),
@@ -69,7 +87,13 @@
        referrer: document.referrer,
        landing_page: window.location.pathname,
        visitor_id: this.visitorId,
-       session_id: this.sessionId
+       session_id: this.sessionId,
+       metadata: {
+         time_on_page: timeOnPage,
+         scroll_depth: this.maxScroll,
+         screen_res: `${window.screen.width}x${window.screen.height}`,
+         language: navigator.language
+       }
      };
    }
  }
