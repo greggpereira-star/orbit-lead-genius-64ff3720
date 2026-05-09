@@ -28,7 +28,9 @@
  
  export function FormPublish({ form }: FormPublishProps) {
    const [copied, setCopied] = useState<string | null>(null);
-   const publicUrl = `${window.location.origin}/f/${form.slug}`;
+    const [sdkCode, setSdkCode] = useState('inline');
+    const publicUrl = `${window.location.origin}/f/${form.slug}`;
+    const sdkUrl = `${window.location.origin}/sdk.js`;
  
    const copyToClipboard = (text: string, id: string) => {
      navigator.clipboard.writeText(text);
@@ -154,19 +156,25 @@
      },
      {
        id: 'ecommerce',
-       title: 'E-commerce Mode',
-       description: 'Capture leads integrados com produtos do Shopify/Woo.',
+       title: 'E-commerce (Woo/Shopify)',
+       description: 'Capture leads integrados com produtos e carrinho.',
        icon: ShoppingBag,
        content: (
          <div className="space-y-4 pt-4">
-           <div className="p-4 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center space-y-2">
-             <Smartphone className="h-8 w-8 text-muted-foreground" />
-             <div className="space-y-1">
-               <p className="text-sm font-bold">Ativar Rastreamento de Produto</p>
-               <p className="text-[11px] text-muted-foreground">O formulário capturará automaticamente ID, Nome e Preço do produto visualizado.</p>
-             </div>
-             <Button size="sm" variant="outline" className="mt-2">Ver Documentação</Button>
+           <div className="relative group">
+             <pre className="bg-muted p-3 rounded-lg text-[9px] font-mono overflow-x-auto border">
+               {`<script>\n  LeadFlow.trackProduct({\n    id: "PROD-123",\n    name: "Produto Exemplo",\n    price: 299.90\n  });\n</script>`}
+             </pre>
+             <Button 
+               size="icon" 
+               variant="ghost" 
+               className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+               onClick={() => copyToClipboard(`<script>\n  LeadFlow.trackProduct({\n    id: "PROD-123",\n    name: "Produto Exemplo",\n    price: 299.90\n  });\n</script>`, 'eco')}
+             >
+               {copied === 'eco' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+             </Button>
            </div>
+           <p className="text-[9px] text-muted-foreground">O formulário vinculará o lead ao produto visualizado automaticamente.</p>
          </div>
        )
      }

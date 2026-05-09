@@ -26,7 +26,20 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     queryFn: () => formService.getFormBySlug(slug),
   });
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch } = useForm();
+   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue } = useForm();
+ 
+   // Capture UTMs from URL
+   React.useEffect(() => {
+     const params = new URLSearchParams(window.location.search);
+     const ecData = params.get('ec_data');
+     
+     if (ecData) {
+       try {
+         const parsed = JSON.parse(ecData);
+         console.log('LeadFlow: E-commerce context detected', parsed);
+       } catch (e) {}
+     }
+   }, []);
 
   if (isLoading) {
     return (
@@ -57,17 +70,36 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   const onSubmit = async (values: any) => {
     try {
-      const trackingData = tracker.getTrackingParams();
-      const result = await captureService.submitLead(form.tenant_id, {
-        name: values.name || values.full_name || 'Anonymous',
-        email: values.email,
-        phone: values.phone,
-        metadata: {
-          form_id: form.id,
-          form_slug: form.slug,
-          answers: values
-        }
-      }, trackingData);
+       const params = new URLSearchParams(window.location.search);
+       const trackingData = {
+         ...tracker.getTrackingParams(),
+         utm_source: params.get('utm_source') || undefined,
+         utm_medium: params.get('utm_medium') || undefined,
+         utm_campaign: params.get('utm_campaign') || undefined,
+         utm_content: params.get('utm_content') || undefined,
+         utm_term: params.get('utm_term') || undefined,
+         gclid: params.get('gclid') || undefined,
+         fbclid: params.get('fbclid') || undefined,
+       };
+ 
+       const ecData = params.get('ec_data');
+       let ecommerceContext = {};
+       if (ecData) {
+         try { ecommerceContext = JSON.parse(ecData); } catch (e) {}
+       }
+ 
+       const result = await captureService.submitLead(form.tenant_id, {
+         name: values.name || values.full_name || 'Anonymous',
+         email: values.email,
+         phone: values.phone,
+         metadata: {
+           form_id: form.id,
+           form_slug: form.slug,
+           answers: values,
+           ecommerce: ecommerceContext,
+           source: 'public_form_v2'
+         }
+       }, trackingData);
 
       if (result.success) {
         setSubmitted(true);
