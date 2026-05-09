@@ -113,16 +113,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
              logger.fatal('Security Infrastructure Fault', { error: result.error, traceId });
           }
           
-          // If we have a cache hit but orchestration failed, enter recovery mode instead of hard error
-          if (checkWorkspaceReadiness()) {
-            logger.warn('Orchestration failed with cache hit. Entering Recovery Mode.', { traceId });
+          // If we have a cache hit but orchestration failed, check if we should show recovery or onboarding
+          const hasWorkspaceEvidence = checkWorkspaceReadiness() || result.membership !== null;
+          
+          if (hasWorkspaceEvidence) {
+            logger.warn('Orchestration failed but workspace evidence exists. Entering Recovery Mode.', { traceId });
             setState('RECOVERY_MODE');
             setError(result.error);
-            return;
+          } else {
+            logger.info('No workspace found after validation. Requiring onboarding.', { traceId });
+            setState('ONBOARDING_REQUIRED');
           }
-
-          setError(result.error);
-          setState('ERROR');
           return;
         }
  
