@@ -70,6 +70,7 @@
                <Label htmlFor="company">Company Name</Label>
                <Input 
                  id="company" 
+                name="company"
                  placeholder="Acme Inc" 
                  required 
                  value={companyName}
@@ -80,6 +81,7 @@
                 <Label htmlFor="email">Work Email</Label>
                 <Input 
                   id="email" 
+                name="email"
                   type="email" 
                   placeholder="name@company.com" 
                   required 
@@ -91,6 +93,7 @@
                 <Label htmlFor="password">Password</Label>
                 <Input 
                   id="password" 
+                name="password"
                   type="password" 
                   placeholder="••••••••" 
                   required 
