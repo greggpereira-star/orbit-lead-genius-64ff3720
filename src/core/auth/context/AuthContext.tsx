@@ -1,46 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { getSupabase, safeDb } from '@/lib/supabase';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+ import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+ import { getSupabase } from '@/lib/supabase';
+ import { User as SupabaseUser } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
-
- export type AuthState = 
-   | 'IDLE'
-   | 'INITIALIZING'
-   | 'UNAUTHENTICATED'
-   | 'AUTHENTICATING'
-   | 'CREATING_ACCOUNT'
-   | 'ACCOUNT_CREATED'
-   | 'EMAIL_SENT'
-   | 'WAITING_EMAIL_CONFIRMATION'
-   | 'EMAIL_CONFIRMED'
-   | 'AUTHENTICATED'
-   | 'TENANT_LOADING'
-   | 'TENANT_BOOTSTRAPPING'
-   | 'ROLE_LOADING'
-   | 'PERMISSIONS_LOADING'
-   | 'SELF_HEALING'
-   | 'READY'
-   | 'ERROR';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar_url?: string;
-}
-
-interface Company {
-  id: string;
-  name: string;
-  slug: string;
-}
+ import { AuthState, UserProfile, Company, Membership } from '../types';
+ import { WorkspaceOrchestrator } from '../services/WorkspaceOrchestrator';
 
 interface AuthContextType {
   state: AuthState;
-  user: User | null;
+   user: UserProfile | null;
    company: Company | null;
-   membership: any | null;
+    membership: Membership | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isReady: boolean;
@@ -60,11 +30,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
    const [envError, setEnvError] = useState<string | null>(null);
    const [state, setState] = useState<AuthState>('IDLE');
-  const [user, setUser] = useState<User | null>(null);
+   const [user, setUser] = useState<UserProfile | null>(null);
    const [company, setCompany] = useState<Company | null>(null);
-   const [membership, setMembership] = useState<any | null>(null);
+    const [membership, setMembership] = useState<Membership | null>(null);
   const [error, setError] = useState<string | null>(null);
   const traceId = useMemo(() => Math.random().toString(36).substring(2, 15), []);
+   const orchestratorRef = useRef<WorkspaceOrchestrator | null>(null);
 
   const handleAuthFailure = useCallback((msg: string, logError = true) => {
     if (logError) logger.error(msg, { traceId });
@@ -74,124 +45,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     setCompany(null);
   }, [traceId]);
 
-  const ensureTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
-    logger.info('AuthTrace: Self-healing tenant context', { userId: supabaseUser.id, traceId });
-    
-    try {
-      const compName = supabaseUser.user_metadata?.company_name || 'My Enterprise';
-      const compSlug = `workspace-${supabaseUser.id.substring(0, 5)}-${Math.floor(Math.random() * 1000)}`;
-      
-      const { data: companyData, error: companyError } = await supabaseClient
-        .from('companies')
-        .insert({ name: compName, slug: compSlug })
-        .select()
-        .single();
-
-      if (companyError) {
-        const { data: existingMemb } = await supabaseClient.from('memberships').select('company_id').eq('user_id', supabaseUser.id).maybeSingle();
-        if (existingMemb) return true;
-        throw companyError;
-      }
-
-      const { error: memberError } = await supabaseClient
-        .from('memberships')
-        .insert({
-          company_id: companyData.id,
-          user_id: supabaseUser.id,
-          role: 'owner'
-        });
-
-      if (memberError) throw memberError;
-
-      logger.info('AuthTrace: Self-healing complete', { companyId: companyData.id, traceId });
-      return true;
-    } catch (err: any) {
-      logger.error('AuthTrace: Self-healing failed', { error: err.message, traceId });
-      return false;
-    }
-  }, [traceId]);
-
-   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
-     // The state is already set to TENANT_BOOTSTRAPPING or EMAIL_CONFIRMED by the caller
-     // but we ensure it's in a loading state
-     if (state !== 'TENANT_BOOTSTRAPPING') setState('TENANT_BOOTSTRAPPING');
-    const requestId = Math.random().toString(36).substring(2, 7);
-    
-    try {
-      logger.info('Loading tenant context', { userId: supabaseUser.id, traceId, requestId });
-      
-      // 1. Profiles
-      logger.info('AuthTrace: Fetching profile', { userId: supabaseUser.id, traceId, requestId });
-      const { data: profile, error: profileError } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      setUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: profile?.full_name || supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
-        avatar_url: profile?.avatar_url || supabaseUser.user_metadata?.avatar_url
-      });
-
-      // 2. Memberships + Companies
-      logger.info('AuthTrace: Fetching membership', { userId: supabaseUser.id, traceId, requestId });
-      const { data: membership, error: membershipError } = await supabaseClient
-        .from('memberships')
-        .select('*, companies(*)')
-        .eq('user_id', supabaseUser.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (membershipError) throw membershipError;
-
-      if (!membership || !membership.companies || (Array.isArray(membership.companies) && membership.companies.length === 0)) {
-        logger.warn('AuthTrace: No membership found, attempting self-healing', { userId: supabaseUser.id, traceId });
-        
-        const healed = await ensureTenantContext(supabaseUser, supabaseClient);
-        if (healed) {
-          // Retry once
-          const { data: retryMemb } = await supabaseClient
-            .from('memberships')
-            .select('*, companies(*)')
-            .eq('user_id', supabaseUser.id)
-            .limit(1)
-            .maybeSingle();
-            
-          if (retryMemb?.companies) {
-            setCompany({
-              id: retryMemb.companies.id,
-              name: retryMemb.companies.name,
-              slug: retryMemb.companies.slug
-            });
-            setState('READY');
-            return;
-          }
-        }
-
-        logger.error('AuthTrace: User authenticated but no tenant context even after healing', { userId: supabaseUser.id, traceId });
-        setState('READY'); // Let the UI handle company === null
-        return;
-      }
-
-      setCompany({
-        id: membership.companies.id,
-        name: membership.companies.name,
-        slug: membership.companies.slug
-      });
-
-      setState('READY');
+   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
+     const client = getSupabase();
+     if (!orchestratorRef.current) {
+       orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
+     }
+ 
+     setState('TENANT_VALIDATING');
+     
+     try {
+       const result = await orchestratorRef.current.validateAndRepair(
+         supabaseUser.id,
+         supabaseUser.email || '',
+         supabaseUser.user_metadata || {}
+       );
+ 
+       if (result.state === 'ERROR') {
+         setError(result.error);
+         setState('ERROR');
+         return;
+       }
+ 
+       setUser(result.user);
+       setCompany(result.company);
+       setMembership(result.membership);
        setState('READY');
-       logger.info('Auth lifecycle complete: READY', { companyId: membership.companies.id, traceId });
-    } catch (err: any) {
-      logger.error('Failed to load tenant context', { error: err.message, traceId });
-      setError(`Context load failed: ${err.message}`);
-      setState('ERROR');
-    }
-  }, [traceId]);
+       
+       logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
+     } catch (err: any) {
+       logger.error('Failed to orchestrate workspace', { error: err.message, traceId });
+       setError(`Workspace bootstrap failed: ${err.message}`);
+       setState('ERROR');
+     }
+   }, [traceId]);
 
   useEffect(() => {
     let mounted = true;
