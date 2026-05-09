@@ -38,7 +38,7 @@ let configInstance: RuntimeConfig | null = null;
                       'placeholder-key',
      isDevelopment: !!import.meta.env.DEV,
      isProduction: !!import.meta.env.PROD,
-     isTest: !!import.meta.env.MODE === 'test',
+      isTest: import.meta.env.MODE === 'test',
      appName: 'Enterprise Resilient CRM',
      environment: (import.meta.env.MODE as any) || 'development',
    };
