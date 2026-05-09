@@ -13,6 +13,7 @@
  } from '@/components/ui/form';
  import { Input } from '@/components/ui/input';
  import { toast } from 'sonner';
+import { LGPDConsent } from './LGPDConsent';
  import { captureService } from '../services/captureService';
  import { tracker } from '@/core/tracking/tracker';
  import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -26,6 +27,7 @@
  
  export function CaptureForm() {
    const [step, setStep] = useState(1);
+  const [consents, setConsents] = useState({ marketing: true, tracking: true });
    const form = useForm<z.infer<typeof formSchema>>({
      resolver: zodResolver(formSchema),
      defaultValues: {
@@ -50,7 +52,11 @@
        name: values.name,
        email: values.email,
        phone: values.phone,
-       metadata: { company_name: values.company }
+      metadata: { 
+        company_name: values.company,
+        consents,
+        consent_version: '2.4.0-2024'
+      }
      }, trackingData);
  
      if (result.success) {
@@ -147,6 +153,7 @@
                  </FormItem>
                )}
              />
+              <LGPDConsent onConsentChange={setConsents} />
              <div className="flex gap-3">
                <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1 h-12">
                  Back
