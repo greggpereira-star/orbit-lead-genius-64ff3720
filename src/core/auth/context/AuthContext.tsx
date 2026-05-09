@@ -49,7 +49,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+   const [envError, setEnvError] = useState<string | null>(null);
   const [state, setState] = useState<AuthState>('INITIALIZING');
   const [user, setUser] = useState<User | null>(null);
    const [company, setCompany] = useState<Company | null>(null);
@@ -184,41 +185,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
     
-    const initSession = async () => {
-      try {
-        const supabaseClient = getSupabase();
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-        if (sessionError) throw sessionError;
-        
-        if (session?.user && mounted) {
-          await loadTenantContext(session.user, supabaseClient);
-        } else if (mounted) {
-          setState('UNAUTHENTICATED');
-        }
-      } catch (err: any) {
-        handleAuthFailure(`Initialization error: ${err.message}`);
-      }
-    };
+     const initSession = async () => {
+       try {
+         logger.info('AuthTrace: Initializing session', { traceId });
+         const supabaseClient = getSupabase();
+         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+         
+         if (sessionError) {
+           logger.error('AuthTrace: Session error', { error: sessionError.message, traceId });
+           throw sessionError;
+         }
+         
+         if (session?.user && mounted) {
+           logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
+           await loadTenantContext(session.user, supabaseClient);
+         } else if (mounted) {
+           logger.info('AuthTrace: No session found', { traceId });
+           setState('UNAUTHENTICATED');
+         }
+       } catch (err: any) {
+         logger.error('AuthTrace: Initialization failed', { error: err.message, traceId });
+         if (err.message.includes('configuration missing') || err.message.includes('required')) {
+           setEnvError('Supabase configuration is missing. Please check your project settings and environment variables.');
+           setState('ERROR');
+         } else {
+           handleAuthFailure(`Initialization error: ${err.message}`);
+         }
+       }
+     };
 
     initSession();
 
     const supabaseClient = getSupabase();
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
-      logger.info('Supabase Auth Event', { event, traceId });
-      if (!mounted) return;
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user) await loadTenantContext(session.user, supabaseClient);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setCompany(null);
-        setState('UNAUTHENTICATED');
-      }
-    });
+     let subscription: any = null;
+     try {
+       const res = supabaseClient.auth.onAuthStateChange(async (event: any, session: any) => {
+         logger.info('Supabase Auth Event', { event, traceId });
+         if (!mounted) return;
+ 
+         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+           if (session?.user) await loadTenantContext(session.user, supabaseClient);
+         } else if (event === 'SIGNED_OUT') {
+           setUser(null);
+           setCompany(null);
+           setState('UNAUTHENTICATED');
+         }
+       });
+       subscription = res.data.subscription;
+     } catch (e) {
+       logger.error('AuthTrace: Failed to setup auth listener', { traceId });
+     }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+       if (subscription) subscription.unsubscribe();
     };
   }, [loadTenantContext, handleAuthFailure, traceId]);
 
