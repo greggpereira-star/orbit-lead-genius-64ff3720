@@ -1,10 +1,42 @@
 import { supabase } from '@/lib/supabase';
+import { healthService } from '@/modules/audit/services/healthService';
+import { toast } from 'sonner';
 
 /**
  * CV.CRM Integration Service
  * Follows the principle: Frontend -> API Gateway (Edge Function) -> CV.CRM
  */
 export const cvcrmService = {
+  /**
+   * Saves CV.CRM integration settings securely.
+   */
+  async saveConfig(companyId: string, config: { domain: string; email: string; api_token: string }) {
+    try {
+      const { error } = await supabase
+        .from('integrations')
+        .upsert({
+          company_id: companyId,
+          provider: 'cvcrm',
+          status: 'connected',
+          config: {
+            domain: config.domain,
+            email: config.email,
+            api_token: config.api_token
+          },
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'company_id,provider' });
+
+      if (error) throw error;
+      
+      toast.success('CV.CRM configuration saved successfully');
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error saving CV.CRM config:', err);
+      toast.error('Failed to save CV.CRM configuration');
+      return { success: false, error: err.message };
+    }
+  },
+
   /**
    * Triggers real-time synchronization of a lead to CV.CRM.
    * Uses a Supabase Edge Function to protect tokens and handle integration logic.
@@ -24,6 +56,10 @@ export const cvcrmService = {
       const { data, error } = await supabase.functions.invoke('sync-cvcrm', {
         body: { leadId, companyId }
       });
+
+      if (data?.success === false) {
+         await healthService.logIntegrationError(companyId, 'cvcrm', data.error);
+      }
 
       if (error) {
         console.error('Edge Function Error:', error);
