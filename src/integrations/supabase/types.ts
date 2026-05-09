@@ -17,18 +17,21 @@ export type Database = {
       companies: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           name: string
           slug: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           name: string
           slug: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           name?: string
           slug?: string
@@ -85,6 +88,42 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          company_id: string | null
+          correlation_id: string | null
+          created_at: string | null
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          route: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          correlation_id?: string | null
+          created_at?: string | null
+          id?: string
+          level: string
+          message: string
+          metadata?: Json | null
+          route?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          correlation_id?: string | null
+          created_at?: string | null
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          route?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
