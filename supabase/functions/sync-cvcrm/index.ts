@@ -49,7 +49,7 @@ serve(async (req) => {
       email: lead.email,
       telefone: lead.phone,
       id_empreendimento: lead.metadata?.id_empreendimento || lead.metadata?.product_id,
-      origem: lead.utm_source || 'Platform',
+      origem: lead.utm_source || lead.metadata?.source || 'Lovable_CRM',
       // Fields requested by some versions of CV.CRM
       email_corretor: lead.metadata?.corretor_email,
       id_situacao: lead.metadata?.id_situacao || 1, // Default initial status
