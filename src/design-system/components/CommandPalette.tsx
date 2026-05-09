@@ -27,7 +27,8 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command"
-import { useNavigate } from "@tanstack/react-router"
+ import { useNavigate } from "@tanstack/react-router"
+ import { toast } from "sonner"
 
 export function CommandPalette() {
   const [open, setOpen] = React.useState(false)
