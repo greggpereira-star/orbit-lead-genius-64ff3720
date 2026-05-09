@@ -33,9 +33,10 @@ let configInstance: RuntimeConfig | null = null;
      supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 
                  (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_URL : null) || 
                  'https://placeholder-project.supabase.co',
-     supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 
-                      (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_ANON_KEY : null) || 
-                      'placeholder-key',
+      supabaseAnonKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+                       import.meta.env.VITE_SUPABASE_ANON_KEY || 
+                       (typeof window !== 'undefined' ? ((window as any)._env_?.VITE_SUPABASE_PUBLISHABLE_KEY || (window as any)._env_?.VITE_SUPABASE_ANON_KEY) : null) || 
+                       'placeholder-key',
      isDevelopment: !!import.meta.env.DEV,
      isProduction: !!import.meta.env.PROD,
       isTest: import.meta.env.MODE === 'test',
