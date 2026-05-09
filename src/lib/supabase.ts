@@ -7,7 +7,31 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.en
    console.warn('Supabase credentials missing. Database features will be unavailable.');
  }
  
- // Only create client if URL is provided to avoid crashing the server
- export const supabase = supabaseUrl 
-   ? createClient(supabaseUrl, supabaseAnonKey) 
-   : (null as any);
+  // Advanced Enterprise Supabase Client with Resiliency and Logging
+  export const supabase = supabaseUrl 
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+        global: {
+          headers: { 'x-application-name': 'crm-enterprise-resilient' },
+        }
+      }) 
+    : (null as any);
+
+  // Helper to handle safe database calls with auto-logging
+  export const safeDb = async <T>(promise: Promise<T>, context: string): Promise<T> => {
+    try {
+      return await promise;
+    } catch (error: any) {
+      const { logger } = await import('@/core/observability/logger');
+      logger.error(\`Supabase Error in [\${context}]: \${error.message}\`, {
+        context,
+        originalError: error,
+        code: error.code
+      });
+      throw error;
+    }
+  };
