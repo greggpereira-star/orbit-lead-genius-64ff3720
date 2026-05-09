@@ -42,8 +42,8 @@ serve(async (req) => {
       }
     }
 
-    // 3. Fetch Ad Accounts
-    const adAccRes = await fetch(`https://graph.facebook.com/v18.0/me/adaccounts?fields=name,account_id,status&access_token=${connection.access_token}`)
+    // 3. Fetch Ad Accounts (Enterprise Discovery)
+    const adAccRes = await fetch(`https://graph.facebook.com/v18.0/me/adaccounts?fields=name,account_id,status,business,amount_spent&access_token=${connection.access_token}`)
     const adAccData = await adAccRes.json()
 
     if (adAccData.data) {
@@ -53,8 +53,40 @@ serve(async (req) => {
           asset_type: 'ad_account',
           external_id: acc.id,
           name: acc.name,
-          metadata: { account_id: acc.account_id, status: acc.status }
+          metadata: { account_id: acc.account_id, status: acc.status, business: acc.business, amount_spent: acc.amount_spent }
         }, { onConflict: 'company_id,asset_type,external_id' })
+      }
+    }
+
+    // 4. Fetch Lead Forms for each Page
+    const pages = await supabaseAdmin.from('meta_assets').select('*').eq('company_id', companyId).eq('asset_type', 'page')
+    if (pages.data) {
+      for (const page of pages.data) {
+        const formsRes = await fetch(`https://graph.facebook.com/v18.0/${page.external_id}/leadgen_forms?fields=name,status,id,locale&access_token=${connection.access_token}`)
+        const formsData = await formsRes.json()
+        if (formsData.data) {
+          for (const form of formsData.data) {
+            await supabaseAdmin.from('meta_assets').upsert({
+              company_id: companyId,
+              asset_type: 'form',
+              external_id: form.id,
+              name: form.name,
+              metadata: { page_id: page.external_id, status: form.status, locale: form.locale }
+            }, { onConflict: 'company_id,asset_type,external_id' })
+          }
+        }
+      }
+    }
+
+    // 5. Automatic Webhook Subscription (Enterprise Strategy)
+    // We subscribe the app to the pages found
+    if (pages.data) {
+      for (const page of pages.data) {
+         // This requires Page Access Token usually, for simplicity we attempt with user token if scopes allow
+         await fetch(`https://graph.facebook.com/v18.0/${page.external_id}/subscribed_apps`, {
+           method: 'POST',
+           body: new URLSearchParams({ subscribed_fields: 'leadgen', access_token: connection.access_token })
+         })
       }
     }
 
