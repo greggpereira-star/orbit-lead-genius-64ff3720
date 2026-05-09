@@ -166,10 +166,16 @@ function IntegrationsSettings() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button 
-                    variant={app.status === 'connected' ? 'outline' : 'default'} 
+                    variant={
+                      (app.id === 'cvcrm' && integrationStatus?.connection_status === 'connected') || 
+                      (app.id !== 'cvcrm' && app.status === 'connected') 
+                      ? 'outline' : 'default'
+                    } 
                     className="w-full text-xs h-10 font-bold"
                   >
-                    {app.status === 'connected' ? 'Configure Integration' : 'Connect Account'}
+                    {(app.id === 'cvcrm' && integrationStatus?.connection_status === 'connected') || 
+                     (app.id !== 'cvcrm' && app.status === 'connected') 
+                     ? 'Configure Integration' : 'Connect Account'}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
