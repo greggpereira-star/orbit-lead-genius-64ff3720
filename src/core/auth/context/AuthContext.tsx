@@ -1,3 +1,43 @@
+  const ensureTenantContext = useCallback(async (supabaseUser: SupabaseUser, supabaseClient = getSupabase()) => {
+    logger.info('AuthTrace: Self-healing tenant context', { userId: supabaseUser.id, traceId });
+    
+    try {
+      // 1. Create a default company
+      const compName = supabaseUser.user_metadata?.company_name || 'My Enterprise';
+      const compSlug = `workspace-${supabaseUser.id.substring(0, 5)}-${Math.floor(Math.random() * 1000)}`;
+      
+      const { data: companyData, error: companyError } = await supabaseClient
+        .from('companies')
+        .insert({ name: compName, slug: compSlug })
+        .select()
+        .single();
+
+      if (companyError) {
+        // If company creation failed (maybe RLS?), try to find ANY existing company for this user
+        const { data: existingMemb } = await supabaseClient.from('memberships').select('company_id').eq('user_id', supabaseUser.id).maybeSingle();
+        if (existingMemb) return true; // It exists now, can retry loading
+        throw companyError;
+      }
+
+      // 2. Create membership
+      const { error: memberError } = await supabaseClient
+        .from('memberships')
+        .insert({
+          company_id: companyData.id,
+          user_id: supabaseUser.id,
+          role: 'owner'
+        });
+
+      if (memberError) throw memberError;
+
+      logger.info('AuthTrace: Self-healing complete', { companyId: companyData.id, traceId });
+      return true;
+    } catch (err: any) {
+      logger.error('AuthTrace: Self-healing failed', { error: err.message, traceId });
+      return false;
+    }
+  }, [traceId]);
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { getSupabase, safeDb } from '@/lib/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -96,24 +136,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (membershipError) throw membershipError;
 
       if (!membership || !membership.companies || (Array.isArray(membership.companies) && membership.companies.length === 0)) {
-        logger.warn('AuthTrace: No membership found', { userId: supabaseUser.id, traceId });
+        logger.warn('AuthTrace: No membership found, attempting self-healing', { userId: supabaseUser.id, traceId });
         
-        // Try a fallback: check if there are ANY companies this user can see
-        const { data: companies } = await supabaseClient.from('companies').select('*').limit(1);
-        if (companies && companies.length > 0) {
-          logger.info('AuthTrace: Found company via fallback', { companyId: companies[0].id, traceId });
-          setCompany({
-            id: companies[0].id,
-            name: companies[0].name,
-            slug: companies[0].slug
-          });
-          setState('READY');
-          return;
+        const healed = await ensureTenantContext(supabaseUser, supabaseClient);
+        if (healed) {
+          // Retry once
+          const { data: retryMemb } = await supabaseClient
+            .from('memberships')
+            .select('*, companies(*)')
+            .eq('user_id', supabaseUser.id)
+            .limit(1)
+            .maybeSingle();
+            
+          if (retryMemb?.companies) {
+            setCompany({
+              id: retryMemb.companies.id,
+              name: retryMemb.companies.name,
+              slug: retryMemb.companies.slug
+            });
+            setState('READY');
+            return;
+          }
         }
 
-        // If still no company, it's a "Partial Auth" state
-        logger.error('AuthTrace: User authenticated but no tenant context', { userId: supabaseUser.id, traceId });
-        setState('READY'); // We set READY but company is null, UI will show "System Fault" or "Create Company"
+        logger.error('AuthTrace: User authenticated but no tenant context even after healing', { userId: supabaseUser.id, traceId });
+        setState('READY'); // Let the UI handle company === null
         return;
       }
 
