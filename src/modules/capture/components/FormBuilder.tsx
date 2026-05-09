@@ -100,9 +100,37 @@ import { logger } from '@/core/observability/logger';
      setFields(newFields);
    };
  
+   if (isLoading) {
+     return (
+       <div className="flex h-64 items-center justify-center">
+         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+       </div>
+     );
+   }
+ 
    return (
-     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-       <div className="lg:col-span-8 space-y-4">
+     <div className="space-y-6">
+       <div className="flex items-center justify-between">
+         <div className="flex items-center gap-4">
+           <Button variant="ghost" size="icon" onClick={onBack}>
+             <ArrowLeft className="h-5 w-5" />
+           </Button>
+           <div>
+             <CardTitle className="text-xl font-bold">{formId ? 'Edit Form' : 'New Form'}</CardTitle>
+             <CardDescription>Configure fields and settings</CardDescription>
+           </div>
+         </div>
+         <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={onBack}>Cancel</Button>
+           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="gap-2">
+             {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+             Save Form
+           </Button>
+         </div>
+       </div>
+ 
+       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+         <div className="lg:col-span-8 space-y-4">
          <Card className="border-none shadow-sm">
            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
              <div>
