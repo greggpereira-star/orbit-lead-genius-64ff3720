@@ -83,9 +83,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
   useEffect(() => {
     let mounted = true;
     
-     const initSession = async () => {
-       try {
-         logger.info('AuthTrace: Initializing session', { traceId });
+      const initSession = async () => {
+        setState('BOOTSTRAP_START');
+        try {
+          logger.info('AuthTrace: Initializing enterprise bootstrap', { traceId });
+          setState('SESSION_LOADING');
           console.log('DEBUG [Auth]: getSupabase() call start');
           const supabaseClient = getSupabase();
           console.log('DEBUG [Auth]: getSupabase() call end');
