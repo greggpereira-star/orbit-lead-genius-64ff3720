@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
  import { Zap, Users, Shield, ArrowRightLeft } from 'lucide-react';
