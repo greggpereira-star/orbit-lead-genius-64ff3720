@@ -1,7 +1,9 @@
- import { AuthProvider } from "../core/auth/context/AuthContext";
- import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
- import { useEffect } from "react";
+import { AuthProvider } from "../core/auth/context/AuthContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
  import { initTracking } from "../core/tracking/pixel";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { logger } from "@/core/observability/logger";
 import {
   Outlet,
   Link,
@@ -115,18 +117,21 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
- function RootComponent() {
-   const { queryClient } = Route.useRouteContext();
- 
-   useEffect(() => {
-     initTracking();
-   }, []);
- 
-   return (
-     <QueryClientProvider client={queryClient}>
-       <AuthProvider>
-         <Outlet />
-       </AuthProvider>
-     </QueryClientProvider>
-   );
- }
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    logger.info("Application Root Mounted");
+    initTracking();
+  }, []);
+
+  return (
+    <ErrorBoundary name="GlobalRoot">
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Outlet />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}

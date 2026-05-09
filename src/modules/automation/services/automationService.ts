@@ -22,29 +22,30 @@ export const automationService = {
 
     if (!automations || automations.length === 0) return;
 
-    for (const automation of automations) {
+    // Process automations in parallel with error isolation
+    await Promise.allSettled(automations.map(async (automation: any) => {
       try {
         await this.executeAutomation(automation, trigger.data);
         
-        // Log success
+        // Log success safely
         await supabase.from('automation_runs').insert({
           automation_id: automation.id,
           lead_id: trigger.data.lead_id || trigger.data.id,
           status: 'success',
           output: { trigger_data: trigger.data }
-        });
+        }).select().maybeSingle();
       } catch (error: any) {
-        console.error(`Automation ${automation.id} failed:`, error);
+        console.error(`Automation \${automation.id} failed:`, error);
         
-        // Log failure
+        // Log failure safely
         await supabase.from('automation_runs').insert({
           automation_id: automation.id,
           lead_id: trigger.data.lead_id || trigger.data.id,
           status: 'failed',
           error: error.message
-        });
+        }).select().maybeSingle();
       }
-    }
+    }));
   },
 
   async executeAutomation(automation: any, data: any) {

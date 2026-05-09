@@ -42,11 +42,16 @@
       
       setIsLoading(true);
       try {
+        console.log('Calling signup service...');
         await signup(email, password, companyName);
+        console.log('Signup service call finished');
         toast.success('Account created! Please check your email to verify.');
-        setTimeout(() => {
-          navigate({ to: '/dashboard' });
-        }, 1500);
+        
+        // Force navigation to dashboard after a delay
+        setTimeout(async () => {
+          console.log('Triggering navigation to dashboard');
+          await navigate({ to: '/dashboard' });
+        }, 1000);
       } catch (error: any) {
         console.error('Registration error:', error);
         toast.error(error.message || 'Failed to create account');
