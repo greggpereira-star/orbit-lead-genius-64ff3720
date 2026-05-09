@@ -1,34 +1,29 @@
  import React, { useEffect, useState, useMemo } from 'react';
  import { useRouterState } from '@tanstack/react-router';
- import { runInfrastructureCheck, HealthReport } from '@/core/runtime/health-checker';
- import { RefreshCw, ServerCrash, CheckCircle2, XCircle, ShieldCheck, Activity } from 'lucide-react';
+ import { BootstrapEngine, BootstrapState } from '@/core/bootstrap/bootstrap-engine';
+ import { RefreshCw, ServerCrash, CheckCircle2, XCircle, ShieldCheck, Activity, AlertTriangle } from 'lucide-react';
  import { Badge } from '@/components/ui/badge';
  import { getRuntimeConfig } from '@/core/config/runtime-config';
 import { Button } from '@/components/ui/button';
 
  export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-   const [report, setReport] = useState<HealthReport | null>(null);
-   const [isChecking, setIsChecking] = useState(true);
+   const [state, setState] = useState<BootstrapState>(BootstrapEngine.getState());
    const routerState = useRouterState();
    
-   // Paths that don't require infrastructure to be healthy (e.g. landing page)
+   useEffect(() => {
+     const unsubscribe = BootstrapEngine.subscribe(setState);
+     BootstrapEngine.run();
+     return unsubscribe;
+   }, []);
+ 
    const isBypassPath = useMemo(() => {
-     const bypassList = ['/'];
+     const bypassList = ['/', '/auth', '/login', '/signup'];
      return bypassList.includes(routerState.location.pathname);
    }, [routerState.location.pathname]);
-
-  const check = async () => {
-    setIsChecking(true);
-    const result = await runInfrastructureCheck();
-    setReport(result);
-    setIsChecking(false);
-  };
-
-  useEffect(() => {
-    check();
-  }, []);
-
-  if (isChecking) {
+ 
+   const isChecking = state.status !== 'ready' && state.status !== 'failed';
+ 
+   if (isChecking) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-background space-y-4">
         <RefreshCw className="h-10 w-10 animate-spin text-primary" />
