@@ -17,7 +17,6 @@ serve(async (req) => {
 
     const { companyId } = await req.json()
 
-    // 1. Fetch Config
     const { data: config, error: configError } = await supabaseAdmin
       .from('cvcrm_integrations')
       .select('*')
@@ -26,8 +25,7 @@ serve(async (req) => {
 
     if (configError || !config) throw new Error('Integration not found')
 
-    // 2. Test Connection
-    const apiUrl = \`https://\${config.cvcrm_base_url}.cvcrm.com.br/api/cv/situacao\`;
+    const apiUrl = "https://" + config.cvcrm_base_url + ".cvcrm.com.br/api/cv/situacao";
     
     const response = await fetch(apiUrl, {
       method: 'GET',
