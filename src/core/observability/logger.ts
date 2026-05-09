@@ -38,10 +38,10 @@ class EnterpriseLogger {
     const color = level === 'error' || level === 'fatal' ? '\x1b[31m' : '\x1b[32m';
     console.log(`[${payload.timestamp}] ${color}${level.toUpperCase()}\x1b[0m [${payload.correlation_id}] ${message}`, context);
 
-    // Persist to Supabase if available
+    // Optimized background logging to avoid blocking the main thread
     if (supabase && (level === 'error' || level === 'fatal')) {
-      try {
-        await supabase.from('system_logs').insert({
+      setTimeout(() => {
+        supabase.from('system_logs').insert({
             level,
             message,
             correlation_id: payload.correlation_id,
@@ -49,10 +49,8 @@ class EnterpriseLogger {
             user_id: payload.user_id,
             company_id: payload.company_id,
             metadata: payload.metadata
-        });
-      } catch (err) {
-        // Silent fail to avoid infinite loops
-      }
+        }).catch(() => {});
+      }, 0);
     }
   }
 
