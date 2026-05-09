@@ -1,3 +1,4 @@
+ import { enrichmentService } from '@/modules/ai/services/enrichment';
  export interface LeadSubmission {
    name: string;
    email?: string;
@@ -12,6 +13,8 @@
  }
  
  import { supabase } from '@/lib/supabase';
+ import { calculateLeadScore } from '@/modules/ai/services/scoring';
+ import { routingService } from '@/modules/crm/services/routingService';
  
  export const captureService = {
    async submitLead(
@@ -51,6 +54,31 @@
        metadata: { source: 'form_builder' }
      });
  
-     return { success: true, leadId: lead.id };
+ 
+      // 1. Calculate AI Score
+      const scoreResult = calculateLeadScore({ ...data, ...trackingData });
+ 
+      // 2. Update Lead with Score
+      await supabase
+        .from('leads')
+        .update({ 
+          score: scoreResult.totalScore,
+          temperature: scoreResult.temperature,
+          metadata: { 
+            ...data.metadata, 
+            ...trackingData.metadata,
+            ai_analysis: scoreResult.summary,
+            grade: scoreResult.grade
+          } 
+        })
+        .eq('id', lead.id);
+ 
+      // 3. Auto-route lead
+      await routingService.assignLead(lead.id, companyId);
+ 
+      // 4. Enrich Lead in background
+      enrichmentService.enrichLead(lead.id).catch(console.error);
+ 
+      return { success: true, leadId: lead.id };
    }
  };
