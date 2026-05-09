@@ -46,10 +46,10 @@ const chartData = [
 ];
 
 const attributionData = [
-  { name: 'Google Ads', value: 45, color: '#4285F4' },
-  { name: 'Meta Ads', value: 30, color: '#1877F2' },
-  { name: 'Organic', value: 15, color: '#34A853' },
-  { name: 'Direct', value: 10, color: '#EA4335' },
+  { name: 'Google Ads', value: 45, color: 'var(--primary)' },
+  { name: 'Meta Ads', value: 30, color: 'oklch(0.68 0.19 145)' }, // Success/Green
+  { name: 'Organic', value: 15, color: 'oklch(0.65 0.23 300)' }, // Purple
+  { name: 'Direct', value: 10, color: 'oklch(0.59 0.23 27)' }, // Danger/Red
 ];
 
 const liveEvents = [
@@ -139,11 +139,12 @@ function DashboardPage() {
                   </linearGradient>
                  </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', opacity: 0.5 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', opacity: 0.5 }} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 500 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 500 }} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: 500, color: 'var(--foreground)' }}
+                    contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 600, color: 'var(--foreground)' }}
+                    labelStyle={{ fontWeight: 700, color: 'var(--foreground)', marginBottom: '4px' }}
                   />
                     <Area type="monotone" dataKey="leads" stroke="var(--primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
                  </AreaChart>
