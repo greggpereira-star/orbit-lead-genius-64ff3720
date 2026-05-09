@@ -46,11 +46,11 @@ const integrations = [
   {
     id: 'cvcrm',
     name: 'CV.CRM',
-    description: 'Enterprise integration with legacy real estate CRM systems.',
+    description: 'One-way enterprise delivery pipeline with UTM enrichment and attribution mapping.',
     icon: Database,
     color: 'bg-[#0a2540]',
     status: 'disconnected',
-    features: ['Bi-directional Sync', 'Status Mapping', 'Webhook Gateway']
+    features: ['One-Way Delivery', 'UTM Mapping', 'Lead Enrichment', 'Sync Audit']
   },
 ];
 
