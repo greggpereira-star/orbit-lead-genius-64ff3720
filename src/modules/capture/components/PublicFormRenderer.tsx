@@ -162,20 +162,30 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   {field.label} {field.required && <span className="text-destructive">*</span>}
                 </Label>
                 
-                {field.type === 'textarea' ? (
-                  <Textarea 
+                 {field.type === 'textarea' ? (
+                   <Textarea 
+                      {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+                     placeholder={field.placeholder}
+                     className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
+                   />
+                 ) : field.type === 'select' ? (
+                   <select
                      {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                    placeholder={field.placeholder}
-                    className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
-                  />
-                ) : (
-                  <Input 
-                    type={field.type === 'phone' ? 'tel' : field.type}
-                     {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                    placeholder={field.placeholder}
-                    className="h-12 bg-background/50 border-2 focus-visible:ring-primary/20 text-base"
-                  />
-                )}
+                     className="w-full h-12 rounded-md border-2 border-input bg-background/50 px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                   >
+                     <option value="">Selecione uma opção...</option>
+                     {(field.options || []).map((option: string, i: number) => (
+                       <option key={i} value={option}>{option}</option>
+                     ))}
+                   </select>
+                 ) : (
+                   <Input 
+                     type={field.type === 'phone' ? 'tel' : field.type}
+                      {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+                     placeholder={field.placeholder}
+                     className="h-12 bg-background/50 border-2 focus-visible:ring-primary/20 text-base"
+                   />
+                 )}
                  {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
                   <span className="text-xs font-bold text-destructive uppercase tracking-widest">This field is required</span>
                 )}
