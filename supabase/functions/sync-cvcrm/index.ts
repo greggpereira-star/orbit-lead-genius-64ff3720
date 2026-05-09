@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Validation Layer
 const validateLead = (lead: any) => {
   const errors = [];
   if (!lead.name) errors.push('Name is required');
@@ -26,7 +25,6 @@ serve(async (req) => {
     const { leadId, companyId } = await req.json()
     const startTime = Date.now()
 
-    // 1. Fetch Lead Data
     const { data: lead, error: leadError } = await supabaseAdmin
       .from('leads')
       .select('*')
@@ -35,11 +33,9 @@ serve(async (req) => {
 
     if (leadError || !lead) throw new Error('Lead not found')
 
-    // 2. Validation Layer
     const validation = validateLead(lead);
-    if (!validation.isValid) throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    if (!validation.isValid) throw new Error("Validation failed: " + validation.errors.join(', '));
 
-    // 3. Fetch Company CV.CRM Integration Config
     const { data: integration, error: intError } = await supabaseAdmin
       .from('cvcrm_integrations')
       .select('*')
@@ -49,13 +45,14 @@ serve(async (req) => {
 
     if (intError || !integration) throw new Error('CV.CRM integration not configured or inactive')
 
-    // 4. Prepare Payload (CV.CRM SPEC)
     const cvPayload = {
       nome: lead.name,
       email: lead.email,
       telefone: lead.phone,
       id_empreendimento: lead.metadata?.id_empreendimento || lead.metadata?.product_id,
-      origem: lead.utm_source || lead.metadata?.source || 'Lovable_CRM',
+      origem: lead.utm_source || lead.metadata?.source || 'LeadFlow',
+      
+      // LeadFlow Enrichment Mapping
       utm_source: lead.utm_source,
       utm_medium: lead.utm_medium,
       utm_campaign: lead.utm_campaign,
@@ -63,13 +60,19 @@ serve(async (req) => {
       utm_term: lead.utm_term,
       gclid: lead.gclid,
       fbclid: lead.fbclid,
+      
+      // Custom Fields Mapping (LeadFlow -> CV.CRM Custom Fields)
+      campo_personalizado_utm_source: lead.utm_source,
+      campo_personalizado_utm_campaign: lead.utm_campaign,
+      campo_personalizado_gclid: lead.gclid,
+      campo_personalizado_lead_score: lead.lead_score,
+      campo_personalizado_temperature: lead.lead_temperature,
+      
       id_situacao: lead.metadata?.id_situacao || 1,
     }
 
-    const domain = integration.cvcrm_base_url;
-    const apiUrl = `https://${domain}.cvcrm.com.br/api/cv/lead`;
+    const apiUrl = "https://" + integration.cvcrm_base_url + ".cvcrm.com.br/api/cv/lead";
 
-    // 5. Call CV.CRM API
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -83,7 +86,6 @@ serve(async (req) => {
     const result = await response.json();
     const latency = Date.now() - startTime;
 
-    // 6. Audit Logs & Sync Logs
     await supabaseAdmin.from('cvcrm_sync_logs').insert({
       company_id: companyId,
       lead_id: leadId,
@@ -96,9 +98,8 @@ serve(async (req) => {
       error_message: response.ok ? null : JSON.stringify(result)
     })
 
-    if (!response.ok) throw new Error(`CV.CRM API Error: ${JSON.stringify(result)}`);
+    if (!response.ok) throw new Error("CV.CRM API Error: " + JSON.stringify(result));
 
-    // 7. Update Lead Status
     await supabaseAdmin
       .from('leads')
       .update({
@@ -108,7 +109,6 @@ serve(async (req) => {
       })
       .eq('id', leadId)
 
-    // 8. Update Queue Status
     await supabaseAdmin
       .from('cvcrm_sync_queue')
       .update({ status: 'completed', updated_at: new Date().toISOString() })
@@ -122,7 +122,7 @@ serve(async (req) => {
   } catch (error) {
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200,
     })
   }
 })
