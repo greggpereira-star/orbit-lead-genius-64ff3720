@@ -36,16 +36,33 @@ function AppLayout() {
   }, [state, company?.id]);
 
    // Enhanced Loading States with deterministic category messages
-    const isLoadingState = ['INITIALIZING', 'AUTHENTICATING', 'TENANT_VALIDATING', 'TENANT_RECOVERING', 'MEMBERSHIP_RECOVERING', 'ROLE_RECOVERING', 'PERMISSIONS_RECOVERING', 'DASHBOARD_BOOTSTRAP'].includes(state as string);
+    const isLoadingState = [
+      'BOOTSTRAP_START',
+      'INITIALIZING',
+      'SESSION_LOADING',
+      'AUTHENTICATING',
+      'PROFILE_LOADING',
+      'TENANT_VALIDATING',
+      'TENANT_RECOVERING',
+      'MEMBERSHIP_RECOVERING',
+      'ROLE_RECOVERING',
+      'PERMISSIONS_RECOVERING',
+      'DASHBOARD_BOOTSTRAP'
+    ].includes(state as string);
  
    if (isLoadingState) {
-      const getMessage = () => {
-        if (state === 'AUTHENTICATING') return 'Autenticando credenciais seguras...';
-        if (state === 'TENANT_VALIDATING') return 'Validando workspace...';
-        if (state === 'TENANT_RECOVERING') return 'Recuperando workspace...';
-        if (state === 'MEMBERSHIP_RECOVERING') return 'Verificando acesso...';
-        return 'Sincronizando sessão enterprise...';
-      };
+    const getMessage = () => {
+      switch (state) {
+        case 'BOOTSTRAP_START': return 'Iniciando bootstrap enterprise...';
+        case 'SESSION_LOADING': return 'Recuperando sessão segura...';
+        case 'AUTHENTICATING': return 'Autenticando credenciais...';
+        case 'PROFILE_LOADING': return 'Carregando perfil do usuário...';
+        case 'TENANT_VALIDATING': return 'Validando workspace...';
+        case 'TENANT_RECOVERING': return 'Recuperando workspace...';
+        case 'MEMBERSHIP_RECOVERING': return 'Verificando acessos...';
+        default: return 'Sincronizando ambiente...';
+      }
+    };
  
      return (
        <div className="flex h-screen items-center justify-center bg-background">
