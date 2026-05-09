@@ -1,3 +1,89 @@
+function EmbedDialog({ form }: { form: Form }) {
+  const [copied, setCopied] = React.useState(false);
+  const publicUrl = `${window.location.origin}/f/${form.slug}`;
+  
+  const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0"></iframe>`;
+  const scriptCode = `<script src="${window.location.origin}/widget.js"></script>
+<script>
+  LeadFlow.initForm({
+    formId: "${form.id}",
+    slug: "${form.slug}"
+  });
+</script>`;
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success('Code copied to clipboard');
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="flex-1 text-[10px] uppercase font-bold tracking-wider h-8 gap-1.5">
+          <Code2 className="h-3 w-3" /> Embed
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Embed Form: {form.name}</DialogTitle>
+          <DialogDescription>
+            Choose how you want to integrate this form into your website.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Tabs defaultValue="iframe" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="iframe">iFrame</TabsTrigger>
+            <TabsTrigger value="link">Public Link</TabsTrigger>
+            <TabsTrigger value="wordpress">WordPress</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="iframe" className="space-y-4 pt-4">
+            <p className="text-xs text-muted-foreground">The easiest way to embed. Works on any site including WordPress, Elementor, and Webflow.</p>
+            <div className="relative">
+              <pre className="bg-muted p-4 rounded-lg text-[10px] font-mono overflow-x-auto">
+                {iframeCode}
+              </pre>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="absolute top-2 right-2"
+                onClick={() => copyToClipboard(iframeCode)}
+              >
+                {copied ? <ClipboardCheck className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="link" className="space-y-4 pt-4">
+            <p className="text-xs text-muted-foreground">Share this link directly or use it in buttons and social media.</p>
+            <div className="flex gap-2">
+              <Input value={publicUrl} readOnly className="text-xs" />
+              <Button onClick={() => copyToClipboard(publicUrl)}>Copy</Button>
+            </div>
+            <Button variant="outline" className="w-full gap-2" onClick={() => window.open(publicUrl, '_blank')}>
+              <ExternalLink className="h-4 w-4" /> View Live Form
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="wordpress" className="space-y-4 pt-4">
+            <div className="p-4 bg-primary/5 border border-primary/10 rounded-lg space-y-2">
+              <h4 className="text-sm font-bold uppercase tracking-wider">Shortcode (Coming Soon)</h4>
+              <p className="text-xs text-muted-foreground">Once you install our WordPress plugin, you can use this shortcode:</p>
+              <code className="bg-background px-2 py-1 rounded text-xs font-mono">[leadflow_form id="{form.id}"]</code>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold uppercase tracking-wider">Elementor / Gutenberg</h4>
+              <p className="text-xs text-muted-foreground">Use the "HTML" widget and paste the iFrame code provided in the iFrame tab.</p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formService, Form } from '../services/formService';
