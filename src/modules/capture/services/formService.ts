@@ -82,43 +82,48 @@ export const formService = {
     return data;
   },
 
-  async createForm(tenantId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<Form> {
-    const { data: newForm, error: formError } = await supabase
-      .from('forms')
-      .insert({
-        tenant_id: tenantId,
-        name: form.name || 'Untitled Form',
-        slug: form.slug || `form-${Math.random().toString(36).substr(2, 9)}`,
-        type: form.type || 'traditional',
-        settings: form.settings || {
-          submit_label: 'Submit',
-          success_message: 'Thank you!',
-          theme: 'premium-light',
-          cv_crm_integration: false,
-          capture_utms: true
-        }
-      })
-      .select()
-      .single();
-
-    if (formError) throw formError;
-
-    if (fields.length > 0) {
-      const fieldsWithFormId = fields.map((f, index) => ({
-        ...f,
-        form_id: newForm.id,
-        sort_order: f.sort_order ?? index
-      }));
-
-      const { error: fieldsError } = await supabase
-        .from('form_fields')
-        .insert(fieldsWithFormId);
-
-      if (fieldsError) throw fieldsError;
-    }
-
-    return newForm;
-  },
+   async createForm(tenantId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<Form> {
+     const { data: newForm, error: formError } = await supabase
+       .from('forms')
+       .insert({
+         tenant_id: tenantId,
+         name: form.name || 'Untitled Form',
+         slug: form.slug || `form-${Math.random().toString(36).substr(2, 9)}`,
+         type: form.type || 'traditional',
+         settings: form.settings || {
+           submit_label: 'Submit',
+           success_message: 'Thank you!',
+           theme: 'premium-light',
+           cv_crm_integration: false,
+           capture_utms: true
+         }
+       })
+       .select()
+       .single();
+ 
+     if (formError) throw formError;
+ 
+     if (fields.length > 0) {
+       const fieldsWithFormId = fields.map((f, index) => ({
+         label: f.label,
+         name: f.name || f.label?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+         type: f.type,
+         required: !!f.required,
+         placeholder: f.placeholder,
+         form_id: newForm.id,
+         sort_order: index,
+         step_number: f.step_number || 1
+       }));
+ 
+       const { error: fieldsError } = await supabase
+         .from('form_fields')
+         .insert(fieldsWithFormId);
+ 
+       if (fieldsError) throw fieldsError;
+     }
+ 
+     return newForm;
+   },
 
    async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
      const { id, tenant_id, created_at, updated_at, form_fields, ...updateData } = form as any;
@@ -133,16 +138,16 @@ export const formService = {
     if (fields && fields.length > 0) {
       await supabase.from('form_fields').delete().eq('form_id', formId);
       
-      const fieldsWithFormId = fields.map((f, index) => ({
-        label: f.label,
-        name: f.name || f.label?.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-        type: f.type,
-        required: !!f.required,
-        placeholder: f.placeholder,
-        form_id: formId,
-        sort_order: index,
-        step_number: f.step_number || 1
-      }));
+       const fieldsWithFormId = fields.map((f, index) => ({
+         label: f.label,
+         name: f.name || f.label?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+         type: f.type,
+         required: !!f.required,
+         placeholder: f.placeholder,
+         form_id: formId,
+         sort_order: index,
+         step_number: f.step_number || 1
+       }));
 
       const { error: fieldsError } = await supabase
         .from('form_fields')

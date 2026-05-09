@@ -5,18 +5,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { 
-  GripVertical, 
-  Plus, 
-  Trash2, 
-  Settings2, 
-  Eye, 
-  Code2,
-  CheckCircle2,
-  ArrowLeft,
-  Save,
-  Loader2,
-  Globe
-} from 'lucide-react';
+   GripVertical,
+   Plus,
+   Trash2,
+   Settings2,
+   Eye,
+   Code2,
+   CheckCircle2,
+   ArrowLeft,
+   Save,
+   Loader2,
+   Globe
+ } from 'lucide-react';
+ import {
+   DndContext,
+   closestCenter,
+   KeyboardSensor,
+   PointerSensor,
+   useSensor,
+   useSensors,
+   DragEndEvent
+ } from '@dnd-kit/core';
+ import {
+   arrayMove,
+   SortableContext,
+   sortableKeyboardCoordinates,
+   verticalListSortingStrategy,
+   useSortable
+ } from '@dnd-kit/sortable';
+ import { CSS } from '@dnd-kit/utilities';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -26,15 +43,96 @@ import { logger } from '@/core/observability/logger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
 
-interface FormBuilderProps {
-  formId?: string;
-  onBack: () => void;
-}
-
-export function FormBuilder({ formId, onBack }: FormBuilderProps) {
+ interface FormBuilderProps {
+   formId?: string;
+   onBack: () => void;
+ }
+ 
+ function SortableField({ field, index, onUpdate, onRemove }: { 
+   field: any, 
+   index: number, 
+   onUpdate: (index: number, data: any) => void,
+   onRemove: (id: string) => void
+ }) {
+   const {
+     attributes,
+     listeners,
+     setNodeRef,
+     transform,
+     transition,
+     isDragging
+   } = useSortable({ id: field.id });
+ 
+   const style = {
+     transform: CSS.Transform.toString(transform),
+     transition,
+     zIndex: isDragging ? 50 : undefined,
+     opacity: isDragging ? 0.5 : 1,
+   };
+ 
+   return (
+     <div 
+       ref={setNodeRef}
+       style={style}
+       className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
+     >
+       <div 
+         {...attributes} 
+         {...listeners}
+         className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors p-1"
+       >
+         <GripVertical className="h-5 w-5" />
+       </div>
+       
+       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+         <div className="space-y-1.5">
+           <Label className="text-xs">Field Label</Label>
+           <Input 
+             value={field.label} 
+             onChange={(e) => onUpdate(index, { label: e.target.value })}
+             className="h-9"
+           />
+         </div>
+         <div className="space-y-1.5">
+           <Label className="text-xs">Field Type</Label>
+           <select 
+             className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+             value={field.type}
+             onChange={(e) => onUpdate(index, { type: e.target.value })}
+           >
+             <option value="text">Text Input</option>
+             <option value="email">Email</option>
+             <option value="phone">Phone</option>
+             <option value="textarea">Textarea</option>
+             <option value="select">Dropdown</option>
+           </select>
+         </div>
+         <div className="flex items-center gap-4 pt-6">
+           <div className="flex items-center gap-2">
+             <Switch 
+               checked={field.required} 
+               onCheckedChange={(val) => onUpdate(index, { required: val })}
+             />
+             <span className="text-xs font-medium">Required</span>
+           </div>
+           <Button 
+             variant="ghost" 
+             size="icon" 
+             className="h-8 w-8 text-muted-foreground hover:text-destructive"
+             onClick={() => onRemove(field.id)}
+           >
+             <Trash2 className="h-4 w-4" />
+           </Button>
+         </div>
+       </div>
+     </div>
+   );
+ }
+ 
+ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
-  const [fields, setFields] = useState<(Partial<FormField> & { tempId?: string })[]>([]);
+   const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
     slug: '',
@@ -55,17 +153,17 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
     enabled: !!formId,
   });
 
-  useEffect(() => {
-    if (existingForm) {
-      setFormConfig(existingForm);
-      setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, tempId: f.id })));
-    } else if (!formId) {
-      setFields([
-        { tempId: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
-        { tempId: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
-      ]);
-    }
-  }, [existingForm, formId]);
+   useEffect(() => {
+     if (existingForm) {
+       setFormConfig(existingForm);
+       setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, id: f.id })));
+     } else if (!formId) {
+       setFields([
+         { id: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
+         { id: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
+       ]);
+     }
+   }, [existingForm, formId]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -87,22 +185,38 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
     }
   });
 
-  const addField = () => {
-    const newField: Partial<FormField> & { tempId: string } = {
-      tempId: Math.random().toString(36).substr(2, 9),
-      label: 'New Field',
-      type: 'text',
-      required: false,
-      placeholder: 'Enter text...'
-    };
-    setFields([...fields, newField]);
-  };
+   const addField = () => {
+     const newField: Partial<FormField> & { id: string } = {
+       id: Math.random().toString(36).substr(2, 9),
+       label: 'New Field',
+       type: 'text',
+       required: false,
+       placeholder: 'Enter text...'
+     };
+     setFields([...fields, newField]);
+   };
 
-  const removeField = (index: number) => {
-    const newFields = [...fields];
-    newFields.splice(index, 1);
-    setFields(newFields);
-  };
+   const removeField = (id: string) => {
+     setFields(fields.filter(f => f.id !== id));
+   };
+ 
+   const sensors = useSensors(
+     useSensor(PointerSensor),
+     useSensor(KeyboardSensor, {
+       coordinateGetter: sortableKeyboardCoordinates,
+     })
+   );
+ 
+   const handleDragEnd = (event: DragEndEvent) => {
+     const { active, over } = event;
+     if (over && active.id !== over.id) {
+       setFields((items) => {
+         const oldIndex = items.findIndex((i) => i.id === active.id);
+         const newIndex = items.findIndex((i) => i.id === over.id);
+         return arrayMove(items, oldIndex, newIndex);
+       });
+     }
+   };
 
   if (isLoading) {
     return (
@@ -164,72 +278,32 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
                     Add Field
                   </Button>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {fields.map((field, index) => (
-                    <div 
-                      key={field.tempId || index} 
-                      className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
-                    >
-                      <div className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors">
-                        <GripVertical className="h-5 w-5" />
-                      </div>
-                      
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Field Label</Label>
-                          <Input 
-                            value={field.label} 
-                            onChange={(e) => {
-                              const newFields = [...fields];
-                              newFields[index].label = e.target.value;
-                              setFields(newFields);
-                            }}
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Field Type</Label>
-                          <select 
-                            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            value={field.type}
-                            onChange={(e) => {
-                              const newFields = [...fields];
-                              newFields[index].type = e.target.value as any;
-                              setFields(newFields);
-                            }}
-                          >
-                            <option value="text">Text Input</option>
-                            <option value="email">Email</option>
-                            <option value="phone">Phone</option>
-                            <option value="textarea">Textarea</option>
-                            <option value="select">Dropdown</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-4 pt-6">
-                          <div className="flex items-center gap-2">
-                            <Switch 
-                              checked={field.required} 
-                              onCheckedChange={(val) => {
-                                const newFields = [...fields];
-                                newFields[index].required = val;
-                                setFields(newFields);
-                              }}
-                            />
-                            <span className="text-xs font-medium">Required</span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeField(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
+                 <CardContent className="space-y-3">
+                   <DndContext 
+                     sensors={sensors}
+                     collisionDetection={closestCenter}
+                     onDragEnd={handleDragEnd}
+                   >
+                     <SortableContext 
+                       items={fields.map(f => f.id)}
+                       strategy={verticalListSortingStrategy}
+                     >
+                       {fields.map((field, index) => (
+                         <SortableField 
+                           key={field.id} 
+                           field={field} 
+                           index={index}
+                           onRemove={removeField}
+                           onUpdate={(idx: number, data: any) => {
+                             const newFields = [...fields];
+                             newFields[idx] = { ...newFields[idx], ...data };
+                             setFields(newFields);
+                           }}
+                         />
+                       ))}
+                     </SortableContext>
+                   </DndContext>
+                 </CardContent>
               </Card>
             </div>
 
