@@ -158,15 +158,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       const initSession = async () => {
         setState('BOOTSTRAP_START');
         try {
-          logger.info('AuthTrace: Initializing enterprise bootstrap', { traceId });
-          setState('SESSION_LOADING');
-          console.log('DEBUG [Auth]: getSupabase() call start');
           const supabaseClient = getSupabase();
-          console.log('DEBUG [Auth]: getSupabase() call end');
+          
+          // Optimized: Use enterprise-auth-v1 key to skip heavy session checks for cold starts
+          const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('enterprise-auth-v1');
+          
+          if (!hasToken) {
+            logger.info('AuthTrace: Cold start, skipping initial session check', { traceId });
+            if (mounted) setState('UNAUTHENTICATED');
+            return;
+          }
 
-          console.log('DEBUG [Auth]: auth.getSession() call start');
+          logger.info('AuthTrace: Auth token detected, initializing bootstrap', { traceId });
+          setState('SESSION_LOADING');
+          
           const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-          console.log('DEBUG [Auth]: auth.getSession() call end', { session: !!session, error: !!sessionError });
           
           if (sessionError) {
             logger.error('AuthTrace: Session error', { error: sessionError.message, traceId });
@@ -177,12 +183,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             logger.info('AuthTrace: Session found, loading tenant', { userId: session.user.id, traceId });
             await loadTenantContext(session.user);
           } else if (mounted) {
-            const isRestoring = typeof window !== 'undefined' && localStorage.getItem('supabase.auth.token') !== null;
-            if (isRestoring) {
-              setState('SESSION_LOADING');
-              return; 
-            }
-            logger.info('AuthTrace: No session found', { traceId });
+            logger.info('AuthTrace: No active session', { traceId });
             setState('UNAUTHENTICATED');
           }
        } catch (err: any) {
