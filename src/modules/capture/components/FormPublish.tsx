@@ -28,10 +28,9 @@
  
  export function FormPublish({ form }: FormPublishProps) {
    const [copied, setCopied] = useState<string | null>(null);
-   const [sdkCode, setSdkCode] = useState('inline');
-   const publicUrl = `${window.location.origin}/f/${form.slug}`;
-   const sdkUrl = `${window.location.origin}/sdk.js`;
-   const publicUrl = `${window.location.origin}/f/${form.slug}`;
+    const [sdkCode, setSdkCode] = useState('inline');
+    const publicUrl = `${window.location.origin}/f/${form.slug}`;
+    const sdkUrl = `${window.location.origin}/sdk.js`;
  
    const copyToClipboard = (text: string, id: string) => {
      navigator.clipboard.writeText(text);
