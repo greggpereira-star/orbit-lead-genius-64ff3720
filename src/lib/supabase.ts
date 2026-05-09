@@ -21,17 +21,13 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.en
       }) 
     : (null as any);
 
-  // Helper to handle safe database calls with auto-logging
-  export const safeDb = async <T>(promise: Promise<T>, context: string): Promise<T> => {
-    try {
-      return await promise;
-    } catch (error: any) {
-      const { logger } = await import('@/core/observability/logger');
-      logger.error(\`Supabase Error in [\${context}]: \${error.message}\`, {
-        context,
-        originalError: error,
-        code: error.code
-      });
-      throw error;
-    }
-  };
+export const safeDb = async <T>(promise: Promise<T>, context: string): Promise<T> => {
+  try {
+    return await promise;
+  } catch (error: any) {
+    // Logging would happen here, but we must avoid dynamic imports if they cause issues
+    // or handle them carefully. For now, simple console for stability.
+    console.error(`Supabase Error in [${context}]:`, error);
+    throw error;
+  }
+};
