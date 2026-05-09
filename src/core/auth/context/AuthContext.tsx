@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { getSupabase, safeDb } from '@/lib/supabase';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
@@ -289,6 +289,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     traceId,
     login,
     signup,
+    loginWithGoogle,
+    loginWithMeta,
     logout,
     refreshContext
   };
