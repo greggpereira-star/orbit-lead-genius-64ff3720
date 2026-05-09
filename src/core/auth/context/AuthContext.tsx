@@ -29,7 +29,8 @@ interface Company {
 interface AuthContextType {
   state: AuthState;
   user: User | null;
-  company: Company | null;
+   company: Company | null;
+   membership: any | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isReady: boolean;
