@@ -32,7 +32,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
       return strength;
     }, [password]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('!!! Register form handleSubmit triggered !!!', { email, companyName });
     
@@ -49,22 +49,24 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
     
     setIsLoading(true);
     
-    (async () => {
-      try {
-        console.log('Calling signup service in AuthContext...');
-        await signup(email, password, companyName);
-        console.log('Signup service call finished successfully');
-        toast.success('Account created! Redirecting to dashboard...');
-        
-        console.log('Navigating to dashboard...');
+    try {
+      console.log('AuthTrace: Calling signup service', { email, companyName });
+      const result = await signup(email, password, companyName);
+      console.log('AuthTrace: Signup response received', result);
+      
+      if (result?.session) {
+        toast.success('Account created! Entering workspace...');
         navigate({ to: '/dashboard' });
-      } catch (error: any) {
-        console.error('CRITICAL Registration error:', error);
-        toast.error(error.message || 'Failed to create account');
-      } finally {
-        setIsLoading(false);
+      } else {
+        toast.success('Enterprise account pending verification. Check your email.');
+        // Stay on page or redirect to a "check email" page if we had one
       }
-    })();
+    } catch (error: any) {
+      console.error('AuthTrace: CRITICAL Registration error:', error);
+      toast.error(error.message || 'Failed to initialize enterprise account');
+    } finally {
+      setIsLoading(false);
+    }
   };
  
    return (
