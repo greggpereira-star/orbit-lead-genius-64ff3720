@@ -133,6 +133,7 @@ import { FormPublish } from './FormPublish';
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
+    const [showTemplates, setShowTemplates] = useState(!formId);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
     slug: '',
@@ -157,13 +158,11 @@ import { FormPublish } from './FormPublish';
      if (existingForm) {
        setFormConfig(existingForm);
        setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, id: f.id })));
-     } else if (!formId) {
-       setFields([
-         { id: Math.random().toString(36).substr(2, 9), label: 'Full Name', type: 'text', required: true, placeholder: 'Ex: John Doe' },
-         { id: Math.random().toString(36).substr(2, 9), label: 'Email', type: 'email', required: true, placeholder: 'Ex: john@example.com' },
-       ]);
+     } else if (!formId && fields.length === 0) {
+       // Don't set default fields if we want to show templates
+       setShowTemplates(true);
      }
-   }, [existingForm, formId]);
+   }, [existingForm, formId, fields.length]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -218,6 +217,97 @@ import { FormPublish } from './FormPublish';
      }
    };
 
+   const applyTemplate = (template: any) => {
+     setFormConfig(prev => ({
+       ...prev,
+       name: template.name,
+       settings: { ...prev.settings, ...template.settings }
+     }));
+     setFields(template.fields.map((f: any) => ({
+       ...f,
+       id: Math.random().toString(36).substr(2, 9)
+     })));
+     setShowTemplates(false);
+   };
+ 
+   const templates = [
+     {
+       id: 'contact',
+       name: 'Contato Imobiliário',
+       description: 'Ideal para captura de leads em imóveis.',
+       fields: [
+         { label: 'Nome Completo', type: 'text', required: true, placeholder: 'Ex: João Silva' },
+         { label: 'E-mail', type: 'email', required: true, placeholder: 'Ex: joao@email.com' },
+         { label: 'Telefone/WhatsApp', type: 'phone', required: true, placeholder: 'Ex: (11) 99999-9999' },
+         { label: 'Interesse', type: 'select', required: true, options: ['Comprar', 'Alugar', 'Vender'] },
+       ],
+       settings: { submit_label: 'Quero receber informações' }
+     },
+     {
+       id: 'ecommerce',
+       name: 'Orçamento E-commerce',
+       description: 'Para produtos sob consulta ou personalizados.',
+       fields: [
+         { label: 'Nome', type: 'text', required: true },
+         { label: 'WhatsApp', type: 'phone', required: true },
+         { label: 'Produto de Interesse', type: 'text', required: true },
+         { label: 'Quantidade', type: 'text', required: false },
+         { label: 'Mensagem', type: 'textarea', required: false },
+       ],
+       settings: { submit_label: 'Solicitar Orçamento' }
+     },
+     {
+       id: 'newsletter',
+       name: 'Assinatura de Newsletter',
+       description: 'Captura rápida apenas com e-mail.',
+       fields: [
+         { label: 'Seu melhor E-mail', type: 'email', required: true, placeholder: 'Ex: joao@email.com' },
+       ],
+       settings: { submit_label: 'Inscrever-se Agora' }
+     }
+   ];
+ 
+   if (showTemplates && !formId) {
+     return (
+       <div className="space-y-8 animate-in fade-in duration-500">
+         <div className="text-center space-y-2">
+           <h2 className="text-3xl font-black uppercase tracking-tighter">Escolha um Modelo</h2>
+           <p className="text-muted-foreground">Comece rápido com um de nossos templates otimizados para conversão.</p>
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           {templates.map((template) => (
+             <Card key={template.id} className="group cursor-pointer hover:ring-2 hover:ring-primary transition-all overflow-hidden border-none shadow-sm" onClick={() => applyTemplate(template)}>
+               <div className="h-2 bg-primary/20 group-hover:bg-primary transition-colors" />
+               <CardHeader>
+                 <CardTitle className="text-lg">{template.name}</CardTitle>
+                 <CardDescription>{template.description}</CardDescription>
+               </CardHeader>
+               <CardContent>
+                 <div className="space-y-2">
+                   {template.fields.slice(0, 3).map((f, i) => (
+                     <div key={i} className="h-8 bg-muted rounded animate-pulse" />
+                   ))}
+                   {template.fields.length > 3 && <p className="text-[10px] text-center text-muted-foreground">+{template.fields.length - 3} campos</p>}
+                 </div>
+               </CardContent>
+               <div className="p-4 bg-muted/50 border-t flex justify-center">
+                 <Button variant="ghost" size="sm" className="font-bold uppercase tracking-widest text-[10px]">Usar este modelo</Button>
+               </div>
+             </Card>
+           ))}
+           <Card className="border-dashed flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setShowTemplates(false)}>
+             <Plus className="h-8 w-8 text-muted-foreground mb-2" />
+             <p className="font-bold text-sm">Começar do Zero</p>
+             <p className="text-xs text-muted-foreground text-center">Crie seu próprio formulário do seu jeito.</p>
+           </Card>
+         </div>
+         <div className="flex justify-center">
+           <Button variant="ghost" onClick={onBack}>Voltar para lista</Button>
+         </div>
+       </div>
+     );
+   }
+ 
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
