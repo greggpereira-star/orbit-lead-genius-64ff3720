@@ -21,7 +21,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
      const [companyName, setCompanyName] = useState('');
      const [retryCount, setRetryCount] = useState(0);
      const { signup, state, error: authError } = useAuth();
-     const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
+      const isLoading = state === 'CREATING_ACCOUNT' || state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
    
       const passwordStrength = useMemo(() => {
         if (!password) return null;
@@ -47,18 +47,14 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
          return;
        }
        
-       try {
-         console.log('Signup: Calling signup function for', email);
-         const result = await signup(email, password, companyName);
-         console.log('Signup: Success result', result);
-         if (result?.session) {
-           console.log('Signup: Session found, navigating to dashboard');
-           navigate({ to: '/dashboard' });
-         } else {
-           console.log('Signup: No session (likely email confirmation needed)');
-           toast.info('Conta criada! Verifique seu e-mail para confirmar o cadastro.', { duration: 6000 });
-         }
-       } catch (error: any) {
+        try {
+          const result = await signup(email, password, companyName);
+          if (result?.session) {
+            navigate({ to: '/dashboard' });
+          } else {
+            navigate({ to: '/auth/verify-email' });
+          }
+        } catch (error: any) {
          console.error('Signup: Error occurred', error);
          setRetryCount(prev => prev + 1);
          toast.error(error.message || 'Falha no cadastro');
