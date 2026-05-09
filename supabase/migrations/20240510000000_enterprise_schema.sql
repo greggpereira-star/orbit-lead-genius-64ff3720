@@ -221,3 +221,18 @@ ALTER TABLE cvcrm_sync_queue ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "CV CRM integrations access" ON cvcrm_integrations FOR ALL USING (check_membership(company_id));
 CREATE POLICY "CV CRM sync queue access" ON cvcrm_sync_queue FOR ALL USING (check_membership(company_id));
+
+-- Audit Logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID, -- Links to auth.users
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id UUID,
+    changes JSONB,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Audit logs access" ON audit_logs FOR ALL USING (check_membership(company_id));
