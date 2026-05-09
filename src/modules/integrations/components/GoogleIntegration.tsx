@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
-import { Globe, RefreshCcw, AlertCircle } from 'lucide-react';
+ import { Globe, RefreshCcw, AlertCircle } from 'lucide-react';
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Dialog, 
   DialogContent, 
