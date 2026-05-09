@@ -193,7 +193,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
        MEMBERSHIP_RECOVERING: 'BOOTSTRAPPING',
        WORKSPACE_READY: 'FINALIZING',
      };
+     
+     // Double check: if we are AUTHENTICATED (cached), this component won't even reach here 
+     // because AuthWrapper is re-rendered on state change.
      return <TenantBootstrap status={statusMap[state as string] || 'BOOTSTRAPPING'} />;
+   }
+
+   if (state === 'ONBOARDING_REQUIRED') {
+     // Fallback to TenantBootstrap with the starting status or redirect to an onboarding flow if we had one.
+     // Since we don't have a dedicated /onboarding yet, we use TenantBootstrap as the interface.
+     return <TenantBootstrap status="ACCOUNT_CREATED" />;
    }
 
    if (state === 'RECOVERY_MODE') {
