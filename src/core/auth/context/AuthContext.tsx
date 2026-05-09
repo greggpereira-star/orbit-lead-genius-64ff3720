@@ -91,13 +91,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     setCompany(null);
   }, [traceId]);
 
-   const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
-     const client = getSupabase();
-     if (!orchestratorRef.current) {
-       orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
-     }
+    const loadTenantContext = useCallback(async (supabaseUser: SupabaseUser) => {
+      if (isOrchestrating.current === supabaseUser.id) {
+        logger.info('AuthTrace: Orchestration already in progress for user, skipping.', { userId: supabaseUser.id });
+        return;
+      }
+
+      const client = getSupabase();
+      if (!orchestratorRef.current) {
+        orchestratorRef.current = new WorkspaceOrchestrator(client, traceId);
+      }
  
       try {
+        isOrchestrating.current = supabaseUser.id;
         // Determine if we should show the full bootstrap UI
         const isReadyCache = checkWorkspaceReadiness();
         
