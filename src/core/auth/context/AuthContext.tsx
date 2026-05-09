@@ -126,11 +126,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
           return;
         }
  
-        if (result.company?.id) {
-          // Re-validate cache with the actual tenant ID
-          if (!checkWorkspaceReadiness(result.company.id)) {
-             markWorkspaceAsReady(result.company.id);
-          }
+        if (result.company?.id && result.user?.id && result.membership?.id) {
+          markWorkspaceAsReady(result.user.id, result.company.id, result.membership.id);
         }
 
         setUser(result.user);
