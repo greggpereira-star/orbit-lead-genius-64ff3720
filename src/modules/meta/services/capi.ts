@@ -1,3 +1,41 @@
+ import { supabase } from '@/lib/supabase';
+ 
+ export const metaCapiService = {
+   async sendLeadEvent(companyId: string, leadData: any) {
+     const { data: integration } = await supabase
+       .from('integrations')
+       .select('config')
+       .eq('company_id', companyId)
+       .eq('provider', 'meta')
+       .eq('status', 'connected')
+       .single();
+ 
+     if (!integration) return;
+ 
+     const { pixel_id, access_token } = integration.config as any;
+     if (!pixel_id || !access_token) return;
+ 
+     const hashedEmail = leadData.email ? await hashData(leadData.email) : undefined;
+     const hashedPhone = leadData.phone ? await hashData(leadData.phone) : undefined;
+ 
+     const event: CAPIEvent = {
+       event_name: 'Lead',
+       event_time: Math.floor(Date.now() / 1000),
+       user_data: {
+         em: hashedEmail ? [hashedEmail] : [],
+         ph: hashedPhone ? [hashedPhone] : [],
+         client_ip_address: leadData.metadata?.ip,
+         client_user_agent: leadData.metadata?.user_agent,
+         fbc: leadData.fbclid,
+       },
+       action_source: 'website',
+       event_source_url: window.location.href,
+     };
+ 
+     return await sendCAPIEvent(event, pixel_id, access_token);
+   }
+ };
+ 
  export interface CAPIEvent {
    event_name: 'Lead' | 'Contact' | 'PageView' | 'CompleteRegistration';
    event_time: number;
