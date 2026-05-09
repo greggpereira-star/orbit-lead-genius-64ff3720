@@ -8,17 +8,19 @@ export interface HealthReport {
     database: boolean;
     storage: boolean;
   };
-  details: Record<string, string | null>;
-  timestamp: string;
-}
+   details: Record<string, string | null>;
+   timestamp: string;
+   latency: Record<string, number>;
+ }
 
 export const runInfrastructureCheck = async (): Promise<HealthReport> => {
   const report: HealthReport = {
     status: 'healthy',
     checks: { env: false, auth: false, database: false, storage: false },
     details: {},
-    timestamp: new Date().toISOString(),
-  };
+     timestamp: new Date().toISOString(),
+     latency: {},
+   };
 
    try {
      const config = getRuntimeConfig();
@@ -30,17 +32,21 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
        return report;
      }
  
-     const authRes = await fetch(`${config.supabaseUrl}/auth/v1/settings`, {
+     const startAuth = performance.now();
+     const authRes = await fetch(`${config.supabaseUrl}/auth/v1/health`, {
        headers: { apikey: config.supabaseAnonKey },
        signal: AbortSignal.timeout(5000)
      });
+     report.latency.auth = Math.round(performance.now() - startAuth);
      report.checks.auth = authRes.ok;
      if (!authRes.ok) report.details.auth = `Auth failed with status: ${authRes.status}`;
  
+     const startDb = performance.now();
      const dbRes = await fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
        method: 'HEAD',
        signal: AbortSignal.timeout(5000)
      });
+     report.latency.database = Math.round(performance.now() - startDb);
      report.checks.database = dbRes.ok;
      if (!dbRes.ok) report.details.database = `Database REST failed with status: ${dbRes.status}`;
  
