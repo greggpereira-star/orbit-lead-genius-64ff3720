@@ -67,48 +67,69 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
     return () => { mounted = false; };
   }, [company?.id]);
  
-   const fetchData = async () => {
-     setIsLoading(true);
-     try {
-       // 1. Fetch stages
-       const { data: stagesData, error: stagesError } = await supabase
-         .from('stages')
-         .select('*')
-         .eq('company_id', company?.id)
-         .order('order_index');
- 
-       if (stagesError) throw stagesError;
- 
-       // 2. Fetch leads
-       const { data: leadsData, error: leadsError } = await supabase
-         .from('leads')
-         .select('*')
-         .eq('company_id', company?.id);
- 
-       if (leadsError) throw leadsError;
- 
-       // 3. Map leads to stages
-       const mappedColumns = (stagesData || []).map((stage: any) => ({
-         id: stage.id,
-         title: stage.name,
-           leads: (leadsData || []).filter((lead: any) => lead.stage_id === stage.id).map((lead: any) => ({
-           id: lead.id,
-           name: lead.name || 'Unnamed Lead',
-           company: lead.metadata?.company_name,
-           value: lead.income ? `$${lead.income}` : undefined,
-           temperature: lead.temperature as 'cold' | 'warm' | 'hot',
-           score: lead.score || 0
-         }))
-       }));
- 
-       setColumns(mappedColumns);
-     } catch (error) {
-       console.error('Error fetching Kanban data:', error);
-       toast.error('Failed to load pipeline');
-     } finally {
-       setIsLoading(false);
-     }
-   };
+    const fetchData = async () => {
+      if (!company?.id) return;
+      setIsLoading(true);
+      try {
+        // 1. Fetch stages
+        let { data: stagesData, error: stagesError } = await supabase
+          .from('stages')
+          .select('*')
+          .eq('company_id', company.id)
+          .order('order_index');
+  
+        if (stagesError) throw stagesError;
+
+        // Auto-initialize default stages if none exist
+        if (!stagesData || stagesData.length === 0) {
+          const defaultStages = [
+            { name: 'Novo Lead', order_index: 0 },
+            { name: 'Contato', order_index: 1 },
+            { name: 'Qualificado', order_index: 2 },
+            { name: 'Reunião', order_index: 3 },
+            { name: 'Proposta', order_index: 4 },
+            { name: 'Venda', order_index: 5 }
+          ];
+          
+          const { data: createdStages, error: createError } = await supabase
+            .from('stages')
+            .insert(defaultStages.map(s => ({ ...s, company_id: company.id })))
+            .select();
+            
+          if (createError) throw createError;
+          stagesData = createdStages;
+        }
+  
+        // 2. Fetch leads
+        const { data: leadsData, error: leadsError } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('company_id', company.id);
+  
+        if (leadsError) throw leadsError;
+  
+        // 3. Map leads to stages
+        const mappedColumns = (stagesData || []).map((stage: any) => ({
+          id: stage.id,
+          title: stage.name,
+            leads: (leadsData || []).filter((lead: any) => lead.stage_id === stage.id).map((lead: any) => ({
+            id: lead.id,
+            name: lead.name || 'Unnamed Lead',
+            company: (lead.metadata as any)?.company_name || lead.company_name,
+            value: lead.income ? `$${lead.income}` : undefined,
+            temperature: (lead.lead_temperature || 'cold') as 'cold' | 'warm' | 'hot',
+            score: lead.lead_score || 0
+          }))
+        }));
+  
+        setColumns(mappedColumns);
+      } catch (error: any) {
+        console.error('Error fetching Kanban data:', error);
+        toast.error(`Failed to load pipeline: ${error.message || 'Unknown error'}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
  
    const onDragEnd = async (result: DropResult) => {
      const { destination, source, draggableId } = result;
