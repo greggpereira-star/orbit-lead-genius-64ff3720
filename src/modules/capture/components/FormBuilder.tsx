@@ -1,19 +1,27 @@
- import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
  import { Label } from '@/components/ui/label';
  import { Badge } from '@/components/ui/badge';
- import { 
-   GripVertical, 
-   Plus, 
-   Trash2, 
-   Settings2, 
-   Eye, 
-   Code2,
-   CheckCircle2
- } from 'lucide-react';
- import { Switch } from '@/components/ui/switch';
+import { 
+  GripVertical, 
+  Plus, 
+  Trash2, 
+  Settings2, 
+  Eye, 
+  Code2,
+  CheckCircle2,
+  ArrowLeft,
+  Save,
+  Loader2
+} from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { formService, Form, FormField } from '../services/formService';
+import { toast } from 'sonner';
+import { logger } from '@/core/observability/logger';
  
  interface FormField {
    id: string;
