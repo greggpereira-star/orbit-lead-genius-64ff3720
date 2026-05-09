@@ -39,11 +39,12 @@ export function AppLayout() {
      'PROFILE_LOADING',
      'TENANT_VALIDATING',
      'TENANT_RECOVERING',
-     'MEMBERSHIP_RECOVERING',
-     'ROLE_RECOVERING',
-     'PERMISSIONS_RECOVERING',
-     'DASHBOARD_BOOTSTRAP'
-   ].includes(state as string);
+    'MEMBERSHIP_RECOVERING',
+    'ROLE_RECOVERING',
+    'PERMISSIONS_RECOVERING',
+    'DASHBOARD_BOOTSTRAP',
+    'WORKSPACE_READY'
+  ].includes(state as string);
 
    if (isLoadingState) {
     const getMessage = () => {
