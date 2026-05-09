@@ -43,7 +43,7 @@
  
      initAuth();
  
-     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
        if (session?.user) {
          await handleUserSession(session.user);
        } else {
