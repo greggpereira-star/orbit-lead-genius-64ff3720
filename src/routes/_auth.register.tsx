@@ -143,7 +143,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
                 type="submit"
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating account...' : 'Get Started Free'}
+                 {state === 'CREATING_ACCOUNT' ? 'Iniciando Workspace...' : isLoading ? 'Processando...' : 'Get Started Free'}
               </button>
              <p className="text-xs text-center text-muted-foreground">
                Already have an account?{' '}
