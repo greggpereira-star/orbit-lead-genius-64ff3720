@@ -107,7 +107,7 @@ import { Badge } from '@/components/ui/badge';
                </div>
                <div className="space-y-2">
                  <Label className="text-xs font-bold uppercase text-muted-foreground">Lead Source (Manual Override)</Label>
-                 <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+                  <select className="w-full h-10 rounded-md border border-input bg-input px-3 py-2 text-sm font-medium text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
                    <option value="direct">Direct / Manual</option>
                    <option value="referral">Referral</option>
                    <option value="inbound">Inbound Content</option>
@@ -162,18 +162,18 @@ import { Badge } from '@/components/ui/badge';
                </TableRow>
              ) : (
                leads.map((lead) => (
-                 <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50 transition-colors group">
+                  <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/80 odd:bg-muted/30 transition-colors group">
                    <TableCell className="font-medium p-0">
                      <Link to="/leads/$id" params={{ id: lead.id }} className="block p-4">
-                       <div className="text-sm">{lead.name || 'Unnamed Lead'}</div>
-                       <div className="text-[11px] text-muted-foreground font-normal">{lead.email}</div>
+                        <div className="text-sm font-bold text-foreground">{lead.name || 'Unnamed Lead'}</div>
+                        <div className="text-[11px] text-muted-foreground font-semibold">{lead.email}</div>
                      </Link>
                    </TableCell>
                  <TableCell>
-                   <div className="flex items-center gap-2">
-                     {getSourceIcon(lead.source || lead.utm_source || 'Direct')}
-                     <span className="text-xs">{lead.source || lead.utm_source || 'Direct'}</span>
-                   </div>
+                    <div className="flex items-center gap-2">
+                      {getSourceIcon(lead.source || lead.utm_source || 'Direct')}
+                      <span className="text-xs font-semibold">{lead.source || lead.utm_source || 'Direct'}</span>
+                    </div>
                  </TableCell>
                  <TableCell>
                    <Badge variant="secondary" className="capitalize text-[10px] py-0">{lead.status}</Badge>
