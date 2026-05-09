@@ -1,4 +1,4 @@
- import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { Outlet, createFileRoute, redirect, useRouter } from '@tanstack/react-router';
  import { useEffect } from 'react';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
@@ -16,35 +16,43 @@
    component: AppLayout,
  });
  
- function AppLayout() {
-   const { isAuthenticated, isLoading, company } = useAuth();
- 
-   useEffect(() => {
-     if (isAuthenticated && company) {
-       tracker.init(company.id);
-     }
-   }, [isAuthenticated, company]);
- 
-   if (isLoading) {
-     return <div className="flex h-screen items-center justify-center">Loading...</div>;
-   }
- 
-   if (!isAuthenticated) {
-     throw redirect({ to: '/login' });
-   }
- 
+function AppLayout() {
+  const { isAuthenticated, isLoading, company } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated && company) {
+      tracker.init(company.id);
+    }
+  }, [isAuthenticated, company?.id]);
+
+  if (isLoading) {
     return (
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <div className="flex flex-col h-screen">
-            <Topbar />
-            <main className="flex-1 overflow-auto p-6">
-              <Outlet />
-            </main>
-          </div>
-        </SidebarInset>
-        <CommandPalette />
-      </SidebarProvider>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground italic">Verifying session...</p>
+        </div>
+      </div>
     );
- }
+  }
+
+  if (!isAuthenticated) {
+    throw redirect({ to: '/login' });
+  }
+
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <div className="flex flex-col h-screen overflow-hidden">
+          <Topbar />
+          <main className="flex-1 overflow-auto p-6 bg-background/50">
+            <Outlet />
+          </main>
+        </div>
+      </SidebarInset>
+      <CommandPalette />
+    </SidebarProvider>
+  );
+}
