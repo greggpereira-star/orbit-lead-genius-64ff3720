@@ -1,6 +1,7 @@
- import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+  import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
  import * as React from 'react';
- import { useState } from 'react';
+  import { useState, useMemo } from 'react';
+  import { toast } from 'sonner';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
@@ -20,29 +21,34 @@
    const [companyName, setCompanyName] = useState('');
    const [isLoading, setIsLoading] = useState(false);
  
-   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-     e.preventDefault();
-     setIsLoading(true);
-     try {
-       await signup(email, password, companyName);
-               <div className="space-y-2">
-                 <Label htmlFor="password">Password</Label>
-                 <Input 
-                   id="password" 
-                   type="password" 
-                   placeholder="••••••••" 
-                   required 
-                   value={password}
-                   onChange={(e) => setPassword(e.target.value)}
-                 />
-               </div>
-       navigate({ to: '/dashboard' });
-     } catch (error) {
-       console.error(error);
-     } finally {
-       setIsLoading(false);
-     }
-   };
+    const passwordStrength = useMemo(() => {
+      if (!password) return null;
+      let strength = 0;
+      if (password.length >= 8) strength++;
+      if (/[A-Z]/.test(password)) strength++;
+      if (/[0-9]/.test(password)) strength++;
+      if (/[^A-Za-z0-9]/.test(password)) strength++;
+      return strength;
+    }, [password]);
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (passwordStrength !== null && passwordStrength < 2) {
+        toast.error('Please choose a stronger password');
+        return;
+      }
+      setIsLoading(true);
+      try {
+        await signup(email, password, companyName);
+        toast.success('Account created! Please check your email to verify.');
+        navigate({ to: '/dashboard' });
+      } catch (error: any) {
+        console.error(error);
+        toast.error(error.message || 'Failed to create account');
+      } finally {
+        setIsLoading(false);
+      }
+    };
  
    return (
      <div className="space-y-6">
@@ -65,17 +71,45 @@
                  onChange={(e) => setCompanyName(e.target.value)}
                />
              </div>
-             <div className="space-y-2">
-               <Label htmlFor="email">Work Email</Label>
-               <Input 
-                 id="email" 
-                 type="email" 
-                 placeholder="name@company.com" 
-                 required 
-                 value={email}
-                 onChange={(e) => setEmail(e.target.value)}
-               />
-             </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Work Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@company.com" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                {passwordStrength !== null && (
+                  <div className="flex gap-1 mt-1">
+                    {[1, 2, 3, 4].map((s) => (
+                      <div 
+                        key={s} 
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                          s <= passwordStrength 
+                            ? passwordStrength <= 1 ? 'bg-rose-500' : passwordStrength <= 2 ? 'bg-amber-500' : 'bg-emerald-500'
+                            : 'bg-muted'
+                        }`} 
+                      />
+                    ))}
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground">
+                  Min. 8 characters with numbers and symbols
+                </p>
+              </div>
              <div className="space-y-3 pt-2">
                {[
                  'Lead intelligence & scoring',
