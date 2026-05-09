@@ -63,9 +63,15 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   }
 
   const captured = consumeLastCapturedError();
-  const diagnostic = captured instanceof Error 
-    ? captured.message 
-    : (captured ? String(captured) : `h3 swallowed SSR error: ${body}`);
+  let diagnostic: string;
+
+  if (captured instanceof Error) {
+    diagnostic = captured.stack || captured.message;
+  } else if (captured !== undefined && captured !== null) {
+    diagnostic = typeof captured === 'object' ? JSON.stringify(captured, null, 2) : String(captured);
+  } else {
+    diagnostic = `SSR Error Swallowed by h3: ${body}`;
+  }
     
   console.error(captured ?? new Error(diagnostic));
   return brandedErrorResponse(diagnostic);

@@ -11,8 +11,10 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
       throw error;
     }
     console.error(error);
-    const lastError = consumeLastCapturedError();
-    const diagnostic = lastError instanceof Error ? lastError.message : String(lastError);
+    const lastError = consumeLastCapturedError() || error;
+    const diagnostic = lastError instanceof Error 
+      ? (lastError.stack || lastError.message) 
+      : (lastError ? String(lastError) : 'Unknown Server Error');
     
     return new Response(renderErrorPage(diagnostic), {
       status: 500,
