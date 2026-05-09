@@ -217,13 +217,25 @@ import { FormPublish } from './FormPublish';
 
    useEffect(() => {
      if (existingForm) {
-       setFormConfig(existingForm);
-       setFields(existingForm.form_fields.sort((a, b) => a.sort_order - b.sort_order).map(f => ({ ...f, id: f.id })));
-     } else if (!formId && fields.length === 0) {
-       // Don't set default fields if we want to show templates
+       // Only update if we are not already editing or if the ID changed
+       setFormConfig(prev => {
+         if (prev.id === existingForm.id) return prev;
+         return existingForm;
+       });
+       
+       setFields(prev => {
+         // If we already have fields and the form ID matches, don't overwrite to avoid loop
+         if (prev.length > 0 && existingForm.form_fields.length > 0 && prev[0].form_id === existingForm.id) {
+           return prev;
+         }
+         return existingForm.form_fields
+           .sort((a, b) => a.sort_order - b.sort_order)
+           .map(f => ({ ...f, id: f.id }));
+       });
+     } else if (!formId && !showTemplates && fields.length === 0) {
        setShowTemplates(true);
      }
-   }, [existingForm, formId, fields.length]);
+   }, [existingForm, formId]);
 
     const saveMutation = useMutation({
       mutationFn: async () => {
@@ -606,9 +618,25 @@ import { FormPublish } from './FormPublish';
           </div>
         </TabsContent>
 
-        <TabsContent value="publish" className="pt-6">
-          {existingForm && <FormPublish form={existingForm} />}
-        </TabsContent>
+         <TabsContent value="publish" className="pt-6">
+           {existingForm && <FormPublish form={existingForm} />}
+         </TabsContent>
+
+         <TabsContent value="events" className="pt-6">
+           {formId && <FormEventsPanel formId={formId} />}
+         </TabsContent>
+
+         <TabsContent value="analytics" className="pt-6">
+           <div className="flex flex-col items-center justify-center h-64 text-center">
+             <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
+             <h3 className="text-lg font-bold">Analytics em Tempo Real</h3>
+             <p className="text-muted-foreground max-w-sm">Os dados de conversão e visualização aparecerão aqui conforme os leads forem capturados.</p>
+           </div>
+         </TabsContent>
+
+         <TabsContent value="submissions" className="pt-6">
+           {formId && <FormSubmissionsPanel formId={formId} />}
+         </TabsContent>
       </Tabs>
     </div>
   );
