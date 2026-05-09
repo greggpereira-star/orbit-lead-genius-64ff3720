@@ -1,39 +1,32 @@
-                 <div className="space-y-2 pt-4 border-t">
-                   <Label className="text-xs uppercase font-bold tracking-widest opacity-70">Post-Submission</Label>
-                   <div className="space-y-2">
-                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">Success Message</Label>
-                     <Input 
-                       value={formConfig.settings?.success_message} 
-                       onChange={(e) => setFormConfig({
-                         ...formConfig, 
-                         settings: { ...formConfig.settings!, success_message: e.target.value }
-                       })}
-                       placeholder="Thank you for your interest!" 
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">Redirect URL (Optional)</Label>
-                     <Input 
-                       value={formConfig.settings?.redirect_url || ''} 
-                       onChange={(e) => setFormConfig({
-                         ...formConfig, 
-                         settings: { ...formConfig.settings!, redirect_url: e.target.value }
-                       })}
-                       placeholder="https://example.com/thanks" 
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">WhatsApp Number (Optional)</Label>
-                     <Input 
-                       value={formConfig.settings?.whatsapp_number || ''} 
-                       onChange={(e) => setFormConfig({
-                         ...formConfig, 
-                         settings: { ...formConfig.settings!, whatsapp_number: e.target.value }
-                       })}
-                       placeholder="5511999999999" 
-                     />
-                   </div>
-                 </div>
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { 
+  GripVertical, 
+  Plus, 
+  Trash2, 
+  Settings2, 
+  Eye, 
+  Code2,
+  CheckCircle2,
+  ArrowLeft,
+  Save,
+  Loader2
+} from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { formService, Form, FormField } from '../services/formService';
+import { toast } from 'sonner';
+import { logger } from '@/core/observability/logger';
+
+interface FormBuilderProps {
+  formId?: string;
+  onBack: () => void;
+}
 import React, { useState, useEffect } from 'react';
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
