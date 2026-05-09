@@ -1,3 +1,39 @@
+                <div className="space-y-4 pt-4 border-t">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-70">Post-Submission</Label>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Success Message</Label>
+                    <Input 
+                      value={formConfig.settings?.success_message} 
+                      onChange={(e) => setFormConfig({
+                        ...formConfig, 
+                        settings: { ...formConfig.settings!, success_message: e.target.value }
+                      })}
+                      placeholder="Thank you for your interest!" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Redirect URL (Optional)</Label>
+                    <Input 
+                      value={formConfig.settings?.redirect_url || ''} 
+                      onChange={(e) => setFormConfig({
+                        ...formConfig, 
+                        settings: { ...formConfig.settings!, redirect_url: e.target.value }
+                      })}
+                      placeholder="https://example.com/thanks" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">WhatsApp (Optional)</Label>
+                    <Input 
+                      value={formConfig.settings?.whatsapp_number || ''} 
+                      onChange={(e) => setFormConfig({
+                        ...formConfig, 
+                        settings: { ...formConfig.settings!, whatsapp_number: e.target.value }
+                      })}
+                      placeholder="5511999999999" 
+                    />
+                  </div>
+                </div>
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
