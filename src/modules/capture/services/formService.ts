@@ -101,7 +101,14 @@ export const formService = {
        .select()
        .single();
  
-     if (formError) throw formError;
+     if (formError) {
+       logger.error('Failed to create form', { error: formError, tenantId });
+       throw formError;
+     }
+ 
+     if (!newForm) {
+       throw new Error('Form creation failed: No data returned');
+     }
  
      if (fields.length > 0) {
        const fieldsWithFormId = fields.map((f, index) => ({
@@ -130,40 +137,76 @@ export const formService = {
    },
 
    async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
-     const { id, tenant_id, created_at, updated_at, form_fields, ...updateData } = form as any;
+     try {
+       logger.info('Updating form', { formId });
+       
+       const allowedFields = ['name', 'slug', 'description', 'status', 'type', 'settings'];
+       const updateData: any = {};
+       
+       allowedFields.forEach(key => {
+         if ((form as any)[key] !== undefined) {
+           updateData[key] = (form as any)[key];
+         }
+       });
  
-    const { error: formError } = await supabase
-      .from('forms')
-       .update(updateData)
-      .eq('id', formId);
-
-    if (formError) throw formError;
-
-    if (fields && fields.length > 0) {
-      await supabase.from('form_fields').delete().eq('form_id', formId);
-      
-        const fieldsWithFormId = fields.map((f, index) => ({
-          label: f.label,
-          name: f.name || f.label?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-          type: f.type,
-          required: !!f.required,
-          placeholder: f.placeholder || '',
-          options: f.options || [],
-          form_id: formId,
-          sort_order: index,
-          step_number: f.step_number || 1,
-          validation_rules: f.validation_rules || {},
-          logic_rules: f.logic_rules || {},
-          score_rules: f.score_rules || {}
-        }));
-
-      const { error: fieldsError } = await supabase
-        .from('form_fields')
-        .insert(fieldsWithFormId);
-
-      if (fieldsError) throw fieldsError;
-    }
-  },
+       if (updateData.slug === '') {
+         delete updateData.slug;
+       }
+ 
+       const { error: formError } = await supabase
+         .from('forms')
+         .update(updateData)
+         .eq('id', formId);
+ 
+       if (formError) {
+         logger.error('Form update error', { error: formError, formId });
+         throw formError;
+       }
+ 
+       logger.info('Updating form fields', { formId, fieldCount: fields?.length });
+       
+       const { error: deleteError } = await supabase
+         .from('form_fields')
+         .delete()
+         .eq('form_id', formId);
+ 
+       if (deleteError) {
+         logger.error('Failed to delete old fields', { error: deleteError, formId });
+         throw deleteError;
+       }
+ 
+       if (fields && fields.length > 0) {
+         const fieldsWithFormId = fields.map((f, index) => ({
+           label: f.label || 'Untitled Field',
+           name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+           type: f.type || 'text',
+           required: !!f.required,
+           placeholder: f.placeholder || '',
+           options: Array.isArray(f.options) ? f.options : [],
+           form_id: formId,
+           sort_order: index,
+           step_number: f.step_number || 1,
+           validation_rules: f.validation_rules || {},
+           logic_rules: f.logic_rules || {},
+           score_rules: f.score_rules || {}
+         }));
+ 
+         const { error: fieldsError } = await supabase
+           .from('form_fields')
+           .insert(fieldsWithFormId);
+ 
+         if (fieldsError) {
+           logger.error('Failed to insert fields', { error: fieldsError, formId });
+           throw fieldsError;
+         }
+       }
+       
+       logger.info('Form update complete', { formId });
+     } catch (error) {
+       logger.error('updateForm caught error', { error, formId });
+       throw error;
+     }
+   },
 
   async deleteForm(formId: string): Promise<void> {
     const { error } = await supabase.from('forms').delete().eq('id', formId);
