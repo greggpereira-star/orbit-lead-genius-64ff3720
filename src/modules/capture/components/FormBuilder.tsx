@@ -43,12 +43,93 @@ import { logger } from '@/core/observability/logger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
 
-interface FormBuilderProps {
-  formId?: string;
-  onBack: () => void;
-}
-
-export function FormBuilder({ formId, onBack }: FormBuilderProps) {
+ interface FormBuilderProps {
+   formId?: string;
+   onBack: () => void;
+ }
+ 
+ function SortableField({ field, index, onUpdate, onRemove }: { 
+   field: any, 
+   index: number, 
+   onUpdate: (index: number, data: any) => void,
+   onRemove: (id: string) => void
+ }) {
+   const {
+     attributes,
+     listeners,
+     setNodeRef,
+     transform,
+     transition,
+     isDragging
+   } = useSortable({ id: field.id });
+ 
+   const style = {
+     transform: CSS.Transform.toString(transform),
+     transition,
+     zIndex: isDragging ? 50 : undefined,
+     opacity: isDragging ? 0.5 : 1,
+   };
+ 
+   return (
+     <div 
+       ref={setNodeRef}
+       style={style}
+       className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
+     >
+       <div 
+         {...attributes} 
+         {...listeners}
+         className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors p-1"
+       >
+         <GripVertical className="h-5 w-5" />
+       </div>
+       
+       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+         <div className="space-y-1.5">
+           <Label className="text-xs">Field Label</Label>
+           <Input 
+             value={field.label} 
+             onChange={(e) => onUpdate(index, { label: e.target.value })}
+             className="h-9"
+           />
+         </div>
+         <div className="space-y-1.5">
+           <Label className="text-xs">Field Type</Label>
+           <select 
+             className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+             value={field.type}
+             onChange={(e) => onUpdate(index, { type: e.target.value })}
+           >
+             <option value="text">Text Input</option>
+             <option value="email">Email</option>
+             <option value="phone">Phone</option>
+             <option value="textarea">Textarea</option>
+             <option value="select">Dropdown</option>
+           </select>
+         </div>
+         <div className="flex items-center gap-4 pt-6">
+           <div className="flex items-center gap-2">
+             <Switch 
+               checked={field.required} 
+               onCheckedChange={(val) => onUpdate(index, { required: val })}
+             />
+             <span className="text-xs font-medium">Required</span>
+           </div>
+           <Button 
+             variant="ghost" 
+             size="icon" 
+             className="h-8 w-8 text-muted-foreground hover:text-destructive"
+             onClick={() => onRemove(field.id)}
+           >
+             <Trash2 className="h-4 w-4" />
+           </Button>
+         </div>
+       </div>
+     </div>
+   );
+ }
+ 
+ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
@@ -213,7 +294,7 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
                            field={field} 
                            index={index}
                            onRemove={removeField}
-                           onUpdate={(idx, data) => {
+                           onUpdate={(idx: number, data: any) => {
                              const newFields = [...fields];
                              newFields[idx] = { ...newFields[idx], ...data };
                              setFields(newFields);
