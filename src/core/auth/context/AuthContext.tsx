@@ -49,7 +49,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>('INITIALIZING');
   const [user, setUser] = useState<User | null>(null);
-  const [company, setCompany] = useState<Company | null>(null);
+   const [company, setCompany] = useState<Company | null>(null);
+   const [membership, setMembership] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const traceId = useMemo(() => Math.random().toString(36).substring(2, 15), []);
 
