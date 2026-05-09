@@ -23,6 +23,8 @@ import {
     FileText,
     Workflow
  } from 'lucide-react';
+  import { FormEventsPanel } from './events/FormEventsPanel';
+  import { FormSubmissionsPanel } from './events/FormSubmissionsPanel';
  import {
    DndContext,
    closestCenter,
