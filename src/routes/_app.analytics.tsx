@@ -66,9 +66,40 @@ const funnelData = [
 function AnalyticsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Marketing Analytics</h1>
-        <p className="text-muted-foreground text-sm">Measure ROI and channel performance across your campaigns.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Intelligence Dashboard</h1>
+          <p className="text-muted-foreground text-sm font-medium">Enterprise performance metrics and real-time attribution.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="h-8 gap-1.5 px-3 font-semibold border-primary/20 bg-primary/5 text-primary">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            Live Data
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        {kpis.map((kpi) => (
+          <Card key={kpi.title} className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <kpi.icon className={cn("h-4 w-4", kpi.color)} />
+                <span className={cn(
+                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5",
+                  kpi.trend === 'up' ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                )}>
+                  {kpi.trend === 'up' ? <ArrowUpRight className="h-2 w-2" /> : <ArrowDownRight className="h-2 w-2" />}
+                  {kpi.change}
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{kpi.title}</p>
+                <p className="text-lg font-bold">{kpi.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
