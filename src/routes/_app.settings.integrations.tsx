@@ -1,4 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +55,17 @@ const integrations = [
 ];
 
 function IntegrationsSettings() {
+  const { company } = useAuth();
+  const [cvConfig, setCvConfig] = useState({ domain: '', email: '', api_token: '' });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveCV = async () => {
+    if (!company) return;
+    setIsSaving(true);
+    await cvcrmService.saveConfig(company.id, cvConfig);
+    setIsSaving(false);
+  };
+
   const trackingScript = `<script>
   (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -162,17 +176,34 @@ function IntegrationsSettings() {
                             <div className="space-y-2">
                               <Label htmlFor="cv-domain" className="text-xs uppercase font-bold text-muted-foreground">Domain Subdomain</Label>
                               <div className="flex items-center gap-2">
-                                <Input id="cv-domain" placeholder="mycompany" />
+                                <Input 
+                                  id="cv-domain" 
+                                  placeholder="mycompany" 
+                                  value={cvConfig.domain}
+                                  onChange={(e) => setCvConfig({ ...cvConfig, domain: e.target.value })}
+                                />
                                 <span className="text-xs font-medium text-muted-foreground">.cvcrm.com.br</span>
                               </div>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="cv-email" className="text-xs uppercase font-bold text-muted-foreground">Integration Email</Label>
-                              <Input id="cv-email" type="email" placeholder="api@company.com" />
+                              <Input 
+                                id="cv-email" 
+                                type="email" 
+                                placeholder="api@company.com" 
+                                value={cvConfig.email}
+                                onChange={(e) => setCvConfig({ ...cvConfig, email: e.target.value })}
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="cv-token" className="text-xs uppercase font-bold text-muted-foreground">API Token</Label>
-                              <Input id="cv-token" type="password" placeholder="••••••••" />
+                              <Input 
+                                id="cv-token" 
+                                type="password" 
+                                placeholder="••••••••" 
+                                value={cvConfig.api_token}
+                                onChange={(e) => setCvConfig({ ...cvConfig, api_token: e.target.value })}
+                              />
                             </div>
                           </>
                         ) : (
@@ -201,8 +232,12 @@ function IntegrationsSettings() {
                     <Button variant="ghost" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold" onClick={() => toast.error('Integration disconnected')}>
                       Disconnect
                     </Button>
-                    <Button className="font-bold" onClick={() => toast.success('Configuration saved')}>
-                      Save & Test Connection
+                    <Button 
+                      className="font-bold" 
+                      disabled={isSaving}
+                      onClick={() => app.id === 'cvcrm' ? handleSaveCV() : toast.success('Configuration saved')}
+                    >
+                      {isSaving ? 'Saving...' : 'Save & Test Connection'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
