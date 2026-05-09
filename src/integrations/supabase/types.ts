@@ -155,6 +155,215 @@ export type Database = {
         }
         Relationships: []
       }
+      form_analytics: {
+        Row: {
+          created_at: string
+          event_type: string
+          form_id: string
+          id: string
+          metadata: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          form_id: string
+          id?: string
+          metadata?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          form_id?: string
+          id?: string
+          metadata?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_analytics_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_analytics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_fields: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          label: string
+          logic_rules: Json | null
+          name: string
+          options: Json | null
+          placeholder: string | null
+          required: boolean | null
+          score_rules: Json | null
+          sort_order: number
+          step_number: number
+          type: string
+          updated_at: string
+          validation_rules: Json | null
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          label: string
+          logic_rules?: Json | null
+          name: string
+          options?: Json | null
+          placeholder?: string | null
+          required?: boolean | null
+          score_rules?: Json | null
+          sort_order?: number
+          step_number?: number
+          type: string
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          label?: string
+          logic_rules?: Json | null
+          name?: string
+          options?: Json | null
+          placeholder?: string | null
+          required?: boolean | null
+          score_rules?: Json | null
+          sort_order?: number
+          step_number?: number
+          type?: string
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          answers: Json
+          created_at: string
+          form_id: string
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          score_total: number | null
+          tenant_id: string
+          tracking_data: Json | null
+        }
+        Insert: {
+          answers: Json
+          created_at?: string
+          form_id: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          score_total?: number | null
+          tenant_id: string
+          tracking_data?: Json | null
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          form_id?: string
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          score_total?: number | null
+          tenant_id?: string
+          tracking_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          settings: Json
+          slug: string
+          status: string
+          tenant_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          settings?: Json
+          slug: string
+          status?: string
+          tenant_id: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          settings?: Json
+          slug?: string
+          status?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_assets: {
         Row: {
           asset_type: string
