@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute, redirect, useRouter } from '@tanstack/react-router';
- import { useEffect } from 'react';
+ import { useEffect, useState } from 'react';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
  import { AppSidebar } from '@/design-system/components/AppSidebar';
@@ -17,8 +17,16 @@ import { Outlet, createFileRoute, redirect, useRouter } from '@tanstack/react-ro
  });
  
 function AppLayout() {
-  const { isAuthenticated, isLoading, company } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, company } = useAuth();
   const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthLoading) {
+      const timer = setTimeout(() => setIsReady(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthLoading]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -32,7 +40,7 @@ function AppLayout() {
     }
   }, [isAuthenticated, company?.id]);
 
-  if (isLoading) {
+  if (isAuthLoading || !isReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
