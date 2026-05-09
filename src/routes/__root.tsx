@@ -121,8 +121,18 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    console.log("!!! Application Root Mounted !!!");
     logger.info("Application Root Mounted");
     initTracking();
+
+    window.onerror = (message, source, lineno, colno, error) => {
+      console.error("!!! UNCAUGHT ERROR !!!", { message, source, lineno, colno, error });
+      return false;
+    };
+
+    window.onunhandledrejection = (event) => {
+      console.error("!!! UNHANDLED REJECTION !!!", event.reason);
+    };
   }, []);
 
   return (
