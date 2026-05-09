@@ -64,7 +64,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
     const markWorkspaceAsReady = useCallback((userId: string, tenant_id: string, membership_id: string) => {
       if (typeof window === 'undefined') return;
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
+      const payload = {
         user_id: userId,
         tenant_id,
         membership_id,
@@ -74,13 +74,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         validated_at: Date.now(),
         expires_at: Date.now() + (1000 * 60 * 60 * 24 * 7), // 7 days
         version: SCHEMA_VERSION
-      }));
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+      logger.info('WorkspaceReadinessCache: Saved snapshot', { tenant_id });
     }, [SCHEMA_VERSION]);
 
     const clearWorkspaceReady = useCallback(() => {
       if (typeof window === 'undefined') return;
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem('workspace_ready_v1');
+      logger.info('WorkspaceReadinessCache: Cleared snapshot');
     }, []);
 
   const handleAuthFailure = useCallback((msg: string, logError = true) => {
