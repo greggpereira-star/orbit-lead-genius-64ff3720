@@ -1,6 +1,7 @@
- import { createFileRoute } from '@tanstack/react-router';
- import { KanbanBoard } from '@/modules/crm/components/KanbanBoard';
- import { Button } from '@/components/ui/button';
+  import { createFileRoute } from '@tanstack/react-router';
+  import { KanbanBoard } from '@/modules/crm/components/KanbanBoard';
+  import { Button } from '@/components/ui/button';
+  import { ErrorBoundary } from '@/components/error/ErrorBoundary';
  import { Plus, LayoutGrid, List } from 'lucide-react';
  import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
  
