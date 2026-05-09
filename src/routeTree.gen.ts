@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/_auth.forgot-password'
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
@@ -44,6 +46,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -52,6 +59,11 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
 const AppWhatsappRoute = AppWhatsappRouteImport.update({
@@ -146,8 +158,10 @@ export interface FileRoutesByFullPath {
   '/pipeline': typeof AppPipelineRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
+  '/reset-password': typeof AuthResetPasswordRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -166,8 +180,10 @@ export interface FileRoutesByTo {
   '/leads': typeof AppLeadsRouteWithChildren
   '/pipeline': typeof AppPipelineRoute
   '/whatsapp': typeof AppWhatsappRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
+  '/reset-password': typeof AuthResetPasswordRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -190,8 +206,10 @@ export interface FileRoutesById {
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/whatsapp': typeof AppWhatsappRoute
+  '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
+  '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
@@ -213,8 +231,10 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/settings'
     | '/whatsapp'
+    | '/forgot-password'
     | '/login'
     | '/register'
+    | '/reset-password'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -233,8 +253,10 @@ export interface FileRouteTypes {
     | '/leads'
     | '/pipeline'
     | '/whatsapp'
+    | '/forgot-password'
     | '/login'
     | '/register'
+    | '/reset-password'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -256,8 +278,10 @@ export interface FileRouteTypes {
     | '/_app/pipeline'
     | '/_app/settings'
     | '/_app/whatsapp'
+    | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/register'
+    | '/_auth/reset-password'
     | '/_app/analytics/tv'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
@@ -297,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_auth/reset-password': {
+      id: '/_auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/register': {
       id: '/_auth/register'
       path: '/register'
@@ -309,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/forgot-password': {
+      id: '/_auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_app/whatsapp': {
@@ -497,13 +535,17 @@ const AppRouteChildren: AppRouteChildren = {
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface AuthRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -516,3 +558,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
