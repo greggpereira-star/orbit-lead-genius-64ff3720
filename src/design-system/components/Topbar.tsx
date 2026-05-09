@@ -16,20 +16,20 @@
  export function Topbar() {
    const { user, logout } = useAuth();
  
-   return (
-     <header className="h-16 border-b bg-background flex items-center justify-between px-6 sticky top-0 z-10">
-        <div className="flex items-center flex-1 max-w-md relative group">
-          <Search className="absolute left-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <div 
-            className="flex items-center w-full pl-10 pr-3 h-9 bg-muted/50 rounded-md border border-transparent hover:bg-muted/70 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer"
-            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-          >
-            <span className="text-sm text-muted-foreground flex-1">Search or jump to...</span>
-            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </div>
-        </div>
+    return (
+      <header className="h-16 border-b border-border/80 bg-card flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm backdrop-blur-md">
+         <div className="flex items-center flex-1 max-w-md relative group">
+           <Search className="absolute left-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+           <div 
+             className="flex items-center w-full pl-10 pr-3 h-9 bg-background rounded-md border border-input hover:border-border-foreground/20 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer"
+             onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+           >
+             <span className="text-sm text-muted-foreground flex-1 font-medium">Search or jump to...</span>
+             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-bold text-foreground opacity-100">
+               <span className="text-xs">⌘</span>K
+             </kbd>
+           </div>
+         </div>
        <div className="flex items-center gap-4">
          <Button variant="ghost" size="icon" className="relative">
            <Bell className="h-5 w-5 text-muted-foreground" />
