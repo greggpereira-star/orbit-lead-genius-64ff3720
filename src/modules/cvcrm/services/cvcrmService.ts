@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { healthService } from '@/modules/audit/services/healthService';
 import { toast } from 'sonner';
 
 /**
@@ -55,6 +56,10 @@ export const cvcrmService = {
       const { data, error } = await supabase.functions.invoke('sync-cvcrm', {
         body: { leadId, companyId }
       });
+
+      if (data?.success === false) {
+         await healthService.logIntegrationError(companyId, 'cvcrm', data.error);
+      }
 
       if (error) {
         console.error('Edge Function Error:', error);
