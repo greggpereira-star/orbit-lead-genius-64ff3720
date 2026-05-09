@@ -99,7 +99,18 @@
       .single();
 
     if (createError) {
-      logger.fatal('Critical Recovery Failure: Profile could not be repaired', { error: createError.message, userId });
+      // Critical: If this fails, the user is effectively locked out of the dashboard due to RLS.
+      logger.fatal('Critical Recovery Failure: Profile could not be repaired', { 
+        error: createError.message, 
+        userId,
+        code: createError.code,
+        details: createError.details
+      });
+      
+      if (createError.message.includes('row-level security policy')) {
+         throw new Error(`Security Fault: RLS denied profile creation. This is a system misconfiguration for UID: ${userId}`);
+      }
+      
       throw new Error(`Critical Fault: Profile recovery failed: ${createError.message}`);
     }
 
