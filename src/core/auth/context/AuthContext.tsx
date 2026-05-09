@@ -256,29 +256,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     };
   }, [loadTenantContext, handleAuthFailure, traceId]);
 
-  const login = async (email: string, password?: string): Promise<any> => {
-    setState('AUTHENTICATING');
-    const loadingToast = toast.loading('Authenticating credentials...');
-    
-    try {
-      const { data, error } = await getSupabase().auth.signInWithPassword({
-        email,
-        password: password || '',
-      });
-      
-      if (error) {
-        toast.error(error.message, { id: loadingToast });
-        throw error;
-      }
-      
-      logger.info('AuthTrace: Login successful', { email, traceId });
-      toast.success('Successfully signed in', { id: loadingToast });
-      return data;
-    } catch (err: any) {
-      handleAuthFailure(err.message, false);
-      throw err;
-    }
-  };
+   const login = async (email: string, password?: string): Promise<any> => {
+     setState('AUTHENTICATING');
+     const loadingToast = toast.loading('Autenticando credenciais...');
+     
+     try {
+       const { data, error } = await getSupabase().auth.signInWithPassword({
+         email,
+         password: password || '',
+       });
+       
+       if (error) {
+         if (error.message.includes('Email not confirmed')) {
+           toast.info('E-mail ainda não confirmado. Verifique sua caixa de entrada.', { id: loadingToast });
+           setState('EMAIL_SENT');
+           // Set the user email for the verify screen even if not logged in
+           setUser({ id: '', email, name: email.split('@')[0] });
+           throw error;
+         }
+         toast.error(error.message, { id: loadingToast });
+         throw error;
+       }
+       
+       logger.info('AuthTrace: Login successful', { email, traceId });
+       toast.success('Acesso liberado!', { id: loadingToast });
+       return data;
+     } catch (err: any) {
+       if (err.message.includes('Email not confirmed')) {
+         throw err;
+       }
+       handleAuthFailure(err.message, false);
+       throw err;
+     }
+   };
 
    const signup = async (email: string, password: string, companyName: string): Promise<any> => {
      setState('CREATING_ACCOUNT');
