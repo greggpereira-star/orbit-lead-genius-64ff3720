@@ -42,9 +42,28 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+function ErrorComponent({ error, reset }: { error: any; reset: () => void }) {
+  console.error("!!! Route Loading Error !!!", error);
   const router = useRouter();
+  
+  // Self-healing for chunk load failures
+  const isChunkError = error?.message?.includes('Failed to fetch dynamically imported module') || 
+                      error?.message?.includes('chunk load failed');
+
+  if (isChunkError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-sm text-center space-y-4">
+          <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin" />
+          <p className="font-bold text-sm">Atualizando aplicação...</p>
+          <p className="text-xs text-muted-foreground">Detectamos uma nova versão. Sincronizando ambiente enterprise.</p>
+          <Button onClick={() => window.location.reload()} size="sm">
+            Recarregar Agora
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
