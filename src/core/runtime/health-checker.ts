@@ -33,22 +33,23 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
      }
  
      const startAuth = performance.now();
-     const authRes = await fetch(`${config.supabaseUrl}/auth/v1/health`, {
-       headers: { apikey: config.supabaseAnonKey },
-       signal: AbortSignal.timeout(5000)
-     });
-     report.latency.auth = Math.round(performance.now() - startAuth);
-     report.checks.auth = authRes.ok;
-     if (!authRes.ok) report.details.auth = `Auth failed with status: ${authRes.status}`;
- 
-     const startDb = performance.now();
-     const dbRes = await fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
-       method: 'HEAD',
-       signal: AbortSignal.timeout(5000)
-     });
-     report.latency.database = Math.round(performance.now() - startDb);
-     report.checks.database = dbRes.ok;
-     if (!dbRes.ok) report.details.database = `Database REST failed with status: ${dbRes.status}`;
+      const [authRes, dbRes] = await Promise.all([
+        fetch(`${config.supabaseUrl}/auth/v1/health`, {
+          headers: { apikey: config.supabaseAnonKey },
+          signal: AbortSignal.timeout(5000)
+        }).catch(err => ({ ok: false, status: 0, error: err.message })),
+        fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(5000)
+        }).catch(err => ({ ok: false, status: 0, error: err.message }))
+      ]);
+
+      report.latency.auth = Math.round(performance.now() - startAuth);
+      report.checks.auth = (authRes as any).ok;
+      if (!(authRes as any).ok) report.details.auth = `Auth failed: ${(authRes as any).status || (authRes as any).error}`;
+
+      report.checks.database = (dbRes as any).ok;
+      if (!(dbRes as any).ok) report.details.database = `Database failed: ${(dbRes as any).status || (dbRes as any).error}`;
  
      if (!report.checks.auth || !report.checks.database) {
        report.status = report.checks.auth || report.checks.database ? 'degraded' : 'unhealthy';
