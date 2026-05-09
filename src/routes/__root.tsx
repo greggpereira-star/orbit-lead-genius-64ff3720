@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
  import { InfrastructureGuard } from "@/components/infra/InfrastructureGuard";
  import { RuntimeStatus } from "@/components/infra/RuntimeStatus";
  import { TenantBootstrap } from "@/components/auth/TenantBootstrap";
+ import { WorkspaceRecoveryMode } from "@/components/auth/WorkspaceRecoveryMode";
 import {
   Outlet,
   Link,
@@ -193,6 +194,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
        WORKSPACE_READY: 'FINALIZING',
      };
      return <TenantBootstrap status={statusMap[state as string] || 'BOOTSTRAPPING'} />;
+   }
+
+   if (state === 'RECOVERY_MODE') {
+     return <WorkspaceRecoveryMode />;
    }
  
    return (
