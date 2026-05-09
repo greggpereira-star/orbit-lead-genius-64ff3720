@@ -13,8 +13,12 @@ import {
   Code2,
   CheckCircle2,
   ArrowLeft,
-  Save,
-  Loader2
+   Save,
+   Loader2,
+   Globe
+ } from 'lucide-react';
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+ import { FormPublish } from './FormPublish';
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -109,9 +113,57 @@ export function FormBuilder({ formId, onBack }: FormBuilderProps) {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+   return (
+     <div className="space-y-6">
+       <div className="flex items-center justify-between">
+         <div className="flex items-center gap-4">
+           <Button variant="ghost" size="icon" onClick={onBack}>
+             <ArrowLeft className="h-5 w-5" />
+           </Button>
+           <div>
+             <CardTitle className="text-xl font-bold">{formId ? 'Edit Form' : 'New Form'}</CardTitle>
+             <CardDescription>Configure fields and settings</CardDescription>
+           </div>
+         </div>
+         <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={onBack}>Cancel</Button>
+           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="gap-2">
+             {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+             Save Form
+           </Button>
+         </div>
+       </div>
+ 
+       <Tabs defaultValue="builder" className="w-full">
+         <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-12 p-0 gap-8">
+           <TabsTrigger 
+             value="builder" 
+             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+           >
+             <Settings2 className="h-4 w-4" /> Builder
+           </TabsTrigger>
+           <TabsTrigger 
+             value="publish" 
+             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+             disabled={!formId}
+           >
+             <Globe className="h-4 w-4" /> Publicação
+           </TabsTrigger>
+         </TabsList>
+ 
+         <TabsContent value="builder" className="pt-6">
+           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+             {/* ... existing content ... */}
+           </div>
+         </TabsContent>
+ 
+         <TabsContent value="publish" className="pt-6">
+           {existingForm && <FormPublish form={existingForm} />}
+         </TabsContent>
+       </Tabs>
+     </div>
+   );
+ }
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
