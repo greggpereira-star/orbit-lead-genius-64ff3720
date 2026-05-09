@@ -18,7 +18,9 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
    const navigate = useNavigate();
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
-   const [isLoading, setIsLoading] = useState(false);
+   const [retryCount, setRetryCount] = useState(0);
+   const { login, state, error: authError } = useAuth();
+   const isLoading = state === 'AUTHENTICATING' || state === 'TENANT_LOADING';
  
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
