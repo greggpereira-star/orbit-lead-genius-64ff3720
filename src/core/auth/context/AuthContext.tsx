@@ -73,6 +73,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     }, [SCHEMA_VERSION]);
 
     const clearWorkspaceReady = useCallback(() => {
+      if (typeof window === 'undefined') return;
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem('workspace_ready_v1');
     }, []);
