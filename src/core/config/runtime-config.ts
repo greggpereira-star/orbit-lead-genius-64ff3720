@@ -8,26 +8,40 @@ const configSchema = z.object({
   appName: z.string().default('Enterprise Resilient CRM'),
 });
 
-export type RuntimeConfig = z.infer<typeof configSchema>;
+ export interface RuntimeConfig {
+   supabaseUrl: string;
+   supabaseAnonKey: string;
+   isDevelopment: boolean;
+   isProduction: boolean;
+   appName: string;
+   isValid: boolean;
+   errors?: string[];
+ }
 
 let configInstance: RuntimeConfig | null = null;
 
-export const getRuntimeConfig = (): RuntimeConfig => {
-  if (configInstance) return configInstance;
-
-  const rawConfig = {
-    supabaseUrl: import.meta.env.VITE_SUPABASE_URL || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_URL : process.env.VITE_SUPABASE_URL),
-    supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_ANON_KEY : process.env.VITE_SUPABASE_ANON_KEY),
-    isDevelopment: typeof import.meta.env.DEV !== 'undefined' ? import.meta.env.DEV : true,
-    isProduction: typeof import.meta.env.PROD !== 'undefined' ? import.meta.env.PROD : false,
-    appName: 'Enterprise Resilient CRM',
-  };
-
-  try {
-    configInstance = configSchema.parse(rawConfig);
-    return configInstance;
-  } catch (error) {
-    console.error('❌ Runtime Configuration Integrity Failure:', error);
-    throw error;
-  }
-};
+ export const getRuntimeConfig = (): RuntimeConfig => {
+   if (configInstance) return configInstance;
+ 
+   const rawConfig = {
+     supabaseUrl: import.meta.env.VITE_SUPABASE_URL || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_URL : process.env.VITE_SUPABASE_URL) || '',
+     supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || (typeof window !== 'undefined' ? (window as any)._env_?.VITE_SUPABASE_ANON_KEY : process.env.VITE_SUPABASE_ANON_KEY) || '',
+     isDevelopment: typeof import.meta.env.DEV !== 'undefined' ? import.meta.env.DEV : true,
+     isProduction: typeof import.meta.env.PROD !== 'undefined' ? import.meta.env.PROD : false,
+     appName: 'Enterprise Resilient CRM',
+   };
+ 
+   const result = configSchema.safeParse(rawConfig);
+   
+   configInstance = {
+     ...rawConfig,
+     isValid: result.success,
+     errors: result.success ? [] : result.error.errors.map(e => e.message),
+   } as RuntimeConfig;
+ 
+   if (!result.success) {
+     console.warn('⚠️ Runtime Configuration is incomplete:', configInstance.errors);
+   }
+ 
+   return configInstance;
+ };
