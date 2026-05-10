@@ -56,6 +56,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
 import { FormScoringPanel } from './FormScoringPanel';
 
+const makeOptionValue = (label: string) =>
+  label
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const normalizeDropdownOption = (option: any, index: number) => {
+  if (typeof option === 'string') {
+    return {
+      id: crypto.randomUUID(),
+      label: option,
+      value: makeOptionValue(option),
+      score: 0,
+      tag: null,
+      sort_order: index,
+      metadata: {}
+    };
+  }
+
+  const label = option?.label || option?.value || `Opção ${index + 1}`;
+  return {
+    ...option,
+    id: option?.id || crypto.randomUUID(),
+    label,
+    value: option?.value || makeOptionValue(label),
+    score: Number(option?.score || 0),
+    tag: option?.tag ?? null,
+    sort_order: index,
+    metadata: option?.metadata || {}
+  };
+};
+
+const normalizeFieldForEditor = (field: any, index: number) => {
+  const persistedOptions = Array.isArray(field.options_data) && field.options_data.length > 0
+    ? field.options_data
+    : Array.isArray(field.options)
+      ? field.options
+      : [];
+
+  return {
+    ...field,
+    id: field.id || crypto.randomUUID(),
+    name: field.name || `field_${index}`,
+    sort_order: index,
+    options: persistedOptions.map(normalizeDropdownOption)
+  };
+};
+
   interface FormBuilderProps {
     formId?: string;
     onBack: () => void;
