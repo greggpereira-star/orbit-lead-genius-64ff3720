@@ -715,32 +715,145 @@ export type Database = {
           },
         ]
       }
+      form_partial_submissions: {
+        Row: {
+          answers: Json | null
+          company_id: string
+          created_at: string | null
+          current_step_id: string | null
+          current_step_index: number | null
+          expires_at: string | null
+          form_id: string
+          form_slug: string
+          id: string
+          lead_id: string | null
+          score_preview: number | null
+          session_id: string
+          status: string
+          temperature_preview: string | null
+          tracking: Json | null
+          updated_at: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          answers?: Json | null
+          company_id: string
+          created_at?: string | null
+          current_step_id?: string | null
+          current_step_index?: number | null
+          expires_at?: string | null
+          form_id: string
+          form_slug: string
+          id?: string
+          lead_id?: string | null
+          score_preview?: number | null
+          session_id: string
+          status?: string
+          temperature_preview?: string | null
+          tracking?: Json | null
+          updated_at?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          answers?: Json | null
+          company_id?: string
+          created_at?: string | null
+          current_step_id?: string | null
+          current_step_index?: number | null
+          expires_at?: string | null
+          form_id?: string
+          form_slug?: string
+          id?: string
+          lead_id?: string | null
+          score_preview?: number | null
+          session_id?: string
+          status?: string
+          temperature_preview?: string | null
+          tracking?: Json | null
+          updated_at?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_partial_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_partial_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_partial_submissions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_scoring_rules: {
         Row: {
-          condition_value: string
+          company_id: string
+          condition: Json
           created_at: string | null
+          enabled: boolean | null
           field_id: string | null
           form_id: string
           id: string
-          score_points: number
+          recommended_action: string | null
+          rule_type: string
+          score_delta: number
+          step_id: string | null
+          tag_to_apply: string | null
+          temperature_override: string | null
+          updated_at: string | null
         }
         Insert: {
-          condition_value: string
+          company_id: string
+          condition?: Json
           created_at?: string | null
+          enabled?: boolean | null
           field_id?: string | null
           form_id: string
           id?: string
-          score_points?: number
+          recommended_action?: string | null
+          rule_type: string
+          score_delta?: number
+          step_id?: string | null
+          tag_to_apply?: string | null
+          temperature_override?: string | null
+          updated_at?: string | null
         }
         Update: {
-          condition_value?: string
+          company_id?: string
+          condition?: Json
           created_at?: string | null
+          enabled?: boolean | null
           field_id?: string | null
           form_id?: string
           id?: string
-          score_points?: number
+          recommended_action?: string | null
+          rule_type?: string
+          score_delta?: number
+          step_id?: string | null
+          tag_to_apply?: string | null
+          temperature_override?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "form_scoring_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "form_scoring_rules_field_id_fkey"
             columns: ["field_id"]
@@ -804,38 +917,54 @@ export type Database = {
       form_submissions: {
         Row: {
           answers: Json
-          created_at: string
+          company_id: string
+          created_at: string | null
           form_id: string
           id: string
+          ip_address: string | null
           lead_id: string | null
-          metadata: Json | null
-          score_total: number | null
-          tenant_id: string
-          tracking_data: Json | null
+          score: number | null
+          tags: string[] | null
+          temperature: string | null
+          tracking: Json | null
+          user_agent: string | null
         }
         Insert: {
           answers: Json
-          created_at?: string
+          company_id: string
+          created_at?: string | null
           form_id: string
           id?: string
+          ip_address?: string | null
           lead_id?: string | null
-          metadata?: Json | null
-          score_total?: number | null
-          tenant_id: string
-          tracking_data?: Json | null
+          score?: number | null
+          tags?: string[] | null
+          temperature?: string | null
+          tracking?: Json | null
+          user_agent?: string | null
         }
         Update: {
           answers?: Json
-          created_at?: string
+          company_id?: string
+          created_at?: string | null
           form_id?: string
           id?: string
+          ip_address?: string | null
           lead_id?: string | null
-          metadata?: Json | null
-          score_total?: number | null
-          tenant_id?: string
-          tracking_data?: Json | null
+          score?: number | null
+          tags?: string[] | null
+          temperature?: string | null
+          tracking?: Json | null
+          user_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "form_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "form_submissions_form_id_fkey"
             columns: ["form_id"]
@@ -850,17 +979,110 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      form_tag_rules: {
+        Row: {
+          company_id: string
+          condition: Json
+          created_at: string | null
+          form_id: string
+          id: string
+          tag_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          condition?: Json
+          created_at?: string | null
+          form_id: string
+          id?: string
+          tag_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          condition?: Json
+          created_at?: string | null
+          form_id?: string
+          id?: string
+          tag_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "form_submissions_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "form_tag_rules_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_tag_rules_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_temperature_rules: {
+        Row: {
+          color: string | null
+          company_id: string
+          created_at: string | null
+          form_id: string
+          id: string
+          max_score: number
+          min_score: number
+          name: string
+          priority: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          company_id: string
+          created_at?: string | null
+          form_id: string
+          id?: string
+          max_score: number
+          min_score: number
+          name: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          company_id?: string
+          created_at?: string | null
+          form_id?: string
+          id?: string
+          max_score?: number
+          min_score?: number
+          name?: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_temperature_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_temperature_rules_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
             referencedColumns: ["id"]
           },
         ]
       }
       forms: {
         Row: {
+          company_id: string
           created_at: string
           description: string | null
           id: string
@@ -868,12 +1090,12 @@ export type Database = {
           settings: Json
           slug: string
           status: string
-          tenant_id: string
           type: string
           type_v2: string | null
           updated_at: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           description?: string | null
           id?: string
@@ -881,12 +1103,12 @@ export type Database = {
           settings?: Json
           slug: string
           status?: string
-          tenant_id: string
           type?: string
           type_v2?: string | null
           updated_at?: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -894,7 +1116,6 @@ export type Database = {
           settings?: Json
           slug?: string
           status?: string
-          tenant_id?: string
           type?: string
           type_v2?: string | null
           updated_at?: string
@@ -902,7 +1123,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "forms_tenant_id_fkey"
-            columns: ["tenant_id"]
+            columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
@@ -1212,6 +1433,41 @@ export type Database = {
           },
         ]
       }
+      lead_scores: {
+        Row: {
+          change_reason: string | null
+          created_at: string | null
+          id: string
+          lead_id: string
+          metadata: Json | null
+          score: number
+        }
+        Insert: {
+          change_reason?: string | null
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          score: number
+        }
+        Update: {
+          change_reason?: string | null
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_scores_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_sync_logs: {
         Row: {
           company_id: string
@@ -1249,6 +1505,35 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          tag_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tags_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -1316,9 +1601,11 @@ export type Database = {
           name: string | null
           phone: string | null
           referrer: string | null
+          score: number | null
           source: string | null
           status: string | null
           sync_status: string | null
+          temperature: string | null
           updated_at: string
           utm_campaign: string | null
           utm_content: string | null
@@ -1346,9 +1633,11 @@ export type Database = {
           name?: string | null
           phone?: string | null
           referrer?: string | null
+          score?: number | null
           source?: string | null
           status?: string | null
           sync_status?: string | null
+          temperature?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -1376,9 +1665,11 @@ export type Database = {
           name?: string | null
           phone?: string | null
           referrer?: string | null
+          score?: number | null
           source?: string | null
           status?: string | null
           sync_status?: string | null
+          temperature?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
