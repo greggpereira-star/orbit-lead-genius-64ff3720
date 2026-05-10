@@ -88,14 +88,14 @@ serve(async (req) => {
 
     // 5. Send to CV.CRM
     const startTime = Date.now();
-    const apiUrl = `https://${config.subdomain}.cvcrm.com.br/api/cv/lead`;
+    const apiUrl = `https://${config.cvcrm_base_url}.cvcrm.com.br/api/cv/lead`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'token': config.encrypted_api_token,
-        'email': config.integration_user
+        'token': config.api_token,
+        'email': config.api_user
       },
       body: JSON.stringify(cvPayload)
     });
