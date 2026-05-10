@@ -650,6 +650,66 @@ export type Database = {
           },
         ]
       }
+      form_field_options: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          field_id: string
+          form_id: string
+          id: string
+          label: string
+          metadata: Json | null
+          score: number | null
+          sort_order: number
+          tag: string | null
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          field_id: string
+          form_id: string
+          id?: string
+          label: string
+          metadata?: Json | null
+          score?: number | null
+          sort_order: number
+          tag?: string | null
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          field_id?: string
+          form_id?: string
+          id?: string
+          label?: string
+          metadata?: Json | null
+          score?: number | null
+          sort_order?: number
+          tag?: string | null
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_options_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_field_options_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_fields: {
         Row: {
           created_at: string
@@ -2039,6 +2099,38 @@ export type Database = {
         Returns: {
           company_id: string
         }[]
+      }
+      save_form_core_v1: {
+        Args: {
+          p_company_id: string
+          p_description: string
+          p_form_id: string
+          p_name: string
+          p_settings: Json
+          p_slug: string
+          p_status: string
+          p_type?: string
+        }
+        Returns: string
+      }
+      save_form_fields_delta_v1: {
+        Args: {
+          p_company_id: string
+          p_fields_delete: string[]
+          p_fields_upsert: Json
+          p_form_id: string
+        }
+        Returns: undefined
+      }
+      save_form_options_delta_v1: {
+        Args: {
+          p_company_id: string
+          p_field_id: string
+          p_form_id: string
+          p_options_delete: string[]
+          p_options_upsert: Json
+        }
+        Returns: undefined
       }
       save_form_v2: {
         Args: {

@@ -154,7 +154,7 @@ import { FormScoringPanel } from './FormScoringPanel';
                onClick={() => {
                 const currentOptions = Array.isArray(field.options) ? field.options : [];
                 const newOption = {
-                  id: Math.random().toString(36).substr(2, 9),
+                  id: crypto.randomUUID(),
                   label: `Opção ${currentOptions.length + 1}`,
                   value: `opcao_${currentOptions.length + 1}`,
                   score: 0,
@@ -299,7 +299,7 @@ import { FormScoringPanel } from './FormScoringPanel';
             step.fields.forEach((field: any) => {
               newFields.push({
                 ...field,
-                id: Math.random().toString(36).substr(2, 9),
+                id: crypto.randomUUID(),
                 step_id: `step_${sIdx}`
               });
             });
@@ -308,7 +308,7 @@ import { FormScoringPanel } from './FormScoringPanel';
         } else if (template.fields) {
           setFields(template.fields.map((f: any) => ({
             ...f,
-            id: Math.random().toString(36).substr(2, 9)
+            id: crypto.randomUUID()
           })));
         }
         setShowTemplates(false);
@@ -318,6 +318,8 @@ import { FormScoringPanel } from './FormScoringPanel';
     }
   }, [existingForm, formId, template, initialType]);
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const saveMutation = useMutation({
       mutationFn: async () => {
         const traceId = `save_${Math.random().toString(36).substring(2, 10)}`;
@@ -326,87 +328,108 @@ import { FormScoringPanel } from './FormScoringPanel';
         if (!company?.id) {
           throw new Error('Empresa não identificada. Por favor, recarregue a página.');
         }
-  
-        // Delta Detection Logic
-        const hasDropdownChanges = fields.some((f, idx) => {
-          const orig = originalData?.fields.find(of => of.id === f.id);
-          return JSON.stringify(f.options) !== JSON.stringify(orig?.options);
-        });
+        
+        setIsSaving(true);
 
-        logger.info('SaveForm: Starting sequence', { 
-          traceId, 
-          formId, 
-          tenantId: company.id,
-          fieldCount: fields.length,
-          hasDropdownChanges
-        });
-  
-        const cleanedFields = fields.map((f, index) => ({
-          id: f.id && f.id.length > 20 ? f.id : undefined,
-          label: f.label || 'Campo sem nome',
-          name: f.name || `field_${index}`,
-          type: f.type || 'text',
-          required: !!f.required,
-          options: Array.isArray(f.options) ? f.options : [],
-          placeholder: f.placeholder || '',
-          sort_order: index,
-          step_number: f.step_number || 1,
-          step_id: f.step_id || undefined,
-          validation_rules: f.validation_rules || {},
-          logic_rules: f.logic_rules || {},
-          score_rules: f.score_rules || {}
-        }));
-  
-        const steps: any[] = (existingForm as any)?.form_steps || [];
-  
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`A operação demorou demais (30s). Trace ID: ${traceId}. Isso pode ser instabilidade na rede.`)), 30000)
-        );
-  
         try {
-          const savePromise = formId
-            ? formService.updateForm(formId, { ...formConfig, company_id: company.id }, cleanedFields, steps)
-            : formService.createForm(company.id, formConfig, cleanedFields);
-
-          const result = await Promise.race([savePromise, timeoutPromise]);
-
-          const duration = Date.now() - startedAt;
-          logger.info('SaveForm: Performance report', {
-            traceId,
-            duration_ms: duration,
-            field_count: fields.length,
-            kb_size: Math.round(JSON.stringify({ formConfig, cleanedFields }).length / 1024),
-            db_perf: (result as any)?.performance
+          // 1. Save CORE
+          logger.info(`[${traceId}] Step 1: Saving Form Core`);
+          const savedFormId = await formService.saveFormCore({
+            formId: formId || undefined,
+            companyId: company.id,
+            name: formConfig.name || 'Untitled Form',
+            slug: formConfig.slug || `form-${Date.now()}`,
+            description: formConfig.description,
+            status: formConfig.status || 'draft',
+            settings: formConfig.settings,
+            type: formConfig.type
           });
 
-          return result;
-        } catch (err: any) {
-          const duration = Date.now() - startedAt;
-          const errorDetail = err.message || 'Erro desconhecido';
-
-          logger.error('SaveForm: Critical failure', {
-            traceId,
-            error: errorDetail,
-            duration_ms: duration,
-            context: {
-              fieldCount: fields.length,
-              hasFormId: !!formId,
-              payloadSize: JSON.stringify({ formConfig, cleanedFields }).length
-            }
-          });
-
-          const draftKey = `leadflow_form_draft_${formId || 'new'}`;
-          localStorage.setItem(draftKey, JSON.stringify({
-            formConfig,
-            fields,
-            timestamp: Date.now(),
-            error: errorDetail,
-            traceId
+          // 2. Compute Fields Delta
+          const fieldsToDelete = originalData?.fields
+            .filter(of => !fields.some(f => f.id === of.id))
+            .map(of => of.id) || [];
+          
+          const fieldsToUpsert = fields.map((f, index) => ({
+            id: f.id,
+            label: f.label || 'Campo',
+            name: f.name || `field_${index}`,
+            type: f.type || 'text',
+            required: !!f.required,
+            placeholder: f.placeholder || '',
+            sort_order: index,
+            step_number: f.step_number || 1,
+            step_id: f.step_id && f.step_id.length > 20 ? f.step_id : undefined,
+            validation_rules: f.validation_rules || {},
+            logic_rules: f.logic_rules || {},
+            score_rules: f.score_rules || {}
           }));
 
-          const enhancedError = new Error(errorDetail);
+          logger.info(`[${traceId}] Step 2: Saving Fields Delta`, { 
+            upsertCount: fieldsToUpsert.length, 
+            deleteCount: fieldsToDelete.length 
+          });
+
+          await formService.saveFormFieldsDelta({
+            formId: savedFormId,
+            companyId: company.id,
+            fieldsUpsert: fieldsToUpsert,
+            fieldsDelete: fieldsToDelete
+          });
+
+          // 3. Save Options Delta for SELECT fields
+          const selectFields = fields.filter(f => f.type === 'select');
+          
+          for (const field of selectFields) {
+            // Tenta achar o ID real do field (após o upsert acima)
+            // Se o field é novo, precisamos do ID retornado ou gerado. 
+            // Como a RPC de fields não retorna IDs, e o front gera UUIDs curtos, 
+            // em uma implementação real precisaríamos garantir que o field.id é estável.
+             const currentOptions = Array.isArray(field.options) ? field.options : [];
+             if (!field.id) continue;
+            const originalField = originalData?.fields.find(of => of.id === field.id);
+            const originalOptions = originalField?.options_data || [];
+
+            const optionsToDelete = originalOptions
+              .filter((oo: any) => !currentOptions.some((co: any) => co.id === oo.id))
+              .map((oo: any) => oo.id);
+            
+            const optionsToUpsert = currentOptions.map((opt: any, index: number) => ({
+              id: opt.id,
+              label: typeof opt === 'string' ? opt : (opt.label || ''),
+              value: typeof opt === 'string' ? opt.toLowerCase() : (opt.value || ''),
+              score: opt.score || 0,
+              tag: opt.tag || null,
+              sort_order: index,
+              metadata: opt.metadata || {}
+            }));
+
+            if (optionsToUpsert.length > 0 || optionsToDelete.length > 0) {
+              logger.info(`[${traceId}] Step 3: Saving Options for field ${field.label}`);
+              await formService.saveFieldOptionsDelta({
+                formId: savedFormId,
+                companyId: company.id,
+                fieldId: field.id,
+                optionsUpsert: optionsToUpsert,
+                optionsDelete: optionsToDelete
+              });
+            }
+          }
+
+          const duration = Date.now() - startedAt;
+          logger.info(`[${traceId}] Save Complete`, { duration_ms: duration });
+          
+          return savedFormId;
+        } catch (err: any) {
+          setIsSaving(false);
+          const duration = Date.now() - startedAt;
+          logger.error(`[${traceId}] Save Failed`, { error: err.message, duration_ms: duration });
+          
+          const enhancedError = new Error(err.message || 'Erro ao salvar formulário');
           (enhancedError as any).traceId = traceId;
           throw enhancedError;
+        } finally {
+          setIsSaving(false);
         }
       },
     onSuccess: () => {
@@ -417,7 +440,16 @@ import { FormScoringPanel } from './FormScoringPanel';
       }
       
       toast.success(formId ? 'Formulário atualizado com sucesso' : 'Formulário criado com sucesso');
-      onBack();
+      // Apenas volta se não for edição (criação)
+      if (!formId) {
+        onBack();
+      } else {
+        // Se for edição, apenas atualiza o snapshot original para que o próximo save delta seja correto
+        setOriginalData({ 
+          config: formConfig, 
+          fields: JSON.parse(JSON.stringify(fields)) 
+        });
+      }
     },
     onError: (error: any) => {
       const traceId = error.traceId || 'N/A';
@@ -444,7 +476,7 @@ import { FormScoringPanel } from './FormScoringPanel';
   });
 
    const addField = () => {
-     const id = Math.random().toString(36).substr(2, 9);
+    const id = crypto.randomUUID();
      const newField: Partial<FormField> & { id: string } = {
        id,
        label: 'Novo Campo',
@@ -486,7 +518,7 @@ import { FormScoringPanel } from './FormScoringPanel';
      }));
      setFields(template.fields.map((f: any) => ({
        ...f,
-       id: Math.random().toString(36).substr(2, 9)
+      id: crypto.randomUUID()
      })));
      setShowTemplates(false);
    };
