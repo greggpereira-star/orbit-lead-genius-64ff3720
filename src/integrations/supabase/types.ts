@@ -2039,6 +2039,16 @@ export type Database = {
           company_id: string
         }[]
       }
+      save_form_v2: {
+        Args: {
+          p_company_id: string
+          p_fields: Json
+          p_form_data: Json
+          p_form_id: string
+          p_steps: Json
+        }
+        Returns: Json
+      }
       update_form_with_fields: {
         Args: { p_fields: Json; p_form_data: Json; p_form_id: string }
         Returns: undefined
