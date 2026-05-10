@@ -101,7 +101,13 @@ serve(async (req) => {
     });
 
     const latency = Date.now() - startTime;
-    const result = await response.json();
+    const responseText = await response.text();
+    let result: any;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      result = { raw_response: responseText };
+    }
 
     // 6. Register Log
     const { data: logRecord, error: logError } = await supabaseAdmin
