@@ -14,6 +14,7 @@
  }
  
  import { supabase } from '@/lib/supabase';
+ import { logger } from '@/core/observability/logger';
  import { calculateLeadScore } from '@/modules/ai/services/scoring';
 import { qualificationService } from '@/modules/ai/services/qualification';
   import { routingService } from '@/modules/crm/services/routingService';
