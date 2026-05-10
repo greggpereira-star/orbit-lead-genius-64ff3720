@@ -612,31 +612,34 @@ import { FormPublish } from './FormPublish';
                           placeholder="Thank you for your interest!" 
                         />
                       </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Redirect URL (Optional)</Label>
-                      <textarea
-                        className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono break-all"
-                        value={formConfig.settings?.redirect_url || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormConfig(prev => ({
-                            ...prev,
-                            settings: {
-                              ...(prev.settings || {
-                                submit_label: 'Submit',
-                                success_message: 'Thank you!',
-                                theme: 'premium-light',
-                                cv_crm_integration: false,
-                                capture_utms: true
-                              }),
-                              redirect_url: val
-                            }
-                          }));
-                        }}
-                        placeholder="https://example.com/thanks"
-                      />
-                      <p className="text-[10px] text-muted-foreground">Support for complex URLs (e.g., WhatsApp with parameters).</p>
-                    </div>
+                     <div className="space-y-2">
+                       <Label className="text-xs">Redirect URL (Optional)</Label>
+                       <textarea
+                         className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono break-all"
+                         value={formConfig.settings?.redirect_url || ''}
+                         onChange={(e) => {
+                           const val = e.target.value.trim();
+                           setFormConfig(prev => {
+                             const currentSettings = prev.settings || {
+                               submit_label: 'Submit',
+                               success_message: 'Thank you!',
+                               theme: 'premium-light',
+                               cv_crm_integration: false,
+                               capture_utms: true
+                             };
+                             return {
+                               ...prev,
+                               settings: {
+                                 ...currentSettings,
+                                 redirect_url: val
+                               }
+                             };
+                           });
+                         }}
+                         placeholder="https://api.whatsapp.com/send?phone=..."
+                       />
+                       <p className="text-[10px] text-muted-foreground">Cole o link completo do WhatsApp ou página de obrigado. O sistema agora suporta URLs longas e complexas.</p>
+                     </div>
                       <div className="space-y-2">
                         <Label className="text-xs">WhatsApp (Optional)</Label>
                         <Input 
