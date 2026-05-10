@@ -796,7 +796,7 @@ import { FormPublish } from './FormPublish';
                       <Badge className="bg-green-500">+40</Badge>
                     </div>
                     <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
-                      <span className="text-sm">Se "Investimento" for "> R$ 1,2M"</span>
+                       <span className="text-sm">Se "Investimento" for "{'>'} R$ 1,2M"</span>
                       <Badge className="bg-green-500">+40</Badge>
                     </div>
                   </div>
