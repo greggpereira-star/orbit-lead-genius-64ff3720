@@ -141,14 +141,14 @@ function EmbedDialog({ form }: { form: Form }) {
     </Dialog>
   );
 }
-import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formService, Form } from '../services/formService';
-import { useAuth } from '@/core/auth/hooks/useAuth';
+ import React from 'react';
+ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+ import { formService, Form } from '../services/formService';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
  import { Label } from '@/components/ui/label';
-import { 
+ import { 
    Plus, 
    FileText, 
    MoreVertical, 
@@ -164,6 +164,19 @@ import {
    RefreshCcw,
    CheckCircle2
  } from 'lucide-react';
+ import {
+   Dialog,
+   DialogContent,
+   DialogDescription,
+   DialogHeader,
+   DialogTitle,
+   DialogTrigger,
+ } from "@/components/ui/dialog";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Badge } from '@/components/ui/badge';
+ import { Input } from '@/components/ui/input';
+ import { toast } from 'sonner';
+ import { logger } from '@/core/observability/logger';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -171,19 +184,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { logger } from '@/core/observability/logger';
 
 interface FormListProps {
   onEdit: (id: string) => void;
