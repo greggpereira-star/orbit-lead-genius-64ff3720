@@ -152,7 +152,12 @@ export const formService = {
       p_fields: processedFields
     };
 
-    logger.info('Updating form with RPC', { formId, payload });
+     logger.info('Updating form with RPC', { 
+       formId, 
+       slug: form.slug,
+       redirect_url: form.settings?.redirect_url,
+       fieldCount: fields.length 
+     });
 
     const { error } = await supabase.rpc('update_form_with_fields', payload);
 

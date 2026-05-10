@@ -258,12 +258,18 @@ import { FormPublish } from './FormPublish';
       toast.success(formId ? 'Form updated' : 'Form created');
       onBack();
     },
-    onError: (error: any) => {
-      logger.error('Failed to save form', { error });
-      const message = error.message || 'Unknown error';
-      logger.error('Failed to save form', { error });
-      toast.error(`Failed to save form: ${message}`);
-    }
+     onError: (error: any) => {
+       console.error('Save error details:', error);
+       logger.error('Failed to save form', { 
+         error, 
+         message: error.message,
+         details: error.details,
+         hint: error.hint,
+         code: error.code
+       });
+       const message = error.message || 'Unknown error';
+       toast.error(`Erro ao salvar formulário: ${message}`);
+     }
   });
 
    const addField = () => {
