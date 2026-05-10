@@ -246,64 +246,74 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     );
   }
 
-   return (
-     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-       {forms?.map((form) => (
-        <Card key={form.id} className="group hover:shadow-md transition-all border-none shadow-sm overflow-hidden bg-card/50">
-          <div className="h-2 bg-primary/20 group-hover:bg-primary transition-colors" />
-          <CardHeader className="p-4 flex flex-row items-start justify-between space-y-0">
-            <div className="space-y-1">
-              <CardTitle className="text-base font-bold truncate max-w-[200px]">{form.name}</CardTitle>
-              <div className="flex items-center gap-2">
-                 <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0 h-4">
-                   {form.status}
-                 </Badge>
-                 <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0 h-4">
-                   {form.type === 'multi_step' ? 'Step-by-Step' : form.type === 'quiz' ? 'Quiz' : 'Normal'}
-                 </Badge>
-                <span className="text-[10px] text-muted-foreground">/{form.slug}</span>
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {forms?.map((form) => (
+        <Card key={form.id} className="group transition-all duration-300 border border-slate-200/60 shadow-sm hover:shadow-xl hover:-translate-y-1 bg-white overflow-hidden flex flex-col rounded-2xl">
+          <CardHeader className="p-5 flex flex-col space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
+                <FileText className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100">
+                    <MoreVertical className="h-4 w-4 text-slate-400" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-2xl border-slate-200/60">
+                  <DropdownMenuItem onClick={() => onEdit(form.id)} className="gap-2 rounded-lg py-2.5">
+                    <Edit3 className="h-4 w-4" /> Edit Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="gap-2 rounded-lg py-2.5">
+                    <Copy className="h-4 w-4" /> Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="gap-2 rounded-lg py-2.5">
+                    <BarChart3 className="h-4 w-4" /> Analytics
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2 rounded-lg py-2.5 text-destructive focus:text-destructive focus:bg-destructive/5" onClick={() => deleteMutation.mutate(form.id)}>
+                    <Trash2 className="h-4 w-4" /> Delete Form
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="space-y-1.5 min-w-0">
+              <CardTitle className="text-base font-bold text-slate-900 truncate pr-2 leading-tight">
+                {form.name}
+              </CardTitle>
+              <div className="flex items-center gap-2 overflow-hidden">
+                <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="text-[9px] uppercase font-bold tracking-widest px-2 py-0 h-4 min-w-fit">
+                  {form.status}
+                </Badge>
+                <span className="text-[10px] text-slate-400 font-medium truncate shrink-0">
+                  /{form.slug}
+                </span>
               </div>
             </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => onEdit(form.id)} className="gap-2">
-                  <Edit3 className="h-4 w-4" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
-                  <Copy className="h-4 w-4" /> Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
-                  <BarChart3 className="h-4 w-4" /> Analytics
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => deleteMutation.mutate(form.id)}>
-                  <Trash2 className="h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </CardHeader>
           
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex flex-col">
-                <span className="text-xs font-bold">0</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Leads</span>
+          <CardContent className="px-5 pb-5 pt-0 mt-auto">
+            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50/50 rounded-xl border border-slate-100 mb-5">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Leads</span>
+                <span className="text-sm font-black text-slate-900 leading-none">0</span>
               </div>
-              <div className="flex flex-col border-l pl-4">
-                <span className="text-xs font-bold">0%</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Conv.</span>
+              <div className="flex flex-col gap-0.5 border-l border-slate-200 pl-3">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Conv.</span>
+                <span className="text-sm font-black text-slate-900 leading-none">0%</span>
               </div>
             </div>
             
-            <div className="flex gap-2 mt-6">
-              <Button variant="outline" size="sm" className="flex-1 text-[10px] uppercase font-bold tracking-wider h-8 gap-1.5" onClick={() => window.open(`/f/${form.slug}`, '_blank')}>
-                <Eye className="h-3 w-3" /> Preview
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 text-[10px] uppercase font-bold tracking-widest h-9 gap-1.5 rounded-lg border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all" 
+                onClick={() => window.open(`/f/${form.slug}`, '_blank')}
+              >
+                <Eye className="h-3.5 w-3.5" /> Preview
               </Button>
               <EmbedDialog form={form} />
             </div>
