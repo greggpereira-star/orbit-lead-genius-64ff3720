@@ -135,7 +135,7 @@ export const formService = {
       score_rules: f.score_rules || {}
     }));
 
-    const { error } = await supabase.rpc('update_form_with_fields', {
+    const payload = {
       p_form_id: formId,
       p_form_data: {
         name: form.name,
@@ -146,7 +146,11 @@ export const formService = {
         description: form.description
       },
       p_fields: processedFields
-    });
+    };
+
+    logger.info('Updating form with RPC', { formId, payload });
+
+    const { error } = await supabase.rpc('update_form_with_fields', payload);
 
     if (error) {
       logger.error('Failed to update form with RPC', { error, formId });
