@@ -242,11 +242,11 @@ import { FormScoringPanel } from './FormScoringPanel';
            )}
          </div>
        )}
-     </div>
-   );
- }
- 
-   export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
+      </div>
+    );
+  }
+  
+  export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
    const [originalData, setOriginalData] = useState<{ config: any, fields: any[] } | null>(null);
  
   const { company } = useAuth();
