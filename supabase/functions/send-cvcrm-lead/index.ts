@@ -88,20 +88,26 @@ serve(async (req) => {
 
     // 5. Send to CV.CRM
     const startTime = Date.now();
-    const apiUrl = `https://${config.subdomain}.cvcrm.com.br/api/cv/lead`;
+    const apiUrl = `https://${config.cvcrm_base_url}.cvcrm.com.br/api/cv/lead`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'token': config.encrypted_api_token,
-        'email': config.integration_user
+        'token': config.api_token,
+        'email': config.api_user
       },
       body: JSON.stringify(cvPayload)
     });
 
     const latency = Date.now() - startTime;
-    const result = await response.json();
+    const responseText = await response.text();
+    let result: any;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      result = { raw_response: responseText };
+    }
 
     // 6. Register Log
     const { data: logRecord, error: logError } = await supabaseAdmin
