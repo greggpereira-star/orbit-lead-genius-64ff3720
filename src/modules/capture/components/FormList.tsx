@@ -217,9 +217,9 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
           <FileText className="h-8 w-8 text-primary/40" />
         </div>
         <div className="space-y-1">
-          <h3 className="font-bold text-lg">No forms created yet</h3>
+          <h3 className="font-bold text-lg">Nenhum formulário criado ainda</h3>
           <p className="text-muted-foreground text-sm max-w-xs">
-            Create your first high-converting form to start capturing leads today.
+            Crie seu primeiro formulário de alta conversão para começar a capturar leads hoje mesmo.
           </p>
         </div>
         <Button onClick={onCreate} className="gap-2">
