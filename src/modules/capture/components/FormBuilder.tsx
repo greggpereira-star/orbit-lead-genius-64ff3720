@@ -516,7 +516,7 @@ import { FormPublish } from './FormPublish';
                       <Label className="text-xs">Form Name</Label>
                       <Input 
                         value={formConfig.name} 
-                        onChange={(e) => setFormConfig({...formConfig, name: e.target.value})}
+                        onChange={(e) => setFormConfig(prev => ({...prev, name: e.target.value}))}
                         placeholder="E.g. Enterprise Contact" 
                       />
                     </div>
@@ -524,7 +524,7 @@ import { FormPublish } from './FormPublish';
                       <Label className="text-xs">Slug</Label>
                       <Input 
                         value={formConfig.slug} 
-                        onChange={(e) => setFormConfig({...formConfig, slug: e.target.value})}
+                        onChange={(e) => setFormConfig(prev => ({...prev, slug: e.target.value}))}
                         placeholder="e-g-enterprise-contact" 
                       />
                     </div>
@@ -532,10 +532,10 @@ import { FormPublish } from './FormPublish';
                       <Label className="text-xs">Submit Button Text</Label>
                       <Input 
                         value={formConfig.settings?.submit_label} 
-                        onChange={(e) => setFormConfig({
-                          ...formConfig, 
-                          settings: { ...formConfig.settings!, submit_label: e.target.value }
-                        })}
+                        onChange={(e) => setFormConfig(prev => ({
+                          ...prev, 
+                          settings: { ...(prev.settings || {}), submit_label: e.target.value }
+                        }))}
                         placeholder="E.g. Send" 
                       />
                     </div>
@@ -546,10 +546,10 @@ import { FormPublish } from './FormPublish';
                       </div>
                       <Switch 
                         checked={formConfig.settings?.capture_utms} 
-                        onCheckedChange={(val) => setFormConfig({
-                          ...formConfig, 
-                          settings: { ...formConfig.settings!, capture_utms: val }
-                        })}
+                        onCheckedChange={(val) => setFormConfig(prev => ({
+                          ...prev, 
+                          settings: { ...(prev.settings || {}), capture_utms: val }
+                        }))}
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -559,10 +559,10 @@ import { FormPublish } from './FormPublish';
                       </div>
                       <Switch 
                         checked={formConfig.status === 'published'} 
-                        onCheckedChange={(val) => setFormConfig({
-                          ...formConfig, 
+                        onCheckedChange={(val) => setFormConfig(prev => ({
+                          ...prev, 
                           status: val ? 'published' : 'draft'
-                        })}
+                        }))}
                       />
                     </div>
 
@@ -572,10 +572,10 @@ import { FormPublish } from './FormPublish';
                         <Label className="text-xs">Success Message</Label>
                         <Input 
                           value={formConfig.settings?.success_message} 
-                          onChange={(e) => setFormConfig({
-                            ...formConfig, 
-                            settings: { ...formConfig.settings!, success_message: e.target.value }
-                          })}
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev, 
+                            settings: { ...(prev.settings || {}), success_message: e.target.value }
+                          }))}
                           placeholder="Thank you for your interest!" 
                         />
                       </div>
@@ -583,10 +583,10 @@ import { FormPublish } from './FormPublish';
                         <Label className="text-xs">Redirect URL (Optional)</Label>
                         <Input 
                           value={formConfig.settings?.redirect_url || ''} 
-                          onChange={(e) => setFormConfig({
-                            ...formConfig, 
-                            settings: { ...formConfig.settings!, redirect_url: e.target.value }
-                          })}
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev, 
+                            settings: { ...(prev.settings || {}), redirect_url: e.target.value }
+                          }))}
                           placeholder="https://example.com/thanks" 
                         />
                       </div>
@@ -594,10 +594,10 @@ import { FormPublish } from './FormPublish';
                         <Label className="text-xs">WhatsApp (Optional)</Label>
                         <Input 
                           value={formConfig.settings?.whatsapp_number || ''} 
-                          onChange={(e) => setFormConfig({
-                            ...formConfig, 
-                            settings: { ...formConfig.settings!, whatsapp_number: e.target.value }
-                          })}
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev, 
+                            settings: { ...(prev.settings || {}), whatsapp_number: e.target.value }
+                          }))}
                           placeholder="5511999999999" 
                         />
                       </div>
