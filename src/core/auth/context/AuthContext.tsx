@@ -117,8 +117,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         // Determine if we should show the full bootstrap UI
         const isReadyCache = checkWorkspaceReadiness();
         
-        const isReadyCache = checkWorkspaceReadiness();
-        
         if (isReadyCache) {
           const snapshot = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
           logger.info('WorkspaceReadinessCache: High-performance hit. Pre-loading context.', { traceId });
