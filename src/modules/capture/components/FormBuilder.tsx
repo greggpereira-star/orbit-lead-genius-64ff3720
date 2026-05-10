@@ -237,11 +237,11 @@ import { FormScoringPanel } from './FormScoringPanel';
                   </div>
                 );
               })}
-           {(!field.options || field.options.length === 0) && (
-             <p className="text-[10px] text-muted-foreground italic">Nenhuma opção cadastrada. Clique em adicionar para começar.</p>
-           )}
-         </div>
-       )}
+            {(!field.options || field.options.length === 0) && (
+              <p className="text-[10px] text-muted-foreground italic">Nenhuma opção cadastrada. Clique em adicionar para começar.</p>
+            )}
+          </div>
+        )}
       </div>
     );
   }
