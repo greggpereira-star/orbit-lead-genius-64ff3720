@@ -663,6 +663,7 @@ export type Database = {
           required: boolean | null
           score_rules: Json | null
           sort_order: number
+          step_id: string | null
           step_number: number
           type: string
           updated_at: string
@@ -680,6 +681,7 @@ export type Database = {
           required?: boolean | null
           score_rules?: Json | null
           sort_order?: number
+          step_id?: string | null
           step_number?: number
           type: string
           updated_at?: string
@@ -697,6 +699,7 @@ export type Database = {
           required?: boolean | null
           score_rules?: Json | null
           sort_order?: number
+          step_id?: string | null
           step_number?: number
           type?: string
           updated_at?: string
@@ -705,6 +708,92 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_scoring_rules: {
+        Row: {
+          condition_value: string
+          created_at: string | null
+          field_id: string | null
+          form_id: string
+          id: string
+          score_points: number
+        }
+        Insert: {
+          condition_value: string
+          created_at?: string | null
+          field_id?: string | null
+          form_id: string
+          id?: string
+          score_points?: number
+        }
+        Update: {
+          condition_value?: string
+          created_at?: string | null
+          field_id?: string | null
+          form_id?: string
+          id?: string
+          score_points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_scoring_rules_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_scoring_rules_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_steps: {
+        Row: {
+          button_text: string | null
+          conditional_logic: Json | null
+          created_at: string | null
+          description: string | null
+          form_id: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          button_text?: string | null
+          conditional_logic?: Json | null
+          created_at?: string | null
+          description?: string | null
+          form_id: string
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          button_text?: string | null
+          conditional_logic?: Json | null
+          created_at?: string | null
+          description?: string | null
+          form_id?: string
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_steps_form_id_fkey"
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
@@ -781,6 +870,7 @@ export type Database = {
           status: string
           tenant_id: string
           type: string
+          type_v2: string | null
           updated_at: string
         }
         Insert: {
@@ -793,6 +883,7 @@ export type Database = {
           status?: string
           tenant_id: string
           type?: string
+          type_v2?: string | null
           updated_at?: string
         }
         Update: {
@@ -805,6 +896,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           type?: string
+          type_v2?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1647,7 +1739,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      form_type: "standard" | "multi_step" | "quiz" | "conversational"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1774,6 +1866,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      form_type: ["standard", "multi_step", "quiz", "conversational"],
+    },
   },
 } as const

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { FormBuilder } from '@/modules/capture/components/FormBuilder';
+ import { FormBuilder } from '@/modules/capture/components/FormBuilder';
+ import { FormTypeSelector } from '@/modules/capture/components/FormTypeSelector';
 import { FormList } from '@/modules/capture/components/FormList';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -9,14 +10,22 @@ import { Plus } from 'lucide-react';
    component: FormsPage,
  });
  
- function FormsPage() {
-  const [view, setView] = useState<'list' | 'builder'>('list');
-  const [editingId, setEditingId] = useState<string | undefined>(undefined);
-
-  const handleCreate = () => {
-    setEditingId(undefined);
-    setView('builder');
-  };
+  function FormsPage() {
+   const [view, setView] = useState<'list' | 'selector' | 'builder'>('list');
+   const [editingId, setEditingId] = useState<string | undefined>(undefined);
+   const [initialTemplate, setInitialTemplate] = useState<any>(null);
+   const [selectedType, setSelectedType] = useState<'standard' | 'multi_step' | 'quiz'>('standard');
+ 
+   const handleCreate = () => {
+     setEditingId(undefined);
+     setView('selector');
+   };
+ 
+   const handleTypeSelect = (type: 'standard' | 'multi_step' | 'quiz', template?: any) => {
+     setSelectedType(type);
+     setInitialTemplate(template);
+     setView('builder');
+   };
 
   const handleEdit = (id: string) => {
     setEditingId(id);
@@ -30,7 +39,7 @@ import { Plus } from 'lucide-react';
 
    return (
      <div className="space-y-6">
-      {view === 'list' ? (
+      {view === 'list' && (
         <>
           <div className="flex justify-between items-end">
             <div>
@@ -44,8 +53,17 @@ import { Plus } from 'lucide-react';
           </div>
           <FormList onEdit={handleEdit} onCreate={handleCreate} />
         </>
-      ) : (
-        <FormBuilder formId={editingId} onBack={handleBack} />
+      )}
+      {view === 'selector' && (
+        <FormTypeSelector onSelect={handleTypeSelect} onBack={handleBack} />
+      )}
+      {view === 'builder' && (
+        <FormBuilder 
+          formId={editingId} 
+          onBack={handleBack} 
+          initialType={selectedType}
+          template={initialTemplate}
+        />
       )}
      </div>
    );

@@ -18,10 +18,14 @@ import {
     Globe,
     ListPlus,
     X,
-    Activity,
-    BarChart3,
-    FileText,
-    Workflow
+   Activity,
+   BarChart3,
+   FileText,
+   Workflow,
+   Layers,
+   Trophy,
+   Target,
+   ChevronRight
  } from 'lucide-react';
   import { FormEventsPanel } from './events/FormEventsPanel';
   import { FormSubmissionsPanel } from './events/FormSubmissionsPanel';
@@ -51,10 +55,12 @@ import { logger } from '@/core/observability/logger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
 
- interface FormBuilderProps {
-   formId?: string;
-   onBack: () => void;
- }
+  interface FormBuilderProps {
+    formId?: string;
+    onBack: () => void;
+    initialType?: 'standard' | 'multi_step' | 'quiz';
+    template?: any;
+  }
  
  function SortableField({ field, index, onUpdate, onRemove }: { 
    field: any, 
@@ -190,7 +196,7 @@ import { FormPublish } from './FormPublish';
    );
  }
  
- export function FormBuilder({ formId, onBack }: FormBuilderProps) {
+  export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
@@ -199,7 +205,7 @@ import { FormPublish } from './FormPublish';
     name: 'Untitled Form',
     slug: '',
     status: 'draft',
-    type: 'traditional',
+    type: initialType || 'standard',
     settings: {
       submit_label: 'Submit',
       success_message: 'Thank you!',
@@ -224,9 +230,38 @@ import { FormPublish } from './FormPublish';
       );
       setShowTemplates(false);
     } else if (!formId) {
-      setShowTemplates(true);
+      if (template) {
+        setFormConfig(prev => ({
+          ...prev,
+          name: template.name,
+          type: template.type || initialType || 'standard',
+          settings: { ...prev.settings, ...template.settings }
+        }));
+        
+        if (template.steps) {
+          const newFields: any[] = [];
+          template.steps.forEach((step: any, sIdx: number) => {
+            step.fields.forEach((field: any) => {
+              newFields.push({
+                ...field,
+                id: Math.random().toString(36).substr(2, 9),
+                step_id: `step_${sIdx}`
+              });
+            });
+          });
+          setFields(newFields);
+        } else if (template.fields) {
+          setFields(template.fields.map((f: any) => ({
+            ...f,
+            id: Math.random().toString(36).substr(2, 9)
+          })));
+        }
+        setShowTemplates(false);
+      } else {
+        setShowTemplates(false);
+      }
     }
-  }, [existingForm, formId]);
+  }, [existingForm, formId, template, initialType]);
 
     const saveMutation = useMutation({
       mutationFn: async () => {
@@ -441,12 +476,26 @@ import { FormPublish } from './FormPublish';
 
       <Tabs defaultValue="builder" className="w-full">
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-12 p-0 gap-8">
-          <TabsTrigger 
-            value="builder" 
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
-          >
-            <Settings2 className="h-4 w-4" /> Builder
-          </TabsTrigger>
+           <TabsTrigger 
+             value="builder" 
+             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+           >
+             <Settings2 className="h-4 w-4" /> Builder
+           </TabsTrigger>
+           {formConfig.type === 'multi_step' && (
+             <TabsTrigger 
+               value="steps" 
+               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+             >
+               <Layers className="h-4 w-4" /> Steps
+             </TabsTrigger>
+           )}
+           <TabsTrigger 
+             value="scoring" 
+             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+           >
+             <Trophy className="h-4 w-4" /> Scoring
+           </TabsTrigger>
           <TabsTrigger 
             value="publish" 
             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
@@ -696,9 +745,69 @@ import { FormPublish } from './FormPublish';
            </div>
          </TabsContent>
 
-         <TabsContent value="submissions" className="pt-6">
-           {formId && <FormSubmissionsPanel formId={formId} />}
-         </TabsContent>
+          <TabsContent value="steps" className="pt-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold">Gerenciar Etapas</h3>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" /> Adicionar Etapa
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                {(template?.steps || [{ title: 'Etapa 1', description: 'Dados iniciais' }]).map((step: any, idx: number) => (
+                  <Card key={idx} className="border-none shadow-sm p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm">{step.title}</h4>
+                        <p className="text-xs text-muted-foreground">{step.description || 'Sem descrição'}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon"><Settings2 className="h-4 w-4" /></Button>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="scoring" className="pt-6">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold">Lead Scoring Inteligente</h3>
+                  <p className="text-xs text-muted-foreground">Defina pontuações automáticas com base nas respostas.</p>
+                </div>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" /> Nova Regra
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <Card className="p-4 border-dashed bg-muted/30">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
+                    <span>Regras Ativas</span>
+                    <span>Pontos</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
+                      <span className="text-sm">Se "Prazo" for "Agora"</span>
+                      <Badge className="bg-green-500">+40</Badge>
+                    </div>
+                    <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
+                       <span className="text-sm">Se "Investimento" for "{'>'} R$ 1,2M"</span>
+                      <Badge className="bg-green-500">+40</Badge>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="submissions" className="pt-6">
+            {formId && <FormSubmissionsPanel formId={formId} />}
+          </TabsContent>
       </Tabs>
     </div>
   );
