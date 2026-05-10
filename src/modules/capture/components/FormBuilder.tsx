@@ -377,24 +377,6 @@ const normalizeFieldForEditor = (field: any, index: number) => {
         setIsSaving(true);
 
         try {
-          // 1. Save CORE
-          logger.info(`[${traceId}] Step 1: Saving Form Core`);
-          const savedFormId = await formService.saveFormCore({
-            formId: formId || undefined,
-            companyId: company.id,
-            name: formConfig.name || 'Untitled Form',
-            slug: formConfig.slug || `form-${Date.now()}`,
-            description: formConfig.description,
-            status: formConfig.status || 'draft',
-            settings: formConfig.settings,
-            type: formConfig.type
-          });
-
-          // 2. Compute Fields Delta
-          const fieldsToDelete = originalData?.fields
-            .filter(of => !fields.some(f => f.id === of.id))
-            .map(of => of.id) || [];
-          
           const fieldsToUpsert = fields.map((f, index) => ({
             id: f.id,
             label: f.label || 'Campo',
@@ -411,18 +393,6 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             score_rules: f.score_rules || {}
           }));
 
-          logger.info(`[${traceId}] Step 2: Saving Fields Delta`, { 
-            upsertCount: fieldsToUpsert.length, 
-            deleteCount: fieldsToDelete.length 
-          });
-
-          await formService.saveFormFieldsDelta({
-            formId: savedFormId,
-            companyId: company.id,
-            fieldsUpsert: fieldsToUpsert,
-            fieldsDelete: fieldsToDelete
-          });
-
           const optionsByField = fields
             .filter((field) => field.type === 'select' && field.id)
             .map((field) => ({
@@ -430,23 +400,32 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               options: Array.isArray(field.options) ? field.options.map(normalizeDropdownOption) : []
             }));
 
-          logger.info(`[${traceId}] Step 3: Saving Dropdown Options Batch`, {
-            fieldCount: optionsByField.length,
-            optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0)
+          logger.info(`[${traceId}] Saving Form Builder atomically`, {
+            fieldCount: fieldsToUpsert.length,
+            dropdownFieldCount: optionsByField.length,
+            optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0),
           });
 
-          if (optionsByField.length > 0) {
-            await formService.saveFieldOptionsBatch({
-              formId: savedFormId,
-              companyId: company.id,
-              optionsByField
-            });
-          }
+          const saveResult = await formService.saveFormBuilder({
+            formId: formId || undefined,
+            companyId: company.id,
+            formData: {
+              name: formConfig.name || 'Untitled Form',
+              slug: formConfig.slug || `form-${Date.now()}`,
+              description: formConfig.description,
+              status: formConfig.status || 'draft',
+              settings: formConfig.settings,
+              type: formConfig.type || 'standard'
+            },
+            fields: fieldsToUpsert,
+            steps: existingForm?.form_steps || [],
+            optionsByField
+          });
 
           const duration = Date.now() - startedAt;
-          logger.info(`[${traceId}] Save Complete`, { duration_ms: duration });
+          logger.info(`[${traceId}] Save Complete`, { duration_ms: duration, db_trace_id: saveResult.trace_id, saved: saveResult });
           
-          return savedFormId;
+          return saveResult.form_id;
         } catch (err: any) {
           setIsSaving(false);
           const duration = Date.now() - startedAt;
