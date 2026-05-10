@@ -199,7 +199,7 @@ import { FormPublish } from './FormPublish';
     name: 'Untitled Form',
     slug: '',
     status: 'draft',
-    type: 'traditional',
+     type: 'standard',
     settings: {
       submit_label: 'Submit',
       success_message: 'Thank you!',

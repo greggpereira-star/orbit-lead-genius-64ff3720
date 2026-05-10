@@ -157,7 +157,7 @@ export const formService = {
       placeholder: f.placeholder || '',
       options: Array.isArray(f.options) ? f.options : [],
       sort_order: index,
-      step_number: f.step_number || 1,
+       step_id: f.step_id,
       validation_rules: f.validation_rules || {},
       logic_rules: f.logic_rules || {},
       score_rules: f.score_rules || {}
