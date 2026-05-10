@@ -39,7 +39,7 @@
       // If formId is a UUID, use the embed route. Otherwise use slug route.
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId);
       const url = isUuid 
-        ? new URL(`${baseUrl}/embed/form/${formId}`)
+        ? new URL(`${baseUrl}/embed-form/${formId}`)
         : new URL(`${baseUrl}/f/${formId}`);
       
       Object.keys(tracking).forEach(key => {

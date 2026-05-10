@@ -70,11 +70,11 @@ export function FormPublish({ form }: FormPublishProps) {
     label: "Fale com um consultor"
   });
 </script>`,
-    iframe: `<iframe
-  src="${window.location.origin}/embed/form/${form.id}"
-  width="100%"
-  height="700"
-  style="border:0; border-radius:16px;"
+    iframe: `<iframe 
+  src="${window.location.origin}/embed-form/${form.id}" 
+  width="100%" 
+  height="700" 
+  style="border:0; border-radius:16px;" 
   loading="lazy">
 </iframe>`
   };
