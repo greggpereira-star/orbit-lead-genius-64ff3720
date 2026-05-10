@@ -38,6 +38,54 @@ export type Database = {
         }
         Relationships: []
       }
+      conversion_mapping: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          external_event_name: string
+          form_id: string | null
+          id: string
+          is_active: boolean | null
+          platform: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          external_event_name: string
+          form_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          external_event_name?: string
+          form_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_mapping_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cvcrm_dead_letter_queue: {
         Row: {
           company_id: string
@@ -344,6 +392,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      error_logs: {
+        Row: {
+          company_id: string | null
+          context: Json | null
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          stack_trace: string | null
+          trace_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          context?: Json | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          stack_trace?: string | null
+          trace_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          context?: Json | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          stack_trace?: string | null
+          trace_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       export_audit_logs: {
         Row: {
@@ -989,6 +1081,41 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          event_type: string
+          id: string
+          lead_id: string
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          event_type: string
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          event_type?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
