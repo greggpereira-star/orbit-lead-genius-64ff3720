@@ -32,11 +32,12 @@ export interface FormField {
   placeholder?: string;
   options?: any[];
   validation_rules?: any;
-   sort_order: number;
-   step_id?: string;
-   logic_rules?: any;
-   score_rules?: any;
- }
+    sort_order: number;
+    step_number?: number;
+    step_id?: string;
+    logic_rules?: any;
+    score_rules?: any;
+  }
  
  export interface FormStep {
    id: string;
