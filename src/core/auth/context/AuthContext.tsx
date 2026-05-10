@@ -117,13 +117,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         // Determine if we should show the full bootstrap UI
         const isReadyCache = checkWorkspaceReadiness();
         
+        const isReadyCache = checkWorkspaceReadiness();
+        
         if (isReadyCache) {
           const snapshot = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
           logger.info('WorkspaceReadinessCache: High-performance hit. Pre-loading context.', { traceId });
           
-          // Optimistic state update: Bypass block screen by going straight to AUTHENTICATED/READY
-          // while background validation finishes.
-          setState('AUTHENTICATED'); 
+          // Optimistically assume readiness to avoid flashing the loading screen
+          // We still run validateAndRepair in the background to ensure data consistency
+          setState('AUTHENTICATED');
         } else {
           setState('TENANT_VALIDATING');
         }

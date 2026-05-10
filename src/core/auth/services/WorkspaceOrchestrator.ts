@@ -126,25 +126,44 @@
      logger.info('WorkspaceOrchestrator: Ensuring workspace integrity', { userId });
  
      // Check existing membership
-     const { data: membership, error: memError } = await this.client
-       .from('memberships')
-       .select('*, companies(*)')
-       .eq('user_id', userId)
-       .maybeSingle();
- 
-     if (memError) throw new Error(`Membership validation failed: ${memError.message}`);
- 
-     if (membership && membership.companies) {
-       return {
-         company: membership.companies,
-         membership: {
-           id: membership.id,
-           user_id: membership.user_id,
-           company_id: membership.company_id,
-           role: membership.role
-         }
-       };
-     }
+      // Use direct lookup for membership first
+      const { data: membership, error: memError } = await this.client
+        .from('memberships')
+        .select('*')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (memError) {
+        logger.error('WorkspaceOrchestrator: Membership lookup failed', { error: memError.message, userId });
+        throw new Error(`Membership validation failed: ${memError.message}`);
+      }
+
+      if (membership) {
+        logger.info('WorkspaceOrchestrator: Membership found, fetching company', { companyId: membership.company_id });
+        
+        const { data: company, error: compError } = await this.client
+          .from('companies')
+          .select('*')
+          .eq('id', membership.company_id)
+          .single();
+
+        if (compError) {
+          logger.error('WorkspaceOrchestrator: Company lookup failed', { error: compError.message, companyId: membership.company_id });
+          // If we have a membership but can't see the company, it might be an RLS issue or deleted company
+          // We continue to recovery engine instead of throwing
+        } else if (company) {
+          return {
+            company,
+            membership: {
+              id: membership.id,
+              user_id: membership.user_id,
+              company_id: membership.company_id,
+              role: membership.role
+            }
+          };
+        }
+      }
  
      // If missing, we are in Recovery Mode or first-time setup
      logger.warn('WorkspaceOrchestrator: Workspace missing, initiating Recovery Engine', { userId });
