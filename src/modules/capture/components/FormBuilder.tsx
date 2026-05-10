@@ -273,28 +273,28 @@ import { FormScoringPanel } from './FormScoringPanel';
         throw new Error('Empresa não identificada. Por favor, recarregue a página.');
       }
 
-      logger.info('SaveForm: Starting sequence', { traceId, formId });
+      logger.info('SaveForm: Starting sequence', { traceId, formId, tenantId: company.id });
 
       const cleanedFields = fields.map((f, index) => ({
-        ...f,
         label: f.label || 'Campo sem nome',
+        name: f.name || `field_${index}`,
         type: f.type || 'text',
         required: !!f.required,
         options: Array.isArray(f.options) ? f.options : [],
         placeholder: f.placeholder || '',
         sort_order: index,
-        step_number: 1
+        step_number: 1,
+        validation_rules: {},
+        logic_rules: {},
+        score_rules: {}
       }));
 
-      // Diagnostic measurement point
-      const payloadReadyAt = Date.now();
-      
-      // Use a shorter 10s timeout for better UX, but goal is <2s
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error(`Timeout de salvamento (10s). Trace ID: ${traceId}`)), 10000)
       );
 
       try {
+        // Execute save through RPC
         const savePromise = formId 
           ? formService.updateForm(formId, formConfig, cleanedFields)
           : formService.createForm(company.id, formConfig, cleanedFields);
@@ -302,34 +302,22 @@ import { FormScoringPanel } from './FormScoringPanel';
         const result = await Promise.race([savePromise, timeoutPromise]);
         
         const finishedAt = Date.now();
-        logger.info('SaveForm: Performance audit', {
+        logger.info('SaveForm: Execution completed', {
           traceId,
-          total_duration_ms: finishedAt - startedAt,
-          payload_prep_ms: payloadReadyAt - startedAt,
-          rpc_duration_ms: finishedAt - payloadReadyAt,
+          duration_ms: finishedAt - startedAt,
           status: 'success'
         });
         
         return result;
       } catch (err: any) {
-        const errorAt = Date.now();
-        logger.error('SaveForm: Atomic Failure', {
+        logger.error('SaveForm: Execution error', {
           traceId,
-          duration_until_error: errorAt - startedAt,
           error: err.message,
-          code: err.code,
           details: err.details
         });
         
-        // Fallback: Save to localStorage if failed
-        try {
-          const draftKey = `leadflow_form_draft_${formId || 'new'}`;
-          localStorage.setItem(draftKey, JSON.stringify({ formConfig, fields, timestamp: Date.now() }));
-          logger.info('SaveForm: Emergency local draft saved', { traceId });
-        } catch (e) {
-          logger.error('SaveForm: Failed to save emergency draft', { error: e });
-        }
-        
+        const draftKey = `leadflow_form_draft_${formId || 'new'}`;
+        localStorage.setItem(draftKey, JSON.stringify({ formConfig, fields, timestamp: Date.now() }));
         throw err;
       }
     },
