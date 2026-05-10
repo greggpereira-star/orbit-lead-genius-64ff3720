@@ -69,7 +69,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       }
     }, [SCHEMA_VERSION]);
 
-    const markWorkspaceAsReady = useCallback((userId: string, company: Company, membership_id: string) => {
+    const markWorkspaceAsReady = useCallback((userId: string, company: Company, membership_id: string, membership?: Membership | null) => {
       if (typeof window === 'undefined') return;
       const payload = {
         user_id: userId,
@@ -77,6 +77,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         company_name: company.name,
         company_slug: company.slug,
         membership_id,
+        membership_role: membership?.role || 'member',
         workspace_ready: true,
         onboarding_completed: true,
         permissions_ready: true,
@@ -124,16 +125,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             const snapshot = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
             logger.info('WorkspaceReadinessCache: High-performance hit. Pre-loading context.', { traceId });
             
-            // Pre-load basic company info from cache to avoid blocking UI
+             // Pre-load basic workspace info from cache to avoid blocking UI
             if (snapshot.tenant_id && snapshot.company_name) {
               setCompany({
                 id: snapshot.tenant_id,
                 name: snapshot.company_name,
                 slug: snapshot.company_slug || ''
               });
+               setMembership({
+                 id: snapshot.membership_id,
+                 user_id: supabaseUser.id,
+                 company_id: snapshot.tenant_id,
+                 role: snapshot.membership_role || 'member'
+               });
             }
+             setUser({
+               id: supabaseUser.id,
+               email: supabaseUser.email || '',
+               name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário',
+               avatar_url: supabaseUser.user_metadata?.avatar_url || null
+             });
             
-            setState('AUTHENTICATED');
+             setState('READY');
           } catch (e) {
             setState('TENANT_VALIDATING');
           }
@@ -178,7 +191,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         }
  
         if (result.company && result.user?.id && result.membership?.id) {
-          markWorkspaceAsReady(result.user.id, result.company, result.membership.id);
+          markWorkspaceAsReady(result.user.id, result.company, result.membership.id, result.membership);
         }
 
         setUser(result.user);
@@ -237,28 +250,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const supabaseClient = getSupabase();
     let subscription: any = null;
     
-    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
       logger.info('Supabase Auth Event', { event, traceId });
       if (!mounted) return;
 
-      switch (event) {
-        case 'SIGNED_IN':
-        case 'TOKEN_REFRESHED':
-          if (session?.user) {
-            await loadTenantContext(session.user);
-          }
-          break;
-        case 'SIGNED_OUT':
-          clearWorkspaceReady();
-          setUser(null);
-          setCompany(null);
-          setMembership(null);
-          setState('UNAUTHENTICATED');
-          break;
-        case 'USER_UPDATED':
-          if (session?.user) await loadTenantContext(session.user);
-          break;
-      }
+      setTimeout(() => {
+        if (!mounted) return;
+
+        switch (event) {
+          case 'SIGNED_IN':
+          case 'TOKEN_REFRESHED':
+          case 'USER_UPDATED':
+            if (session?.user) {
+              loadTenantContext(session.user);
+            }
+            break;
+          case 'SIGNED_OUT':
+            clearWorkspaceReady();
+            setUser(null);
+            setCompany(null);
+            setMembership(null);
+            setState('UNAUTHENTICATED');
+            break;
+        }
+      }, 0);
     });
     subscription = authSubscription;
 

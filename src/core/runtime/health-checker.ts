@@ -32,15 +32,15 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
        return report;
      }
  
-     const startAuth = performance.now();
-      const [authRes, dbRes] = await Promise.all([
+      const startAuth = performance.now();
+       const [authRes, dbRes] = await Promise.all([
         fetch(`${config.supabaseUrl}/auth/v1/health`, {
           headers: { apikey: config.supabaseAnonKey },
           signal: AbortSignal.timeout(5000)
         }).catch(err => ({ ok: false, status: 0, error: err.message })),
-        fetch(`${config.supabaseUrl}/rest/v1/?apikey=${config.supabaseAnonKey}`, {
+         fetch(`${config.supabaseUrl}/rest/v1/companies?select=id&limit=1`, {
           method: 'GET',
-          headers: { 'Range': '0-0' }, // Request minimal data
+           headers: { apikey: config.supabaseAnonKey },
           signal: AbortSignal.timeout(5000)
         }).catch(err => ({ ok: false, status: 0, error: err.message }))
       ]);

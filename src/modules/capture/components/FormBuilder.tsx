@@ -298,6 +298,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
+   const [steps, setSteps] = useState<any[]>([]);
     const [showTemplates, setShowTemplates] = useState(!formId);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
@@ -327,6 +328,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
        
        setFormConfig(existingForm);
        setFields(sortedFields);
+        setSteps([...(existingForm.form_steps || [])].sort((a, b) => a.sort_order - b.sort_order));
        setOriginalData({ config: existingForm, fields: JSON.parse(JSON.stringify(sortedFields)) });
        setShowTemplates(false);
      } else if (!formId) {
@@ -340,17 +342,29 @@ const normalizeFieldForEditor = (field: any, index: number) => {
         
         if (template.steps) {
           const newFields: any[] = [];
+          const generatedSteps = template.steps.map((step: any, sIdx: number) => ({
+            id: crypto.randomUUID(),
+            title: step.title || `Etapa ${sIdx + 1}`,
+            description: step.description || '',
+            sort_order: sIdx,
+            button_text: step.button_text || 'Avançar',
+            conditional_logic: step.conditional_logic || {}
+          }));
+          setSteps(generatedSteps);
           template.steps.forEach((step: any, sIdx: number) => {
+            const stepId = generatedSteps[sIdx].id;
             step.fields.forEach((field: any) => {
               newFields.push({
                 ...field,
                 id: crypto.randomUUID(),
-                step_id: `step_${sIdx}`
+                step_id: stepId,
+                step_number: sIdx + 1
               });
             });
           });
           setFields(newFields.map(normalizeFieldForEditor));
         } else if (template.fields) {
+          setSteps([]);
           setFields(template.fields.map((f: any, index: number) => normalizeFieldForEditor({
             ...f,
             id: crypto.randomUUID()
@@ -377,24 +391,6 @@ const normalizeFieldForEditor = (field: any, index: number) => {
         setIsSaving(true);
 
         try {
-          // 1. Save CORE
-          logger.info(`[${traceId}] Step 1: Saving Form Core`);
-          const savedFormId = await formService.saveFormCore({
-            formId: formId || undefined,
-            companyId: company.id,
-            name: formConfig.name || 'Untitled Form',
-            slug: formConfig.slug || `form-${Date.now()}`,
-            description: formConfig.description,
-            status: formConfig.status || 'draft',
-            settings: formConfig.settings,
-            type: formConfig.type
-          });
-
-          // 2. Compute Fields Delta
-          const fieldsToDelete = originalData?.fields
-            .filter(of => !fields.some(f => f.id === of.id))
-            .map(of => of.id) || [];
-          
           const fieldsToUpsert = fields.map((f, index) => ({
             id: f.id,
             label: f.label || 'Campo',
@@ -411,18 +407,6 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             score_rules: f.score_rules || {}
           }));
 
-          logger.info(`[${traceId}] Step 2: Saving Fields Delta`, { 
-            upsertCount: fieldsToUpsert.length, 
-            deleteCount: fieldsToDelete.length 
-          });
-
-          await formService.saveFormFieldsDelta({
-            formId: savedFormId,
-            companyId: company.id,
-            fieldsUpsert: fieldsToUpsert,
-            fieldsDelete: fieldsToDelete
-          });
-
           const optionsByField = fields
             .filter((field) => field.type === 'select' && field.id)
             .map((field) => ({
@@ -430,23 +414,32 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               options: Array.isArray(field.options) ? field.options.map(normalizeDropdownOption) : []
             }));
 
-          logger.info(`[${traceId}] Step 3: Saving Dropdown Options Batch`, {
-            fieldCount: optionsByField.length,
-            optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0)
+          logger.info(`[${traceId}] Saving Form Builder atomically`, {
+            fieldCount: fieldsToUpsert.length,
+            dropdownFieldCount: optionsByField.length,
+            optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0),
           });
 
-          if (optionsByField.length > 0) {
-            await formService.saveFieldOptionsBatch({
-              formId: savedFormId,
-              companyId: company.id,
-              optionsByField
-            });
-          }
+          const saveResult = await formService.saveFormBuilder({
+            formId: formId || undefined,
+            companyId: company.id,
+            formData: {
+              name: formConfig.name || 'Untitled Form',
+              slug: formConfig.slug || `form-${Date.now()}`,
+              description: formConfig.description,
+              status: formConfig.status || 'draft',
+              settings: formConfig.settings,
+              type: formConfig.type || 'standard'
+            },
+            fields: fieldsToUpsert,
+            steps,
+            optionsByField
+          });
 
           const duration = Date.now() - startedAt;
-          logger.info(`[${traceId}] Save Complete`, { duration_ms: duration });
+          logger.info(`[${traceId}] Save Complete`, { duration_ms: duration, db_trace_id: saveResult.trace_id, saved: saveResult });
           
-          return savedFormId;
+          return saveResult.form_id;
         } catch (err: any) {
           setIsSaving(false);
           const duration = Date.now() - startedAt;

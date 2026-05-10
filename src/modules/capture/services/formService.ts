@@ -256,6 +256,26 @@ export const formService = {
       if (error) throw error;
     },
 
+    async saveFormBuilder(p: {
+      formId?: string,
+      companyId: string,
+      formData: any,
+      fields: any[],
+      steps?: any[],
+      optionsByField: any[]
+    }): Promise<{ form_id: string; trace_id: string; fields: number; options: number; duration_ms: number }> {
+      const { data, error } = await supabase.rpc('save_form_builder_v1' as any, {
+        p_form_id: p.formId || null,
+        p_company_id: p.companyId,
+        p_form_data: p.formData,
+        p_fields: p.fields,
+        p_steps: p.steps || [],
+        p_options_by_field: p.optionsByField
+      });
+      if (error) throw error;
+      return data as any;
+    },
+
   async deleteForm(formId: string): Promise<void> {
     const { error } = await supabase.from('forms').delete().eq('id', formId);
     if (error) throw error;

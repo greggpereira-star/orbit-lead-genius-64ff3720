@@ -2107,6 +2107,17 @@ export type Database = {
         }[]
       }
       get_workspace_context_v1: { Args: never; Returns: Json }
+      save_form_builder_v1: {
+        Args: {
+          p_company_id: string
+          p_fields?: Json
+          p_form_data: Json
+          p_form_id: string
+          p_options_by_field?: Json
+          p_steps?: Json
+        }
+        Returns: Json
+      }
       save_form_core_v1: {
         Args: {
           p_company_id: string
