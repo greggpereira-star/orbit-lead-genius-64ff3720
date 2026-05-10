@@ -283,10 +283,11 @@ import { FormScoringPanel } from './FormScoringPanel';
         options: Array.isArray(f.options) ? f.options : [],
         placeholder: f.placeholder || '',
         sort_order: index,
-        step_number: 1,
-        validation_rules: {},
-        logic_rules: {},
-        score_rules: {}
+       step_number: f.step_number || 1,
+       step_id: f.step_id || null,
+       validation_rules: f.validation_rules || {},
+       logic_rules: f.logic_rules || {},
+       score_rules: f.score_rules || {}
       }));
 
       const timeoutPromise = new Promise((_, reject) => 
