@@ -715,6 +715,88 @@ export type Database = {
           },
         ]
       }
+      form_partial_submissions: {
+        Row: {
+          answers: Json | null
+          created_at: string | null
+          current_step_id: string | null
+          current_step_index: number | null
+          expires_at: string | null
+          form_id: string
+          form_slug: string
+          id: string
+          lead_id: string | null
+          score_preview: number | null
+          session_id: string
+          status: string
+          temperature_preview: string | null
+          tenant_id: string
+          tracking: Json | null
+          updated_at: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          answers?: Json | null
+          created_at?: string | null
+          current_step_id?: string | null
+          current_step_index?: number | null
+          expires_at?: string | null
+          form_id: string
+          form_slug: string
+          id?: string
+          lead_id?: string | null
+          score_preview?: number | null
+          session_id: string
+          status?: string
+          temperature_preview?: string | null
+          tenant_id: string
+          tracking?: Json | null
+          updated_at?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          answers?: Json | null
+          created_at?: string | null
+          current_step_id?: string | null
+          current_step_index?: number | null
+          expires_at?: string | null
+          form_id?: string
+          form_slug?: string
+          id?: string
+          lead_id?: string | null
+          score_preview?: number | null
+          session_id?: string
+          status?: string
+          temperature_preview?: string | null
+          tenant_id?: string
+          tracking?: Json | null
+          updated_at?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_partial_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_partial_submissions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_partial_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_scoring_rules: {
         Row: {
           condition_value: string
@@ -852,6 +934,60 @@ export type Database = {
           },
           {
             foreignKeyName: "form_submissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_temperature_rules: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          form_id: string
+          id: string
+          max_score: number
+          min_score: number
+          name: string
+          priority: number | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          form_id: string
+          id?: string
+          max_score: number
+          min_score: number
+          name: string
+          priority?: number | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          form_id?: string
+          id?: string
+          max_score?: number
+          min_score?: number
+          name?: string
+          priority?: number | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_temperature_rules_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_temperature_rules_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1212,6 +1348,41 @@ export type Database = {
           },
         ]
       }
+      lead_scores: {
+        Row: {
+          change_reason: string | null
+          created_at: string | null
+          id: string
+          lead_id: string
+          metadata: Json | null
+          score: number
+        }
+        Insert: {
+          change_reason?: string | null
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          score: number
+        }
+        Update: {
+          change_reason?: string | null
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_scores_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_sync_logs: {
         Row: {
           company_id: string
@@ -1249,6 +1420,35 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          tag_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tags_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
