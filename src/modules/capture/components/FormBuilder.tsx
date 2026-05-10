@@ -152,42 +152,91 @@ import { FormScoringPanel } from './FormScoringPanel';
                size="sm" 
                className="h-7 text-[10px] gap-1 px-2"
                onClick={() => {
-                 const currentOptions = field.options || [];
-                 onUpdate(index, { options: [...currentOptions, `Opção ${currentOptions.length + 1}`] });
+                const currentOptions = Array.isArray(field.options) ? field.options : [];
+                const newOption = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  label: `Opção ${currentOptions.length + 1}`,
+                  value: `opcao_${currentOptions.length + 1}`,
+                  score: 0,
+                  tag: null
+                };
+                onUpdate(index, { options: [...currentOptions, newOption] });
                }}
              >
                <Plus className="h-3 w-3" /> Adicionar Opção
              </Button>
            </div>
            
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-             {(field.options || ['Opção 1', 'Opção 2']).map((option: string, optIndex: number) => (
-               <div key={optIndex} className="flex gap-2 items-center">
-                 <Input 
-                   value={option}
-                   onChange={(e) => {
-                     const newOptions = [...(field.options || ['Opção 1', 'Opção 2'])];
-                     newOptions[optIndex] = e.target.value;
-                     onUpdate(index, { options: newOptions });
-                   }}
-                   placeholder={`Opção ${optIndex + 1}`}
-                   className="h-8 text-xs"
-                 />
-                 <Button 
-                   variant="ghost" 
-                   size="icon" 
-                   className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                   onClick={() => {
-                     const newOptions = [...(field.options || ['Opção 1', 'Opção 2'])];
-                     newOptions.splice(optIndex, 1);
-                     onUpdate(index, { options: newOptions });
-                   }}
-                 >
-                   <X className="h-3 w-3" />
-                 </Button>
-               </div>
-             ))}
-           </div>
+            <div className="space-y-2">
+              {(Array.isArray(field.options) ? field.options : []).map((option: any, optIndex: number) => {
+                const optValue = typeof option === 'string' ? option : (option.label || '');
+                const optId = typeof option === 'string' ? optIndex : (option.id || optIndex);
+                
+                return (
+                  <div key={optId} className="flex gap-2 items-center animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <Input 
+                        value={optValue}
+                        onChange={(e) => {
+                          const newOptions = [...(field.options || [])];
+                          if (typeof option === 'string') {
+                            newOptions[optIndex] = e.target.value;
+                          } else {
+                            newOptions[optIndex] = { ...option, label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_') };
+                          }
+                          onUpdate(index, { options: newOptions });
+                        }}
+                        placeholder="Rótulo da Opção"
+                        className="h-8 text-xs"
+                      />
+                      <div className="flex gap-2">
+                        <Input 
+                          value={typeof option === 'string' ? '' : (option.score || 0)}
+                          type="number"
+                          onChange={(e) => {
+                            const newOptions = [...(field.options || [])];
+                            const score = parseInt(e.target.value) || 0;
+                            if (typeof option === 'string') {
+                              newOptions[optIndex] = { label: option, score, value: option.toLowerCase().replace(/\s+/g, '_') };
+                            } else {
+                              newOptions[optIndex] = { ...option, score };
+                            }
+                            onUpdate(index, { options: newOptions });
+                          }}
+                          placeholder="Score"
+                          className="h-8 text-xs w-16"
+                        />
+                        <Input 
+                          value={typeof option === 'string' ? '' : (option.tag || '')}
+                          onChange={(e) => {
+                            const newOptions = [...(field.options || [])];
+                            if (typeof option === 'string') {
+                              newOptions[optIndex] = { label: option, tag: e.target.value, value: option.toLowerCase().replace(/\s+/g, '_') };
+                            } else {
+                              newOptions[optIndex] = { ...option, tag: e.target.value };
+                            }
+                            onUpdate(index, { options: newOptions });
+                          }}
+                          placeholder="Tag"
+                          className="h-8 text-xs flex-1"
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => {
+                        const newOptions = [...(field.options || [])];
+                        newOptions.splice(optIndex, 1);
+                        onUpdate(index, { options: newOptions });
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                );
+              })}
            {(!field.options || field.options.length === 0) && (
              <p className="text-[10px] text-muted-foreground italic">Nenhuma opção cadastrada. Clique em adicionar para começar.</p>
            )}
