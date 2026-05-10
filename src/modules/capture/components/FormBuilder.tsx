@@ -264,64 +264,76 @@ import { FormScoringPanel } from './FormScoringPanel';
     }
   }, [existingForm, formId, template, initialType]);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const traceId = `save_${Math.random().toString(36).substring(2, 9)}`;
-      const startedAt = Date.now();
-      
-      if (!company?.id) {
-        throw new Error('Empresa não identificada. Por favor, recarregue a página.');
-      }
-
-      logger.info('SaveForm: Starting sequence', { traceId, formId, tenantId: company.id });
-
-      const cleanedFields = fields.map((f, index) => ({
-        label: f.label || 'Campo sem nome',
-        name: f.name || `field_${index}`,
-        type: f.type || 'text',
-        required: !!f.required,
-        options: Array.isArray(f.options) ? f.options : [],
-        placeholder: f.placeholder || '',
-       sort_order: index,
-       step_number: f.step_number || 1,
-       step_id: f.step_id || undefined,
-       validation_rules: f.validation_rules || {},
-       logic_rules: f.logic_rules || {},
-       score_rules: f.score_rules || {}
-     }));
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`Timeout de salvamento (10s). Trace ID: ${traceId}`)), 10000)
-      );
-
-      try {
-        // Execute save through RPC
-        const savePromise = formId 
-          ? formService.updateForm(formId, formConfig, cleanedFields)
-          : formService.createForm(company.id, formConfig, cleanedFields);
-  
-        const result = await Promise.race([savePromise, timeoutPromise]);
-        
-        const finishedAt = Date.now();
-        logger.info('SaveForm: Execution completed', {
-          traceId,
-          duration_ms: finishedAt - startedAt,
-          status: 'success'
-        });
-        
-        return result;
-      } catch (err: any) {
-        logger.error('SaveForm: Execution error', {
-          traceId,
-          error: err.message,
-          details: err.details
-        });
-        
-        const draftKey = `leadflow_form_draft_${formId || 'new'}`;
-        localStorage.setItem(draftKey, JSON.stringify({ formConfig, fields, timestamp: Date.now() }));
-        throw err;
-      }
-    },
+   const saveMutation = useMutation({
+     mutationFn: async () => {
+       const traceId = `save_${Math.random().toString(36).substring(2, 10)}`;
+       const startedAt = Date.now();
+       
+       if (!company?.id) {
+         throw new Error('Empresa não identificada. Por favor, recarregue a página.');
+       }
+ 
+       logger.info('SaveForm: Starting sequence', { 
+         traceId, 
+         formId, 
+         tenantId: company.id,
+         fieldCount: fields.length
+       });
+ 
+       // Prepare payload (preserving IDs for UPSERT strategy)
+       const cleanedFields = fields.map((f, index) => ({
+         id: f.id && f.id.length > 20 ? f.id : undefined, // Keep real UUIDs, discard temporary IDs
+         label: f.label || 'Campo sem nome',
+         name: f.name || `field_${index}`,
+         type: f.type || 'text',
+         required: !!f.required,
+         options: Array.isArray(f.options) ? f.options : [],
+         placeholder: f.placeholder || '',
+         sort_order: index,
+         step_number: f.step_number || 1,
+         step_id: f.step_id || undefined,
+         validation_rules: f.validation_rules || {},
+         logic_rules: f.logic_rules || {},
+         score_rules: f.score_rules || {}
+       }));
+ 
+       // Prepare steps (if any)
+       const steps: any[] = (existingForm as any)?.form_steps || [];
+ 
+       // Increased timeout to 15s for very large forms, but optimized RPC should finish in <2s
+       const timeoutPromise = new Promise((_, reject) => 
+         setTimeout(() => reject(new Error(`Timeout de salvamento (15s). Trace ID: ${traceId}`)), 15000)
+       );
+ 
+       try {
+         const savePromise = formId 
+           ? formService.updateForm(formId, { ...formConfig, company_id: company.id }, cleanedFields, steps)
+           : formService.createForm(company.id, formConfig, cleanedFields);
+   
+         const result = await Promise.race([savePromise, timeoutPromise]);
+         
+         const duration = Date.now() - startedAt;
+         logger.info('SaveForm: Performance report', {
+           traceId,
+           duration_ms: duration,
+           field_count: fields.length,
+           kb_size: JSON.stringify({ formConfig, cleanedFields }).length / 1024
+         });
+         
+         return result;
+       } catch (err: any) {
+         logger.error('SaveForm: Critical failure', {
+           traceId,
+           error: err.message,
+           duration: Date.now() - startedAt
+         });
+         
+         // Only save draft on REAL failure, not on expected user actions
+         const draftKey = `leadflow_form_draft_${formId || 'new'}`;
+         localStorage.setItem(draftKey, JSON.stringify({ formConfig, fields, timestamp: Date.now() }));
+         throw err;
+       }
+     },
     onSuccess: () => {
       // Precise invalidation: only invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['forms', company?.id] });
