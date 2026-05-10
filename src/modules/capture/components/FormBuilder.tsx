@@ -18,10 +18,14 @@ import {
     Globe,
     ListPlus,
     X,
-    Activity,
-    BarChart3,
-    FileText,
-    Workflow
+   Activity,
+   BarChart3,
+   FileText,
+   Workflow,
+   Layers,
+   Trophy,
+   Target,
+   ChevronRight
  } from 'lucide-react';
   import { FormEventsPanel } from './events/FormEventsPanel';
   import { FormSubmissionsPanel } from './events/FormSubmissionsPanel';
@@ -472,12 +476,26 @@ import { FormPublish } from './FormPublish';
 
       <Tabs defaultValue="builder" className="w-full">
         <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-12 p-0 gap-8">
-          <TabsTrigger 
-            value="builder" 
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
-          >
-            <Settings2 className="h-4 w-4" /> Builder
-          </TabsTrigger>
+           <TabsTrigger 
+             value="builder" 
+             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+           >
+             <Settings2 className="h-4 w-4" /> Builder
+           </TabsTrigger>
+           {formConfig.type === 'multi_step' && (
+             <TabsTrigger 
+               value="steps" 
+               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+             >
+               <Layers className="h-4 w-4" /> Steps
+             </TabsTrigger>
+           )}
+           <TabsTrigger 
+             value="scoring" 
+             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
+           >
+             <Trophy className="h-4 w-4" /> Scoring
+           </TabsTrigger>
           <TabsTrigger 
             value="publish" 
             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 gap-2"
