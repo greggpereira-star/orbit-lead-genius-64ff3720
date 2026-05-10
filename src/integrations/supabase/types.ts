@@ -981,6 +981,51 @@ export type Database = {
           },
         ]
       }
+      form_tag_rules: {
+        Row: {
+          company_id: string
+          condition: Json
+          created_at: string | null
+          form_id: string
+          id: string
+          tag_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          condition?: Json
+          created_at?: string | null
+          form_id: string
+          id?: string
+          tag_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          condition?: Json
+          created_at?: string | null
+          form_id?: string
+          id?: string
+          tag_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_tag_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_tag_rules_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_temperature_rules: {
         Row: {
           color: string | null
@@ -1037,6 +1082,7 @@ export type Database = {
       }
       forms: {
         Row: {
+          company_id: string
           created_at: string
           description: string | null
           id: string
@@ -1044,12 +1090,12 @@ export type Database = {
           settings: Json
           slug: string
           status: string
-          tenant_id: string
           type: string
           type_v2: string | null
           updated_at: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           description?: string | null
           id?: string
@@ -1057,12 +1103,12 @@ export type Database = {
           settings?: Json
           slug: string
           status?: string
-          tenant_id: string
           type?: string
           type_v2?: string | null
           updated_at?: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -1070,7 +1116,6 @@ export type Database = {
           settings?: Json
           slug?: string
           status?: string
-          tenant_id?: string
           type?: string
           type_v2?: string | null
           updated_at?: string
@@ -1078,7 +1123,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "forms_tenant_id_fkey"
-            columns: ["tenant_id"]
+            columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
@@ -1556,9 +1601,11 @@ export type Database = {
           name: string | null
           phone: string | null
           referrer: string | null
+          score: number | null
           source: string | null
           status: string | null
           sync_status: string | null
+          temperature: string | null
           updated_at: string
           utm_campaign: string | null
           utm_content: string | null
@@ -1586,9 +1633,11 @@ export type Database = {
           name?: string | null
           phone?: string | null
           referrer?: string | null
+          score?: number | null
           source?: string | null
           status?: string | null
           sync_status?: string | null
+          temperature?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -1616,9 +1665,11 @@ export type Database = {
           name?: string | null
           phone?: string | null
           referrer?: string | null
+          score?: number | null
           source?: string | null
           status?: string | null
           sync_status?: string | null
+          temperature?: string | null
           updated_at?: string
           utm_campaign?: string | null
           utm_content?: string | null
