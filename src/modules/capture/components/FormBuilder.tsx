@@ -226,9 +226,38 @@ import { FormPublish } from './FormPublish';
       );
       setShowTemplates(false);
     } else if (!formId) {
-      setShowTemplates(true);
+      if (template) {
+        setFormConfig(prev => ({
+          ...prev,
+          name: template.name,
+          type: template.type || initialType || 'standard',
+          settings: { ...prev.settings, ...template.settings }
+        }));
+        
+        if (template.steps) {
+          const newFields: any[] = [];
+          template.steps.forEach((step: any, sIdx: number) => {
+            step.fields.forEach((field: any) => {
+              newFields.push({
+                ...field,
+                id: Math.random().toString(36).substr(2, 9),
+                step_id: `step_${sIdx}`
+              });
+            });
+          });
+          setFields(newFields);
+        } else if (template.fields) {
+          setFields(template.fields.map((f: any) => ({
+            ...f,
+            id: Math.random().toString(36).substr(2, 9)
+          })));
+        }
+        setShowTemplates(false);
+      } else {
+        setShowTemplates(false);
+      }
     }
-  }, [existingForm, formId]);
+  }, [existingForm, formId, template, initialType]);
 
     const saveMutation = useMutation({
       mutationFn: async () => {
