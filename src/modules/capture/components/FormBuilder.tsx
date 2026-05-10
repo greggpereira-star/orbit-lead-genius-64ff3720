@@ -300,39 +300,59 @@ import { FormScoringPanel } from './FormScoringPanel';
        // Prepare steps (if any)
        const steps: any[] = (existingForm as any)?.form_steps || [];
  
-       // Increased timeout to 15s for very large forms, but optimized RPC should finish in <2s
-       const timeoutPromise = new Promise((_, reject) => 
-         setTimeout(() => reject(new Error(`Timeout de salvamento (15s). Trace ID: ${traceId}`)), 15000)
-       );
+        // Increased client-side timeout to 30s to allow for infrastructure latencies,
+        // though the optimized database RPC should complete in <500ms.
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`A operação demorou demais (30s). Trace ID: ${traceId}. Isso pode ser instabilidade na rede.`)), 30000)
+        );
  
-       try {
-         const savePromise = formId 
-           ? formService.updateForm(formId, { ...formConfig, company_id: company.id }, cleanedFields, steps)
-           : formService.createForm(company.id, formConfig, cleanedFields);
-   
-         const result = await Promise.race([savePromise, timeoutPromise]);
-         
-         const duration = Date.now() - startedAt;
-         logger.info('SaveForm: Performance report', {
-           traceId,
-           duration_ms: duration,
-           field_count: fields.length,
-           kb_size: JSON.stringify({ formConfig, cleanedFields }).length / 1024
-         });
-         
-         return result;
-       } catch (err: any) {
-         logger.error('SaveForm: Critical failure', {
-           traceId,
-           error: err.message,
-           duration: Date.now() - startedAt
-         });
-         
-         // Only save draft on REAL failure, not on expected user actions
-         const draftKey = `leadflow_form_draft_${formId || 'new'}`;
-         localStorage.setItem(draftKey, JSON.stringify({ formConfig, fields, timestamp: Date.now() }));
-         throw err;
-       }
+        try {
+          const savePromise = formId
+            ? formService.updateForm(formId, { ...formConfig, company_id: company.id }, cleanedFields, steps)
+            : formService.createForm(company.id, formConfig, cleanedFields);
+
+          const result = await Promise.race([savePromise, timeoutPromise]);
+
+          const duration = Date.now() - startedAt;
+          logger.info('SaveForm: Performance report', {
+            traceId,
+            duration_ms: duration,
+            field_count: fields.length,
+            kb_size: JSON.stringify({ formConfig, cleanedFields }).length / 1024,
+            db_perf: (result as any)?.performance
+          });
+
+          return result;
+        } catch (err: any) {
+          const duration = Date.now() - startedAt;
+          const errorDetail = err.message || 'Erro desconhecido';
+
+          logger.error('SaveForm: Critical failure', {
+            traceId,
+            error: errorDetail,
+            duration_ms: duration,
+            context: {
+              fieldCount: fields.length,
+              hasFormId: !!formId,
+              payloadSize: JSON.stringify({ formConfig, cleanedFields }).length
+            }
+          });
+
+          // Save local draft for recovery
+          const draftKey = `leadflow_form_draft_${formId || 'new'}`;
+          localStorage.setItem(draftKey, JSON.stringify({
+            formConfig,
+            fields,
+            timestamp: Date.now(),
+            error: errorDetail,
+            traceId
+          }));
+
+          // Enhance error with trace ID for the UI
+          const enhancedError = new Error(errorDetail);
+          (enhancedError as any).traceId = traceId;
+          throw enhancedError;
+        }
      },
     onSuccess: () => {
       // Precise invalidation: only invalidate relevant queries
@@ -345,10 +365,25 @@ import { FormScoringPanel } from './FormScoringPanel';
       onBack();
     },
     onError: (error: any) => {
-      const message = error.message || 'Erro desconhecido';
-      toast.error(`Erro crítico ao salvar: ${message}`, {
-        description: 'Um rascunho local foi salvo por segurança.',
-        duration: 5000,
+      const traceId = error.traceId || 'N/A';
+      const message = error.message || 'Erro inesperado na comunicação com o servidor';
+      
+      console.error(`[Save Error] Trace: ${traceId}`, error);
+
+      toast.error(`Falha no salvamento`, {
+        description: (
+          <div className="space-y-2 mt-1">
+            <p className="text-xs font-medium text-destructive">{message}</p>
+            <div className="flex items-center gap-2 pt-1 border-t border-destructive/20">
+              <span className="text-[10px] opacity-70 uppercase font-bold tracking-tighter">ID do Erro:</span>
+              <code className="text-[10px] bg-destructive/10 px-1 rounded font-mono">{traceId}</code>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Um rascunho local foi salvo. Se o erro persistir, informe este ID ao suporte.
+            </p>
+          </div>
+        ),
+        duration: 10000,
       });
     }
   });
