@@ -51,10 +51,12 @@ import { logger } from '@/core/observability/logger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
 
- interface FormBuilderProps {
-   formId?: string;
-   onBack: () => void;
- }
+  interface FormBuilderProps {
+    formId?: string;
+    onBack: () => void;
+    initialType?: 'standard' | 'multi_step' | 'quiz';
+    template?: any;
+  }
  
  function SortableField({ field, index, onUpdate, onRemove }: { 
    field: any, 
@@ -190,7 +192,7 @@ import { FormPublish } from './FormPublish';
    );
  }
  
- export function FormBuilder({ formId, onBack }: FormBuilderProps) {
+  export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
@@ -199,7 +201,7 @@ import { FormPublish } from './FormPublish';
     name: 'Untitled Form',
     slug: '',
     status: 'draft',
-     type: 'standard',
+    type: initialType || 'standard',
     settings: {
       submit_label: 'Submit',
       success_message: 'Thank you!',
