@@ -154,7 +154,7 @@ import { FormScoringPanel } from './FormScoringPanel';
                onClick={() => {
                 const currentOptions = Array.isArray(field.options) ? field.options : [];
                 const newOption = {
-                  id: Math.random().toString(36).substr(2, 9),
+                  id: crypto.randomUUID(),
                   label: `Opção ${currentOptions.length + 1}`,
                   value: `opcao_${currentOptions.length + 1}`,
                   score: 0,
@@ -299,7 +299,7 @@ import { FormScoringPanel } from './FormScoringPanel';
             step.fields.forEach((field: any) => {
               newFields.push({
                 ...field,
-                id: Math.random().toString(36).substr(2, 9),
+                id: crypto.randomUUID(),
                 step_id: `step_${sIdx}`
               });
             });
@@ -308,7 +308,7 @@ import { FormScoringPanel } from './FormScoringPanel';
         } else if (template.fields) {
           setFields(template.fields.map((f: any) => ({
             ...f,
-            id: Math.random().toString(36).substr(2, 9)
+            id: crypto.randomUUID()
           })));
         }
         setShowTemplates(false);
@@ -468,7 +468,7 @@ import { FormScoringPanel } from './FormScoringPanel';
   });
 
    const addField = () => {
-     const id = Math.random().toString(36).substr(2, 9);
+    const id = crypto.randomUUID();
      const newField: Partial<FormField> & { id: string } = {
        id,
        label: 'Novo Campo',
@@ -510,7 +510,7 @@ import { FormScoringPanel } from './FormScoringPanel';
      }));
      setFields(template.fields.map((f: any) => ({
        ...f,
-       id: Math.random().toString(36).substr(2, 9)
+      id: crypto.randomUUID()
      })));
      setShowTemplates(false);
    };
