@@ -351,7 +351,7 @@ import { FormScoringPanel } from './FormScoringPanel';
             .map(of => of.id) || [];
           
           const fieldsToUpsert = fields.map((f, index) => ({
-            id: (f.id && f.id.length > 20) ? f.id : undefined,
+            id: f.id,
             label: f.label || 'Campo',
             name: f.name || `field_${index}`,
             type: f.type || 'text',
