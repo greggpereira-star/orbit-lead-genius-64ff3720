@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
+ import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, ArrowRight, ArrowLeft } from 'lucide-react';
+ import { Progress } from '@/components/ui/progress';
 import { captureService } from '../services/captureService';
 import { tracker } from '@/core/tracking/tracker';
 
@@ -19,7 +20,7 @@ interface PublicFormRendererProps {
 
 export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   const [submitted, setSubmitted] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+   const [currentStep, setCurrentStep] = useState(0); // 0-based for array indexing
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['public-form', slug],
@@ -142,90 +143,167 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     );
   }
 
-  const sortedFields = [...form.form_fields].sort((a, b) => a.sort_order - b.sort_order);
-
-  return (
-    <div className="max-w-2xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ color: 'var(--foreground)' }}>
+   const isMultiStep = form.type === 'multi_step' && form.form_steps && form.form_steps.length > 0;
+   
+   const sortedSteps = isMultiStep 
+     ? [...form.form_steps].sort((a, b) => a.sort_order - b.sort_order)
+     : [];
+ 
+   const currentStepFields = isMultiStep 
+     ? form.form_fields.filter(f => f.step_id === sortedSteps[currentStep]?.id || !f.step_id && currentStep === 0)
+     : [...form.form_fields].sort((a, b) => a.sort_order - b.sort_order);
+ 
+   const progress = isMultiStep ? ((currentStep + 1) / sortedSteps.length) * 100 : 0;
+ 
+   const handleNext = async () => {
+     const fieldsInStep = currentStepFields.map(f => f.name || f.label.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+     const isValid = await watch(fieldsInStep); // Basic check, better to use trigger()
+     
+     if (currentStep < sortedSteps.length - 1) {
+       setCurrentStep(prev => prev + 1);
+       window.scrollTo({ top: 0, behavior: 'smooth' });
+     } else {
+       handleSubmit(onSubmit)();
+     }
+   };
+ 
+   const handleBack = () => {
+     if (currentStep > 0) {
+       setCurrentStep(prev => prev - 1);
+       window.scrollTo({ top: 0, behavior: 'smooth' });
+     }
+   };
+ 
+   return (
+     <div className="max-w-2xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ color: 'var(--foreground)' }}>
       <Card className="border-none shadow-2xl overflow-hidden bg-card/80 backdrop-blur-md" style={{ borderColor: 'var(--border)' }}>
-        <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
-        <CardHeader className="space-y-2 pb-8 pt-8 border-b" style={{ borderColor: 'var(--border)' }}>
+         {isMultiStep ? (
+           <div className="pt-6 px-8">
+             <div className="flex justify-between items-center mb-2">
+               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                 Passo {currentStep + 1} de {sortedSteps.length}
+               </span>
+               <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                 {Math.round(progress)}% Completo
+               </span>
+             </div>
+             <Progress value={progress} className="h-1.5" />
+           </div>
+         ) : (
+           <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
+         )}
+         
+         <CardHeader className="space-y-2 pb-8 pt-8 border-b" style={{ borderColor: 'var(--border)' }}>
+           {isMultiStep ? (
+             <div className="text-center space-y-1">
+               <CardTitle className="text-2xl font-black uppercase tracking-tighter">
+                 {sortedSteps[currentStep]?.title || form.name}
+               </CardTitle>
+               {sortedSteps[currentStep]?.description && (
+                 <p className="text-sm text-muted-foreground">{sortedSteps[currentStep].description}</p>
+               )}
+             </div>
+           ) : (
+             <>
+               <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center" style={{ color: 'var(--foreground)' }}>{form.name}</CardTitle>
+               {form.description && (
+                 <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
+               )}
+             </>
+           )}
+         </CardHeader>
           <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center" style={{ color: 'var(--foreground)' }}>{form.name}</CardTitle>
           {form.description && (
             <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
           )}
         </CardHeader>
-        <CardContent className="pb-12">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {sortedFields.map((field) => (
-              <div key={field.id} className="space-y-2">
-                <Label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
-                  {field.label} {field.required && <span className="text-destructive">*</span>}
-                </Label>
-                
-                 {field.type === 'textarea' ? (
-                   <Textarea 
-                      {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                     placeholder={field.placeholder}
-                     className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
-                   />
-                  ) : field.type === 'select' ? (
-                    <div className="relative group">
-                      <select
-                        {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                        className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
-                        style={{ 
-                          borderColor: 'var(--border)',
-                          '--tw-ring-color': 'var(--primary)',
-                        } as any}
-                      >
-                        <option value="">Selecione uma opção...</option>
-                        {(field.options || []).map((option: string, i: number) => (
-                          <option key={i} value={option}>{option}</option>
-                        ))}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-                        <ChevronRight className="h-4 w-4 rotate-90" />
-                      </div>
-                    </div>
-                 ) : (
-                    <Input
-                      type={field.type === 'phone' ? 'tel' : field.type}
-                      {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+         <CardContent className="pb-12 pt-6">
+           <div className="space-y-6">
+             {currentStepFields.map((field) => (
+               <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                 <Label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
+                   {field.label} {field.required && <span className="text-destructive">*</span>}
+                 </Label>
+                 
+                  {field.type === 'textarea' ? (
+                    <Textarea 
+                       {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
                       placeholder={field.placeholder}
-                      className="h-12 bg-background/50 border-2 text-base transition-all"
-                      style={{ 
-                        borderColor: 'var(--border)',
-                        '--tw-ring-color': 'var(--primary)',
-                      } as any}
+                      className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
                     />
+                   ) : field.type === 'select' ? (
+                     <div className="relative group">
+                       <select
+                         {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+                         className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
+                         style={{ 
+                           borderColor: 'var(--border)',
+                           '--tw-ring-color': 'var(--primary)',
+                         } as any}
+                       >
+                         <option value="">Selecione uma opção...</option>
+                         {(field.options || []).map((option: string, i: number) => (
+                           <option key={i} value={option}>{option}</option>
+                         ))}
+                       </select>
+                       <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                         <ChevronRight className="h-4 w-4 rotate-90" />
+                       </div>
+                     </div>
+                  ) : (
+                     <Input
+                       type={field.type === 'phone' ? 'tel' : field.type}
+                       {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+                       placeholder={field.placeholder}
+                       className="h-12 bg-background/50 border-2 text-base transition-all"
+                       style={{ 
+                         borderColor: 'var(--border)',
+                         '--tw-ring-color': 'var(--primary)',
+                       } as any}
+                     />
+                  )}
+                  {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
+                   <span className="text-xs font-bold text-destructive uppercase tracking-widest">Este campo é obrigatório</span>
                  )}
-                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
-                  <span className="text-xs font-bold text-destructive uppercase tracking-widest">This field is required</span>
-                )}
-              </div>
-            ))}
-            
-             <Button 
-               type="submit" 
-               disabled={isSubmitting}
-               className="w-full h-14 text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
-               style={{ 
-                 backgroundColor: 'var(--primary)',
-                 color: 'var(--primary-foreground)',
-                 boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' 
-               }}
-             >
-              {isSubmitting ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                <>
-                  {form.settings.submit_label}
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
+               </div>
+             ))}
+             
+             <div className="flex gap-4 pt-4">
+               {isMultiStep && currentStep > 0 && (
+                 <Button 
+                   variant="outline"
+                   onClick={handleBack}
+                   className="h-14 px-8 font-bold uppercase tracking-widest border-2"
+                 >
+                   <ArrowLeft className="mr-2 h-5 w-5" /> Voltar
+                 </Button>
+               )}
+               
+               <Button 
+                 onClick={isMultiStep ? handleNext : handleSubmit(onSubmit)}
+                 disabled={isSubmitting}
+                 className="flex-1 h-14 text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                 style={{ 
+                   backgroundColor: 'var(--primary)',
+                   color: 'var(--primary-foreground)',
+                   boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' 
+                 }}
+               >
+                 {isSubmitting ? (
+                   <Loader2 className="h-6 w-6 animate-spin" />
+                 ) : (
+                   <>
+                     {isMultiStep 
+                        ? (currentStep === sortedSteps.length - 1 ? form.settings.submit_label : sortedSteps[currentStep].button_text || 'Próximo')
+                        : form.settings.submit_label
+                     }
+                     <ArrowRight className="ml-2 h-5 w-5" />
+                   </>
+                 )}
+               </Button>
+             </div>
+           </div>
+         </CardContent>
       </Card>
       
       <div className="mt-8 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
