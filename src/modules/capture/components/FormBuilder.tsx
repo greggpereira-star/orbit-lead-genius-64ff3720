@@ -432,7 +432,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               type: formConfig.type || 'standard'
             },
             fields: fieldsToUpsert,
-            steps: existingForm?.form_steps || [],
+            steps,
             optionsByField
           });
 
