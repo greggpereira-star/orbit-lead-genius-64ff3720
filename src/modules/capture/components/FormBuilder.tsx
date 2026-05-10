@@ -385,9 +385,8 @@ import { FormScoringPanel } from './FormScoringPanel';
             // Se o field é novo, precisamos do ID retornado ou gerado. 
             // Como a RPC de fields não retorna IDs, e o front gera UUIDs curtos, 
             // em uma implementação real precisaríamos garantir que o field.id é estável.
-            if (!field.id || field.id.length < 20) continue; 
-
-            const currentOptions = Array.isArray(field.options) ? field.options : [];
+             const currentOptions = Array.isArray(field.options) ? field.options : [];
+             if (!field.id) continue;
             const originalField = originalData?.fields.find(of => of.id === field.id);
             const originalOptions = originalField?.options_data || [];
 
