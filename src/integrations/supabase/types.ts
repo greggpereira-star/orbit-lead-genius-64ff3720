@@ -1445,38 +1445,49 @@ export type Database = {
       system_logs: {
         Row: {
           company_id: string | null
-          correlation_id: string | null
+          component: string | null
           created_at: string | null
           id: string
           level: string
           message: string
-          metadata: Json | null
+          payload: Json | null
           route: string | null
+          trace_id: string | null
           user_id: string | null
         }
         Insert: {
           company_id?: string | null
-          correlation_id?: string | null
+          component?: string | null
           created_at?: string | null
           id?: string
           level: string
           message: string
-          metadata?: Json | null
+          payload?: Json | null
           route?: string | null
+          trace_id?: string | null
           user_id?: string | null
         }
         Update: {
           company_id?: string | null
-          correlation_id?: string | null
+          component?: string | null
           created_at?: string | null
           id?: string
           level?: string
           message?: string
-          metadata?: Json | null
+          payload?: Json | null
           route?: string | null
+          trace_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "system_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
