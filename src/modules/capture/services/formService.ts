@@ -3,7 +3,7 @@ import { logger } from '@/core/observability/logger';
 
 export interface Form {
   id: string;
-  tenant_id: string;
+  company_id: string;
   name: string;
   slug: string;
   description?: string;
@@ -61,7 +61,7 @@ export const formService = {
     const { data, error } = await supabase
       .from('forms')
       .select('*')
-      .eq('tenant_id', tenantId)
+      .eq('company_id', tenantId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -112,7 +112,7 @@ export const formService = {
       const { data: newForm, error: formError } = await supabase
         .from('forms')
         .insert({
-          tenant_id: tenantId,
+          company_id: tenantId,
           name: form.name,
           slug: form.slug,
           status: form.status || 'draft',
