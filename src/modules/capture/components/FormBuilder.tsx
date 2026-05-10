@@ -395,7 +395,7 @@ import { FormScoringPanel } from './FormScoringPanel';
               .map((oo: any) => oo.id);
             
             const optionsToUpsert = currentOptions.map((opt: any, index: number) => ({
-              id: (opt.id && opt.id.length > 20) ? opt.id : undefined,
+              id: opt.id,
               label: typeof opt === 'string' ? opt : (opt.label || ''),
               value: typeof opt === 'string' ? opt.toLowerCase() : (opt.value || ''),
               score: opt.score || 0,
