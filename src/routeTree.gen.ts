@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
+import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
@@ -36,6 +37,7 @@ import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.c
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
+import { Route as EmbedFormRouteImport } from './routes/embed.form.'
 
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
@@ -58,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
 const FSlugRoute = FSlugRouteImport.update({
   id: '/f/$slug',
   path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
+  id: '/embed-form/$id',
+  path: '/embed-form/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
@@ -171,6 +178,11 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
   path: '/tv',
   getParentRoute: () => AppAnalyticsRoute,
 } as any)
+const EmbedFormRoute = EmbedFormRouteImport.update({
+  id: '/embed/form/',
+  path: '/embed/form/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -189,7 +201,9 @@ export interface FileRoutesByFullPath {
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/embed/form/': typeof EmbedFormRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -215,7 +229,9 @@ export interface FileRoutesByTo {
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/embed/form': typeof EmbedFormRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -245,7 +261,9 @@ export interface FileRoutesById {
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/embed/form/': typeof EmbedFormRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
@@ -274,7 +292,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/embed-form/$id'
     | '/f/$slug'
+    | '/embed/form/'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -300,7 +320,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/embed-form/$id'
     | '/f/$slug'
+    | '/embed/form'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -329,7 +351,9 @@ export interface FileRouteTypes {
     | '/_auth/register'
     | '/_auth/reset-password'
     | '/_auth/verify-email'
+    | '/embed-form/$id'
     | '/f/$slug'
+    | '/embed/form/'
     | '/_app/analytics/tv'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
@@ -345,7 +369,9 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
+  EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
+  EmbedFormRoute: typeof EmbedFormRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -383,6 +409,13 @@ declare module '@tanstack/react-router' {
       path: '/f/$slug'
       fullPath: '/f/$slug'
       preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed-form/$id': {
+      id: '/embed-form/$id'
+      path: '/embed-form/$id'
+      fullPath: '/embed-form/$id'
+      preLoaderRoute: typeof EmbedFormIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/verify-email': {
@@ -539,6 +572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsTvRouteImport
       parentRoute: typeof AppAnalyticsRoute
     }
+    '/embed/form/': {
+      id: '/embed/form/'
+      path: '/embed/form'
+      fullPath: '/embed/form/'
+      preLoaderRoute: typeof EmbedFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -637,7 +677,9 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
+  EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
+  EmbedFormRoute: EmbedFormRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

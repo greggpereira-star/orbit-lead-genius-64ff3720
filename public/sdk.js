@@ -36,7 +36,11 @@
     buildUrl: function(formId) {
       const tracking = this.getTrackingData();
       const baseUrl = window.location.origin;
-      const url = new URL(`${baseUrl}/f/${formId}`);
+      // If formId is a UUID, use the embed route. Otherwise use slug route.
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId);
+      const url = isUuid 
+        ? new URL(`${baseUrl}/embed-form/${formId}`)
+        : new URL(`${baseUrl}/f/${formId}`);
       
       Object.keys(tracking).forEach(key => {
         if (tracking[key]) url.searchParams.set(key, tracking[key]);
