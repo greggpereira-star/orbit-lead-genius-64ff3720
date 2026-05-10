@@ -32,11 +32,12 @@ export interface FormField {
   placeholder?: string;
   options?: any[];
   validation_rules?: any;
-   sort_order: number;
-   step_id?: string;
-   logic_rules?: any;
-   score_rules?: any;
- }
+    sort_order: number;
+    step_number?: number;
+    step_id?: string;
+    logic_rules?: any;
+    score_rules?: any;
+  }
  
  export interface FormStep {
    id: string;
@@ -107,19 +108,20 @@ export const formService = {
      steps: Partial<FormStep>[] = [],
      scoringRules: Partial<ScoringRule>[] = []
    ): Promise<Form> {
-     const processedFields = fields.map((f, index) => ({
-       label: f.label || 'Untitled Field',
-       name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-       type: f.type || 'text',
-       required: !!f.required,
-       placeholder: f.placeholder || '',
-       options: Array.isArray(f.options) ? f.options : [],
-       sort_order: index,
-       step_number: f.step_id ? 1 : 1, // Fallback logic if step_id is used
-       validation_rules: f.validation_rules || {},
-       logic_rules: f.logic_rules || {},
-       score_rules: f.score_rules || {}
-     }));
+      const processedFields = fields.map((f, index) => ({
+        label: f.label || 'Untitled Field',
+        name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+        type: f.type || 'text',
+        required: !!f.required,
+        placeholder: f.placeholder || '',
+        options: Array.isArray(f.options) ? f.options : [],
+        sort_order: f.sort_order !== undefined ? f.sort_order : index,
+        step_number: f.step_number || 1,
+        step_id: f.step_id,
+        validation_rules: f.validation_rules || {},
+        logic_rules: f.logic_rules || {},
+        score_rules: f.score_rules || {}
+      }));
  
      const payload = {
        p_tenant_id: tenantId,
@@ -166,8 +168,9 @@ export const formService = {
       required: !!f.required,
       placeholder: f.placeholder || '',
       options: Array.isArray(f.options) ? f.options : [],
-      sort_order: index,
-       step_id: f.step_id,
+      sort_order: f.sort_order !== undefined ? f.sort_order : index,
+      step_number: f.step_number || 1,
+      step_id: f.step_id,
       validation_rules: f.validation_rules || {},
       logic_rules: f.logic_rules || {},
       score_rules: f.score_rules || {}

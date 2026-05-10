@@ -282,12 +282,13 @@ import { FormScoringPanel } from './FormScoringPanel';
         required: !!f.required,
         options: Array.isArray(f.options) ? f.options : [],
         placeholder: f.placeholder || '',
-        sort_order: index,
-        step_number: 1,
-        validation_rules: {},
-        logic_rules: {},
-        score_rules: {}
-      }));
+       sort_order: index,
+       step_number: f.step_number || 1,
+       step_id: f.step_id || undefined,
+       validation_rules: f.validation_rules || {},
+       logic_rules: f.logic_rules || {},
+       score_rules: f.score_rules || {}
+     }));
 
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error(`Timeout de salvamento (10s). Trace ID: ${traceId}`)), 10000)
