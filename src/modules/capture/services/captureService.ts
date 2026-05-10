@@ -1,117 +1,117 @@
- import { automationService } from '@/modules/automation/services/automationService';
- import { enrichmentService } from '@/modules/ai/services/enrichment';
- export interface LeadSubmission {
-   name: string;
-   email?: string;
-   phone?: string;
-   city?: string;
-   metadata?: Record<string, any>;
-   utm_source?: string;
-   utm_medium?: string;
-   utm_campaign?: string;
-   gclid?: string;
-   fbclid?: string;
- }
- 
- import { supabase } from '@/lib/supabase';
- import { logger } from '@/core/observability/logger';
- import { calculateLeadScore } from '@/modules/ai/services/scoring';
-import { qualificationService } from '@/modules/ai/services/qualification';
-  import { routingService } from '@/modules/crm/services/routingService';
-  import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
-  
-  export const captureService = {
-   async submitLead(
-     companyId: string, 
-     data: LeadSubmission, 
-     trackingData: any = {}
-   ): Promise<{ success: boolean; leadId?: string; error?: any }> {
-     const { data: lead, error } = await supabase
-       .from('leads')
-       .insert({
-         company_id: companyId,
-         name: data.name,
-         email: data.email,
-         phone: data.phone,
-         city: data.city,
-         utm_source: data.utm_source || trackingData.utm_source,
-         utm_medium: data.utm_medium || trackingData.utm_medium,
-         utm_campaign: data.utm_campaign || trackingData.utm_campaign,
-         gclid: data.gclid || trackingData.gclid,
-         fbclid: data.fbclid || trackingData.fbclid,
-         metadata: { ...data.metadata, ...trackingData.metadata },
-         referrer: trackingData.referrer,
-         landing_page: trackingData.landing_page,
-         status: 'new',
-         temperature: 'cold'
-       })
-       .select()
-       .single();
- 
-     if (error) return { success: false, error };
-     
-     // Create initial lead event
-     await supabase.from('lead_events').insert({
-       lead_id: lead.id,
-       event_type: 'capture',
-       description: 'Lead captured via form',
-       metadata: { source: 'form_builder' }
-     });
- 
- 
-      // 1. Calculate AI Score
-      const scoreResult = calculateLeadScore({ ...data, ...trackingData });
- 
-      // 2. Update Lead with Score
-      await supabase
-        .from('leads')
-        .update({ 
-          score: scoreResult.totalScore,
-          temperature: scoreResult.temperature,
-          metadata: { 
-            ...data.metadata, 
-            ...trackingData.metadata,
-            ai_analysis: scoreResult.summary,
-            grade: scoreResult.grade
-          } 
-        })
-        .eq('id', lead.id);
- 
-      // 3. Detailed AI Analysis
-      const analysis = await qualificationService.analyzeLead(lead.id, scoreResult);
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/core/observability/logger';
+import { formScoringService } from './formScoringService';
+import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
+import { automationService } from '@/modules/automation/services/automationService';
 
-      // 4. Update Lead with deep analysis
-      await supabase
-        .from('leads')
-        .update({
-          metadata: { 
-            ...lead.metadata,
-            ...analysis,
-            ai_summary: analysis.summary,
-            buying_intent: analysis.buying_intent
-          }
-        })
-        .eq('id', lead.id);
+export interface LeadSubmission {
+  name: string;
+  email?: string;
+  phone?: string;
+  metadata?: Record<string, any>;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  gclid?: string;
+  fbclid?: string;
+}
 
-      // 5. Intelligence-based routing
-      await routingService.assignLead(lead.id, companyId, scoreResult);
- 
-      // 6. Enrich Lead in background
-      enrichmentService.enrichLead(lead.id).catch(console.error);
- 
-       // 7. Trigger automations
-       automationService.processTrigger(companyId, {
-         type: 'lead_created',
-         data: { ...lead, ...trackingData }
-       }).catch(console.error);
- 
-       // 8. Auto-sync to CV.CRM if form metadata says so
-       if (data.metadata?.cv_crm_integration) {
-         cvcrmService.syncLead(companyId, lead.id).catch(err => {
-           logger.error('CaptureService: Auto-sync CV.CRM failed', { leadId: lead.id, error: err.message });
-         });
-       }
-  
-       return { success: true, leadId: lead.id };
-   }
- };
+export const captureService = {
+  async submitLead(
+    companyId: string, 
+    data: LeadSubmission, 
+    trackingData: any = {}
+  ): Promise<{ success: boolean; leadId?: string; submissionId?: string; error?: any }> {
+    try {
+      // 1. Calculate Score based on form rules if form_id is present
+      let score = 0;
+      let tags: string[] = [];
+      let temperature = 'cold';
+
+      if (data.metadata?.form_id) {
+        const rules = await formScoringService.getScoringRules(data.metadata.form_id);
+        const tempRules = await formScoringService.getTemperatureRules(data.metadata.form_id);
+        const scoring = formScoringService.calculateScore(rules, data.metadata.answers || {});
+        
+        score = scoring.score;
+        tags = scoring.tags;
+        temperature = scoring.temperature || formScoringService.getTemperature(score, tempRules);
+      }
+
+      // 2. Insert Lead
+      const { data: lead, error: leadError } = await supabase
+        .from('leads')
+        .insert({
+          company_id: companyId,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          utm_source: data.utm_source || trackingData.utm_source,
+          utm_medium: data.utm_medium || trackingData.utm_medium,
+          utm_campaign: data.utm_campaign || trackingData.utm_campaign,
+          gclid: data.gclid || trackingData.gclid,
+          fbclid: data.fbclid || trackingData.fbclid,
+          metadata: { ...data.metadata, ...trackingData.metadata, tags },
+          referrer: trackingData.referrer,
+          landing_page: trackingData.landing_page,
+          status: 'new',
+          score,
+          temperature
+        })
+        .select()
+        .single();
+
+      if (leadError) throw leadError;
+
+      // 3. Insert Tag rules (persist tags to lead_tags table)
+      if (tags.length > 0) {
+        await supabase.from('lead_tags').insert(
+          tags.map(tag => ({ lead_id: lead.id, tag_name: tag }))
+        );
+      }
+
+      // 4. Save Final Submission record
+      const { data: submission, error: subError } = await supabase
+        .from('form_submissions')
+        .insert({
+          company_id: companyId,
+          form_id: data.metadata?.form_id,
+          lead_id: lead.id,
+          answers: data.metadata?.answers || {},
+          score,
+          temperature,
+          tags,
+          tracking: trackingData
+        })
+        .select()
+        .single();
+
+      // 5. Create lead event
+      await supabase.from('lead_events').insert({
+        lead_id: lead.id,
+        event_type: 'capture',
+        description: `Lead captured with score ${score} (${temperature})`,
+        metadata: { submission_id: submission?.id }
+      });
+
+      // 6. Async actions
+      // CV.CRM Sync
+      if (data.metadata?.cv_crm_integration) {
+        cvcrmService.syncLead(companyId, lead.id).catch(err => {
+          logger.error('CaptureService: CV.CRM sync failed', { leadId: lead.id, error: err.message });
+        });
+      }
+
+      // Automations
+      automationService.processTrigger(companyId, {
+        type: 'lead_created',
+        data: { ...lead, submission_id: submission?.id }
+      }).catch(console.error);
+
+      return { success: true, leadId: lead.id, submissionId: submission?.id };
+    } catch (err: any) {
+      logger.error('CaptureService: submitLead failed', { error: err.message, companyId });
+      return { success: false, error: err.message };
+    }
+  }
+};
