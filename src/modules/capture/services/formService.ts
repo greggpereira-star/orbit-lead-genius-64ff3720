@@ -136,24 +136,19 @@ export const formService = {
  
      logger.info('Creating form with RPC', { tenantId, slug: form.slug });
  
-     const { data: formId, error } = await supabase.rpc('create_form_with_fields', payload);
+    const { data: formId, error } = await supabase.rpc('create_form_with_fields', payload);
  
-     if (error) {
-       logger.error('Failed to create form with RPC', { error, tenantId });
-       if (error.code === '23505') {
-         throw new Error('This slug is already in use. Please choose a different one.');
-       }
-       throw error;
-     }
+    if (error) {
+      logger.error('Failed to create form with RPC', { error, tenantId });
+      if (error.code === '23505') {
+        throw new Error('Este slug já está em uso. Por favor, escolha outro.');
+      }
+      throw error;
+    }
  
-     const { data: newForm, error: fetchError } = await supabase
-       .from('forms')
-       .select('*')
-       .eq('id', formId)
-       .single();
- 
-     if (fetchError) throw fetchError;
-     return newForm;
+    // Optimized: return a partial form object immediately to avoid extra roundtrip
+    // React Query will refetch the list if needed, or we can return the ID
+    return { id: formId, ...form } as Form;
    },
  
   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
