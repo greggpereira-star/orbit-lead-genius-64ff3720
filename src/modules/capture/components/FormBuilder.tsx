@@ -56,6 +56,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
 import { FormScoringPanel } from './FormScoringPanel';
 
+const makeOptionValue = (label: string) =>
+  label
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const normalizeDropdownOption = (option: any, index: number) => {
+  if (typeof option === 'string') {
+    return {
+      id: crypto.randomUUID(),
+      label: option,
+      value: makeOptionValue(option),
+      score: 0,
+      tag: null,
+      sort_order: index,
+      metadata: {}
+    };
+  }
+
+  const label = option?.label || option?.value || `Opção ${index + 1}`;
+  return {
+    ...option,
+    id: option?.id || crypto.randomUUID(),
+    label,
+    value: option?.value || makeOptionValue(label),
+    score: Number(option?.score || 0),
+    tag: option?.tag ?? null,
+    sort_order: index,
+    metadata: option?.metadata || {}
+  };
+};
+
+const normalizeFieldForEditor = (field: any, index: number) => {
+  const persistedOptions = Array.isArray(field.options_data) && field.options_data.length > 0
+    ? field.options_data
+    : Array.isArray(field.options)
+      ? field.options
+      : [];
+
+  return {
+    ...field,
+    id: field.id || crypto.randomUUID(),
+    name: field.name || `field_${index}`,
+    sort_order: index,
+    options: persistedOptions.map(normalizeDropdownOption)
+  };
+};
+
   interface FormBuilderProps {
     formId?: string;
     onBack: () => void;
@@ -167,21 +217,21 @@ import { FormScoringPanel } from './FormScoringPanel';
              </Button>
            </div>
            
-            <div className="space-y-2">
-              {(Array.isArray(field.options) ? field.options : []).map((option: any, optIndex: number) => {
-                const optValue = typeof option === 'string' ? option : (option.label || '');
-                const optId = typeof option === 'string' ? optIndex : (option.id || optIndex);
+             <div className="space-y-2">
+               {(Array.isArray(field.options) ? field.options : []).map((option: any, optIndex: number) => {
+                 const normalizedOption = normalizeDropdownOption(option, optIndex);
+                 const optValue = normalizedOption.label;
+                 const optId = normalizedOption.id;
                 
                 return (
                   <div key={optId} className="flex gap-2 items-center animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <Input 
+                       <Input 
                         value={optValue}
+                         onKeyDown={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           const newOptions = [...(field.options || [])];
-                           const updatedOption = typeof option === 'string' 
-                             ? { label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
-                             : { ...option, label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_') };
+                            const updatedOption = { ...normalizedOption, label: e.target.value, value: makeOptionValue(e.target.value) };
                            newOptions[optIndex] = updatedOption;
                           onUpdate(index, { options: newOptions });
                         }}
@@ -189,28 +239,26 @@ import { FormScoringPanel } from './FormScoringPanel';
                         className="h-8 text-xs"
                       />
                       <div className="flex gap-2">
-                        <Input 
-                          value={typeof option === 'string' ? '' : (option.score || 0)}
+                         <Input 
+                           value={normalizedOption.score || 0}
                           type="number"
+                           onKeyDown={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             const newOptions = [...(field.options || [])];
                             const score = parseInt(e.target.value) || 0;
-                             const updatedOptionScore = typeof option === 'string'
-                               ? { label: option, score, value: option.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
-                               : { ...option, score };
+                              const updatedOptionScore = { ...normalizedOption, score };
                              newOptions[optIndex] = updatedOptionScore;
                             onUpdate(index, { options: newOptions });
                           }}
                           placeholder="Score"
                           className="h-8 text-xs w-16"
                         />
-                        <Input 
-                          value={typeof option === 'string' ? '' : (option.tag || '')}
+                         <Input 
+                           value={normalizedOption.tag || ''}
+                           onKeyDown={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             const newOptions = [...(field.options || [])];
-                             const updatedOptionTag = typeof option === 'string'
-                               ? { label: option, tag: e.target.value, value: option.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
-                               : { ...option, tag: e.target.value };
+                              const updatedOptionTag = { ...normalizedOption, tag: e.target.value };
                              newOptions[optIndex] = updatedOptionTag;
                             onUpdate(index, { options: newOptions });
                           }}
@@ -274,8 +322,8 @@ import { FormScoringPanel } from './FormScoringPanel';
    useEffect(() => {
      if (existingForm) {
        const sortedFields = existingForm.form_fields
-         .sort((a, b) => a.sort_order - b.sort_order)
-         .map(f => ({ ...f, id: f.id }));
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map(normalizeFieldForEditor);
        
        setFormConfig(existingForm);
        setFields(sortedFields);
@@ -301,12 +349,12 @@ import { FormScoringPanel } from './FormScoringPanel';
               });
             });
           });
-          setFields(newFields);
+          setFields(newFields.map(normalizeFieldForEditor));
         } else if (template.fields) {
-          setFields(template.fields.map((f: any) => ({
+          setFields(template.fields.map((f: any, index: number) => normalizeFieldForEditor({
             ...f,
             id: crypto.randomUUID()
-          })));
+          }, index)));
         }
         setShowTemplates(false);
       } else {
@@ -354,6 +402,7 @@ import { FormScoringPanel } from './FormScoringPanel';
             type: f.type || 'text',
             required: !!f.required,
             placeholder: f.placeholder || '',
+            options: Array.isArray(f.options) ? f.options.map(normalizeDropdownOption) : [],
             sort_order: index,
             step_number: f.step_number || 1,
             step_id: f.step_id && f.step_id.length > 20 ? f.step_id : undefined,
@@ -374,65 +423,24 @@ import { FormScoringPanel } from './FormScoringPanel';
             fieldsDelete: fieldsToDelete
           });
 
-          // 3. Save Options Delta for SELECT fields
-          const selectFields = fields.filter(f => f.type === 'select');
-          
-          for (const field of selectFields) {
-            const fieldId = field.id;
-            if (!fieldId) continue;
-
-            // Snapshot original para computar delta de opções
-            const originalField = originalData?.fields.find(of => of.id === fieldId);
-            const originalOptions = Array.isArray(originalField?.options_data) ? originalField.options_data : [];
-            
-            // Garante que currentOptions é um array de objetos estruturados
-            const currentOptions = Array.isArray(field.options) ? field.options.map((opt: any, index: number) => {
-              if (typeof opt === 'string') {
-                return {
-                  id: crypto.randomUUID(), // Opções legacy como string ganham ID
-                  label: opt,
-                  value: opt.toLowerCase().replace(/\s+/g, '_'),
-                  sort_order: index,
-                  score: 0
-                };
-              }
-              return {
-                ...opt,
-                id: opt.id || crypto.randomUUID(),
-                sort_order: index
-              };
-            }) : [];
-
-            const optionsToDelete = originalOptions
-              .filter((oo: any) => oo.id && !currentOptions.some((co: any) => co.id === oo.id))
-              .map((oo: any) => oo.id);
-            
-            const optionsToUpsert = currentOptions.map((opt: any, index: number) => ({
-              id: opt.id || crypto.randomUUID(),
-              label: opt.label || '',
-              value: opt.value || (opt.label ? opt.label.toLowerCase().replace(/\s+/g, '_') : ''),
-              score: opt.score || 0,
-              tag: opt.tag || null,
-              sort_order: index,
-              metadata: opt.metadata || {}
+          const optionsByField = fields
+            .filter((field) => field.type === 'select' && field.id)
+            .map((field) => ({
+              field_id: field.id,
+              options: Array.isArray(field.options) ? field.options.map(normalizeDropdownOption) : []
             }));
 
-            // Só envia se houver mudança real para evitar requests desnecessários
-            const hasChanges = optionsToUpsert.length > 0 || optionsToDelete.length > 0;
-            
-            if (hasChanges) {
-              logger.info(`[${traceId}] Step 3: Saving Options for field ${field.label}`, {
-                upsertCount: optionsToUpsert.length,
-                deleteCount: optionsToDelete.length
-              });
-              await formService.saveFieldOptionsDelta({
-                formId: savedFormId,
-                companyId: company.id,
-                fieldId: fieldId,
-                optionsUpsert: optionsToUpsert,
-                optionsDelete: optionsToDelete
-              });
-            }
+          logger.info(`[${traceId}] Step 3: Saving Dropdown Options Batch`, {
+            fieldCount: optionsByField.length,
+            optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0)
+          });
+
+          if (optionsByField.length > 0) {
+            await formService.saveFieldOptionsBatch({
+              formId: savedFormId,
+              companyId: company.id,
+              optionsByField
+            });
           }
 
           const duration = Date.now() - startedAt;
@@ -535,10 +543,10 @@ import { FormScoringPanel } from './FormScoringPanel';
        name: template.name,
        settings: { ...prev.settings, ...template.settings }
      }));
-     setFields(template.fields.map((f: any) => ({
+      setFields(template.fields.map((f: any, index: number) => normalizeFieldForEditor({
        ...f,
       id: crypto.randomUUID()
-     })));
+      }, index)));
      setShowTemplates(false);
    };
  

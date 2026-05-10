@@ -157,11 +157,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
    );
  }
  
- function AuthWrapper() {
-   const { state } = useAuth();
+  function AuthWrapper() {
+    const { state } = useAuth();
  
    useEffect(() => {
-    console.log("!!! Application Root Mounted !!!");
     logger.info("Application Root Mounted");
     initTracking();
 
@@ -173,7 +172,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     window.onunhandledrejection = (event) => {
       console.error("!!! UNHANDLED REJECTION !!!", event.reason);
     };
-   }, [state]);
+   }, []);
  
     // Only show bootstrap UI if we ARE in a bootstrap state AND we don't have a workspace ready cache
     // This prevents background re-validations (e.g. on tab focus) from unmounting the active UI.

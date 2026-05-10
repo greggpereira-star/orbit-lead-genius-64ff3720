@@ -226,6 +226,19 @@ export const formService = {
       if (error) throw error;
     },
 
+    async saveFieldOptionsBatch(p: {
+      formId: string,
+      companyId: string,
+      optionsByField: any[]
+    }): Promise<void> {
+      const { error } = await supabase.rpc('save_form_options_batch_v1' as any, {
+        p_form_id: p.formId,
+        p_company_id: p.companyId,
+        p_options_by_field: p.optionsByField
+      });
+      if (error) throw error;
+    },
+
     async saveFieldOptionsDelta(p: {
       formId: string,
       companyId: string,

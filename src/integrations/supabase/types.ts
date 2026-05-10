@@ -2106,6 +2106,7 @@ export type Database = {
           company_id: string
         }[]
       }
+      get_workspace_context_v1: { Args: never; Returns: Json }
       save_form_core_v1: {
         Args: {
           p_company_id: string
@@ -2127,6 +2128,14 @@ export type Database = {
           p_form_id: string
         }
         Returns: undefined
+      }
+      save_form_options_batch_v1: {
+        Args: {
+          p_company_id: string
+          p_form_id: string
+          p_options_by_field: Json
+        }
+        Returns: Json
       }
       save_form_options_delta_v1: {
         Args: {
