@@ -217,21 +217,21 @@ const normalizeFieldForEditor = (field: any, index: number) => {
              </Button>
            </div>
            
-            <div className="space-y-2">
-              {(Array.isArray(field.options) ? field.options : []).map((option: any, optIndex: number) => {
-                const optValue = typeof option === 'string' ? option : (option.label || '');
-                const optId = typeof option === 'string' ? optIndex : (option.id || optIndex);
+             <div className="space-y-2">
+               {(Array.isArray(field.options) ? field.options : []).map((option: any, optIndex: number) => {
+                 const normalizedOption = normalizeDropdownOption(option, optIndex);
+                 const optValue = normalizedOption.label;
+                 const optId = normalizedOption.id;
                 
                 return (
                   <div key={optId} className="flex gap-2 items-center animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <Input 
+                       <Input 
                         value={optValue}
+                         onKeyDown={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           const newOptions = [...(field.options || [])];
-                           const updatedOption = typeof option === 'string' 
-                             ? { label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
-                             : { ...option, label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_') };
+                            const updatedOption = { ...normalizedOption, label: e.target.value, value: makeOptionValue(e.target.value) };
                            newOptions[optIndex] = updatedOption;
                           onUpdate(index, { options: newOptions });
                         }}
@@ -239,28 +239,26 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                         className="h-8 text-xs"
                       />
                       <div className="flex gap-2">
-                        <Input 
-                          value={typeof option === 'string' ? '' : (option.score || 0)}
+                         <Input 
+                           value={normalizedOption.score || 0}
                           type="number"
+                           onKeyDown={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             const newOptions = [...(field.options || [])];
                             const score = parseInt(e.target.value) || 0;
-                             const updatedOptionScore = typeof option === 'string'
-                               ? { label: option, score, value: option.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
-                               : { ...option, score };
+                              const updatedOptionScore = { ...normalizedOption, score };
                              newOptions[optIndex] = updatedOptionScore;
                             onUpdate(index, { options: newOptions });
                           }}
                           placeholder="Score"
                           className="h-8 text-xs w-16"
                         />
-                        <Input 
-                          value={typeof option === 'string' ? '' : (option.tag || '')}
+                         <Input 
+                           value={normalizedOption.tag || ''}
+                           onKeyDown={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             const newOptions = [...(field.options || [])];
-                             const updatedOptionTag = typeof option === 'string'
-                               ? { label: option, tag: e.target.value, value: option.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
-                               : { ...option, tag: e.target.value };
+                              const updatedOptionTag = { ...normalizedOption, tag: e.target.value };
                              newOptions[optIndex] = updatedOptionTag;
                             onUpdate(index, { options: newOptions });
                           }}
