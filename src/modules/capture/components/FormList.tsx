@@ -255,9 +255,12 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
             <div className="space-y-1">
               <CardTitle className="text-base font-bold truncate max-w-[200px]">{form.name}</CardTitle>
               <div className="flex items-center gap-2">
-                <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0 h-4">
-                  {form.status}
-                </Badge>
+                 <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0 h-4">
+                   {form.status}
+                 </Badge>
+                 <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0 h-4">
+                   {form.type === 'multi_step' ? 'Step-by-Step' : form.type === 'quiz' ? 'Quiz' : 'Normal'}
+                 </Badge>
                 <span className="text-[10px] text-muted-foreground">/{form.slug}</span>
               </div>
             </div>
