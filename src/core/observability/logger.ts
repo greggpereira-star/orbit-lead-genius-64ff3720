@@ -13,6 +13,12 @@ interface LogContext {
 class EnterpriseLogger {
   private _correlationId: string | null = null;
 
+  private shouldWriteConsole(level: LogLevel) {
+    if (level === 'error' || level === 'fatal') return true;
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('debug_logs') === 'true';
+  }
+
   private get correlationId(): string {
     if (!this._correlationId) {
       this._correlationId = typeof crypto !== 'undefined' && crypto.randomUUID 
@@ -34,9 +40,11 @@ class EnterpriseLogger {
       metadata: context,
     };
 
-    // Console output for dev/observability
-    const color = level === 'error' || level === 'fatal' ? '\x1b[31m' : '\x1b[32m';
-    console.log(`[${payload.timestamp}] ${color}${level.toUpperCase()}\x1b[0m [${payload.correlation_id}] ${message}`, context);
+    // Console output is opt-in for info/warn to avoid slowing auth and form editing.
+    if (this.shouldWriteConsole(level)) {
+      const color = level === 'error' || level === 'fatal' ? '\x1b[31m' : '\x1b[32m';
+      console.log(`[${payload.timestamp}] ${color}${level.toUpperCase()}\x1b[0m [${payload.correlation_id}] ${message}`, context);
+    }
 
     // Optimized background logging to avoid blocking the main thread.
     // Errors are sent to the backend via fire-and-forget; never block or throw.
