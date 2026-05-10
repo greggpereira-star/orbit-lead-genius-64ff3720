@@ -247,11 +247,23 @@ import { FormPublish } from './FormPublish';
           setTimeout(() => reject(new Error('Tempo limite de salvamento excedido (30s). Verifique sua conexão.')), 30000)
         );
   
-        const savePromise = formId 
-          ? formService.updateForm(formId, formConfig, cleanedFields)
-          : formService.createForm(company.id, formConfig, cleanedFields);
-  
-        return Promise.race([savePromise, timeoutPromise]);
+        try {
+          const savePromise = formId 
+            ? formService.updateForm(formId, formConfig, cleanedFields)
+            : formService.createForm(company.id, formConfig, cleanedFields);
+    
+          return await Promise.race([savePromise, timeoutPromise]);
+        } catch (err: any) {
+          // Forensic logging for save failures
+          logger.error('FormBuilder: Atomic Save Failure', {
+            formId,
+            tenantId: company.id,
+            error: err.message,
+            stack: err.stack,
+            payload_size: JSON.stringify(cleanedFields).length
+          });
+          throw err;
+        }
       },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['forms'] });

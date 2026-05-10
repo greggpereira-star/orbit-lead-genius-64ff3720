@@ -46,7 +46,7 @@ export function AppLayout() {
     'WORKSPACE_READY'
   ].includes(state as string);
 
-    if (isLoadingState && state !== 'READY') {
+    if (isLoadingState && state !== 'READY' && state !== 'AUTHENTICATED') {
     const getMessage = () => {
       switch (state) {
         case 'BOOTSTRAP_START': return 'Iniciando bootstrap enterprise...';
@@ -86,7 +86,7 @@ export function AppLayout() {
      );
    }
 
-  if (state === 'ERROR' || (state === 'READY' && !company)) {
+   if (state === 'ERROR') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
         <div className="max-w-md w-full space-y-8 text-center animate-in fade-in zoom-in duration-500">
@@ -135,14 +135,14 @@ export function AppLayout() {
 
    const userRole = membership?.role;
    
-   if (state === 'READY' && (!company || !userRole)) {
+   if ((state === 'READY' || state === 'AUTHENTICATED') && !company) {
      return (
        <div className="flex h-screen items-center justify-center bg-background">
          <div className="flex flex-col items-center gap-4 text-center">
            <Loader2 className="h-8 w-8 text-primary animate-spin" />
            <div className="space-y-1">
-             <p className="text-sm font-bold">Finalizando autorização...</p>
-             <p className="text-xs text-muted-foreground">Validando permissões de acesso ao workspace.</p>
+             <p className="text-sm font-bold">Sincronizando Workspace...</p>
+             <p className="text-xs text-muted-foreground">Estabelecendo conexão segura com seu tenant.</p>
            </div>
          </div>
        </div>

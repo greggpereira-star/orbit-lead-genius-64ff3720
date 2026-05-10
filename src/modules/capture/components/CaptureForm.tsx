@@ -48,14 +48,16 @@ import { LGPDConsent } from './LGPDConsent';
  
      const trackingData = tracker.getTrackingParams();
      
-     const result = await captureService.submitLead(company.id, {
+      const result = await captureService.submitLead(company.id, {
        name: values.name,
        email: values.email,
        phone: values.phone,
       metadata: { 
         company_name: values.company,
         consents,
-        consent_version: '2.4.0-2024'
+          consent_version: '2.4.0-2024',
+          source_origin: window.location.href,
+          form_type: 'traditional_capture'
       }
      }, trackingData);
  

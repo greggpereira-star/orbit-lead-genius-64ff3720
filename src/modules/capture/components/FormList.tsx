@@ -186,7 +186,7 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     );
   }
 
-   if (isError || (!isLoading && !company?.id)) {
+    if (isError) {
      return (
        <Card className="border-destructive/20 bg-destructive/5 flex flex-col items-center justify-center p-12 text-center space-y-4">
          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
@@ -209,6 +209,22 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
        </Card>
      );
    }
+
+    if (!isLoading && !company?.id) {
+      return (
+        <Card className="border-primary/20 bg-primary/5 flex flex-col items-center justify-center p-12 text-center space-y-4">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+            <RefreshCcw className="h-8 w-8 text-primary animate-spin" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-bold text-lg">Validando acesso ao Workspace</h3>
+            <p className="text-muted-foreground text-sm max-w-xs">
+              Aguardando confirmação de permissões para carregar seus formulários...
+            </p>
+          </div>
+        </Card>
+      );
+    }
 
    if (!isLoading && (!forms || forms.length === 0)) {
      return (
