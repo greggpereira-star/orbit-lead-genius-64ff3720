@@ -402,6 +402,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             type: f.type || 'text',
             required: !!f.required,
             placeholder: f.placeholder || '',
+            options: Array.isArray(f.options) ? f.options.map(normalizeDropdownOption) : [],
             sort_order: index,
             step_number: f.step_number || 1,
             step_id: f.step_id && f.step_id.length > 20 ? f.step_id : undefined,
@@ -422,65 +423,24 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             fieldsDelete: fieldsToDelete
           });
 
-          // 3. Save Options Delta for SELECT fields
-          const selectFields = fields.filter(f => f.type === 'select');
-          
-          for (const field of selectFields) {
-            const fieldId = field.id;
-            if (!fieldId) continue;
-
-            // Snapshot original para computar delta de opções
-            const originalField = originalData?.fields.find(of => of.id === fieldId);
-            const originalOptions = Array.isArray(originalField?.options_data) ? originalField.options_data : [];
-            
-            // Garante que currentOptions é um array de objetos estruturados
-            const currentOptions = Array.isArray(field.options) ? field.options.map((opt: any, index: number) => {
-              if (typeof opt === 'string') {
-                return {
-                  id: crypto.randomUUID(), // Opções legacy como string ganham ID
-                  label: opt,
-                  value: opt.toLowerCase().replace(/\s+/g, '_'),
-                  sort_order: index,
-                  score: 0
-                };
-              }
-              return {
-                ...opt,
-                id: opt.id || crypto.randomUUID(),
-                sort_order: index
-              };
-            }) : [];
-
-            const optionsToDelete = originalOptions
-              .filter((oo: any) => oo.id && !currentOptions.some((co: any) => co.id === oo.id))
-              .map((oo: any) => oo.id);
-            
-            const optionsToUpsert = currentOptions.map((opt: any, index: number) => ({
-              id: opt.id || crypto.randomUUID(),
-              label: opt.label || '',
-              value: opt.value || (opt.label ? opt.label.toLowerCase().replace(/\s+/g, '_') : ''),
-              score: opt.score || 0,
-              tag: opt.tag || null,
-              sort_order: index,
-              metadata: opt.metadata || {}
+          const optionsByField = fields
+            .filter((field) => field.type === 'select' && field.id)
+            .map((field) => ({
+              field_id: field.id,
+              options: Array.isArray(field.options) ? field.options.map(normalizeDropdownOption) : []
             }));
 
-            // Só envia se houver mudança real para evitar requests desnecessários
-            const hasChanges = optionsToUpsert.length > 0 || optionsToDelete.length > 0;
-            
-            if (hasChanges) {
-              logger.info(`[${traceId}] Step 3: Saving Options for field ${field.label}`, {
-                upsertCount: optionsToUpsert.length,
-                deleteCount: optionsToDelete.length
-              });
-              await formService.saveFieldOptionsDelta({
-                formId: savedFormId,
-                companyId: company.id,
-                fieldId: fieldId,
-                optionsUpsert: optionsToUpsert,
-                optionsDelete: optionsToDelete
-              });
-            }
+          logger.info(`[${traceId}] Step 3: Saving Dropdown Options Batch`, {
+            fieldCount: optionsByField.length,
+            optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0)
+          });
+
+          if (optionsByField.length > 0) {
+            await formService.saveFieldOptionsBatch({
+              formId: savedFormId,
+              companyId: company.id,
+              optionsByField
+            });
           }
 
           const duration = Date.now() - startedAt;
