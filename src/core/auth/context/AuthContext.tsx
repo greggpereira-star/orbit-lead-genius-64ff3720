@@ -204,16 +204,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         try {
           const supabaseClient = getSupabase();
           
-          // Optimized: Use enterprise-auth-v1 key to skip heavy session checks for cold starts
-          const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('enterprise-auth-v1');
-          
-          if (!hasToken) {
-            logger.info('AuthTrace: Cold start, skipping initial session check', { traceId });
-            if (mounted) setState('UNAUTHENTICATED');
-            return;
-          }
-
-          logger.info('AuthTrace: Auth token detected, initializing bootstrap', { traceId });
+          logger.info('AuthTrace: Initializing session bootstrap', { traceId });
           setState('SESSION_LOADING');
           
           const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();

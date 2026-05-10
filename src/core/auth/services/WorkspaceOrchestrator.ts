@@ -25,14 +25,17 @@
  
       try {
          onProgress?.('TENANT_VALIDATING');
-         logger.info('AuthRecovery: Initializing profile hydration', { userId });
-         context.user = await this.ensureProfile(userId, email, metadata);
-         logger.info('AuthRecovery: Profile hydrated successfully', { userId });
+         logger.info('AuthRecovery: Parallelizing profile and workspace hydration', { userId });
+         
+         // Hydrate profile and workspace in parallel to reduce login latency
+         const [profile, workspace] = await Promise.all([
+           this.ensureProfile(userId, email, metadata),
+           this.ensureWorkspace(userId, metadata, onProgress)
+         ]);
 
-        onProgress?.('TENANT_RECOVERING');
-        const workspace = await this.ensureWorkspace(userId, metadata, onProgress);
-       context.company = workspace.company;
-       context.membership = workspace.membership;
+         context.user = profile;
+         context.company = workspace.company;
+         context.membership = workspace.membership;
        
        context.state = 'READY';
        logger.info('WorkspaceOrchestrator: Validation successful', { userId, companyId: context.company?.id });
