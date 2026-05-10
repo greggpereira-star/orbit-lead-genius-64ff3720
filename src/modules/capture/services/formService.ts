@@ -120,39 +120,43 @@ export const formService = {
      return formResult;
    },
  
-   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
-     const processedFields = fields.map((f, index) => ({
-       label: f.label || 'Untitled Field',
-       name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-       type: f.type || 'text',
-       required: !!f.required,
-       placeholder: f.placeholder || '',
-       options: f.options || [],
-       sort_order: index,
-       step_number: f.step_number || 1,
-       validation_rules: f.validation_rules || {},
-       logic_rules: f.logic_rules || {},
-       score_rules: f.score_rules || {}
-     }));
- 
-     const { error } = await supabase.rpc('update_form_with_fields', {
-       p_form_id: formId,
-       p_form_data: {
-         name: form.name,
-         slug: form.slug,
-         status: form.status,
-         type: form.type,
-         settings: form.settings,
-         description: form.description
-       },
-       p_fields: processedFields
-     });
- 
-     if (error) {
-       logger.error('Failed to update form with RPC', { error });
-       throw error;
-     }
-   },
+  async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
+    const processedFields = fields.map((f, index) => ({
+      label: f.label || 'Untitled Field',
+      name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+      type: f.type || 'text',
+      required: !!f.required,
+      placeholder: f.placeholder || '',
+      options: Array.isArray(f.options) ? f.options : [],
+      sort_order: index,
+      step_number: f.step_number || 1,
+      validation_rules: f.validation_rules || {},
+      logic_rules: f.logic_rules || {},
+      score_rules: f.score_rules || {}
+    }));
+
+    const { error } = await supabase.rpc('update_form_with_fields', {
+      p_form_id: formId,
+      p_form_data: {
+        name: form.name,
+        slug: form.slug,
+        status: form.status,
+        type: form.type,
+        settings: form.settings,
+        description: form.description
+      },
+      p_fields: processedFields
+    });
+
+    if (error) {
+      logger.error('Failed to update form with RPC', { error, formId });
+      // Provide a more descriptive error message if possible
+      if (error.code === '23505') {
+        throw new Error('This slug is already in use by another form. Please choose a different one.');
+      }
+      throw error;
+    }
+  },
 
   async deleteForm(formId: string): Promise<void> {
     const { error } = await supabase.from('forms').delete().eq('id', formId);
