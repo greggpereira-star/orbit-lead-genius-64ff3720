@@ -98,11 +98,13 @@ import {
   Trash2, 
   Copy,
   Edit3,
-  Eye,
-  BarChart3,
-  Code2,
-  ClipboardCheck
-} from 'lucide-react';
+   Eye,
+   BarChart3,
+   Code2,
+   ClipboardCheck,
+   AlertCircle,
+   RefreshCcw
+ } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -133,11 +135,30 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: forms, isLoading } = useQuery({
-    queryKey: ['forms', company?.id],
-    queryFn: () => formService.getForms(company!.id),
-    enabled: !!company?.id,
-  });
+   const { data: forms, isLoading, isError, error: queryError, refetch } = useQuery({
+     queryKey: ['forms', company?.id],
+     queryFn: async () => {
+       if (!company?.id) throw new Error('Company ID is missing');
+       logger.info('Fetching forms for company', { companyId: company.id });
+       return formService.getForms(company.id);
+     },
+     enabled: !!company?.id,
+     retry: 2,
+     staleTime: 1000 * 30, // 30 seconds
+   });
+
+   // Debug logs for UI states
+   React.useEffect(() => {
+     if (company?.id) {
+       logger.info('FormList state:', { 
+         hasForms: !!forms?.length, 
+         isLoading, 
+         isError,
+         formCount: forms?.length || 0,
+         companyId: company.id 
+       });
+     }
+   }, [forms, isLoading, isError, company?.id]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => formService.deleteForm(id),
@@ -151,7 +172,7 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     }
   });
 
-  if (isLoading) {
+   if (isLoading && !forms) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
@@ -167,9 +188,29 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     );
   }
 
-  if (!forms?.length) {
-    return (
-      <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center space-y-4">
+   if (isError) {
+     return (
+       <Card className="border-destructive/20 bg-destructive/5 flex flex-col items-center justify-center p-12 text-center space-y-4">
+         <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
+           <AlertCircle className="h-8 w-8 text-destructive" />
+         </div>
+         <div className="space-y-1">
+           <h3 className="font-bold text-lg text-destructive">Failed to load forms</h3>
+           <p className="text-muted-foreground text-sm max-w-xs">
+             {(queryError as any)?.message || 'There was an error connecting to the database.'}
+           </p>
+         </div>
+         <Button onClick={() => refetch()} variant="outline" className="gap-2">
+           <RefreshCcw className="h-4 w-4" />
+           Try Again
+         </Button>
+       </Card>
+     );
+   }
+
+   if (!isLoading && (!forms || forms.length === 0)) {
+     return (
+       <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center space-y-4">
         <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center">
           <FileText className="h-8 w-8 text-primary/40" />
         </div>
@@ -187,9 +228,9 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {forms.map((form) => (
+   return (
+     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+       {forms?.map((form) => (
         <Card key={form.id} className="group hover:shadow-md transition-all border-none shadow-sm overflow-hidden bg-card/50">
           <div className="h-2 bg-primary/20 group-hover:bg-primary transition-colors" />
           <CardHeader className="p-4 flex flex-row items-start justify-between space-y-0">
