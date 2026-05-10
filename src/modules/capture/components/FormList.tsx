@@ -98,11 +98,13 @@ import {
   Trash2, 
   Copy,
   Edit3,
-  Eye,
-  BarChart3,
-  Code2,
-  ClipboardCheck
-} from 'lucide-react';
+   Eye,
+   BarChart3,
+   Code2,
+   ClipboardCheck,
+   AlertCircle,
+   RefreshCcw
+ } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -207,8 +209,8 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
    }
 
    if (!isLoading && (!forms || forms.length === 0)) {
-    return (
-      <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center space-y-4">
+     return (
+       <Card className="border-dashed flex flex-col items-center justify-center p-12 text-center space-y-4">
         <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center">
           <FileText className="h-8 w-8 text-primary/40" />
         </div>
@@ -226,9 +228,9 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {forms.map((form) => (
+   return (
+     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+       {forms?.map((form) => (
         <Card key={form.id} className="group hover:shadow-md transition-all border-none shadow-sm overflow-hidden bg-card/50">
           <div className="h-2 bg-primary/20 group-hover:bg-primary transition-colors" />
           <CardHeader className="p-4 flex flex-row items-start justify-between space-y-0">
