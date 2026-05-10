@@ -274,9 +274,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                       className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
                     >
                       <option value="">Selecione uma opção...</option>
-                      {(field.options || []).map((option: string, i: number) => (
-                        <option key={i} value={option}>{option}</option>
-                      ))}
+                      {(field.options || []).map((option: any, i: number) => {
+                        const label = typeof option === 'string' ? option : option.label;
+                        const value = typeof option === 'string' ? option : (option.value || option.label);
+                        return <option key={option.id || value || i} value={value}>{label}</option>;
+                      })}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
                       <ChevronRight className="h-4 w-4 rotate-90" />
