@@ -129,8 +129,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
               setCompany({
                 id: snapshot.tenant_id,
                 name: snapshot.company_name,
-                slug: snapshot.company_slug || '',
-                created_at: ''
+                slug: snapshot.company_slug || ''
               });
             }
             
