@@ -712,6 +712,7 @@ export type Database = {
       }
       form_fields: {
         Row: {
+          company_id: string | null
           created_at: string
           form_id: string
           id: string
@@ -730,6 +731,7 @@ export type Database = {
           validation_rules: Json | null
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           form_id: string
           id?: string
@@ -748,6 +750,7 @@ export type Database = {
           validation_rules?: Json | null
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           form_id?: string
           id?: string
@@ -933,6 +936,7 @@ export type Database = {
       form_steps: {
         Row: {
           button_text: string | null
+          company_id: string | null
           conditional_logic: Json | null
           created_at: string | null
           description: string | null
@@ -944,6 +948,7 @@ export type Database = {
         }
         Insert: {
           button_text?: string | null
+          company_id?: string | null
           conditional_logic?: Json | null
           created_at?: string | null
           description?: string | null
@@ -955,6 +960,7 @@ export type Database = {
         }
         Update: {
           button_text?: string | null
+          company_id?: string | null
           conditional_logic?: Json | null
           created_at?: string | null
           description?: string | null
