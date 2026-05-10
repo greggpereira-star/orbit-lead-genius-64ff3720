@@ -149,15 +149,13 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
 
    // Debug logs for UI states
    React.useEffect(() => {
-     if (company?.id) {
-       logger.info('FormList state:', { 
-         hasForms: !!forms?.length, 
-         isLoading, 
-         isError,
-         formCount: forms?.length || 0,
-         companyId: company.id 
-       });
-     }
+     logger.info('FormList state:', { 
+       companyId: company?.id,
+       hasForms: !!forms?.length, 
+       isLoading, 
+       isError,
+       formCount: forms?.length || 0
+     });
    }, [forms, isLoading, isError, company?.id]);
 
   const deleteMutation = useMutation({
