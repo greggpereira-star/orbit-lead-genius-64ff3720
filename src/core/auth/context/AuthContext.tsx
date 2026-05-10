@@ -53,9 +53,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       
       try {
         const snapshot = JSON.parse(cached);
+        // Schema v1 check
         if (snapshot.version !== SCHEMA_VERSION) return false;
+        // Tenant validation
         if (tenantId && snapshot.tenant_id !== tenantId) return false;
+        // Expiration check
         if (snapshot.expires_at && Date.now() > snapshot.expires_at) return false;
+        
+        // Force critical fields to be present
+        if (!snapshot.user_id || !snapshot.tenant_id || !snapshot.membership_id) return false;
+        
         return snapshot.workspace_ready === true;
       } catch {
         return false;
@@ -111,8 +118,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         const isReadyCache = checkWorkspaceReadiness();
         
         if (isReadyCache) {
-          logger.info('WorkspaceReadinessCache: Hit. Skipping blocking bootstrap UI.', { traceId });
-          setState('AUTHENTICATED');
+          const snapshot = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+          logger.info('WorkspaceReadinessCache: High-performance hit. Pre-loading context.', { traceId });
+          
+          // Optimistic state update: Bypass block screen by going straight to AUTHENTICATED/READY
+          // while background validation finishes.
+          setState('AUTHENTICATED'); 
         } else {
           setState('TENANT_VALIDATING');
         }
