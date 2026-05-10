@@ -25,7 +25,25 @@
  
       try {
          onProgress?.('TENANT_VALIDATING');
-         logger.info('AuthRecovery: Parallelizing profile and workspace hydration', { userId });
+          const { data: fastContext, error: fastContextError } = await (this.client as any).rpc('get_workspace_context_v1');
+
+          if (!fastContextError && fastContext?.profile && fastContext?.company && fastContext?.membership) {
+            context.user = {
+              id: fastContext.profile.id,
+              email,
+              name: fastContext.profile.full_name || email.split('@')[0],
+              avatar_url: fastContext.profile.avatar_url
+            };
+            context.company = fastContext.company;
+            context.membership = fastContext.membership;
+            context.state = 'READY';
+            return context;
+          }
+
+          if (fastContextError) {
+            logger.warn('WorkspaceOrchestrator: Fast context unavailable, using repair path', { error: fastContextError.message });
+          }
+          logger.info('AuthRecovery: Parallelizing profile and workspace hydration', { userId });
          
          // Hydrate profile and workspace in parallel to reduce login latency
          const [profile, workspace] = await Promise.all([
