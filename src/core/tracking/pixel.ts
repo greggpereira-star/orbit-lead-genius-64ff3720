@@ -21,7 +21,34 @@ const getOrCreateSessionId = () => {
   return sessionId;
 };
 
+const sanitizeUrl = (url: string) => {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    ['password', 'token', 'access_token', 'refresh_token'].forEach((key) => parsed.searchParams.delete(key));
+    return parsed.pathname + parsed.search;
+  } catch {
+    return url.split('?')[0];
+  }
+};
+
 export const initTracking = (): TrackingData => {
+  if (typeof window === 'undefined') {
+    return { landing_page: '/', session_id: 'server', timestamp: Date.now() };
+  }
+
+  const currentPage = sanitizeUrl(window.location.href);
+  const lastStored = localStorage.getItem('tracking_last_touch');
+  if (lastStored) {
+    try {
+      const parsed = JSON.parse(lastStored) as TrackingData;
+      if (parsed.landing_page === currentPage && Date.now() - parsed.timestamp < 60_000) {
+        return parsed;
+      }
+    } catch {
+      localStorage.removeItem('tracking_last_touch');
+    }
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const data: TrackingData = {
     utm_source: urlParams.get('utm_source') || undefined,
@@ -31,14 +58,11 @@ export const initTracking = (): TrackingData => {
     utm_term: urlParams.get('utm_term') || undefined,
     gclid: urlParams.get('gclid') || undefined,
     fbclid: urlParams.get('fbclid') || undefined,
-    referrer: document.referrer || undefined,
-    landing_page: window.location.pathname + window.location.search,
+    referrer: document.referrer ? sanitizeUrl(document.referrer) : undefined,
+    landing_page: currentPage,
     session_id: getOrCreateSessionId(),
     timestamp: Date.now(),
   };
-
-  // Log for development
-  console.log('[Tracking] Initialized:', data);
 
   // Store in localStorage for cross-page persistence (Last Touch Attribution)
   if (Object.values(data).some(val => val !== undefined && typeof val === 'string')) {
