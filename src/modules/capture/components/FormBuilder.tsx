@@ -264,62 +264,92 @@ import { FormScoringPanel } from './FormScoringPanel';
     }
   }, [existingForm, formId, template, initialType]);
 
-    const saveMutation = useMutation({
-      mutationFn: async () => {
-        if (!company?.id) {
-          throw new Error('Empresa não identificada. Por favor, recarregue a página.');
-        }
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const traceId = `save_${Math.random().toString(36).substring(2, 9)}`;
+      const startedAt = Date.now();
+      
+      if (!company?.id) {
+        throw new Error('Empresa não identificada. Por favor, recarregue a página.');
+      }
+
+      logger.info('SaveForm: Starting sequence', { traceId, formId });
+
+      const cleanedFields = fields.map((f, index) => ({
+        ...f,
+        label: f.label || 'Campo sem nome',
+        type: f.type || 'text',
+        required: !!f.required,
+        options: Array.isArray(f.options) ? f.options : [],
+        placeholder: f.placeholder || '',
+        sort_order: index,
+        step_number: 1
+      }));
+
+      // Diagnostic measurement point
+      const payloadReadyAt = Date.now();
+      
+      // Use a shorter 10s timeout for better UX, but goal is <2s
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout de salvamento (10s). Trace ID: ${traceId}`)), 10000)
+      );
+
+      try {
+        const savePromise = formId 
+          ? formService.updateForm(formId, formConfig, cleanedFields)
+          : formService.createForm(company.id, formConfig, cleanedFields);
   
-         const cleanedFields = fields.map((f, index) => ({
-           ...f,
-           label: f.label || 'Campo sem nome',
-           type: f.type || 'text',
-           required: !!f.required,
-           options: Array.isArray(f.options) ? f.options : [],
-           placeholder: f.placeholder || '',
-           sort_order: index,
-           step_number: 1 // Default to step 1
-         }));
-  
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Tempo limite de salvamento excedido (30s). Verifique sua conexão.')), 30000)
-        );
-  
+        const result = await Promise.race([savePromise, timeoutPromise]);
+        
+        const finishedAt = Date.now();
+        logger.info('SaveForm: Performance audit', {
+          traceId,
+          total_duration_ms: finishedAt - startedAt,
+          payload_prep_ms: payloadReadyAt - startedAt,
+          rpc_duration_ms: finishedAt - payloadReadyAt,
+          status: 'success'
+        });
+        
+        return result;
+      } catch (err: any) {
+        const errorAt = Date.now();
+        logger.error('SaveForm: Atomic Failure', {
+          traceId,
+          duration_until_error: errorAt - startedAt,
+          error: err.message,
+          code: err.code,
+          details: err.details
+        });
+        
+        // Fallback: Save to localStorage if failed
         try {
-          const savePromise = formId 
-            ? formService.updateForm(formId, formConfig, cleanedFields)
-            : formService.createForm(company.id, formConfig, cleanedFields);
-    
-          return await Promise.race([savePromise, timeoutPromise]);
-        } catch (err: any) {
-          // Forensic logging for save failures
-          logger.error('FormBuilder: Atomic Save Failure', {
-            formId,
-            tenantId: company.id,
-            error: err.message,
-            stack: err.stack,
-            payload_size: JSON.stringify(cleanedFields).length
-          });
-          throw err;
+          const draftKey = `leadflow_form_draft_${formId || 'new'}`;
+          localStorage.setItem(draftKey, JSON.stringify({ formConfig, fields, timestamp: Date.now() }));
+          logger.info('SaveForm: Emergency local draft saved', { traceId });
+        } catch (e) {
+          logger.error('SaveForm: Failed to save emergency draft', { error: e });
         }
-      },
+        
+        throw err;
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['forms'] });
-      toast.success(formId ? 'Form updated' : 'Form created');
+      // Precise invalidation: only invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['forms', company?.id] });
+      if (formId) {
+        queryClient.invalidateQueries({ queryKey: ['form', formId] });
+      }
+      
+      toast.success(formId ? 'Formulário atualizado com sucesso' : 'Formulário criado com sucesso');
       onBack();
     },
-     onError: (error: any) => {
-       console.error('Save error details:', error);
-       logger.error('Failed to save form', { 
-         error, 
-         message: error.message,
-         details: error.details,
-         hint: error.hint,
-         code: error.code
-       });
-       const message = error.message || 'Unknown error';
-       toast.error(`Erro ao salvar formulário: ${message}`);
-     }
+    onError: (error: any) => {
+      const message = error.message || 'Erro desconhecido';
+      toast.error(`Erro crítico ao salvar: ${message}`, {
+        description: 'Um rascunho local foi salvo por segurança.',
+        duration: 5000,
+      });
+    }
   });
 
    const addField = () => {
