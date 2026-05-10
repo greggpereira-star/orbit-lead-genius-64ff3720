@@ -2048,7 +2048,7 @@ export type Database = {
           p_form_id: string
           p_steps?: Json
         }
-        Returns: undefined
+        Returns: Json
       }
       update_form_with_fields: {
         Args: { p_fields: Json; p_form_data: Json; p_form_id: string }
