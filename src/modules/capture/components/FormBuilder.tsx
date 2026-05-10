@@ -381,12 +381,6 @@ import { FormScoringPanel } from './FormScoringPanel';
           const selectFields = fields.filter(f => f.type === 'select');
           
           for (const field of selectFields) {
-            // Tenta achar o ID real do field (após o upsert acima)
-            // Se o field é novo, precisamos do ID retornado ou gerado. 
-            // Como a RPC de fields não retorna IDs, e o front gera UUIDs curtos, 
-            // em uma implementação real precisaríamos garantir que o field.id é estável.
-             const currentOptions = Array.isArray(field.options) ? field.options : [];
-            // Tenta achar o ID real do field (UUID ou gerado pelo front)
             const fieldId = field.id;
             if (!fieldId) continue;
 
