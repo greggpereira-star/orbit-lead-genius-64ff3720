@@ -39,6 +39,19 @@ export interface FormField {
     score_rules?: any;
   }
  
+ export interface FormFieldOption {
+   id: string;
+   field_id: string;
+   company_id: string;
+   form_id: string;
+   label: string;
+   value: string;
+   score: number;
+   tag?: string | null;
+   sort_order: number;
+   metadata?: any;
+ }
+ 
  export interface FormStep {
    id: string;
    form_id: string;
@@ -72,19 +85,32 @@ export const formService = {
     return data;
   },
 
-   async getFormById(id: string): Promise<Form & { form_fields: FormField[], form_steps: FormStep[], scoring_rules: ScoringRule[] } | null> {
-     const { data, error } = await supabase
-       .from('forms')
-       .select('*, form_fields(*), form_steps(*), form_scoring_rules(*)')
-       .eq('id', id)
-       .single();
+    async getFormById(id: string): Promise<Form & { 
+      form_fields: (FormField & { options_data?: FormFieldOption[] })[], 
+      form_steps: FormStep[], 
+      scoring_rules: ScoringRule[] 
+    } | null> {
+      const { data, error } = await supabase
+        .from('forms')
+        .select('*, form_fields(*), form_steps(*), form_scoring_rules(*), form_field_options(*)')
+        .eq('id', id)
+        .single();
 
     if (error) {
       logger.error('Failed to fetch form by id', { error, id });
       throw error;
     }
-    return data;
-  },
+      if (data) {
+        // Vincular options_data aos campos correspondentes
+        const fieldsWithOptions = data.form_fields.map((field: any) => ({
+          ...field,
+          options_data: (data.form_field_options || []).filter((opt: any) => opt.field_id === field.id)
+            .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        }));
+        return { ...data, form_fields: fieldsWithOptions };
+      }
+      return data;
+    },
 
    async getFormBySlug(slug: string): Promise<Form & { form_fields: FormField[], form_steps: FormStep[] } | null> {
      const { data, error } = await supabase
@@ -160,68 +186,62 @@ export const formService = {
      return newForm;
    },
  
-   async updateForm(
-     formId: string, 
-     form: Partial<Form>, 
-     fields: Partial<FormField>[], 
-     steps: Partial<FormStep>[] = []
-   ): Promise<void> {
-     const processedFields = fields.map((f, index) => ({
-       id: f.id,
-       label: f.label || 'Untitled Field',
-       name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-       type: f.type || 'text',
-       required: !!f.required,
-       placeholder: f.placeholder || '',
-       options: Array.isArray(f.options) ? f.options : [],
-       sort_order: f.sort_order !== undefined ? f.sort_order : index,
-       step_number: f.step_number || 1,
-       step_id: f.step_id,
-       validation_rules: f.validation_rules || {},
-       logic_rules: f.logic_rules || {},
-       score_rules: f.score_rules || {}
-     }));
- 
-     const processedSteps = steps.map((s, index) => ({
-       id: s.id,
-       title: s.title || `Step ${index + 1}`,
-       description: s.description || '',
-       sort_order: s.sort_order !== undefined ? s.sort_order : index,
-       button_text: s.button_text || 'Next',
-       conditional_logic: s.conditional_logic || {}
-     }));
- 
-     const payload = {
-       p_form_id: formId,
-       p_company_id: form.company_id,
-       p_form_data: {
-         name: form.name,
-         slug: form.slug,
-         status: form.status,
-         type: form.type,
-         settings: form.settings,
-         description: form.description
-       },
-       p_steps: processedSteps,
-       p_fields: processedFields
-     };
- 
-     logger.info('Updating form with optimized save_form_v2', { 
-       formId, 
-       fieldCount: fields.length,
-       stepCount: steps.length 
-     });
- 
-     const { error } = await supabase.rpc('save_form_v2', payload);
- 
-     if (error) {
-       logger.error('Failed to update form with save_form_v2', { error, formId });
-       if (error.code === '23505') {
-         throw new Error('This slug is already in use by another form. Please choose a different one.');
-       }
-       throw error;
-     }
-   },
+    // Novo salvamento modular por camadas
+    async saveFormCore(p: { 
+      formId?: string, 
+      companyId: string, 
+      name: string, 
+      slug: string, 
+      description?: string, 
+      status: string, 
+      settings: any,
+      type?: string 
+    }): Promise<string> {
+      const { data, error } = await supabase.rpc('save_form_core_v1', {
+        p_form_id: p.formId,
+        p_company_id: p.companyId,
+        p_name: p.name,
+        p_slug: p.slug,
+        p_description: p.description,
+        p_status: p.status,
+        p_settings: p.settings,
+        p_type: p.type || 'standard'
+      });
+      if (error) throw error;
+      return data;
+    },
+
+    async saveFormFieldsDelta(p: {
+      formId: string,
+      companyId: string,
+      fieldsUpsert: any[],
+      fieldsDelete: string[]
+    }): Promise<void> {
+      const { error } = await supabase.rpc('save_form_fields_delta_v1', {
+        p_form_id: p.formId,
+        p_company_id: p.companyId,
+        p_fields_upsert: p.fieldsUpsert,
+        p_fields_delete: p.fieldsDelete
+      });
+      if (error) throw error;
+    },
+
+    async saveFieldOptionsDelta(p: {
+      formId: string,
+      companyId: string,
+      fieldId: string,
+      optionsUpsert: any[],
+      optionsDelete: string[]
+    }): Promise<void> {
+      const { error } = await supabase.rpc('save_form_options_delta_v1', {
+        p_form_id: p.formId,
+        p_company_id: p.companyId,
+        p_field_id: p.fieldId,
+        p_options_upsert: p.optionsUpsert,
+        p_options_delete: p.optionsDelete
+      });
+      if (error) throw error;
+    },
 
   async deleteForm(formId: string): Promise<void> {
     const { error } = await supabase.from('forms').delete().eq('id', formId);
