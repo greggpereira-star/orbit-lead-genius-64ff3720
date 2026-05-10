@@ -2015,7 +2015,7 @@ export type Database = {
       }
       check_membership_v2: { Args: { p_company_id: string }; Returns: boolean }
       create_form_with_fields: {
-        Args: { p_fields: Json; p_form_data: Json; p_tenant_id: string }
+        Args: { p_fields?: Json; p_form_data: Json; p_tenant_id: string }
         Returns: string
       }
       get_or_create_company: {
@@ -2048,7 +2048,7 @@ export type Database = {
           p_form_id: string
           p_steps?: Json
         }
-        Returns: undefined
+        Returns: Json
       }
       update_form_with_fields: {
         Args: { p_fields: Json; p_form_data: Json; p_form_id: string }
