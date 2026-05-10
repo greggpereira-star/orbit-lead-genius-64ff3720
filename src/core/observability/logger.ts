@@ -38,18 +38,28 @@ class EnterpriseLogger {
     const color = level === 'error' || level === 'fatal' ? '\x1b[31m' : '\x1b[32m';
     console.log(`[${payload.timestamp}] ${color}${level.toUpperCase()}\x1b[0m [${payload.correlation_id}] ${message}`, context);
 
-    // Optimized background logging to avoid blocking the main thread
-    if (supabase && (level === 'error' || level === 'fatal')) {
+    // Optimized background logging to avoid blocking the main thread.
+    // Errors are sent to the backend via fire-and-forget; never block or throw.
+    if (typeof window !== 'undefined' && (level === 'error' || level === 'fatal')) {
       setTimeout(() => {
-        supabase.from('system_logs').insert({
-            level,
-            message,
-            correlation_id: payload.correlation_id,
-            route: payload.route,
-            user_id: payload.user_id,
-            company_id: payload.company_id,
-            metadata: payload.metadata
-        }).catch(() => {});
+        try {
+          const client: any = supabase;
+          if (client && typeof client.from === 'function') {
+            Promise.resolve(
+              client.from('system_logs').insert({
+                level,
+                message,
+                correlation_id: payload.correlation_id,
+                route: payload.route,
+                user_id: payload.user_id,
+                company_id: payload.company_id,
+                metadata: payload.metadata,
+              })
+            ).catch(() => {});
+          }
+        } catch {
+          // Never let logging break the app
+        }
       }, 0);
     }
   }

@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getRuntimeConfig } from '../config/runtime-config';
-import { logger } from '../observability/logger';
 
 export class SafeSupabaseClientFactory {
   private static instance: SupabaseClient | null = null;
@@ -26,7 +25,7 @@ export class SafeSupabaseClientFactory {
       },
     });
 
-    logger.info('Supabase Factory: Singleton instance established');
+    console.info('[Supabase] Singleton instance established');
     return this.instance;
   }
 
