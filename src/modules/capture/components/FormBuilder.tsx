@@ -197,7 +197,9 @@ import { FormScoringPanel } from './FormScoringPanel';
    );
  }
  
-  export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
+   export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
+   const [originalData, setOriginalData] = useState<{ config: any, fields: any[] } | null>(null);
+ 
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
@@ -222,15 +224,17 @@ import { FormScoringPanel } from './FormScoringPanel';
     enabled: !!formId,
   });
 
-  useEffect(() => {
-    if (existingForm) {
-      setFormConfig(existingForm);
-      setFields(existingForm.form_fields
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map(f => ({ ...f, id: f.id }))
-      );
-      setShowTemplates(false);
-    } else if (!formId) {
+   useEffect(() => {
+     if (existingForm) {
+       const sortedFields = existingForm.form_fields
+         .sort((a, b) => a.sort_order - b.sort_order)
+         .map(f => ({ ...f, id: f.id }));
+       
+       setFormConfig(existingForm);
+       setFields(sortedFields);
+       setOriginalData({ config: existingForm, fields: JSON.parse(JSON.stringify(sortedFields)) });
+       setShowTemplates(false);
+     } else if (!formId) {
       if (template) {
         setFormConfig(prev => ({
           ...prev,
@@ -264,48 +268,51 @@ import { FormScoringPanel } from './FormScoringPanel';
     }
   }, [existingForm, formId, template, initialType]);
 
-   const saveMutation = useMutation({
-     mutationFn: async () => {
-       const traceId = `save_${Math.random().toString(36).substring(2, 10)}`;
-       const startedAt = Date.now();
-       
-       if (!company?.id) {
-         throw new Error('Empresa não identificada. Por favor, recarregue a página.');
-       }
- 
-       logger.info('SaveForm: Starting sequence', { 
-         traceId, 
-         formId, 
-         tenantId: company.id,
-         fieldCount: fields.length
-       });
- 
-       // Prepare payload (preserving IDs for UPSERT strategy)
-       const cleanedFields = fields.map((f, index) => ({
-         id: f.id && f.id.length > 20 ? f.id : undefined, // Keep real UUIDs, discard temporary IDs
-         label: f.label || 'Campo sem nome',
-         name: f.name || `field_${index}`,
-         type: f.type || 'text',
-         required: !!f.required,
-         options: Array.isArray(f.options) ? f.options : [],
-         placeholder: f.placeholder || '',
-         sort_order: index,
-         step_number: f.step_number || 1,
-         step_id: f.step_id || undefined,
-         validation_rules: f.validation_rules || {},
-         logic_rules: f.logic_rules || {},
-         score_rules: f.score_rules || {}
-       }));
- 
-       // Prepare steps (if any)
-       const steps: any[] = (existingForm as any)?.form_steps || [];
- 
-        // Increased client-side timeout to 30s to allow for infrastructure latencies,
-        // though the optimized database RPC should complete in <500ms.
+    const saveMutation = useMutation({
+      mutationFn: async () => {
+        const traceId = `save_${Math.random().toString(36).substring(2, 10)}`;
+        const startedAt = Date.now();
+        
+        if (!company?.id) {
+          throw new Error('Empresa não identificada. Por favor, recarregue a página.');
+        }
+  
+        // Delta Detection Logic
+        const hasDropdownChanges = fields.some((f, idx) => {
+          const orig = originalData?.fields.find(of => of.id === f.id);
+          return JSON.stringify(f.options) !== JSON.stringify(orig?.options);
+        });
+
+        logger.info('SaveForm: Starting sequence', { 
+          traceId, 
+          formId, 
+          tenantId: company.id,
+          fieldCount: fields.length,
+          hasDropdownChanges
+        });
+  
+        const cleanedFields = fields.map((f, index) => ({
+          id: f.id && f.id.length > 20 ? f.id : undefined,
+          label: f.label || 'Campo sem nome',
+          name: f.name || `field_${index}`,
+          type: f.type || 'text',
+          required: !!f.required,
+          options: Array.isArray(f.options) ? f.options : [],
+          placeholder: f.placeholder || '',
+          sort_order: index,
+          step_number: f.step_number || 1,
+          step_id: f.step_id || undefined,
+          validation_rules: f.validation_rules || {},
+          logic_rules: f.logic_rules || {},
+          score_rules: f.score_rules || {}
+        }));
+  
+        const steps: any[] = (existingForm as any)?.form_steps || [];
+  
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`A operação demorou demais (30s). Trace ID: ${traceId}. Isso pode ser instabilidade na rede.`)), 30000)
         );
- 
+  
         try {
           const savePromise = formId
             ? formService.updateForm(formId, { ...formConfig, company_id: company.id }, cleanedFields, steps)
@@ -318,7 +325,7 @@ import { FormScoringPanel } from './FormScoringPanel';
             traceId,
             duration_ms: duration,
             field_count: fields.length,
-            kb_size: JSON.stringify({ formConfig, cleanedFields }).length / 1024,
+            kb_size: Math.round(JSON.stringify({ formConfig, cleanedFields }).length / 1024),
             db_perf: (result as any)?.performance
           });
 
@@ -338,7 +345,6 @@ import { FormScoringPanel } from './FormScoringPanel';
             }
           });
 
-          // Save local draft for recovery
           const draftKey = `leadflow_form_draft_${formId || 'new'}`;
           localStorage.setItem(draftKey, JSON.stringify({
             formConfig,
@@ -348,12 +354,11 @@ import { FormScoringPanel } from './FormScoringPanel';
             traceId
           }));
 
-          // Enhance error with trace ID for the UI
           const enhancedError = new Error(errorDetail);
           (enhancedError as any).traceId = traceId;
           throw enhancedError;
         }
-     },
+      },
     onSuccess: () => {
       // Precise invalidation: only invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['forms', company?.id] });
