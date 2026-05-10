@@ -186,17 +186,21 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     );
   }
 
-   if (isError) {
+   if (isError || (!isLoading && !company?.id)) {
      return (
        <Card className="border-destructive/20 bg-destructive/5 flex flex-col items-center justify-center p-12 text-center space-y-4">
          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
            <AlertCircle className="h-8 w-8 text-destructive" />
          </div>
          <div className="space-y-1">
-           <h3 className="font-bold text-lg text-destructive">Failed to load forms</h3>
-           <p className="text-muted-foreground text-sm max-w-xs">
-             {(queryError as any)?.message || 'There was an error connecting to the database.'}
-           </p>
+          <h3 className="font-bold text-lg text-destructive">
+            {!company?.id ? 'Workspace não identificado' : 'Falha ao carregar formulários'}
+          </h3>
+          <p className="text-muted-foreground text-sm max-w-xs">
+            {!company?.id 
+              ? 'Sua sessão expirou ou sua empresa ainda não foi validada. Por favor, recarregue a página.' 
+              : (queryError as any)?.message || 'Ocorreu um erro ao conectar ao banco de dados.'}
+          </p>
          </div>
          <Button onClick={() => refetch()} variant="outline" className="gap-2">
            <RefreshCcw className="h-4 w-4" />
