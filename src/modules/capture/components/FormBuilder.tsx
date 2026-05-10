@@ -54,6 +54,7 @@ import { toast } from 'sonner';
 import { logger } from '@/core/observability/logger';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormPublish } from './FormPublish';
+import { FormScoringPanel } from './FormScoringPanel';
 
   interface FormBuilderProps {
     formId?: string;
@@ -773,36 +774,18 @@ import { FormPublish } from './FormPublish';
           </TabsContent>
 
           <TabsContent value="scoring" className="pt-6">
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-bold">Lead Scoring Inteligente</h3>
-                  <p className="text-xs text-muted-foreground">Defina pontuações automáticas com base nas respostas.</p>
-                </div>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" /> Nova Regra
-                </Button>
+            {formId && company?.id && (
+              <FormScoringPanel 
+                formId={formId} 
+                companyId={company.id} 
+                fields={fields} 
+              />
+            )}
+            {!formId && (
+              <div className="p-8 text-center bg-muted/30 rounded-xl border-dashed border-2">
+                <p className="text-muted-foreground">Salve o formulário primeiro para configurar o Scoring.</p>
               </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <Card className="p-4 border-dashed bg-muted/30">
-                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
-                    <span>Regras Ativas</span>
-                    <span>Pontos</span>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
-                      <span className="text-sm">Se "Prazo" for "Agora"</span>
-                      <Badge className="bg-green-500">+40</Badge>
-                    </div>
-                    <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
-                       <span className="text-sm">Se "Investimento" for "{'>'} R$ 1,2M"</span>
-                      <Badge className="bg-green-500">+40</Badge>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="submissions" className="pt-6">
