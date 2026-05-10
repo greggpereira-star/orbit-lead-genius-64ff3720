@@ -607,23 +607,27 @@ import { FormPublish } from './FormPublish';
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">Redirect URL (Optional)</Label>
-                        <Input 
-                          value={formConfig.settings?.redirect_url || ''} 
-                          onChange={(e) => setFormConfig(prev => {
-                            const currentSettings = prev.settings || {
-                              submit_label: 'Submit',
-                              success_message: 'Thank you!',
-                              theme: 'premium-light',
-                              cv_crm_integration: false,
-                              capture_utms: true
-                            };
-                            return {
-                              ...prev,
-                              settings: { ...currentSettings, redirect_url: e.target.value }
-                            };
-                          })}
-                          placeholder="https://example.com/thanks" 
+                        <Label className="text-xs">Redirect URL (Optional) - Use URL encoded if complex</Label>
+                        <textarea
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={formConfig.settings?.redirect_url || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormConfig(prev => {
+                              const currentSettings = prev.settings || {
+                                submit_label: 'Submit',
+                                success_message: 'Thank you!',
+                                theme: 'premium-light',
+                                cv_crm_integration: false,
+                                capture_utms: true
+                              };
+                              return {
+                                ...prev,
+                                settings: { ...currentSettings, redirect_url: val }
+                              };
+                            });
+                          }}
+                          placeholder="https://example.com/thanks"
                         />
                       </div>
                       <div className="space-y-2">
