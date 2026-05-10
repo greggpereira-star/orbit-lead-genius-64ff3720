@@ -440,7 +440,16 @@ import { FormScoringPanel } from './FormScoringPanel';
       }
       
       toast.success(formId ? 'Formulário atualizado com sucesso' : 'Formulário criado com sucesso');
-      onBack();
+      // Apenas volta se não for edição (criação)
+      if (!formId) {
+        onBack();
+      } else {
+        // Se for edição, apenas atualiza o snapshot original para que o próximo save delta seja correto
+        setOriginalData({ 
+          config: formConfig, 
+          fields: JSON.parse(JSON.stringify(fields)) 
+        });
+      }
     },
     onError: (error: any) => {
       const traceId = error.traceId || 'N/A';
