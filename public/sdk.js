@@ -61,20 +61,29 @@
       }
     },
 
-    renderInline: function(config) {
-      const container = document.querySelector(config.target);
-      if (!container) return;
+     renderInline: function(config) {
+       const render = () => {
+         const container = document.querySelector(config.target);
+         if (!container) return;
+         if (container.querySelector('iframe')) return; // Prevent double render
+ 
+         const iframe = document.createElement('iframe');
+         iframe.src = this.buildUrl(config.formId);
+         iframe.width = '100%';
+         iframe.height = config.height || '700px';
+         iframe.style.border = 'none';
+         iframe.style.borderRadius = '12px';
+         iframe.setAttribute('loading', 'lazy');
+         
+         container.appendChild(iframe);
+       };
 
-      const iframe = document.createElement('iframe');
-      iframe.src = this.buildUrl(config.formId);
-      iframe.width = '100%';
-      iframe.height = config.height || '700px';
-      iframe.style.border = 'none';
-      iframe.style.borderRadius = '12px';
-      iframe.setAttribute('loading', 'lazy');
-      
-      container.appendChild(iframe);
-    },
+       if (document.readyState === 'complete') {
+         render();
+       } else {
+         window.addEventListener('load', render);
+       }
+     },
 
     popup: function(formId, options = {}) {
       if (options.trigger === 'exit') {

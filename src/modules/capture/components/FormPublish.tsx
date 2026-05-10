@@ -44,32 +44,9 @@ export function FormPublish({ form }: FormPublishProps) {
   };
 
   const codes = {
-    inline: `<div id="leadflow-form-${form.id}"></div>
-<script src="${window.location.origin}/sdk.js"></script>
-<script>
-  LeadFlow.init({
-    formId: "${form.id}",
-    target: "#leadflow-form-${form.id}",
-    mode: "inline"
-  });
-</script>`,
-    popup: `<script src="${window.location.origin}/sdk.js"></script>
-<script>
-  LeadFlow.init({
-    formId: "${form.id}",
-    mode: "popup",
-    trigger: "exit_intent"
-  });
-</script>`,
-    floating: `<script src="${window.location.origin}/sdk.js"></script>
-<script>
-  LeadFlow.init({
-    formId: "${form.id}",
-    mode: "floating",
-    position: "bottom-right",
-    label: "Fale com um consultor"
-  });
-</script>`,
+     inline: `<div id="leadflow-form-${form.id}"></div>\n<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function() {\n    LeadFlow.init({\n      formId: "${form.id}",\n      target: "#leadflow-form-${form.id}",\n      mode: "inline"\n    });\n  });\n</script>`,
+     popup: `<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function() {\n    LeadFlow.init({\n      formId: "${form.id}",\n      mode: "popup",\n      trigger: "exit_intent"\n    });\n  });\n</script>`,
+     floating: `<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function() {\n    LeadFlow.init({\n      formId: "${form.id}",\n      mode: "floating",\n      position: "bottom-right",\n      label: "Fale com um consultor"\n    });\n  });\n</script>`,
     iframe: `<iframe 
   src="${window.location.origin}/embed-form/${form.id}" 
   width="100%" 

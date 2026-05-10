@@ -2,14 +2,18 @@ function EmbedDialog({ form }: { form: Form }) {
   const [copied, setCopied] = React.useState(false);
   const publicUrl = `${window.location.origin}/f/${form.slug}`;
   
-  const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0"></iframe>`;
-  const scriptCode = `<script src="${window.location.origin}/widget.js"></script>
-<script>
-  LeadFlow.initForm({
-    formId: "${form.id}",
-    slug: "${form.slug}"
-  });
-</script>`;
+   const iframeCode = `<iframe src="${window.location.origin}/embed-form/${form.id}" width="100%" height="700" style="border:0; border-radius:12px;" loading="lazy"></iframe>`;
+   const scriptCode = `<div id="leadflow-form-${form.id}"></div>
+ <script src="${window.location.origin}/sdk.js"></script>
+ <script>
+   window.addEventListener('load', function() {
+     LeadFlow.init({
+       formId: "${form.id}",
+       target: "#leadflow-form-${form.id}",
+       mode: "inline"
+     });
+   });
+ </script>`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -68,43 +72,111 @@ function EmbedDialog({ form }: { form: Form }) {
             </Button>
           </TabsContent>
 
-          <TabsContent value="wordpress" className="space-y-4 pt-4">
-            <div className="p-4 bg-primary/5 border border-primary/10 rounded-lg space-y-2">
-              <h4 className="text-sm font-bold uppercase tracking-wider">Shortcode (Coming Soon)</h4>
-              <p className="text-xs text-muted-foreground">Once you install our WordPress plugin, you can use this shortcode:</p>
-              <code className="bg-background px-2 py-1 rounded text-xs font-mono">[leadflow_form id="{form.id}"]</code>
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-sm font-bold uppercase tracking-wider">Elementor / Gutenberg</h4>
-              <p className="text-xs text-muted-foreground">Use the "HTML" widget and paste the iFrame code provided in the iFrame tab.</p>
-            </div>
-          </TabsContent>
+           <TabsContent value="wordpress" className="space-y-4 pt-4">
+             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 space-y-4">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                   <CheckCircle2 className="h-5 w-5" />
+                 </div>
+                 <div>
+                   <h4 className="text-sm font-black uppercase tracking-tight">WordPress Integration</h4>
+                   <p className="text-[11px] text-muted-foreground">Siga os passos abaixo para inserir no seu site.</p>
+                 </div>
+               </div>
+
+               <div className="space-y-4">
+                 <div className="space-y-2">
+                   <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">Opção 1: Script (Recomendado)</Label>
+                   <p className="text-[11px] text-muted-foreground">Melhor para rastreamento de UTMs e performance.</p>
+                   <div className="relative">
+                     <pre className="bg-background p-3 rounded-lg text-[10px] font-mono border overflow-x-auto">
+                       {scriptCode}
+                     </pre>
+                     <Button 
+                       size="icon" 
+                       variant="ghost" 
+                       className="absolute top-1 right-1 h-7 w-7"
+                       onClick={() => copyToClipboard(scriptCode)}
+                     >
+                       {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                     </Button>
+                   </div>
+                 </div>
+
+                 <div className="space-y-2 pt-2 border-t border-primary/10">
+                   <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">Opção 2: Iframe</Label>
+                   <p className="text-[11px] text-muted-foreground">Use se o seu tema bloquear scripts externos.</p>
+                   <div className="relative">
+                     <pre className="bg-background p-3 rounded-lg text-[10px] font-mono border overflow-x-auto">
+                       {iframeCode}
+                     </pre>
+                     <Button 
+                       size="icon" 
+                       variant="ghost" 
+                       className="absolute top-1 right-1 h-7 w-7"
+                       onClick={() => copyToClipboard(iframeCode)}
+                     >
+                       {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                     </Button>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             <div className="p-4 bg-slate-50 border rounded-xl space-y-2">
+               <h5 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                 <AlertCircle className="h-3 w-3 text-amber-500" />
+                 Como inserir no WordPress:
+               </h5>
+               <ol className="text-[11px] text-muted-foreground list-decimal pl-4 space-y-1">
+                 <li>No editor do WordPress (Gutenberg), adicione um bloco chamado <strong>"HTML Personalizado"</strong>.</li>
+                 <li>Cole o código da <strong>Opção 1</strong> acima dentro do bloco.</li>
+                 <li>Se estiver usando <strong>Elementor</strong>, use o widget "HTML".</li>
+                 <li>Salve a página e visualize o resultado.</li>
+               </ol>
+             </div>
+           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
   );
 }
-import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formService, Form } from '../services/formService';
-import { useAuth } from '@/core/auth/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
-  Plus, 
-  FileText, 
-  MoreVertical, 
-  ExternalLink, 
-  Trash2, 
-  Copy,
-  Edit3,
+ import React from 'react';
+ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+ import { formService, Form } from '../services/formService';
+ import { useAuth } from '@/core/auth/hooks/useAuth';
+ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+ import { Button } from '@/components/ui/button';
+ import { Label } from '@/components/ui/label';
+ import { 
+   Plus, 
+   FileText, 
+   MoreVertical, 
+   ExternalLink, 
+   Trash2, 
+   Copy,
+   Edit3,
    Eye,
    BarChart3,
    Code2,
    ClipboardCheck,
    AlertCircle,
-   RefreshCcw
+   RefreshCcw,
+   CheckCircle2
  } from 'lucide-react';
+ import {
+   Dialog,
+   DialogContent,
+   DialogDescription,
+   DialogHeader,
+   DialogTitle,
+   DialogTrigger,
+ } from "@/components/ui/dialog";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Badge } from '@/components/ui/badge';
+ import { Input } from '@/components/ui/input';
+ import { toast } from 'sonner';
+ import { logger } from '@/core/observability/logger';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -112,19 +184,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { logger } from '@/core/observability/logger';
 
 interface FormListProps {
   onEdit: (id: string) => void;
