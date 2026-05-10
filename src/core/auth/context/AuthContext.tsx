@@ -250,28 +250,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
     const supabaseClient = getSupabase();
     let subscription: any = null;
     
-    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription: authSubscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
       logger.info('Supabase Auth Event', { event, traceId });
       if (!mounted) return;
 
-      switch (event) {
-        case 'SIGNED_IN':
-        case 'TOKEN_REFRESHED':
-          if (session?.user) {
-            await loadTenantContext(session.user);
-          }
-          break;
-        case 'SIGNED_OUT':
-          clearWorkspaceReady();
-          setUser(null);
-          setCompany(null);
-          setMembership(null);
-          setState('UNAUTHENTICATED');
-          break;
-        case 'USER_UPDATED':
-          if (session?.user) await loadTenantContext(session.user);
-          break;
-      }
+      setTimeout(() => {
+        if (!mounted) return;
+
+        switch (event) {
+          case 'SIGNED_IN':
+          case 'TOKEN_REFRESHED':
+          case 'USER_UPDATED':
+            if (session?.user) {
+              loadTenantContext(session.user);
+            }
+            break;
+          case 'SIGNED_OUT':
+            clearWorkspaceReady();
+            setUser(null);
+            setCompany(null);
+            setMembership(null);
+            setState('UNAUTHENTICATED');
+            break;
+        }
+      }, 0);
     });
     subscription = authSubscription;
 
