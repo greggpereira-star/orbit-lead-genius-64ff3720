@@ -298,6 +298,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
   const { company } = useAuth();
   const queryClient = useQueryClient();
    const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
+   const [steps, setSteps] = useState<any[]>([]);
     const [showTemplates, setShowTemplates] = useState(!formId);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
     name: 'Untitled Form',
@@ -327,6 +328,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
        
        setFormConfig(existingForm);
        setFields(sortedFields);
+        setSteps([...(existingForm.form_steps || [])].sort((a, b) => a.sort_order - b.sort_order));
        setOriginalData({ config: existingForm, fields: JSON.parse(JSON.stringify(sortedFields)) });
        setShowTemplates(false);
      } else if (!formId) {
@@ -340,17 +342,29 @@ const normalizeFieldForEditor = (field: any, index: number) => {
         
         if (template.steps) {
           const newFields: any[] = [];
+          const generatedSteps = template.steps.map((step: any, sIdx: number) => ({
+            id: crypto.randomUUID(),
+            title: step.title || `Etapa ${sIdx + 1}`,
+            description: step.description || '',
+            sort_order: sIdx,
+            button_text: step.button_text || 'Avançar',
+            conditional_logic: step.conditional_logic || {}
+          }));
+          setSteps(generatedSteps);
           template.steps.forEach((step: any, sIdx: number) => {
+            const stepId = generatedSteps[sIdx].id;
             step.fields.forEach((field: any) => {
               newFields.push({
                 ...field,
                 id: crypto.randomUUID(),
-                step_id: `step_${sIdx}`
+                step_id: stepId,
+                step_number: sIdx + 1
               });
             });
           });
           setFields(newFields.map(normalizeFieldForEditor));
         } else if (template.fields) {
+          setSteps([]);
           setFields(template.fields.map((f: any, index: number) => normalizeFieldForEditor({
             ...f,
             id: crypto.randomUUID()
