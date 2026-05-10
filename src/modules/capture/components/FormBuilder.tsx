@@ -543,10 +543,10 @@ const normalizeFieldForEditor = (field: any, index: number) => {
        name: template.name,
        settings: { ...prev.settings, ...template.settings }
      }));
-     setFields(template.fields.map((f: any) => ({
+      setFields(template.fields.map((f: any, index: number) => normalizeFieldForEditor({
        ...f,
       id: crypto.randomUUID()
-     })));
+      }, index)));
      setShowTemplates(false);
    };
  
