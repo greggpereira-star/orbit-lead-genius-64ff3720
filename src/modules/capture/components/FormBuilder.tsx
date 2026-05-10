@@ -324,8 +324,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
    useEffect(() => {
      if (existingForm) {
        const sortedFields = existingForm.form_fields
-         .sort((a, b) => a.sort_order - b.sort_order)
-         .map(f => ({ ...f, id: f.id }));
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map(normalizeFieldForEditor);
        
        setFormConfig(existingForm);
        setFields(sortedFields);
@@ -351,12 +351,12 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               });
             });
           });
-          setFields(newFields);
+          setFields(newFields.map(normalizeFieldForEditor));
         } else if (template.fields) {
-          setFields(template.fields.map((f: any) => ({
+          setFields(template.fields.map((f: any) => normalizeFieldForEditor({
             ...f,
             id: crypto.randomUUID()
-          })));
+          }, 0)));
         }
         setShowTemplates(false);
       } else {
