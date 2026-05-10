@@ -745,9 +745,69 @@ import { FormPublish } from './FormPublish';
            </div>
          </TabsContent>
 
-         <TabsContent value="submissions" className="pt-6">
-           {formId && <FormSubmissionsPanel formId={formId} />}
-         </TabsContent>
+          <TabsContent value="steps" className="pt-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold">Gerenciar Etapas</h3>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" /> Adicionar Etapa
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                {(template?.steps || [{ title: 'Etapa 1', description: 'Dados iniciais' }]).map((step: any, idx: number) => (
+                  <Card key={idx} className="border-none shadow-sm p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm">{step.title}</h4>
+                        <p className="text-xs text-muted-foreground">{step.description || 'Sem descrição'}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon"><Settings2 className="h-4 w-4" /></Button>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="scoring" className="pt-6">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold">Lead Scoring Inteligente</h3>
+                  <p className="text-xs text-muted-foreground">Defina pontuações automáticas com base nas respostas.</p>
+                </div>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" /> Nova Regra
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <Card className="p-4 border-dashed bg-muted/30">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest opacity-60 mb-4">
+                    <span>Regras Ativas</span>
+                    <span>Pontos</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
+                      <span className="text-sm">Se "Prazo" for "Agora"</span>
+                      <Badge className="bg-green-500">+40</Badge>
+                    </div>
+                    <div className="flex items-center justify-between bg-card p-3 rounded-lg border">
+                      <span className="text-sm">Se "Investimento" for "> R$ 1,2M"</span>
+                      <Badge className="bg-green-500">+40</Badge>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="submissions" className="pt-6">
+            {formId && <FormSubmissionsPanel formId={formId} />}
+          </TabsContent>
       </Tabs>
     </div>
   );
