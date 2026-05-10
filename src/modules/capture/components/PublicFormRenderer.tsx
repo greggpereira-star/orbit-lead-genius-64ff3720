@@ -210,13 +210,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                  <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
                )}
              </>
-           )}
-         </CardHeader>
-          <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center" style={{ color: 'var(--foreground)' }}>{form.name}</CardTitle>
-          {form.description && (
-            <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
-          )}
-        </CardHeader>
+            )}
+          </CardHeader>
          <CardContent className="pb-12 pt-6">
            <div className="space-y-6">
              {currentStepFields.map((field) => (
