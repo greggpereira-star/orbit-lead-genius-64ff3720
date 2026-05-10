@@ -53,10 +53,14 @@ export function WhatsAppWidget() {
     setIsSubmitting(true);
     const trackingData = tracker.getTrackingParams();
     
-    const result = await captureService.submitLead(targetCompanyId, {
+      const result = await captureService.submitLead(targetCompanyId, {
       name,
       email,
-      metadata: { channel: 'whatsapp_widget' }
+        metadata: { 
+          channel: 'whatsapp_widget',
+          source_origin: window.location.href,
+          browser: navigator.userAgent
+        }
     }, trackingData);
 
     setIsSubmitting(false);
