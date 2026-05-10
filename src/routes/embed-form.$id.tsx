@@ -4,7 +4,7 @@ import { formService } from '@/modules/capture/services/formService';
 import { PublicFormRenderer } from '@/modules/capture/components/PublicFormRenderer';
 import { Loader2 } from 'lucide-react';
 
-export const Route = createFileRoute('/embed/form/$id')({
+export const Route = createFileRoute('/embed-form/$id')({
   component: EmbedFormPage,
 });
 
