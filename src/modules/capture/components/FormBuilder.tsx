@@ -179,11 +179,10 @@ import { FormScoringPanel } from './FormScoringPanel';
                         value={optValue}
                         onChange={(e) => {
                           const newOptions = [...(field.options || [])];
-                          if (typeof option === 'string') {
-                            newOptions[optIndex] = e.target.value;
-                          } else {
-                            newOptions[optIndex] = { ...option, label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_') };
-                          }
+                           const updatedOption = typeof option === 'string' 
+                             ? { label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
+                             : { ...option, label: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_') };
+                           newOptions[optIndex] = updatedOption;
                           onUpdate(index, { options: newOptions });
                         }}
                         placeholder="Rótulo da Opção"
@@ -196,11 +195,10 @@ import { FormScoringPanel } from './FormScoringPanel';
                           onChange={(e) => {
                             const newOptions = [...(field.options || [])];
                             const score = parseInt(e.target.value) || 0;
-                            if (typeof option === 'string') {
-                              newOptions[optIndex] = { label: option, score, value: option.toLowerCase().replace(/\s+/g, '_') };
-                            } else {
-                              newOptions[optIndex] = { ...option, score };
-                            }
+                             const updatedOptionScore = typeof option === 'string'
+                               ? { label: option, score, value: option.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
+                               : { ...option, score };
+                             newOptions[optIndex] = updatedOptionScore;
                             onUpdate(index, { options: newOptions });
                           }}
                           placeholder="Score"
@@ -210,11 +208,10 @@ import { FormScoringPanel } from './FormScoringPanel';
                           value={typeof option === 'string' ? '' : (option.tag || '')}
                           onChange={(e) => {
                             const newOptions = [...(field.options || [])];
-                            if (typeof option === 'string') {
-                              newOptions[optIndex] = { label: option, tag: e.target.value, value: option.toLowerCase().replace(/\s+/g, '_') };
-                            } else {
-                              newOptions[optIndex] = { ...option, tag: e.target.value };
-                            }
+                             const updatedOptionTag = typeof option === 'string'
+                               ? { label: option, tag: e.target.value, value: option.toLowerCase().replace(/\s+/g, '_'), id: crypto.randomUUID() }
+                               : { ...option, tag: e.target.value };
+                             newOptions[optIndex] = updatedOptionTag;
                             onUpdate(index, { options: newOptions });
                           }}
                           placeholder="Tag"
