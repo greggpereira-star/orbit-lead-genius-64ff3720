@@ -718,6 +718,7 @@ export type Database = {
       form_partial_submissions: {
         Row: {
           answers: Json | null
+          company_id: string
           created_at: string | null
           current_step_id: string | null
           current_step_index: number | null
@@ -730,13 +731,13 @@ export type Database = {
           session_id: string
           status: string
           temperature_preview: string | null
-          tenant_id: string
           tracking: Json | null
           updated_at: string | null
           visitor_id: string | null
         }
         Insert: {
           answers?: Json | null
+          company_id: string
           created_at?: string | null
           current_step_id?: string | null
           current_step_index?: number | null
@@ -749,13 +750,13 @@ export type Database = {
           session_id: string
           status?: string
           temperature_preview?: string | null
-          tenant_id: string
           tracking?: Json | null
           updated_at?: string | null
           visitor_id?: string | null
         }
         Update: {
           answers?: Json | null
+          company_id?: string
           created_at?: string | null
           current_step_id?: string | null
           current_step_index?: number | null
@@ -768,12 +769,18 @@ export type Database = {
           session_id?: string
           status?: string
           temperature_preview?: string | null
-          tenant_id?: string
           tracking?: Json | null
           updated_at?: string | null
           visitor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "form_partial_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "form_partial_submissions_form_id_fkey"
             columns: ["form_id"]
@@ -788,41 +795,65 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "form_partial_submissions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
         ]
       }
       form_scoring_rules: {
         Row: {
-          condition_value: string
+          company_id: string
+          condition: Json
           created_at: string | null
+          enabled: boolean | null
           field_id: string | null
           form_id: string
           id: string
-          score_points: number
+          recommended_action: string | null
+          rule_type: string
+          score_delta: number
+          step_id: string | null
+          tag_to_apply: string | null
+          temperature_override: string | null
+          updated_at: string | null
         }
         Insert: {
-          condition_value: string
+          company_id: string
+          condition?: Json
           created_at?: string | null
+          enabled?: boolean | null
           field_id?: string | null
           form_id: string
           id?: string
-          score_points?: number
+          recommended_action?: string | null
+          rule_type: string
+          score_delta?: number
+          step_id?: string | null
+          tag_to_apply?: string | null
+          temperature_override?: string | null
+          updated_at?: string | null
         }
         Update: {
-          condition_value?: string
+          company_id?: string
+          condition?: Json
           created_at?: string | null
+          enabled?: boolean | null
           field_id?: string | null
           form_id?: string
           id?: string
-          score_points?: number
+          recommended_action?: string | null
+          rule_type?: string
+          score_delta?: number
+          step_id?: string | null
+          tag_to_apply?: string | null
+          temperature_override?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "form_scoring_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "form_scoring_rules_field_id_fkey"
             columns: ["field_id"]
@@ -886,38 +917,54 @@ export type Database = {
       form_submissions: {
         Row: {
           answers: Json
-          created_at: string
+          company_id: string
+          created_at: string | null
           form_id: string
           id: string
+          ip_address: string | null
           lead_id: string | null
-          metadata: Json | null
-          score_total: number | null
-          tenant_id: string
-          tracking_data: Json | null
+          score: number | null
+          tags: string[] | null
+          temperature: string | null
+          tracking: Json | null
+          user_agent: string | null
         }
         Insert: {
           answers: Json
-          created_at?: string
+          company_id: string
+          created_at?: string | null
           form_id: string
           id?: string
+          ip_address?: string | null
           lead_id?: string | null
-          metadata?: Json | null
-          score_total?: number | null
-          tenant_id: string
-          tracking_data?: Json | null
+          score?: number | null
+          tags?: string[] | null
+          temperature?: string | null
+          tracking?: Json | null
+          user_agent?: string | null
         }
         Update: {
           answers?: Json
-          created_at?: string
+          company_id?: string
+          created_at?: string | null
           form_id?: string
           id?: string
+          ip_address?: string | null
           lead_id?: string | null
-          metadata?: Json | null
-          score_total?: number | null
-          tenant_id?: string
-          tracking_data?: Json | null
+          score?: number | null
+          tags?: string[] | null
+          temperature?: string | null
+          tracking?: Json | null
+          user_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "form_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "form_submissions_form_id_fkey"
             columns: ["form_id"]
@@ -932,18 +979,12 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "form_submissions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
         ]
       }
       form_temperature_rules: {
         Row: {
           color: string | null
+          company_id: string
           created_at: string | null
           form_id: string
           id: string
@@ -951,11 +992,11 @@ export type Database = {
           min_score: number
           name: string
           priority: number | null
-          tenant_id: string
           updated_at: string | null
         }
         Insert: {
           color?: string | null
+          company_id: string
           created_at?: string | null
           form_id: string
           id?: string
@@ -963,11 +1004,11 @@ export type Database = {
           min_score: number
           name: string
           priority?: number | null
-          tenant_id: string
           updated_at?: string | null
         }
         Update: {
           color?: string | null
+          company_id?: string
           created_at?: string | null
           form_id?: string
           id?: string
@@ -975,22 +1016,21 @@ export type Database = {
           min_score?: number
           name?: string
           priority?: number | null
-          tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "form_temperature_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "form_temperature_rules_form_id_fkey"
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "form_temperature_rules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
