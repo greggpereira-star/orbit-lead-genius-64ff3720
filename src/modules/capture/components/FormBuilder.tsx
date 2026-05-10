@@ -215,19 +215,18 @@ import { FormPublish } from './FormPublish';
     enabled: !!formId,
   });
 
-   useEffect(() => {
-     if (existingForm) {
-       // Batch updates using non-functional updates to avoid stale state issues in concurrent mode
-       // but with a check to prevent overwriting user changes
-       setFormConfig(existingForm);
-       setFields(existingForm.form_fields
-         .sort((a, b) => a.sort_order - b.sort_order)
-         .map(f => ({ ...f, id: f.id }))
-       );
-     } else if (!formId && fields.length === 0) {
-       setShowTemplates(true);
-     }
-   }, [existingForm?.id, formId]); // Only trigger when ID changes
+  useEffect(() => {
+    if (existingForm) {
+      setFormConfig(existingForm);
+      setFields(existingForm.form_fields
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(f => ({ ...f, id: f.id }))
+      );
+      setShowTemplates(false);
+    } else if (!formId) {
+      setShowTemplates(true);
+    }
+  }, [existingForm, formId]);
 
     const saveMutation = useMutation({
       mutationFn: async () => {
@@ -352,7 +351,7 @@ import { FormPublish } from './FormPublish';
      }
    ];
  
-   if (showTemplates && !formId) {
+  if (showTemplates && !formId && !isLoading) {
      return (
        <div className="space-y-8 animate-in fade-in duration-500">
          <div className="text-center space-y-2">
