@@ -532,18 +532,19 @@ import { FormPublish } from './FormPublish';
                       <Label className="text-xs">Submit Button Text</Label>
                       <Input 
                         value={formConfig.settings?.submit_label} 
-                        onChange={(e) => setFormConfig(prev => ({
-                          ...prev, 
-                          settings: { 
+                        onChange={(e) => setFormConfig(prev => {
+                          const currentSettings = prev.settings || {
                             submit_label: 'Submit',
                             success_message: 'Thank you!',
                             theme: 'premium-light',
                             cv_crm_integration: false,
-                            capture_utms: true,
-                            ...(prev.settings || {}), 
-                            submit_label: e.target.value 
-                          }
-                        }))}
+                            capture_utms: true
+                          };
+                          return {
+                            ...prev,
+                            settings: { ...currentSettings, submit_label: e.target.value }
+                          };
+                        })}
                         placeholder="E.g. Send" 
                       />
                     </div>
@@ -554,18 +555,19 @@ import { FormPublish } from './FormPublish';
                       </div>
                       <Switch 
                         checked={formConfig.settings?.capture_utms} 
-                        onCheckedChange={(val) => setFormConfig(prev => ({
-                          ...prev, 
-                          settings: { 
+                        onCheckedChange={(val) => setFormConfig(prev => {
+                          const currentSettings = prev.settings || {
                             submit_label: 'Submit',
                             success_message: 'Thank you!',
                             theme: 'premium-light',
                             cv_crm_integration: false,
-                            capture_utms: true,
-                            ...(prev.settings || {}), 
-                            capture_utms: val 
-                          }
-                        }))}
+                            capture_utms: true
+                          };
+                          return {
+                            ...prev,
+                            settings: { ...currentSettings, capture_utms: val }
+                          };
+                        })}
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -588,18 +590,19 @@ import { FormPublish } from './FormPublish';
                         <Label className="text-xs">Success Message</Label>
                         <Input 
                           value={formConfig.settings?.success_message} 
-                          onChange={(e) => setFormConfig(prev => ({
-                            ...prev, 
-                            settings: { 
+                          onChange={(e) => setFormConfig(prev => {
+                            const currentSettings = prev.settings || {
                               submit_label: 'Submit',
                               success_message: 'Thank you!',
                               theme: 'premium-light',
                               cv_crm_integration: false,
-                              capture_utms: true,
-                              ...(prev.settings || {}), 
-                              success_message: e.target.value 
-                            }
-                          }))}
+                              capture_utms: true
+                            };
+                            return {
+                              ...prev,
+                              settings: { ...currentSettings, success_message: e.target.value }
+                            };
+                          })}
                           placeholder="Thank you for your interest!" 
                         />
                       </div>
@@ -607,18 +610,19 @@ import { FormPublish } from './FormPublish';
                         <Label className="text-xs">Redirect URL (Optional)</Label>
                         <Input 
                           value={formConfig.settings?.redirect_url || ''} 
-                          onChange={(e) => setFormConfig(prev => ({
-                            ...prev, 
-                            settings: { 
+                          onChange={(e) => setFormConfig(prev => {
+                            const currentSettings = prev.settings || {
                               submit_label: 'Submit',
                               success_message: 'Thank you!',
                               theme: 'premium-light',
                               cv_crm_integration: false,
-                              capture_utms: true,
-                              ...(prev.settings || {}), 
-                              redirect_url: e.target.value 
-                            }
-                          }))}
+                              capture_utms: true
+                            };
+                            return {
+                              ...prev,
+                              settings: { ...currentSettings, redirect_url: e.target.value }
+                            };
+                          })}
                           placeholder="https://example.com/thanks" 
                         />
                       </div>
@@ -626,18 +630,19 @@ import { FormPublish } from './FormPublish';
                         <Label className="text-xs">WhatsApp (Optional)</Label>
                         <Input 
                           value={formConfig.settings?.whatsapp_number || ''} 
-                          onChange={(e) => setFormConfig(prev => ({
-                            ...prev, 
-                            settings: { 
+                          onChange={(e) => setFormConfig(prev => {
+                            const currentSettings = prev.settings || {
                               submit_label: 'Submit',
                               success_message: 'Thank you!',
                               theme: 'premium-light',
                               cv_crm_integration: false,
-                              capture_utms: true,
-                              ...(prev.settings || {}), 
-                              whatsapp_number: e.target.value 
-                            }
-                          }))}
+                              capture_utms: true
+                            };
+                            return {
+                              ...prev,
+                              settings: { ...currentSettings, whatsapp_number: e.target.value }
+                            };
+                          })}
                           placeholder="5511999999999" 
                         />
                       </div>
