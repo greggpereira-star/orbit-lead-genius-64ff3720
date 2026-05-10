@@ -2128,6 +2128,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_form_options_batch_v1: {
+        Args: {
+          p_company_id: string
+          p_form_id: string
+          p_options_by_field: Json
+        }
+        Returns: Json
+      }
       save_form_options_delta_v1: {
         Args: {
           p_company_id: string
