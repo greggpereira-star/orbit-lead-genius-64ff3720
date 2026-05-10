@@ -46,7 +46,7 @@ export function AppLayout() {
     'WORKSPACE_READY'
   ].includes(state as string);
 
-   if (isLoadingState) {
+    if (isLoadingState && state !== 'READY') {
     const getMessage = () => {
       switch (state) {
         case 'BOOTSTRAP_START': return 'Iniciando bootstrap enterprise...';
