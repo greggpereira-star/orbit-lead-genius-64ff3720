@@ -353,10 +353,10 @@ const normalizeFieldForEditor = (field: any, index: number) => {
           });
           setFields(newFields.map(normalizeFieldForEditor));
         } else if (template.fields) {
-          setFields(template.fields.map((f: any) => normalizeFieldForEditor({
+          setFields(template.fields.map((f: any, index: number) => normalizeFieldForEditor({
             ...f,
             id: crypto.randomUUID()
-          }, 0)));
+          }, index)));
         }
         setShowTemplates(false);
       } else {
