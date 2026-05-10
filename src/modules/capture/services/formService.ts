@@ -148,7 +148,14 @@ export const formService = {
  
     // Optimized: return a partial form object immediately to avoid extra roundtrip
     // React Query will refetch the list if needed, or we can return the ID
-    return { id: formId, ...form } as Form;
+     const { data: newForm, error: fetchError } = await supabase
+       .from('forms')
+       .select('*')
+       .eq('id', formId)
+       .single();
+ 
+     if (fetchError) throw fetchError;
+     return newForm;
    },
  
   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
