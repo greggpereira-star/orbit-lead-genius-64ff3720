@@ -69,11 +69,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       }
     }, [SCHEMA_VERSION]);
 
-    const markWorkspaceAsReady = useCallback((userId: string, tenant_id: string, membership_id: string) => {
+    const markWorkspaceAsReady = useCallback((userId: string, company: Company, membership_id: string) => {
       if (typeof window === 'undefined') return;
       const payload = {
         user_id: userId,
-        tenant_id,
+        tenant_id: company.id,
+        company_name: company.name,
+        company_slug: company.slug,
         membership_id,
         workspace_ready: true,
         onboarding_completed: true,
@@ -83,7 +85,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         version: SCHEMA_VERSION
       };
       localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
-      logger.info('WorkspaceReadinessCache: Saved snapshot', { tenant_id });
+      logger.info('WorkspaceReadinessCache: Saved snapshot', { tenant_id: company.id });
     }, [SCHEMA_VERSION]);
 
     const clearWorkspaceReady = useCallback(() => {
@@ -118,12 +120,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
         const isReadyCache = checkWorkspaceReadiness();
         
         if (isReadyCache) {
-          const snapshot = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-          logger.info('WorkspaceReadinessCache: High-performance hit. Pre-loading context.', { traceId });
-          
-          // Optimistic state update: Bypass block screen by going straight to AUTHENTICATED/READY
-          // while background validation finishes.
-          setState('AUTHENTICATED'); 
+          try {
+            const snapshot = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            logger.info('WorkspaceReadinessCache: High-performance hit. Pre-loading context.', { traceId });
+            
+            // Pre-load basic company info from cache to avoid blocking UI
+            if (snapshot.tenant_id && snapshot.company_name) {
+              setCompany({
+                id: snapshot.tenant_id,
+                name: snapshot.company_name,
+                slug: snapshot.company_slug || ''
+              });
+            }
+            
+            setState('AUTHENTICATED');
+          } catch (e) {
+            setState('TENANT_VALIDATING');
+          }
         } else {
           setState('TENANT_VALIDATING');
         }
@@ -164,8 +177,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
           return;
         }
  
-        if (result.company?.id && result.user?.id && result.membership?.id) {
-          markWorkspaceAsReady(result.user.id, result.company.id, result.membership.id);
+        if (result.company && result.user?.id && result.membership?.id) {
+          markWorkspaceAsReady(result.user.id, result.company, result.membership.id);
         }
 
         setUser(result.user);

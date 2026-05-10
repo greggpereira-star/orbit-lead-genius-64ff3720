@@ -2033,6 +2033,12 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_user_tenant_ids: {
+        Args: never
+        Returns: {
+          company_id: string
+        }[]
+      }
       update_form_with_fields: {
         Args: { p_fields: Json; p_form_data: Json; p_form_id: string }
         Returns: undefined
