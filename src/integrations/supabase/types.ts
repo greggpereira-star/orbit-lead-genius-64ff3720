@@ -2005,6 +2005,10 @@ export type Database = {
     }
     Functions: {
       check_membership: { Args: { p_company_id: string }; Returns: boolean }
+      check_membership_test: {
+        Args: { p_company_id: string }
+        Returns: boolean
+      }
       create_form_with_fields: {
         Args: { p_fields: Json; p_form_data: Json; p_tenant_id: string }
         Returns: string
