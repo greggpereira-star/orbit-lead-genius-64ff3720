@@ -16,9 +16,10 @@
  import { supabase } from '@/lib/supabase';
  import { calculateLeadScore } from '@/modules/ai/services/scoring';
 import { qualificationService } from '@/modules/ai/services/qualification';
- import { routingService } from '@/modules/crm/services/routingService';
- 
- export const captureService = {
+  import { routingService } from '@/modules/crm/services/routingService';
+  import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
+  
+  export const captureService = {
    async submitLead(
      companyId: string, 
      data: LeadSubmission, 
@@ -97,12 +98,19 @@ import { qualificationService } from '@/modules/ai/services/qualification';
       // 6. Enrich Lead in background
       enrichmentService.enrichLead(lead.id).catch(console.error);
  
-      // 7. Trigger automations
-      automationService.processTrigger(companyId, {
-        type: 'lead_created',
-        data: { ...lead, ...trackingData }
-      }).catch(console.error);
+       // 7. Trigger automations
+       automationService.processTrigger(companyId, {
+         type: 'lead_created',
+         data: { ...lead, ...trackingData }
+       }).catch(console.error);
  
-      return { success: true, leadId: lead.id };
+       // 8. Auto-sync to CV.CRM if form metadata says so
+       if (data.metadata?.cv_crm_integration) {
+         cvcrmService.syncLead(companyId, lead.id).catch(err => {
+           logger.error('CaptureService: Auto-sync CV.CRM failed', { leadId: lead.id, error: err.message });
+         });
+       }
+  
+       return { success: true, leadId: lead.id };
    }
  };
