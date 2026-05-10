@@ -241,9 +241,10 @@ import { FormScoringPanel } from './FormScoringPanel';
               <p className="text-[10px] text-muted-foreground italic">Nenhuma opção cadastrada. Clique em adicionar para começar.</p>
             )}
           </div>
-        )}
-      </div>
-    );
+        </div>
+      )}
+    </div>
+  );
   }
   
   export function FormBuilder({ formId, onBack, initialType, template }: FormBuilderProps) {
