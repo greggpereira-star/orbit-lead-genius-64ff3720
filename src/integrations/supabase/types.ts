@@ -2005,6 +2005,10 @@ export type Database = {
     }
     Functions: {
       check_membership: { Args: { p_company_id: string }; Returns: boolean }
+      check_membership_internal: {
+        Args: { p_company_id: string; p_user_id: string }
+        Returns: boolean
+      }
       check_membership_test: {
         Args: { p_company_id: string }
         Returns: boolean
