@@ -13,6 +13,7 @@ class EnterpriseTracker {
   private maxScroll: number = 0;
 
   init(companyId: string) {
+    if (this.companyId === companyId && this.sessionId) return;
     this.companyId = companyId;
     this.visitorId = this.getOrCreateVisitorId();
     this.startSession();
