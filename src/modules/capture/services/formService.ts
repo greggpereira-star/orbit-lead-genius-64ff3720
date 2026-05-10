@@ -97,18 +97,22 @@ export const formService = {
        score_rules: f.score_rules || {}
      }));
  
-     const { data: newFormId, error } = await supabase.rpc('create_form_with_fields', {
-       p_tenant_id: tenantId,
-       p_form_data: {
-         name: form.name,
-         slug: form.slug,
-         status: form.status,
-         type: form.type,
-         settings: form.settings,
-         description: form.description
-       },
-       p_fields: processedFields
-     });
+      const payload = {
+        p_tenant_id: tenantId,
+        p_form_data: {
+          name: form.name,
+          slug: form.slug,
+          status: form.status,
+          type: form.type,
+          settings: form.settings,
+          description: form.description
+        },
+        p_fields: processedFields
+      };
+
+      logger.info('Creating form with RPC', { tenantId, payload });
+
+      const { data: newFormId, error } = await supabase.rpc('create_form_with_fields', payload);
  
      if (error) {
        logger.error('Failed to create form with RPC', { error });
@@ -135,7 +139,7 @@ export const formService = {
       score_rules: f.score_rules || {}
     }));
 
-    const { error } = await supabase.rpc('update_form_with_fields', {
+    const payload = {
       p_form_id: formId,
       p_form_data: {
         name: form.name,
@@ -146,7 +150,11 @@ export const formService = {
         description: form.description
       },
       p_fields: processedFields
-    });
+    };
+
+    logger.info('Updating form with RPC', { formId, payload });
+
+    const { error } = await supabase.rpc('update_form_with_fields', payload);
 
     if (error) {
       logger.error('Failed to update form with RPC', { error, formId });
