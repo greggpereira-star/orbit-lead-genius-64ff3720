@@ -32,8 +32,12 @@ export interface FormField {
   placeholder?: string;
   options?: any[];
   validation_rules?: any;
-  sort_order: number;
+   sort_order: number;
    step_id?: string;
+   logic_rules?: any;
+   score_rules?: any;
+ }
+ 
  export interface FormStep {
    id: string;
    form_id: string;
@@ -51,10 +55,6 @@ export interface FormField {
    condition_value: string;
    score_points: number;
  }
- 
-  logic_rules?: any;
-  score_rules?: any;
-}
 
 export const formService = {
   async getForms(tenantId: string): Promise<Form[]> {
@@ -145,22 +145,8 @@ export const formService = {
         })));
       if (fieldsError) throw fieldsError;
 
-      return newForm;
-    },
-
-      logger.info('Creating form with RPC', { tenantId, payload });
-
-      const { data: newFormId, error } = await supabase.rpc('create_form_with_fields', payload);
- 
-     if (error) {
-       logger.error('Failed to create form with RPC', { error });
-       throw error;
-     }
- 
-     const formResult = await this.getFormById(newFormId);
-     if (!formResult) throw new Error('Failed to retrieve created form');
-     return formResult;
-   },
+       return newForm;
+     },
  
   async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
     const processedFields = fields.map((f, index) => ({
