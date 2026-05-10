@@ -160,53 +160,68 @@ export const formService = {
      return newForm;
    },
  
-  async updateForm(formId: string, form: Partial<Form>, fields: Partial<FormField>[]): Promise<void> {
-    const processedFields = fields.map((f, index) => ({
-      label: f.label || 'Untitled Field',
-      name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
-      type: f.type || 'text',
-      required: !!f.required,
-      placeholder: f.placeholder || '',
-      options: Array.isArray(f.options) ? f.options : [],
-      sort_order: f.sort_order !== undefined ? f.sort_order : index,
-      step_number: f.step_number || 1,
-      step_id: f.step_id,
-      validation_rules: f.validation_rules || {},
-      logic_rules: f.logic_rules || {},
-      score_rules: f.score_rules || {}
-    }));
-
-    const payload = {
-      p_form_id: formId,
-      p_form_data: {
-        name: form.name,
-        slug: form.slug,
-        status: form.status,
-        type: form.type,
-        settings: form.settings,
-        description: form.description
-      },
-      p_fields: processedFields
-    };
-
-     logger.info('Updating form with RPC', { 
+   async updateForm(
+     formId: string, 
+     form: Partial<Form>, 
+     fields: Partial<FormField>[], 
+     steps: Partial<FormStep>[] = []
+   ): Promise<void> {
+     const processedFields = fields.map((f, index) => ({
+       id: f.id,
+       label: f.label || 'Untitled Field',
+       name: f.name || (f.label || 'field').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_'),
+       type: f.type || 'text',
+       required: !!f.required,
+       placeholder: f.placeholder || '',
+       options: Array.isArray(f.options) ? f.options : [],
+       sort_order: f.sort_order !== undefined ? f.sort_order : index,
+       step_number: f.step_number || 1,
+       step_id: f.step_id,
+       validation_rules: f.validation_rules || {},
+       logic_rules: f.logic_rules || {},
+       score_rules: f.score_rules || {}
+     }));
+ 
+     const processedSteps = steps.map((s, index) => ({
+       id: s.id,
+       title: s.title || `Step ${index + 1}`,
+       description: s.description || '',
+       sort_order: s.sort_order !== undefined ? s.sort_order : index,
+       button_text: s.button_text || 'Next',
+       conditional_logic: s.conditional_logic || {}
+     }));
+ 
+     const payload = {
+       p_form_id: formId,
+       p_company_id: form.company_id,
+       p_form_data: {
+         name: form.name,
+         slug: form.slug,
+         status: form.status,
+         type: form.type,
+         settings: form.settings,
+         description: form.description
+       },
+       p_steps: processedSteps,
+       p_fields: processedFields
+     };
+ 
+     logger.info('Updating form with optimized save_form_v2', { 
        formId, 
-       slug: form.slug,
-       redirect_url: form.settings?.redirect_url,
-       fieldCount: fields.length 
+       fieldCount: fields.length,
+       stepCount: steps.length 
      });
-
-    const { error } = await supabase.rpc('update_form_with_fields', payload);
-
-    if (error) {
-      logger.error('Failed to update form with RPC', { error, formId });
-      // Provide a more descriptive error message if possible
-      if (error.code === '23505') {
-        throw new Error('This slug is already in use by another form. Please choose a different one.');
-      }
-      throw error;
-    }
-  },
+ 
+     const { error } = await supabase.rpc('save_form_v2', payload);
+ 
+     if (error) {
+       logger.error('Failed to update form with save_form_v2', { error, formId });
+       if (error.code === '23505') {
+         throw new Error('This slug is already in use by another form. Please choose a different one.');
+       }
+       throw error;
+     }
+   },
 
   async deleteForm(formId: string): Promise<void> {
     const { error } = await supabase.from('forms').delete().eq('id', formId);
