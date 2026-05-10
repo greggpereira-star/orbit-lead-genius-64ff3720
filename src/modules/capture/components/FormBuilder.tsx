@@ -534,7 +534,15 @@ import { FormPublish } from './FormPublish';
                         value={formConfig.settings?.submit_label} 
                         onChange={(e) => setFormConfig(prev => ({
                           ...prev, 
-                          settings: { ...(prev.settings || {}), submit_label: e.target.value }
+                          settings: { 
+                            submit_label: 'Submit',
+                            success_message: 'Thank you!',
+                            theme: 'premium-light',
+                            cv_crm_integration: false,
+                            capture_utms: true,
+                            ...(prev.settings || {}), 
+                            submit_label: e.target.value 
+                          }
                         }))}
                         placeholder="E.g. Send" 
                       />
@@ -548,7 +556,15 @@ import { FormPublish } from './FormPublish';
                         checked={formConfig.settings?.capture_utms} 
                         onCheckedChange={(val) => setFormConfig(prev => ({
                           ...prev, 
-                          settings: { ...(prev.settings || {}), capture_utms: val }
+                          settings: { 
+                            submit_label: 'Submit',
+                            success_message: 'Thank you!',
+                            theme: 'premium-light',
+                            cv_crm_integration: false,
+                            capture_utms: true,
+                            ...(prev.settings || {}), 
+                            capture_utms: val 
+                          }
                         }))}
                       />
                     </div>
@@ -574,7 +590,15 @@ import { FormPublish } from './FormPublish';
                           value={formConfig.settings?.success_message} 
                           onChange={(e) => setFormConfig(prev => ({
                             ...prev, 
-                            settings: { ...(prev.settings || {}), success_message: e.target.value }
+                            settings: { 
+                              submit_label: 'Submit',
+                              success_message: 'Thank you!',
+                              theme: 'premium-light',
+                              cv_crm_integration: false,
+                              capture_utms: true,
+                              ...(prev.settings || {}), 
+                              success_message: e.target.value 
+                            }
                           }))}
                           placeholder="Thank you for your interest!" 
                         />
@@ -585,7 +609,15 @@ import { FormPublish } from './FormPublish';
                           value={formConfig.settings?.redirect_url || ''} 
                           onChange={(e) => setFormConfig(prev => ({
                             ...prev, 
-                            settings: { ...(prev.settings || {}), redirect_url: e.target.value }
+                            settings: { 
+                              submit_label: 'Submit',
+                              success_message: 'Thank you!',
+                              theme: 'premium-light',
+                              cv_crm_integration: false,
+                              capture_utms: true,
+                              ...(prev.settings || {}), 
+                              redirect_url: e.target.value 
+                            }
                           }))}
                           placeholder="https://example.com/thanks" 
                         />
@@ -596,7 +628,15 @@ import { FormPublish } from './FormPublish';
                           value={formConfig.settings?.whatsapp_number || ''} 
                           onChange={(e) => setFormConfig(prev => ({
                             ...prev, 
-                            settings: { ...(prev.settings || {}), whatsapp_number: e.target.value }
+                            settings: { 
+                              submit_label: 'Submit',
+                              success_message: 'Thank you!',
+                              theme: 'premium-light',
+                              cv_crm_integration: false,
+                              capture_utms: true,
+                              ...(prev.settings || {}), 
+                              whatsapp_number: e.target.value 
+                            }
                           }))}
                           placeholder="5511999999999" 
                         />
