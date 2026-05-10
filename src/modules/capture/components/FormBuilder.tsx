@@ -270,14 +270,16 @@ import { FormScoringPanel } from './FormScoringPanel';
           throw new Error('Empresa não identificada. Por favor, recarregue a página.');
         }
   
-        const cleanedFields = (fields as FormField[]).map(f => ({
-          ...f,
-          label: f.label || 'Campo sem nome',
-          type: f.type || 'text',
-          required: !!f.required,
-          options: Array.isArray(f.options) ? f.options : [],
-          placeholder: f.placeholder || ''
-        }));
+         const cleanedFields = fields.map((f, index) => ({
+           ...f,
+           label: f.label || 'Campo sem nome',
+           type: f.type || 'text',
+           required: !!f.required,
+           options: Array.isArray(f.options) ? f.options : [],
+           placeholder: f.placeholder || '',
+           sort_order: index,
+           step_number: 1 // Default to step 1
+         }));
   
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Tempo limite de salvamento excedido (30s). Verifique sua conexão.')), 30000)
