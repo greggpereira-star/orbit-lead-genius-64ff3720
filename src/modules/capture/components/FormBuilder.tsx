@@ -381,35 +381,57 @@ import { FormScoringPanel } from './FormScoringPanel';
           const selectFields = fields.filter(f => f.type === 'select');
           
           for (const field of selectFields) {
-            // Tenta achar o ID real do field (após o upsert acima)
-            // Se o field é novo, precisamos do ID retornado ou gerado. 
-            // Como a RPC de fields não retorna IDs, e o front gera UUIDs curtos, 
-            // em uma implementação real precisaríamos garantir que o field.id é estável.
-             const currentOptions = Array.isArray(field.options) ? field.options : [];
-             if (!field.id) continue;
-            const originalField = originalData?.fields.find(of => of.id === field.id);
-            const originalOptions = originalField?.options_data || [];
+            const fieldId = field.id;
+            if (!fieldId) continue;
+
+            // Snapshot original para computar delta de opções
+            const originalField = originalData?.fields.find(of => of.id === fieldId);
+            const originalOptions = Array.isArray(originalField?.options_data) ? originalField.options_data : [];
+            
+            // Garante que currentOptions é um array de objetos estruturados
+            const currentOptions = Array.isArray(field.options) ? field.options.map((opt: any, index: number) => {
+              if (typeof opt === 'string') {
+                return {
+                  id: crypto.randomUUID(), // Opções legacy como string ganham ID
+                  label: opt,
+                  value: opt.toLowerCase().replace(/\s+/g, '_'),
+                  sort_order: index,
+                  score: 0
+                };
+              }
+              return {
+                ...opt,
+                id: opt.id || crypto.randomUUID(),
+                sort_order: index
+              };
+            }) : [];
 
             const optionsToDelete = originalOptions
-              .filter((oo: any) => !currentOptions.some((co: any) => co.id === oo.id))
+              .filter((oo: any) => oo.id && !currentOptions.some((co: any) => co.id === oo.id))
               .map((oo: any) => oo.id);
             
             const optionsToUpsert = currentOptions.map((opt: any, index: number) => ({
-              id: opt.id,
-              label: typeof opt === 'string' ? opt : (opt.label || ''),
-              value: typeof opt === 'string' ? opt.toLowerCase() : (opt.value || ''),
+              id: opt.id || crypto.randomUUID(),
+              label: opt.label || '',
+              value: opt.value || (opt.label ? opt.label.toLowerCase().replace(/\s+/g, '_') : ''),
               score: opt.score || 0,
               tag: opt.tag || null,
               sort_order: index,
               metadata: opt.metadata || {}
             }));
 
-            if (optionsToUpsert.length > 0 || optionsToDelete.length > 0) {
-              logger.info(`[${traceId}] Step 3: Saving Options for field ${field.label}`);
+            // Só envia se houver mudança real para evitar requests desnecessários
+            const hasChanges = optionsToUpsert.length > 0 || optionsToDelete.length > 0;
+            
+            if (hasChanges) {
+              logger.info(`[${traceId}] Step 3: Saving Options for field ${field.label}`, {
+                upsertCount: optionsToUpsert.length,
+                deleteCount: optionsToDelete.length
+              });
               await formService.saveFieldOptionsDelta({
                 formId: savedFormId,
                 companyId: company.id,
-                fieldId: field.id,
+                fieldId: fieldId,
                 optionsUpsert: optionsToUpsert,
                 optionsDelete: optionsToDelete
               });
