@@ -229,16 +229,17 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
     }
   });
 
-   if (isLoading && !forms) {
+  if (isLoading && !forms) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <div className="h-32 bg-muted rounded-t-xl" />
-            <CardContent className="p-4 space-y-2">
-              <div className="h-4 bg-muted w-2/3 rounded" />
-              <div className="h-3 bg-muted w-1/2 rounded" />
-            </CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="animate-pulse h-64 border-none shadow-sm rounded-2xl overflow-hidden bg-white">
+            <div className="h-16 bg-muted/30" />
+            <div className="p-8 space-y-4">
+              <div className="h-6 bg-muted/30 w-1/2 rounded-lg" />
+              <div className="h-4 bg-muted/30 w-1/3 rounded-lg" />
+              <div className="h-20 bg-muted/20 w-full rounded-xl mt-6" />
+            </div>
           </Card>
         ))}
       </div>
@@ -306,73 +307,84 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {forms?.map((form) => (
-        <Card key={form.id} className="group transition-all duration-300 border border-slate-200/60 shadow-sm hover:shadow-xl hover:-translate-y-1 bg-white overflow-hidden flex flex-col rounded-2xl">
-          <CardHeader className="p-5 flex flex-col space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
-                <FileText className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" />
-              </div>
+        <Card key={form.id} className="group relative transition-all duration-500 border-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] hover:-translate-y-1 bg-white overflow-hidden flex flex-col rounded-[24px]">
+          {/* Blue Top Banner */}
+          <div className="h-16 w-full bg-gradient-to-r from-primary to-blue-600 relative overflow-hidden shrink-0">
+            <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.1)_75%,transparent_75%,transparent)] bg-[length:24px_24px] opacity-10" />
+            <div className="absolute top-4 right-6">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100">
-                    <MoreVertical className="h-4 w-4 text-slate-400" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm transition-all">
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-2xl border-slate-200/60">
-                  <DropdownMenuItem onClick={() => onEdit(form.id)} className="gap-2 rounded-lg py-2.5">
-                    <Edit3 className="h-4 w-4" /> Edit Details
+                <DropdownMenuContent align="end" className="w-52 rounded-2xl p-1.5 shadow-2xl border-slate-200/60">
+                  <DropdownMenuItem onClick={() => onEdit(form.id)} className="gap-3 rounded-xl py-3 cursor-pointer">
+                    <Edit3 className="h-4 w-4 text-slate-500" /> 
+                    <span className="font-semibold text-sm">Editar Detalhes</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 rounded-lg py-2.5">
-                    <Copy className="h-4 w-4" /> Duplicate
+                  <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer">
+                    <Copy className="h-4 w-4 text-slate-500" /> 
+                    <span className="font-semibold text-sm">Duplicar</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 rounded-lg py-2.5">
-                    <BarChart3 className="h-4 w-4" /> Analytics
+                  <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer">
+                    <BarChart3 className="h-4 w-4 text-slate-500" /> 
+                    <span className="font-semibold text-sm">Relatórios</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2 rounded-lg py-2.5 text-destructive focus:text-destructive focus:bg-destructive/5" onClick={() => deleteMutation.mutate(form.id)}>
-                    <Trash2 className="h-4 w-4" /> Delete Form
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuItem className="gap-3 rounded-xl py-3 text-destructive focus:text-destructive focus:bg-destructive/5 cursor-pointer" onClick={() => deleteMutation.mutate(form.id)}>
+                    <Trash2 className="h-4 w-4" /> 
+                    <span className="font-semibold text-sm">Excluir Formulário</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+          </div>
 
-            <div className="space-y-1.5 min-w-0">
-              <CardTitle className="text-base font-bold text-slate-900 truncate pr-2 leading-tight">
-                {form.name}
-              </CardTitle>
-              <div className="flex items-center gap-2 overflow-hidden">
-                <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="text-[9px] uppercase font-bold tracking-widest px-2 py-0 h-4 min-w-fit">
-                  {form.status}
+          <CardHeader className="p-8 pt-6 flex flex-col space-y-4">
+            <div className="space-y-2 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant={form.status === 'published' ? 'default' : 'secondary'} className="text-[10px] uppercase font-black tracking-widest px-2.5 py-0.5 h-5 rounded-full bg-primary/10 text-primary border-none shadow-none">
+                  {form.status === 'published' ? 'Ativo' : 'Rascunho'}
                 </Badge>
-                <span className="text-[10px] text-slate-400 font-medium truncate shrink-0">
-                  /{form.slug}
+                <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                  ID: {form.slug}
                 </span>
               </div>
+              <CardTitle className="text-2xl font-black text-slate-900 truncate leading-tight tracking-tight group-hover:text-primary transition-colors">
+                {form.name}
+              </CardTitle>
             </div>
           </CardHeader>
           
-          <CardContent className="px-5 pb-5 pt-0 mt-auto">
-            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50/50 rounded-xl border border-slate-100 mb-5">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Leads</span>
-                <span className="text-sm font-black text-slate-900 leading-none">0</span>
+          <CardContent className="px-8 pb-8 pt-0 mt-auto">
+            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50/80 rounded-2xl border border-slate-100/50 mb-8 transition-all group-hover:bg-slate-50">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Total de Leads</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-slate-900 leading-none tracking-tighter">0</span>
+                  <span className="text-[10px] text-green-500 font-bold">+0%</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-0.5 border-l border-slate-200 pl-3">
-                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Conv.</span>
-                <span className="text-sm font-black text-slate-900 leading-none">0%</span>
+              <div className="flex flex-col gap-1 border-l border-slate-200/60 pl-4">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Conversão</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-slate-900 leading-none tracking-tighter">0%</span>
+                  <span className="text-[10px] text-slate-400 font-bold">avg.</span>
+                </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Button 
                 variant="outline" 
-                size="sm" 
-                className="flex-1 text-[10px] uppercase font-bold tracking-widest h-9 gap-1.5 rounded-lg border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all" 
+                size="lg" 
+                className="flex-1 text-[11px] uppercase font-black tracking-widest h-12 gap-2.5 rounded-xl border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-[0.98]" 
                 onClick={() => window.open(`/f/${form.slug}`, '_blank')}
               >
-                <Eye className="h-3.5 w-3.5" /> Preview
+                <Eye className="h-4 w-4" /> Visualizar
               </Button>
               <EmbedDialog form={form} />
             </div>
