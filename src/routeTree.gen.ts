@@ -30,7 +30,6 @@ import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
-import { Route as EmbedFormRouteImport } from './routes/embed-form.'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
@@ -143,11 +142,6 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
-const EmbedFormRoute = EmbedFormRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => EmbedFormRoute,
-} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -194,7 +188,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/embed-form': typeof EmbedFormRouteWithChildren
-  '/embed-form/': typeof EmbedFormRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -223,7 +216,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
-  '/embed-form': typeof EmbedFormRoute
+  '/embed-form': typeof EmbedFormRouteWithChildren
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -255,7 +248,6 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/diagnostics': typeof DiagnosticsRoute
   '/embed-form': typeof EmbedFormRouteWithChildren
-  '/embed-form/': typeof EmbedFormRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -287,7 +279,6 @@ export interface FileRouteTypes {
     | '/'
     | '/diagnostics'
     | '/embed-form'
-    | '/embed-form/'
     | '/analytics'
     | '/automations'
     | '/dashboard'
@@ -347,7 +338,6 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/diagnostics'
     | '/embed-form'
-    | '/embed-form/'
     | '/_app/analytics'
     | '/_app/automations'
     | '/_app/dashboard'
@@ -532,13 +522,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/embed-form/': {
-      id: '/embed-form/'
-      path: '/'
-      fullPath: '/embed-form/'
-      preLoaderRoute: typeof EmbedFormRouteImport
-      parentRoute: typeof EmbedFormRoute
-    }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/'
@@ -689,12 +672,10 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface EmbedFormRouteChildren {
-  EmbedFormRoute: typeof EmbedFormRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
 }
 
 const EmbedFormRouteChildren: EmbedFormRouteChildren = {
-  EmbedFormRoute: EmbedFormRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
 }
 
