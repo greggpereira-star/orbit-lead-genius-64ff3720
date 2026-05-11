@@ -140,9 +140,11 @@
         
         iframe.src = url;
         iframe.width = '100%';
-        iframe.height = config.height || '600px'; 
+        iframe.height = config.height || '800px'; 
         iframe.style.width = '100%';
         iframe.style.minWidth = '100%';
+        iframe.style.border = 'none';
+        iframe.style.overflow = 'hidden';
         iframe.style.border = 'none';
         iframe.style.overflow = 'hidden';
         iframe.style.transition = 'height 0.3s ease';
