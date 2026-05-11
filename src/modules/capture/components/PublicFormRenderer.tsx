@@ -188,9 +188,14 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
          }
 
         await partialSubmissionService.markAsCompleted(form.id, sessionId);
-        setSubmitted(true);
+        
         if (form.settings.redirect_url) {
-          window.location.href = form.settings.redirect_url;
+          // Se houver redirect, dar um pequeno delay para o usuário ver o feedback ou garantir que as mensagens de sucesso sejam processadas
+          setTimeout(() => {
+            window.location.href = form.settings.redirect_url!;
+          }, 500);
+        } else {
+          setSubmitted(true);
         }
       } else {
         toast.error('Failed to submit form. Please try again.');
