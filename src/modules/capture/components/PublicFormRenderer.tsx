@@ -325,8 +325,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             </div>
           )}
         </CardHeader>
-        <CardContent className="pb-8 pt-0 px-1 md:px-0">
-          <div className="space-y-5">
+        <CardContent className="pb-8 pt-0 px-4 md:px-6">
+          <div className="space-y-5 max-w-2xl mx-auto">
             {currentStepFields.map((field) => (
               <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
                  <Label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
