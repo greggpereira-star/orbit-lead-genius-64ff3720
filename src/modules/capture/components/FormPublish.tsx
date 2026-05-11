@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   FileCode,
   Laptop,
-  Download
+  Download,
+  ShieldCheck,
+  Terminal
 } from 'lucide-react';
 import { Form } from '../services/formService';
 import { toast } from 'sonner';
@@ -145,6 +147,29 @@ export function FormPublish({ form }: FormPublishProps) {
                   </div>
                 </CardContent>
               </Card>
+              
+              <div className="bg-slate-900 rounded-lg p-4 text-slate-100 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-4 w-4 text-green-400" />
+                    <span className="text-xs font-mono font-bold">Monitor de Rastreamento</span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] border-green-400/30 text-green-400">ATIVO</Badge>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Para verificar se os UTMs e eventos estão sendo capturados corretamente no WordPress, adicione <code className="text-green-300">?lf_debug=true</code> ao final da URL do seu site e abra o Console do Navegador (F12).
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="w-full text-[10px] h-8 font-bold bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200"
+                    onClick={() => toast.info('Adicione ?lf_debug=true na URL do seu site para testar.')}
+                  >
+                    Como verificar?
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
