@@ -37,7 +37,7 @@ function EmbedFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent p-0">
+    <div className="bg-transparent p-0 overflow-hidden">
       <PublicFormRenderer slug={form.slug} />
     </div>
   );

@@ -31,7 +31,25 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     queryFn: () => formService.getFormBySlug(slug),
   });
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue, getValues } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue, getValues, trigger } = useForm();
+
+  // Iframe auto-resize notification
+  useEffect(() => {
+    const updateHeight = () => {
+      const height = document.body.scrollHeight;
+      if (window.parent) {
+        window.parent.postMessage({ type: 'LEADFLOW_RESIZE', height }, '*');
+      }
+    };
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(document.body);
+    
+    // Initial call
+    updateHeight();
+    
+    return () => observer.disconnect();
+  }, [currentStep, submitted, resumePrompt, form]);
 
   useEffect(() => {
     localStorage.setItem(`lf_session_${slug}`, sessionId);
@@ -76,9 +94,9 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+      <div className="flex flex-col items-center justify-center py-12 space-y-4 w-full">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground animate-pulse">Loading enterprise form...</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Carregando formulário seguro...</p>
       </div>
     );
   }
@@ -207,6 +225,10 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   const handleNext = async () => {
     const fieldsInStep = currentStepFields.map(f => f.name || f.label.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+    const isValid = await trigger(fieldsInStep);
+    
+    if (!isValid) return;
+
     const nextStep = currentStep + 1;
     if (currentStep < sortedSteps.length - 1) {
       setCurrentStep(nextStep);
@@ -225,8 +247,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-     <div className="w-full max-w-2xl mx-auto p-2 md:p-4 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ color: 'var(--foreground)' }}>
-       <Card className="border-none shadow-2xl overflow-hidden bg-card/80 backdrop-blur-md w-full" style={{ borderColor: 'var(--border)' }}>
+     <div className="w-full mx-auto p-0 animate-in fade-in duration-700" style={{ color: 'var(--foreground)' }}>
+       <Card className="border-none shadow-none overflow-hidden bg-transparent w-full" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep ? (
           <div className="pt-6 px-8">
             <div className="flex justify-between items-center mb-2">
@@ -243,7 +265,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
         )}
         
-         <CardHeader className="space-y-2 pb-8 pt-8 border-b" style={{ borderColor: 'var(--border)' }}>
+         <CardHeader className="space-y-2 pb-6 pt-0 border-none" style={{ borderColor: 'var(--border)' }}>
           {isMultiStep ? (
             <div className="text-center space-y-1">
                <CardTitle className="text-2xl font-black uppercase tracking-tighter">
@@ -255,14 +277,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             </div>
           ) : (
             <>
-               <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center">{form.name}</CardTitle>
-               {form.description && (
-                 <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
-              )}
+                <div className="bg-primary px-6 py-8 rounded-t-xl mb-6 -mx-6 -mt-0 shadow-lg">
+                  <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center text-white">{form.name}</CardTitle>
+                  {form.description && (
+                    <CardDescription className="text-center text-base font-medium text-white/80 mt-2">{form.description}</CardDescription>
+                  )}
+                </div>
             </>
           )}
         </CardHeader>
-         <CardContent className="pb-12 pt-6">
+         <CardContent className="pb-8 pt-0 px-0">
           <div className="space-y-6">
             {currentStepFields.map((field) => (
               <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
