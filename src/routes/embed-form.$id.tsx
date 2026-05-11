@@ -38,7 +38,8 @@ function EmbedFormPage() {
 
   return (
     <div className="bg-transparent p-0 overflow-hidden">
-      <PublicFormRenderer slug={form.slug} />
+      {/* Pass the ID directly as fallback if slug is not found in the renderer */}
+      <PublicFormRenderer slug={form.slug || id} />
     </div>
   );
 }

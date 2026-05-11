@@ -28,7 +28,18 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['public-form', slug],
-    queryFn: () => formService.getFormBySlug(slug),
+    queryFn: async () => {
+      // Try slug first
+      const bySlug = await formService.getFormBySlug(slug);
+      if (bySlug) return bySlug;
+      
+      // Fallback: Check if slug is actually an ID (common in some embeds)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      if (isUuid) {
+        return await formService.getFormById(slug);
+      }
+      return null;
+    },
   });
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue, getValues, trigger } = useForm();
@@ -247,8 +258,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-     <div className="w-full mx-auto p-0 animate-in fade-in duration-700" style={{ color: 'var(--foreground)' }}>
-       <Card className="border-none shadow-none overflow-hidden bg-transparent w-full" style={{ borderColor: 'var(--border)' }}>
+    <div className="w-full mx-auto p-0 animate-in fade-in duration-700 overflow-hidden" style={{ color: 'var(--foreground)' }}>
+      <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep ? (
           <div className="pt-6 px-8">
             <div className="flex justify-between items-center mb-2">
@@ -276,18 +287,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               )}
             </div>
           ) : (
-            <>
-                <div className="bg-primary px-6 py-8 rounded-t-xl mb-6 -mx-6 -mt-0 shadow-lg">
-                  <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center text-white">{form.name}</CardTitle>
-                  {form.description && (
-                    <CardDescription className="text-center text-base font-medium text-white/80 mt-2">{form.description}</CardDescription>
-                  )}
-                </div>
-            </>
+            <div className="bg-primary px-6 py-8 rounded-xl mb-6 shadow-lg">
+              <CardTitle className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-center text-white">{form.name}</CardTitle>
+              {form.description && (
+                <CardDescription className="text-center text-sm md:text-base font-medium text-white/80 mt-2">{form.description}</CardDescription>
+              )}
+            </div>
           )}
         </CardHeader>
-         <CardContent className="pb-8 pt-0 px-0">
-          <div className="space-y-6">
+        <CardContent className="pb-8 pt-0 px-1 md:px-0">
+          <div className="space-y-5">
             {currentStepFields.map((field) => (
               <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
                  <Label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
@@ -320,13 +329,20 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 ) : (
                   <Input
                     type={field.type === 'phone' ? 'tel' : field.type}
-                    {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
+                    {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { 
+                      required: field.required,
+                      pattern: field.type === 'email' ? /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i : undefined
+                    })}
                     placeholder={field.placeholder}
-                     className="h-12 bg-background/50 border-2 text-base transition-all"
+                    className="h-12 bg-background/50 border-2 text-base transition-all focus-visible:ring-primary/20"
                   />
                 )}
                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
-                  <span className="text-xs font-bold text-destructive uppercase tracking-widest">Este campo é obrigatório</span>
+                  <span className="text-[10px] font-bold text-destructive uppercase tracking-widest block mt-1">
+                    {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')]?.type === 'pattern' 
+                      ? 'E-mail inválido' 
+                      : 'Campo obrigatório'}
+                  </span>
                 )}
               </div>
             ))}
@@ -343,9 +359,12 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               )}
               
               <Button 
-                onClick={isMultiStep ? handleNext : handleSubmit(onSubmit)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  isMultiStep ? handleNext() : handleSubmit(onSubmit)();
+                }}
                 disabled={isSubmitting}
-                 className="flex-1 h-14 text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="flex-1 h-14 text-base md:text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:brightness-110 active:scale-[0.98] bg-primary text-white"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
