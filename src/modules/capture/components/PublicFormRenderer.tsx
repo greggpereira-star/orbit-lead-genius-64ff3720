@@ -188,9 +188,14 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
          }
 
         await partialSubmissionService.markAsCompleted(form.id, sessionId);
-        setSubmitted(true);
+        
         if (form.settings.redirect_url) {
-          window.location.href = form.settings.redirect_url;
+          // Se houver redirect, dar um pequeno delay para o usuário ver o feedback ou garantir que as mensagens de sucesso sejam processadas
+          setTimeout(() => {
+            window.location.href = form.settings.redirect_url!;
+          }, 500);
+        } else {
+          setSubmitted(true);
         }
       } else {
         toast.error('Failed to submit form. Please try again.');
@@ -279,7 +284,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-    <div className="w-full mx-auto p-0 animate-in fade-in duration-700 overflow-hidden" style={{ color: 'var(--foreground)' }}>
+    <form 
+      onSubmit={handleSubmit(onSubmit)}
+      className="w-full mx-auto p-0 animate-in fade-in duration-700 overflow-hidden" 
+      style={{ color: 'var(--foreground)' }}
+    >
       <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep ? (
           <div className="pt-6 px-8">
@@ -380,10 +389,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               )}
               
               <Button 
-                onClick={(e) => {
+                type={isMultiStep ? "button" : "submit"}
+                onClick={isMultiStep ? (e) => {
                   e.preventDefault();
-                  isMultiStep ? handleNext() : handleSubmit(onSubmit)();
-                }}
+                  handleNext();
+                } : undefined}
                 disabled={isSubmitting}
                 className="flex-1 h-14 text-base md:text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:brightness-110 active:scale-[0.98] bg-primary text-white"
               >
@@ -408,6 +418,6 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Powered by</span>
         <span className="text-xs font-black uppercase tracking-tighter">LeadFlow Intelligence</span>
       </div>
-    </div>
+    </form>
   );
 }
