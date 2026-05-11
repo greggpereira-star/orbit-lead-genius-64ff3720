@@ -43,24 +43,34 @@
     // Build Public URL with UTM forward
     buildUrl: function(formId) {
       const tracking = this.getTrackingData();
-      // Use the actual SDK source URL instead of window.location.origin
-      // to ensure we point back to the app, not the client site.
-      let baseUrl = 'https://lovable-crm-pro.lovable.app';
+      
+      // Identificar URL base do SDK
+      let baseUrl = window.location.origin;
       const scripts = document.getElementsByTagName('script');
-      for (let s of scripts) {
-        if (s.src && s.src.includes('sdk.js')) {
+      for (let i = 0; i < scripts.length; i++) {
+        const src = scripts[i].src;
+        if (src && src.indexOf('sdk.js') !== -1) {
           try {
-            baseUrl = new URL(s.src).origin;
+            baseUrl = new URL(src).origin;
             break;
           } catch(e) {}
         }
       }
       
+      // Se estiver rodando local no WordPress ou similar, garantir que aponte para o domínio da App
+      if (baseUrl.indexOf('localhost') !== -1 || baseUrl.indexOf('127.0.0.1') !== -1 || baseUrl.indexOf('.local') !== -1) {
+        // Fallback para o domínio de produção se o SDK for carregado localmente de forma indevida
+        if (window.location.hostname.indexOf('localhost') === -1) {
+           baseUrl = 'https://lovable-crm-pro.lovable.app';
+        }
+      }
+
       // If formId is a UUID, use the embed route. Otherwise use slug route.
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId);
-      const url = isUuid 
-        ? new URL(`${baseUrl}/embed-form/${formId}`)
-        : new URL(`${baseUrl}/f/${formId}`);
+      
+      // Forçar o caminho absoluto para evitar que o iframe tente carregar rotas relativas do site cliente
+      const path = isUuid ? '/embed-form/' + formId : '/f/' + formId;
+      const url = new URL(path, baseUrl);
       
       Object.keys(tracking).forEach(key => {
         if (tracking[key]) url.searchParams.set(key, tracking[key]);
