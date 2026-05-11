@@ -3,7 +3,7 @@
  * Plugin Name: LeadFlow Official
  * Plugin URI: https://altflowlead.lovable.app
  * Description: Integre seus formulários LeadFlow de forma simples e profissional no seu site WordPress.
- * Version: 1.0.0
+  * Version: 1.1.0
  * Author: LeadFlow Team
  * Author URI: https://altflowlead.lovable.app
  * License: GPL2
@@ -23,9 +23,19 @@ class LeadFlow_Official {
         add_action('admin_init', [$this, 'register_settings']);
     }
 
-    public function enqueue_scripts() {
-        wp_enqueue_script('leadflow-sdk', $this->base_url . '/sdk.js', [], '1.1.0', true);
-    }
+     public function enqueue_scripts() {
+         wp_enqueue_script('leadflow-sdk', $this->base_url . '/sdk.js', [], '1.2.0', true);
+         wp_add_inline_style('wp-block-library', '
+             .leadflow-form-container { 
+                 width: 100%; 
+                 margin: 20px 0;
+                 min-height: 400px;
+             }
+             .leadflow-form-container iframe {
+                 transition: opacity 0.3s ease;
+             }
+         ');
+     }
 
     public function render_shortcode($atts) {
         $a = shortcode_atts([
