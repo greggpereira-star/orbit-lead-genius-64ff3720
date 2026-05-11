@@ -9,12 +9,13 @@ export const Route = createFileRoute('/embed-form/')({
 });
 
 function EmbedFormPage() {
-  const params = Route.useParams() as { id: string };
-  const id = params.id;
+  const params = Route.useParams();
+  const id = (params as any).id;
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['form-embed', id],
     queryFn: () => formService.getFormById(id),
+    enabled: !!id,
   });
 
   if (isLoading) {
