@@ -225,8 +225,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ color: 'var(--foreground)' }}>
-      <Card className="border-none shadow-2xl overflow-hidden bg-card/80 backdrop-blur-md" style={{ borderColor: 'var(--border)' }}>
+     <div className="max-w-xl mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ color: 'var(--foreground)' }}>
+       <Card className="border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] overflow-hidden bg-card/90 backdrop-blur-xl rounded-[24px]" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep ? (
           <div className="pt-6 px-8">
             <div className="flex justify-between items-center mb-2">
@@ -243,10 +243,10 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
         )}
         
-        <CardHeader className="space-y-2 pb-8 pt-8 border-b" style={{ borderColor: 'var(--border)' }}>
+         <CardHeader className="space-y-2 pb-6 pt-10 px-8 border-none text-center">
           {isMultiStep ? (
             <div className="text-center space-y-1">
-              <CardTitle className="text-2xl font-black uppercase tracking-tighter">
+               <CardTitle className="text-2xl font-black uppercase tracking-tight leading-tight">
                 {sortedSteps[currentStep]?.title || form.name}
               </CardTitle>
               {sortedSteps[currentStep]?.description && (
@@ -255,18 +255,18 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             </div>
           ) : (
             <>
-              <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center">{form.name}</CardTitle>
-              {form.description && (
+               <CardTitle className="text-3xl font-black uppercase tracking-tight leading-tight">{form.name}</CardTitle>
+               {form.description && (
                 <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
               )}
             </>
           )}
         </CardHeader>
-        <CardContent className="pb-12 pt-6">
+         <CardContent className="pb-10 pt-4 px-8">
           <div className="space-y-6">
             {currentStepFields.map((field) => (
               <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
-                <Label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
+                 <Label className="text-[11px] font-black uppercase tracking-[0.1em] mb-1.5 block opacity-70" style={{ color: 'var(--foreground)' }}>
                   {field.label} {field.required && <span className="text-destructive">*</span>}
                 </Label>
                 
@@ -274,13 +274,13 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   <Textarea 
                     {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
                     placeholder={field.placeholder}
-                    className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
+                     className="min-h-[100px] bg-background/40 border-2 border-muted/20 focus-visible:border-primary/50 focus-visible:ring-0 transition-all rounded-xl"
                   />
                 ) : field.type === 'select' ? (
                   <div className="relative group">
                     <select
                       {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                      className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
+                       className="w-full h-12 rounded-xl border-2 border-muted/20 bg-background/40 px-4 py-1 text-sm font-medium shadow-none transition-all focus-visible:outline-none focus-visible:border-primary/50 appearance-none"
                     >
                       <option value="">Selecione uma opção...</option>
                       {(field.options || []).map((option: any, i: number) => {
@@ -298,7 +298,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                     type={field.type === 'phone' ? 'tel' : field.type}
                     {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
                     placeholder={field.placeholder}
-                    className="h-12 bg-background/50 border-2 text-base transition-all"
+                     className="h-12 bg-background/40 border-2 border-muted/20 text-sm font-medium transition-all rounded-xl focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 )}
                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
@@ -321,7 +321,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               <Button 
                 onClick={isMultiStep ? handleNext : handleSubmit(onSubmit)}
                 disabled={isSubmitting}
-                className="flex-1 h-14 text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                 className="flex-1 h-14 text-sm font-black uppercase tracking-[0.15em] shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] rounded-xl"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
