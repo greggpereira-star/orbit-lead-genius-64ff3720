@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as EmbedFormRouteImport } from './routes/embed-form'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
@@ -28,6 +29,7 @@ import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
+import { Route as EmbedFormRouteImport } from './routes/embed-form.'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
@@ -37,6 +39,11 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
 
+const EmbedFormRoute = EmbedFormRouteImport.update({
+  id: '/embed-form',
+  path: '/embed-form',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
   path: '/diagnostics',
@@ -130,6 +137,11 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
+const EmbedFormRoute = EmbedFormRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EmbedFormRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -175,6 +187,8 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/embed-form': typeof EmbedFormRouteWithChildren
+  '/embed-form/': typeof EmbedFormRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -202,6 +216,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/embed-form': typeof EmbedFormRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -231,6 +246,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/diagnostics': typeof DiagnosticsRoute
+  '/embed-form': typeof EmbedFormRouteWithChildren
+  '/embed-form/': typeof EmbedFormRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -260,6 +277,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/diagnostics'
+    | '/embed-form'
+    | '/embed-form/'
     | '/analytics'
     | '/automations'
     | '/dashboard'
@@ -287,6 +306,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/diagnostics'
+    | '/embed-form'
     | '/analytics'
     | '/automations'
     | '/dashboard'
@@ -315,6 +335,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_auth'
     | '/diagnostics'
+    | '/embed-form'
+    | '/embed-form/'
     | '/_app/analytics'
     | '/_app/automations'
     | '/_app/dashboard'
@@ -345,11 +367,19 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
+  EmbedFormRoute: typeof EmbedFormRouteWithChildren
   FSlugRoute: typeof FSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/embed-form': {
+      id: '/embed-form'
+      path: '/embed-form'
+      fullPath: '/embed-form'
+      preLoaderRoute: typeof EmbedFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/diagnostics': {
       id: '/diagnostics'
       path: '/diagnostics'
@@ -482,6 +512,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/analytics'
       preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/embed-form/': {
+      id: '/embed-form/'
+      path: '/'
+      fullPath: '/embed-form/'
+      preLoaderRoute: typeof EmbedFormRouteImport
+      parentRoute: typeof EmbedFormRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -632,11 +669,24 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface EmbedFormRouteChildren {
+  EmbedFormRoute: typeof EmbedFormRoute
+}
+
+const EmbedFormRouteChildren: EmbedFormRouteChildren = {
+  EmbedFormRoute: EmbedFormRoute,
+}
+
+const EmbedFormRouteWithChildren = EmbedFormRoute._addFileChildren(
+  EmbedFormRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
+  EmbedFormRoute: EmbedFormRouteWithChildren,
   FSlugRoute: FSlugRoute,
 }
 export const routeTree = rootRouteImport
