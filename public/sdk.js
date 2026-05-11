@@ -140,7 +140,10 @@
         
         iframe.src = url;
         iframe.width = '100%';
-        iframe.height = config.height || '500px'; // Initial height
+        iframe.height = config.height || '150px'; // Menor altura inicial para evitar salto visual
+        iframe.style.width = '1px';
+        iframe.style.minWidth = '100%';
+        iframe.style.maxWidth = '100%';
         iframe.style.border = 'none';
         iframe.style.overflow = 'hidden';
         iframe.style.transition = 'height 0.3s ease';
