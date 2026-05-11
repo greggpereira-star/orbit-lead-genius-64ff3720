@@ -43,7 +43,19 @@
     // Build Public URL with UTM forward
     buildUrl: function(formId) {
       const tracking = this.getTrackingData();
-      const baseUrl = window.location.origin;
+      // Use the actual SDK source URL instead of window.location.origin
+      // to ensure we point back to the app, not the client site.
+      let baseUrl = 'https://lovable-crm-pro.lovable.app';
+      const scripts = document.getElementsByTagName('script');
+      for (let s of scripts) {
+        if (s.src && s.src.includes('sdk.js')) {
+          try {
+            baseUrl = new URL(s.src).origin;
+            break;
+          } catch(e) {}
+        }
+      }
+      
       // If formId is a UUID, use the embed route. Otherwise use slug route.
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formId);
       const url = isUuid 
