@@ -140,10 +140,9 @@
         
         iframe.src = url;
         iframe.width = '100%';
-        iframe.height = config.height || '1px'; // Mínimo possível para disparar o resize logo em seguida
-        iframe.style.width = '1px';
+        iframe.height = config.height || '600px'; 
+        iframe.style.width = '100%';
         iframe.style.minWidth = '100%';
-        iframe.style.maxWidth = '100%';
         iframe.style.border = 'none';
         iframe.style.overflow = 'hidden';
         iframe.style.transition = 'height 0.3s ease';
