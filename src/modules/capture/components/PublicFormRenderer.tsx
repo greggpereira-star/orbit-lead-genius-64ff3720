@@ -124,9 +124,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4 w-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Carregando formulário seguro...</p>
+      <div className="flex flex-col items-center justify-center py-6 space-y-4 w-full animate-pulse">
+        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Autenticando formulário...</p>
       </div>
     );
   }
