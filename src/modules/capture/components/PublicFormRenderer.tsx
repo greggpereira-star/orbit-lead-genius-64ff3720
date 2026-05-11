@@ -28,7 +28,18 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['public-form', slug],
-    queryFn: () => formService.getFormBySlug(slug),
+    queryFn: async () => {
+      // Try slug first
+      const bySlug = await formService.getFormBySlug(slug);
+      if (bySlug) return bySlug;
+      
+      // Fallback: Check if slug is actually an ID (common in some embeds)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+      if (isUuid) {
+        return await formService.getFormById(slug);
+      }
+      return null;
+    },
   });
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue, getValues, trigger } = useForm();
