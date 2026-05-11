@@ -295,8 +295,6 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             </div>
             <Progress value={progress} className="h-1.5" />
           </div>
-        ) : (
-          <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
         )}
         
         <CardHeader className="space-y-2 pb-6 pt-2 border-none" style={{ borderColor: 'var(--border)' }}>
