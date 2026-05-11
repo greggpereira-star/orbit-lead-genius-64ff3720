@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
+import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
@@ -58,6 +59,11 @@ const IndexRoute = IndexRouteImport.update({
 const FSlugRoute = FSlugRouteImport.update({
   id: '/f/$slug',
   path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
+  id: '/embed-form/$id',
+  path: '/embed-form/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/embed-form/$id'
     | '/f/$slug'
     | '/analytics/tv'
     | '/leads/$id'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/embed-form/$id'
     | '/f/$slug'
     | '/analytics/tv'
     | '/leads/$id'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/_auth/register'
     | '/_auth/reset-password'
     | '/_auth/verify-email'
+    | '/embed-form/$id'
     | '/f/$slug'
     | '/_app/analytics/tv'
     | '/_app/leads/$id'
@@ -345,6 +357,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
+  EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
 }
 
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/f/$slug'
       fullPath: '/f/$slug'
       preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed-form/$id': {
+      id: '/embed-form/$id'
+      path: '/embed-form/$id'
+      fullPath: '/embed-form/$id'
+      preLoaderRoute: typeof EmbedFormIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/verify-email': {
@@ -637,6 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
+  EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
 }
 export const routeTree = rootRouteImport
