@@ -16,7 +16,6 @@ import {
   MessageSquare, 
   ShoppingBag,
   ArrowRight,
-  ShieldCheck,
   AlertCircle,
   PlayCircle,
   CheckCircle2,
