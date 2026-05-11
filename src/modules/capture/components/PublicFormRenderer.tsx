@@ -283,7 +283,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       style={{ color: 'var(--foreground)' }}
     >
       <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
-        {isMultiStep ? (
+        {isMultiStep && (
           <div className="pt-6 px-8">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
