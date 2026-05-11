@@ -1,19 +1,24 @@
 function EmbedDialog({ form }: { form: Form }) {
   const [copied, setCopied] = React.useState(false);
-  const publicUrl = `${window.location.origin}/f/${form.slug}`;
+  // Garantir que a URL aponte para o domínio de produção se estivermos em preview/local
+  const appDomain = window.location.hostname.includes('lovable.app') 
+    ? `https://${window.location.hostname}`
+    : window.location.origin;
+
+  const publicUrl = `${appDomain}/f/${form.slug}`;
   
-   const iframeCode = `<iframe src="${window.location.origin}/embed-form/${form.id}" width="100%" height="700" style="border:0; border-radius:12px;" loading="lazy"></iframe>`;
-   const scriptCode = `<div id="leadflow-form-${form.id}"></div>
- <script src="${window.location.origin}/sdk.js"></script>
- <script>
-   window.addEventListener('load', function() {
-     LeadFlow.init({
-       formId: "${form.id}",
-       target: "#leadflow-form-${form.id}",
-       mode: "inline"
-     });
-   });
- </script>`;
+  const iframeCode = `<iframe src="${appDomain}/embed-form/${form.id}" width="100%" height="700" style="border:0; border-radius:12px;" loading="lazy"></iframe>`;
+  const scriptCode = `<div id="leadflow-form-${form.id}"></div>
+<script src="${appDomain}/sdk.js"></script>
+<script>
+  window.addEventListener('load', function() {
+    LeadFlow.init({
+      formId: "${form.id}",
+      target: "#leadflow-form-${form.id}",
+      mode: "inline"
+    });
+  });
+</script>`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
