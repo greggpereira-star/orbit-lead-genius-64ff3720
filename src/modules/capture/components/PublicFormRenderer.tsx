@@ -299,7 +299,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
         )}
         
-         <CardHeader className="space-y-2 pb-6 pt-0 border-none" style={{ borderColor: 'var(--border)' }}>
+        <CardHeader className="space-y-2 pb-6 pt-2 border-none" style={{ borderColor: 'var(--border)' }}>
           {isMultiStep ? (
             <div className="text-center space-y-1">
                <CardTitle className="text-2xl font-black uppercase tracking-tighter">
