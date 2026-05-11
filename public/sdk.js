@@ -4,8 +4,15 @@
  */
 (function(window) {
   const LeadFlow = {
+    debug: function(msg) {
+      if (new URLSearchParams(window.location.search).get('lf_debug') === 'true') {
+        console.log('%c[LeadFlow Debug]', 'color: #7c3aed; font-weight: bold;', msg);
+      }
+    },
+
     // UTM & Tracking Persistence
     getTrackingData: function() {
+      this.debug('Collecting tracking data...');
       const params = new URLSearchParams(window.location.search);
       const tracking = {
         utm_source: params.get('utm_source'),
@@ -29,6 +36,7 @@
         }
       });
 
+      this.debug('Tracking data collected: ' + JSON.stringify(tracking));
       return tracking;
     },
 
@@ -55,20 +63,26 @@
     },
 
     init: function(config) {
-      console.log('LeadFlow SDK Initialized', config);
+      this.debug('LeadFlow SDK Initialized with config: ' + JSON.stringify(config));
       if (config.mode === 'inline') {
         this.renderInline(config);
       }
     },
 
      renderInline: function(config) {
+       this.debug('Rendering inline form...');
        const render = () => {
          const container = document.querySelector(config.target);
-         if (!container) return;
+         if (!container) {
+           this.debug('Target container not found: ' + config.target);
+           return;
+         }
          if (container.querySelector('iframe')) return; // Prevent double render
  
          const iframe = document.createElement('iframe');
-         iframe.src = this.buildUrl(config.formId);
+         const url = this.buildUrl(config.formId);
+         this.debug('Iframe URL: ' + url);
+         iframe.src = url;
          iframe.width = '100%';
          iframe.height = config.height || '700px';
          iframe.style.border = 'none';

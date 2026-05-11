@@ -16,12 +16,14 @@ import {
   MessageSquare, 
   ShoppingBag,
   ArrowRight,
-  ShieldCheck,
   AlertCircle,
   PlayCircle,
   CheckCircle2,
   FileCode,
-  Laptop
+  Laptop,
+  Download,
+  ShieldCheck,
+  Terminal
 } from 'lucide-react';
 import { Form } from '../services/formService';
 import { toast } from 'sonner';
@@ -115,13 +117,58 @@ export function FormPublish({ form }: FormPublishProps) {
             </ul>
           </div>
 
-          <div className="pt-4 border-t">
-            <Label className="text-xs font-bold uppercase tracking-widest mb-3 block">WordPress Shortcode</Label>
-            <div className="flex gap-2">
-              <Input value={`[leadflow_form id="${form.id}"]`} readOnly className="bg-muted font-mono text-xs" />
-              <Button onClick={() => copyToClipboard(`[leadflow_form id="${form.id}"]`, 'shortcode')}>
-                {copied === 'shortcode' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
+          <div className="pt-6 border-t space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-bold uppercase tracking-widest block text-primary">WordPress (Recomendado)</Label>
+              <Card className="bg-slate-50 border-dashed border-slate-200">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-white p-2 rounded-lg border shadow-sm">
+                      <Download className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <h5 className="text-sm font-bold">Instale o Plugin Oficial</h5>
+                      <p className="text-xs text-muted-foreground">Baixe e instale nosso plugin para habilitar o shortcode e garantir o rastreamento 100% preciso de UTMs e eventos.</p>
+                    </div>
+                    <Button size="sm" onClick={() => window.open(`${window.location.origin}/leadflow-official.zip`)} className="gap-2">
+                      <Download className="h-4 w-4" /> Download Plugin
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Shortcode do Formulário</Label>
+                    <div className="flex gap-2">
+                      <Input value={`[leadflow_form id="${form.id}"]`} readOnly className="bg-white font-mono text-xs" />
+                      <Button variant="outline" size="icon" onClick={() => copyToClipboard(`[leadflow_form id="${form.id}"]`, 'shortcode')}>
+                        {copied === 'shortcode' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <div className="bg-slate-900 rounded-lg p-4 text-slate-100 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-4 w-4 text-green-400" />
+                    <span className="text-xs font-mono font-bold">Monitor de Rastreamento</span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] border-green-400/30 text-green-400">ATIVO</Badge>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Para verificar se os UTMs e eventos estão sendo capturados corretamente no WordPress, adicione <code className="text-green-300">?lf_debug=true</code> ao final da URL do seu site e abra o Console do Navegador (F12).
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="w-full text-[10px] h-8 font-bold bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-200"
+                    onClick={() => toast.info('Adicione ?lf_debug=true na URL do seu site para testar.')}
+                  >
+                    Como verificar?
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
