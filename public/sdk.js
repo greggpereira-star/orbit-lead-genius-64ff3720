@@ -158,10 +158,21 @@
         });
       };
 
-      if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      // Try immediate render
+      if (document.querySelector(config.target)) {
         render();
       } else {
+        // If not found yet, poll briefly (faster than DOMContentLoaded if script is before element)
+        const interval = setInterval(() => {
+          if (document.querySelector(config.target)) {
+            render();
+            clearInterval(interval);
+          }
+        }, 100);
+        // Safety fallback
         document.addEventListener('DOMContentLoaded', render);
+        // Clear interval after 5 seconds to avoid memory leak if target never appears
+        setTimeout(() => clearInterval(interval), 5000);
       }
     },
 
