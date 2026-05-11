@@ -265,7 +265,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           <div className="h-2" style={{ backgroundColor: 'var(--primary)' }} />
         )}
         
-         <CardHeader className="space-y-2 pb-8 pt-8 border-b" style={{ borderColor: 'var(--border)' }}>
+         <CardHeader className="space-y-2 pb-6 pt-0 border-none" style={{ borderColor: 'var(--border)' }}>
           {isMultiStep ? (
             <div className="text-center space-y-1">
                <CardTitle className="text-2xl font-black uppercase tracking-tighter">
@@ -277,14 +277,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             </div>
           ) : (
             <>
-               <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center">{form.name}</CardTitle>
-               {form.description && (
-                 <CardDescription className="text-center text-base font-medium">{form.description}</CardDescription>
-              )}
+                <div className="bg-primary px-6 py-8 rounded-t-xl mb-6 -mx-6 -mt-0 shadow-lg">
+                  <CardTitle className="text-3xl font-black uppercase tracking-tighter text-center text-white">{form.name}</CardTitle>
+                  {form.description && (
+                    <CardDescription className="text-center text-base font-medium text-white/80 mt-2">{form.description}</CardDescription>
+                  )}
+                </div>
             </>
           )}
         </CardHeader>
-         <CardContent className="pb-12 pt-6">
+         <CardContent className="pb-8 pt-0 px-0">
           <div className="space-y-6">
             {currentStepFields.map((field) => (
               <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
