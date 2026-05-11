@@ -47,20 +47,39 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   // Iframe auto-resize notification
   useEffect(() => {
     const updateHeight = () => {
-      const height = document.body.scrollHeight;
+      // Use offsetHeight or getBoundingClientRect for more accurate height in some browsers
+      const height = Math.max(
+        document.body.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.clientHeight,
+        document.documentElement.scrollHeight,
+        document.documentElement.offsetHeight
+      );
+      
       if (window.parent) {
         window.parent.postMessage({ type: 'LEADFLOW_RESIZE', height }, '*');
       }
     };
 
+    // Observe changes in both body and document element
     const observer = new ResizeObserver(updateHeight);
     observer.observe(document.body);
+    
+    // Add event listeners for images loading which might change height
+    window.addEventListener('load', updateHeight);
     
     // Initial call
     updateHeight();
     
-    return () => observer.disconnect();
-  }, [currentStep, submitted, resumePrompt, form]);
+    // Call again after a short delay to ensure layout is settled
+    const timeout = setTimeout(updateHeight, 300);
+    
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('load', updateHeight);
+      clearTimeout(timeout);
+    };
+  }, [currentStep, submitted, resumePrompt, form, isLoading]);
 
   useEffect(() => {
     localStorage.setItem(`lf_session_${slug}`, sessionId);
@@ -105,9 +124,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4 w-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Carregando formulário seguro...</p>
+      <div className="flex flex-col items-center justify-center py-6 space-y-4 w-full animate-pulse">
+        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Autenticando formulário...</p>
       </div>
     );
   }
