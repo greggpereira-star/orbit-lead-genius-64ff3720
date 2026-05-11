@@ -389,10 +389,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               )}
               
               <Button 
-                onClick={(e) => {
+                type={isMultiStep ? "button" : "submit"}
+                onClick={isMultiStep ? (e) => {
                   e.preventDefault();
-                  isMultiStep ? handleNext() : handleSubmit(onSubmit)();
-                }}
+                  handleNext();
+                } : undefined}
                 disabled={isSubmitting}
                 className="flex-1 h-14 text-base md:text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:brightness-110 active:scale-[0.98] bg-primary text-white"
               >
