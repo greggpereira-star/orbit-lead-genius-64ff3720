@@ -127,7 +127,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         }
       }, trackingData);
 
-      if (result.success) {
+       if (result.success) {
+         // Notify parent window for tracking
+         if (window.parent) {
+           window.parent.postMessage({
+             type: 'LEADFLOW_FORM_SUBMITTED',
+             formId: form.id,
+             formSlug: form.slug
+           }, '*');
+         }
+
         await partialSubmissionService.markAsCompleted(form.id, sessionId);
         setSubmitted(true);
         if (form.settings.redirect_url) {

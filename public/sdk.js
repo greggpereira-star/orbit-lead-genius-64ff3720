@@ -62,12 +62,42 @@
       return url.toString();
     },
 
-    init: function(config) {
-      this.debug('LeadFlow SDK Initialized with config: ' + JSON.stringify(config));
-      if (config.mode === 'inline') {
-        this.renderInline(config);
-      }
-    },
+     init: function(config) {
+       this.debug('LeadFlow SDK Initialized with config: ' + JSON.stringify(config));
+       if (config.mode === 'inline') {
+         this.renderInline(config);
+       }
+       this.listenForEvents();
+     },
+
+     listenForEvents: function() {
+       if (this._listening) return;
+       this._listening = true;
+       
+       window.addEventListener('message', (event) => {
+         if (event.data && event.data.type === 'LEADFLOW_FORM_SUBMITTED') {
+           this.debug('Form submission detected via message: ' + JSON.stringify(event.data));
+           
+           // Trigger a custom event in the parent window
+           const customEvent = new CustomEvent('leadflow_submit', { 
+             detail: { 
+               formId: event.data.formId,
+               formSlug: event.data.formSlug
+             } 
+           });
+           window.dispatchEvent(customEvent);
+           
+           // DataLayer push if available (GTM)
+           if (window.dataLayer && window.dataLayer.push) {
+             window.dataLayer.push({
+               event: 'leadflow_form_submission',
+               form_id: event.data.formId,
+               form_slug: event.data.formSlug
+             });
+           }
+         }
+       });
+     },
 
      renderInline: function(config) {
        this.debug('Rendering inline form...');
