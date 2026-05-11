@@ -4,13 +4,12 @@ import { formService } from '@/modules/capture/services/formService';
 import { PublicFormRenderer } from '@/modules/capture/components/PublicFormRenderer';
 import { Loader2 } from 'lucide-react';
 
-export const Route = createFileRoute('/embed-form/')({
+export const Route = createFileRoute('/embed-form/$id')({
   component: EmbedFormPage,
 });
 
 function EmbedFormPage() {
-  const params = Route.useParams();
-  const id = (params as any).id;
+  const { id } = Route.useParams();
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['form-embed', id],
