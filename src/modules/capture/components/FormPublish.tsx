@@ -21,7 +21,8 @@ import {
   PlayCircle,
   CheckCircle2,
   FileCode,
-  Laptop
+  Laptop,
+  Download
 } from 'lucide-react';
 import { Form } from '../services/formService';
 import { toast } from 'sonner';
@@ -115,13 +116,35 @@ export function FormPublish({ form }: FormPublishProps) {
             </ul>
           </div>
 
-          <div className="pt-4 border-t">
-            <Label className="text-xs font-bold uppercase tracking-widest mb-3 block">WordPress Shortcode</Label>
-            <div className="flex gap-2">
-              <Input value={`[leadflow_form id="${form.id}"]`} readOnly className="bg-muted font-mono text-xs" />
-              <Button onClick={() => copyToClipboard(`[leadflow_form id="${form.id}"]`, 'shortcode')}>
-                {copied === 'shortcode' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
+          <div className="pt-6 border-t space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs font-bold uppercase tracking-widest block text-primary">WordPress (Recomendado)</Label>
+              <Card className="bg-slate-50 border-dashed border-slate-200">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-white p-2 rounded-lg border shadow-sm">
+                      <Download className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <h5 className="text-sm font-bold">Instale o Plugin Oficial</h5>
+                      <p className="text-xs text-muted-foreground">Baixe e instale nosso plugin para habilitar o shortcode e garantir o rastreamento 100% preciso de UTMs e eventos.</p>
+                    </div>
+                    <Button size="sm" onClick={() => window.open(`${window.location.origin}/leadflow-official.zip`)} className="gap-2">
+                      <Download className="h-4 w-4" /> Download Plugin
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Shortcode do Formulário</Label>
+                    <div className="flex gap-2">
+                      <Input value={`[leadflow_form id="${form.id}"]`} readOnly className="bg-white font-mono text-xs" />
+                      <Button variant="outline" size="icon" onClick={() => copyToClipboard(`[leadflow_form id="${form.id}"]`, 'shortcode')}>
+                        {copied === 'shortcode' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </CardContent>
