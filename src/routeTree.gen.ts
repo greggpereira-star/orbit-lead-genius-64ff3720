@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as EmbedFormRouteImport } from './routes/embed-form'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
@@ -39,6 +40,11 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
 
+const EmbedFormRoute = EmbedFormRouteImport.update({
+  id: '/embed-form',
+  path: '/embed-form',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
   path: '/diagnostics',
@@ -63,9 +69,9 @@ const FSlugRoute = FSlugRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
-  id: '/embed-form/$id',
-  path: '/embed-form/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => EmbedFormRoute,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -138,9 +144,9 @@ const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 const EmbedFormRoute = EmbedFormRouteImport.update({
-  id: '/embed-form/',
-  path: '/embed-form/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => EmbedFormRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
@@ -187,6 +193,7 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/embed-form': typeof EmbedFormRouteWithChildren
   '/embed-form/': typeof EmbedFormRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
@@ -247,6 +254,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/diagnostics': typeof DiagnosticsRoute
+  '/embed-form': typeof EmbedFormRouteWithChildren
   '/embed-form/': typeof EmbedFormRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
@@ -278,6 +286,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/diagnostics'
+    | '/embed-form'
     | '/embed-form/'
     | '/analytics'
     | '/automations'
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_auth'
     | '/diagnostics'
+    | '/embed-form'
     | '/embed-form/'
     | '/_app/analytics'
     | '/_app/automations'
@@ -369,13 +379,19 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
-  EmbedFormRoute: typeof EmbedFormRoute
-  EmbedFormIdRoute: typeof EmbedFormIdRoute
+  EmbedFormRoute: typeof EmbedFormRouteWithChildren
   FSlugRoute: typeof FSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/embed-form': {
+      id: '/embed-form'
+      path: '/embed-form'
+      fullPath: '/embed-form'
+      preLoaderRoute: typeof EmbedFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/diagnostics': {
       id: '/diagnostics'
       path: '/diagnostics'
@@ -413,10 +429,10 @@ declare module '@tanstack/react-router' {
     }
     '/embed-form/$id': {
       id: '/embed-form/$id'
-      path: '/embed-form/$id'
+      path: '/$id'
       fullPath: '/embed-form/$id'
       preLoaderRoute: typeof EmbedFormIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof EmbedFormRoute
     }
     '/_auth/verify-email': {
       id: '/_auth/verify-email'
@@ -518,10 +534,10 @@ declare module '@tanstack/react-router' {
     }
     '/embed-form/': {
       id: '/embed-form/'
-      path: '/embed-form'
+      path: '/'
       fullPath: '/embed-form/'
       preLoaderRoute: typeof EmbedFormRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof EmbedFormRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -672,13 +688,26 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface EmbedFormRouteChildren {
+  EmbedFormRoute: typeof EmbedFormRoute
+  EmbedFormIdRoute: typeof EmbedFormIdRoute
+}
+
+const EmbedFormRouteChildren: EmbedFormRouteChildren = {
+  EmbedFormRoute: EmbedFormRoute,
+  EmbedFormIdRoute: EmbedFormIdRoute,
+}
+
+const EmbedFormRouteWithChildren = EmbedFormRoute._addFileChildren(
+  EmbedFormRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
-  EmbedFormRoute: EmbedFormRoute,
-  EmbedFormIdRoute: EmbedFormIdRoute,
+  EmbedFormRoute: EmbedFormRouteWithChildren,
   FSlugRoute: FSlugRoute,
 }
 export const routeTree = rootRouteImport
