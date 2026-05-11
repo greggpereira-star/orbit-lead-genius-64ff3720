@@ -47,36 +47,29 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   // Iframe auto-resize notification
   useEffect(() => {
     const updateHeight = () => {
-      // Use offsetHeight or getBoundingClientRect for more accurate height in some browsers
-      const height = Math.max(
-        document.body.scrollHeight,
-        document.body.offsetHeight,
-        document.documentElement.clientHeight,
-        document.documentElement.scrollHeight,
-        document.documentElement.offsetHeight
-      );
+      const root = document.getElementById('root');
+      const height = root ? root.scrollHeight : document.body.scrollHeight;
       
-      if (window.parent) {
-        window.parent.postMessage({ type: 'LEADFLOW_RESIZE', height }, '*');
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'LEADFLOW_RESIZE', height: height + 20 }, '*');
       }
     };
 
-    // Observe changes in both body and document element
-    const observer = new ResizeObserver(updateHeight);
+    const observer = new ResizeObserver(() => {
+      requestAnimationFrame(updateHeight);
+    });
+    
     observer.observe(document.body);
-    
-    // Add event listeners for images loading which might change height
     window.addEventListener('load', updateHeight);
+    window.addEventListener('resize', updateHeight);
     
-    // Initial call
     updateHeight();
-    
-    // Call again after a short delay to ensure layout is settled
-    const timeout = setTimeout(updateHeight, 300);
+    const timeout = setTimeout(updateHeight, 500);
     
     return () => {
       observer.disconnect();
       window.removeEventListener('load', updateHeight);
+      window.removeEventListener('resize', updateHeight);
       clearTimeout(timeout);
     };
   }, [currentStep, submitted, resumePrompt, form, isLoading]);
