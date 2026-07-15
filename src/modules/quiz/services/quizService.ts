@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { QuizFunnel, QuizTemplate } from '../types';
+import type { QuizFunnel, QuizTemplate, QuizSchema } from '../types';
+import { DEFAULT_DESIGN } from '../design-presets';
 
 function slugify(input: string): string {
   return input
