@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { QuizFunnel, QuizTemplate } from '../types';
+import type { QuizFunnel, QuizTemplate, QuizSchema } from '../types';
+import { DEFAULT_DESIGN } from '../design-presets';
 
 function slugify(input: string): string {
   return input
@@ -86,5 +87,58 @@ export const quizService = {
   async remove(id: string): Promise<void> {
     const { error } = await supabase.from('quiz_funnels').delete().eq('id', id);
     if (error) throw error;
+  },
+
+  async getById(id: string): Promise<QuizFunnel | null> {
+    const { data, error } = await supabase.from('quiz_funnels').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return (data as unknown as QuizFunnel) ?? null;
+  },
+
+  async getLatestSchema(quizId: string): Promise<QuizSchema> {
+    const { data, error } = await supabase
+      .from('quiz_versions')
+      .select('schema')
+      .eq('quiz_id', quizId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    const raw = (data?.schema ?? {}) as Partial<QuizSchema>;
+    return {
+      blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
+      design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
+      results: raw.results ?? [],
+    };
+  },
+
+  async saveSchema(params: {
+    quizId: string;
+    companyId: string;
+    userId: string;
+    schema: QuizSchema;
+  }): Promise<void> {
+    const { data: latest } = await supabase
+      .from('quiz_versions')
+      .select('version')
+      .eq('quiz_id', params.quizId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextVersion = ((latest as { version?: number } | null)?.version ?? 0) + 1;
+
+    const { error } = await supabase.from('quiz_versions').insert({
+      quiz_id: params.quizId,
+      company_id: params.companyId,
+      version: nextVersion,
+      schema: params.schema as never,
+      created_by: params.userId,
+    });
+    if (error) throw error;
+
+    await supabase
+      .from('quiz_funnels')
+      .update({ design: params.schema.design as never, updated_at: new Date().toISOString() })
+      .eq('id', params.quizId);
   },
 };

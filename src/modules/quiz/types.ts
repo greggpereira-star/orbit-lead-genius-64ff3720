@@ -33,3 +33,67 @@ export interface QuizTemplate {
   schema: Record<string, unknown>;
   sort_order: number;
 }
+
+// ============ Builder schema ============
+
+export type BlockType =
+  | 'intro'
+  | 'single-choice'
+  | 'multi-choice'
+  | 'short-text'
+  | 'long-text'
+  | 'email'
+  | 'phone'
+  | 'rating'
+  | 'cta'
+  | 'result';
+
+export interface BlockOption {
+  id: string;
+  label: string;
+  value?: string;
+  score?: number;
+  emoji?: string;
+}
+
+export interface QuizBlock {
+  id: string;
+  type: BlockType;
+  title?: string;
+  subtitle?: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: BlockOption[];
+  ctaLabel?: string;
+  imageUrl?: string;
+  maxRating?: number;
+  resultTitle?: string;
+  resultBody?: string;
+}
+
+export interface QuizDesign {
+  presetId: string;
+  primary: string;
+  background: string;
+  surface: string;
+  text: string;
+  muted: string;
+  radius: number;
+  fontHeading: string;
+  fontBody: string;
+  buttonStyle: 'solid' | 'outline' | 'ghost' | 'gradient';
+  progressStyle: 'bar' | 'dots' | 'steps' | 'none';
+}
+
+export interface QuizSchema {
+  blocks: QuizBlock[];
+  design: QuizDesign;
+  results?: unknown[];
+}
+
+export interface DesignPreset {
+  id: string;
+  name: string;
+  description: string;
+  design: QuizDesign;
+}
