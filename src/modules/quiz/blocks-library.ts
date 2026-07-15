@@ -1,4 +1,4 @@
-import type { BlockType, QuizBlock } from '../types';
+import type { BlockType, QuizBlock } from '@/modules/quiz/types';
 import {
   Rocket, ListChecks, CheckSquare, Type, AlignLeft, Mail, Phone, Star, Zap, Trophy,
 } from 'lucide-react';
