@@ -200,17 +200,22 @@ export const quizService = {
     phone?: string;
     name?: string;
   }): Promise<string | null> {
+    const answers = {
+      ...params.responses,
+      _contact: {
+        email: params.email ?? null,
+        phone: params.phone ?? null,
+        name: params.name ?? null,
+      },
+    };
     const payload = {
       quiz_id: params.quizId,
       company_id: params.companyId,
-      responses: params.responses,
+      answers,
       score: params.score,
       tags: params.tags,
       temperature: params.temperature,
-      email: params.email ?? null,
-      phone: params.phone ?? null,
-      name: params.name ?? null,
-      completed: true,
+      status: 'completed',
       completed_at: new Date().toISOString(),
     } as never;
     const { data, error } = await supabase
