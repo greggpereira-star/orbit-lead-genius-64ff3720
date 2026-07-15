@@ -236,7 +236,7 @@ export const quizService = {
       submission_id: params.submissionId ?? null,
       event_type: params.eventType,
       block_id: params.blockId ?? null,
-      metadata: (params.metadata ?? {}) as never,
-    });
+      metadata: params.metadata ?? {},
+    } as never);
   },
 };
