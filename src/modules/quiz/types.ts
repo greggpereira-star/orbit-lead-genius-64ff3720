@@ -98,6 +98,9 @@ export interface QuizBlock {
   testimonialAvatar?: string;
   countdownEndsAt?: string;
   countdownMinutes?: number;
+  // Logic (Phase 4)
+  logicRules?: BlockLogicRule[];
+  scoreWeight?: number; // multiplier for rating/choice blocks
 }
 
 export interface QuizDesign {
