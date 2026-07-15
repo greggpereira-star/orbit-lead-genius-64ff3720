@@ -64,8 +64,8 @@ export const quizService = {
         slug: finalSlug,
         niche: params.niche ?? null,
         status: 'draft',
-        design: (params.templateSchema?.design as Record<string, unknown>) ?? {},
-        settings: {},
+        design: ((params.templateSchema?.design as Record<string, unknown>) ?? {}) as never,
+        settings: {} as never,
       })
       .select('*')
       .single();
@@ -76,7 +76,7 @@ export const quizService = {
       quiz_id: (data as { id: string }).id,
       company_id: params.companyId,
       version: 1,
-      schema: params.templateSchema ?? { blocks: [], results: [], design: {} },
+      schema: (params.templateSchema ?? { blocks: [], results: [], design: {} }) as never,
       created_by: params.userId,
     });
 
