@@ -141,4 +141,101 @@ export const quizService = {
       .update({ design: params.schema.design as never, updated_at: new Date().toISOString() })
       .eq('id', params.quizId);
   },
+
+  // ============ PUBLIC PLAYER (anon) ============
+  async getPublishedBySlug(slug: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
+    const { data: quiz, error } = await supabase
+      .from('quiz_funnels')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .maybeSingle();
+    if (error) throw error;
+    if (!quiz) return null;
+
+    const publishedVersionId = (quiz as { published_version_id: string | null }).published_version_id;
+    let versionQuery = supabase.from('quiz_versions').select('schema').eq('quiz_id', (quiz as { id: string }).id);
+    if (publishedVersionId) {
+      versionQuery = versionQuery.eq('id', publishedVersionId);
+    } else {
+      versionQuery = versionQuery.order('version', { ascending: false }).limit(1);
+    }
+    const { data: version } = await versionQuery.maybeSingle();
+    const raw = ((version?.schema ?? {}) as Partial<QuizSchema>);
+    const schema: QuizSchema = {
+      blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
+      design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
+      results: raw.results ?? [],
+    };
+    return { quiz: quiz as unknown as QuizFunnel, schema };
+  },
+
+  async publish(quizId: string): Promise<void> {
+    const { data: latest } = await supabase
+      .from('quiz_versions')
+      .select('id')
+      .eq('quiz_id', quizId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    await supabase
+      .from('quiz_funnels')
+      .update({
+        status: 'published',
+        published_version_id: (latest as { id?: string } | null)?.id ?? null,
+        published_at: new Date().toISOString(),
+      })
+      .eq('id', quizId);
+  },
+
+  async submitPublic(params: {
+    quizId: string;
+    companyId: string;
+    responses: Record<string, unknown>;
+    score: number;
+    tags: string[];
+    temperature: 'hot' | 'warm' | 'cold';
+    email?: string;
+    phone?: string;
+    name?: string;
+  }): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('quiz_submissions')
+      .insert({
+        quiz_id: params.quizId,
+        company_id: params.companyId,
+        responses: params.responses as never,
+        score: params.score,
+        tags: params.tags as never,
+        temperature: params.temperature,
+        email: params.email ?? null,
+        phone: params.phone ?? null,
+        name: params.name ?? null,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      })
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    return (data as { id?: string } | null)?.id ?? null;
+  },
+
+  async trackEvent(params: {
+    quizId: string;
+    companyId: string;
+    submissionId?: string | null;
+    eventType: string;
+    blockId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await supabase.from('quiz_events').insert({
+      quiz_id: params.quizId,
+      company_id: params.companyId,
+      submission_id: params.submissionId ?? null,
+      event_type: params.eventType,
+      block_id: params.blockId ?? null,
+      metadata: (params.metadata ?? {}) as never,
+    });
+  },
 };
