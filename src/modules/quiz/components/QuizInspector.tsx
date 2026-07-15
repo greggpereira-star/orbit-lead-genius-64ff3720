@@ -101,6 +101,57 @@ function BlockInspector({
         </Field>
       )}
 
+      {(block.type === 'video' || block.type === 'audio' || block.type === 'image') && (
+        <Field label={block.type === 'video' ? 'URL do vídeo' : block.type === 'audio' ? 'URL do áudio (MP3)' : 'URL da imagem'}>
+          <Input value={block.mediaUrl ?? ''} onChange={(e) => onChange({ mediaUrl: e.target.value })} placeholder="https://..." />
+        </Field>
+      )}
+      {block.type === 'video' && (
+        <Field label="Provedor">
+          <Select value={block.mediaProvider ?? 'youtube'} onValueChange={(v) => onChange({ mediaProvider: v as QuizBlock['mediaProvider'] })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="youtube">YouTube</SelectItem>
+              <SelectItem value="vimeo">Vimeo</SelectItem>
+              <SelectItem value="mp4">MP4 direto</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
+      {block.type === 'before-after' && (
+        <>
+          <Field label="Imagem ANTES (URL)">
+            <Input value={block.beforeUrl ?? ''} onChange={(e) => onChange({ beforeUrl: e.target.value })} placeholder="https://..." />
+          </Field>
+          <Field label="Imagem DEPOIS (URL)">
+            <Input value={block.afterUrl ?? ''} onChange={(e) => onChange({ afterUrl: e.target.value })} placeholder="https://..." />
+          </Field>
+        </>
+      )}
+      {block.type === 'testimonial' && (
+        <>
+          <Field label="Autor">
+            <Input value={block.testimonialAuthor ?? ''} onChange={(e) => onChange({ testimonialAuthor: e.target.value })} />
+          </Field>
+          <Field label="Cargo / Empresa">
+            <Input value={block.testimonialRole ?? ''} onChange={(e) => onChange({ testimonialRole: e.target.value })} />
+          </Field>
+          <Field label="Avatar (URL)">
+            <Input value={block.testimonialAvatar ?? ''} onChange={(e) => onChange({ testimonialAvatar: e.target.value })} placeholder="https://..." />
+          </Field>
+        </>
+      )}
+      {block.type === 'countdown' && (
+        <>
+          <Field label={`Duração: ${block.countdownMinutes ?? 15} min`}>
+            <Slider min={1} max={120} step={1} value={[block.countdownMinutes ?? 15]} onValueChange={([v]) => onChange({ countdownMinutes: v, countdownEndsAt: undefined })} />
+          </Field>
+          <Field label="Ou data/hora final (ISO)">
+            <Input value={block.countdownEndsAt ?? ''} onChange={(e) => onChange({ countdownEndsAt: e.target.value })} placeholder="2026-12-31T23:59:00Z" />
+          </Field>
+        </>
+      )}
+
       {hasOptions && (
         <div className="space-y-2">
           <Label className="text-xs">Opções</Label>

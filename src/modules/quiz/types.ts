@@ -46,7 +46,14 @@ export type BlockType =
   | 'phone'
   | 'rating'
   | 'cta'
-  | 'result';
+  | 'result'
+  | 'video'
+  | 'audio'
+  | 'image'
+  | 'before-after'
+  | 'testimonial'
+  | 'countdown'
+  | 'divider';
 
 export interface BlockOption {
   id: string;
@@ -69,6 +76,18 @@ export interface QuizBlock {
   maxRating?: number;
   resultTitle?: string;
   resultBody?: string;
+  // Rich media (Phase 3)
+  mediaUrl?: string;
+  mediaProvider?: 'youtube' | 'vimeo' | 'mp4' | 'file';
+  posterUrl?: string;
+  autoplay?: boolean;
+  beforeUrl?: string;
+  afterUrl?: string;
+  testimonialAuthor?: string;
+  testimonialRole?: string;
+  testimonialAvatar?: string;
+  countdownEndsAt?: string;
+  countdownMinutes?: number;
 }
 
 export interface QuizDesign {

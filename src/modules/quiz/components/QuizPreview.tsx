@@ -1,5 +1,17 @@
 import { useMemo } from 'react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
+import { BeforeAfterSlider } from './BeforeAfterSlider';
+import { CountdownTimer } from './CountdownTimer';
+
+function getVideoEmbed(url: string, provider?: string): { kind: 'iframe' | 'mp4'; src: string } | null {
+  if (!url) return null;
+  if (provider === 'mp4' || /\.mp4($|\?)/i.test(url)) return { kind: 'mp4', src: url };
+  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+  if (yt) return { kind: 'iframe', src: `https://www.youtube.com/embed/${yt[1]}` };
+  const vim = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vim) return { kind: 'iframe', src: `https://player.vimeo.com/video/${vim[1]}` };
+  return { kind: 'iframe', src: url };
+}
 
 interface Props {
   schema: QuizSchema;
@@ -232,6 +244,78 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
           <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
         </div>
       );
+    case 'video': {
+      const embed = block.mediaUrl ? getVideoEmbed(block.mediaUrl, block.mediaProvider) : null;
+      return (
+        <div className="space-y-4">
+          {(title || sub) && heading}
+          <div className="relative w-full aspect-video overflow-hidden bg-black" style={{ borderRadius: design.radius }}>
+            {embed?.kind === 'iframe' ? (
+              <iframe src={embed.src} className="w-full h-full" allowFullScreen title="video" />
+            ) : embed?.kind === 'mp4' ? (
+              <video src={embed.src} controls poster={block.posterUrl} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs opacity-60" style={{ color: design.muted }}>
+                Cole a URL do vídeo no inspetor
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    case 'audio':
+      return (
+        <div className="space-y-4">
+          {heading}
+          {block.mediaUrl ? (
+            <audio src={block.mediaUrl} controls className="w-full" />
+          ) : (
+            <div className="text-xs opacity-60" style={{ color: design.muted }}>Cole a URL do áudio no inspetor</div>
+          )}
+        </div>
+      );
+    case 'image':
+      return (
+        <div className="space-y-3">
+          {(title || sub) && heading}
+          {block.mediaUrl && (
+            <img src={block.mediaUrl} alt="" className="w-full object-cover" style={{ borderRadius: design.radius }} />
+          )}
+        </div>
+      );
+    case 'before-after':
+      return (
+        <div className="space-y-4">
+          {heading}
+          <BeforeAfterSlider beforeUrl={block.beforeUrl ?? ''} afterUrl={block.afterUrl ?? ''} radius={design.radius} />
+        </div>
+      );
+    case 'testimonial':
+      return (
+        <div className="p-6 space-y-4" style={{ background: design.surface, borderRadius: design.radius }}>
+          <p className="text-lg italic leading-relaxed" style={{ color: design.text }}>{title}</p>
+          <div className="flex items-center gap-3">
+            {block.testimonialAvatar && (
+              <img src={block.testimonialAvatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+            )}
+            <div>
+              <div className="text-sm font-semibold" style={{ color: design.text }}>{block.testimonialAuthor}</div>
+              {block.testimonialRole && (
+                <div className="text-xs" style={{ color: design.muted }}>{block.testimonialRole}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    case 'countdown':
+      return (
+        <div className="space-y-3 text-center">
+          {title && <h2 className="text-lg font-semibold" style={{ color: design.text }}>{title}</h2>}
+          <CountdownTimer endsAt={block.countdownEndsAt} minutes={block.countdownMinutes ?? 15} color={design.primary} />
+        </div>
+      );
+    case 'divider':
+      return <div className="h-px w-full" style={{ background: design.surface }} />;
     default:
       return heading;
   }
