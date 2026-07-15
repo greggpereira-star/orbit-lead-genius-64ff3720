@@ -224,8 +224,56 @@ export const quizService = {
       .select('id')
       .maybeSingle();
     if (error) throw error;
-    return (data as { id?: string } | null)?.id ?? null;
+    const submissionId = (data as { id?: string } | null)?.id ?? null;
+
+    // Auto-create lead + trigger CV.CRM sync when contact info was captured
+    if (params.email || params.phone) {
+      try {
+        const { data: lead } = await supabase
+          .from('leads')
+          .insert({
+            company_id: params.companyId,
+            name: params.name ?? null,
+            email: params.email ?? null,
+            phone: params.phone ?? null,
+            source: 'Alt Quiz',
+            score: params.score,
+            temperature: params.temperature,
+            tags: params.tags,
+            metadata: {
+              quiz_id: params.quizId,
+              submission_id: submissionId,
+              responses: params.responses,
+            },
+          } as never)
+          .select('id')
+          .maybeSingle();
+
+        const leadId = (lead as { id?: string } | null)?.id;
+        if (leadId) {
+          // Check if CV.CRM is connected and dispatch (fire-and-forget)
+          const { data: integ } = await supabase
+            .from('cvcrm_integrations')
+            .select('is_active, connection_status')
+            .eq('company_id', params.companyId)
+            .maybeSingle();
+          const active = (integ as { is_active?: boolean; connection_status?: string } | null);
+          if (active?.is_active && active.connection_status === 'connected') {
+            supabase.functions
+              .invoke('send-cvcrm-lead', {
+                body: { lead_id: leadId, tenant_id: params.companyId, trace_id: crypto.randomUUID() },
+              })
+              .catch((e) => console.warn('CV.CRM dispatch failed', e));
+          }
+        }
+      } catch (e) {
+        console.warn('Lead capture from quiz failed', e);
+      }
+    }
+
+    return submissionId;
   },
+
 
   async trackEvent(params: {
     quizId: string;
