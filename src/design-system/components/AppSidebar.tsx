@@ -1,16 +1,17 @@
- import * as React from 'react';
- import { 
-   LayoutDashboard, 
-   Users, 
-   GitPullRequest, 
-   FileText, 
-   BarChart3, 
-   Settings, 
-    Zap,
-    MessageSquare,
-    Monitor,
-    ShieldCheck
- } from 'lucide-react';
+import * as React from 'react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  GitPullRequest, 
+  FileText, 
+  BarChart3, 
+  Settings, 
+   Zap,
+   MessageSquare,
+   Monitor,
+   ShieldCheck,
+   Sparkles
+} from 'lucide-react';
  import {
    Sidebar,
    SidebarContent,
@@ -30,7 +31,8 @@
     { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
     { title: 'Leads', icon: Users, to: '/leads' },
     { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
-    { title: 'Forms', icon: FileText, to: '/forms' },
+   { title: 'Forms', icon: FileText, to: '/forms' },
+   { title: 'Alt Quiz', icon: Sparkles, to: '/quizzes' },
     { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
      { title: 'Automations', icon: Zap, to: '/automations' },
     { title: 'Analytics', icon: BarChart3, to: '/analytics' },
