@@ -200,17 +200,22 @@ export const quizService = {
     phone?: string;
     name?: string;
   }): Promise<string | null> {
+    const answers = {
+      ...params.responses,
+      _contact: {
+        email: params.email ?? null,
+        phone: params.phone ?? null,
+        name: params.name ?? null,
+      },
+    };
     const payload = {
       quiz_id: params.quizId,
       company_id: params.companyId,
-      responses: params.responses,
+      answers,
       score: params.score,
       tags: params.tags,
       temperature: params.temperature,
-      email: params.email ?? null,
-      phone: params.phone ?? null,
-      name: params.name ?? null,
-      completed: true,
+      status: 'completed',
       completed_at: new Date().toISOString(),
     } as never;
     const { data, error } = await supabase
@@ -238,5 +243,135 @@ export const quizService = {
       block_id: params.blockId ?? null,
       metadata: params.metadata ?? {},
     } as never);
+  },
+
+  // ============ ANALYTICS ============
+  async getMetrics(quizId: string, days = 30): Promise<{
+    starts: number;
+    completions: number;
+    submissions: number;
+    conversionRate: number;
+    avgScore: number;
+    temperature: { hot: number; warm: number; cold: number };
+    dailySeries: { date: string; starts: number; completions: number }[];
+    dropOffByBlock: { blockId: string; views: number }[];
+    leadsCaptured: number;
+  }> {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    const [{ data: events }, { data: subs }] = await Promise.all([
+      supabase
+        .from('quiz_events')
+        .select('event_type, block_id, created_at')
+        .eq('quiz_id', quizId)
+        .gte('created_at', since),
+      supabase
+        .from('quiz_submissions')
+        .select('id, score, temperature, answers, status, created_at')
+        .eq('quiz_id', quizId)
+        .gte('created_at', since),
+    ]);
+
+    const evs = (events ?? []) as Array<{ event_type: string; block_id: string | null; created_at: string }>;
+    const subsData = (subs ?? []) as unknown as Array<{
+      score: number | null;
+      temperature: string | null;
+      answers: Record<string, unknown> | null;
+      status: string | null;
+      created_at: string;
+    }>;
+
+    const starts = evs.filter((e) => e.event_type === 'start').length;
+    const completions = evs.filter((e) => e.event_type === 'complete').length;
+    const submissions = subsData.length;
+    const leadsCaptured = subsData.filter((s) => {
+      const c = (s.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
+      return !!(c.email || c.phone);
+    }).length;
+    const conversionRate = starts > 0 ? (completions / starts) * 100 : 0;
+    const scored = subsData.filter((s) => typeof s.score === 'number');
+    const avgScore = scored.length > 0 ? scored.reduce((a, b) => a + (b.score ?? 0), 0) / scored.length : 0;
+
+    const temperature = { hot: 0, warm: 0, cold: 0 };
+    for (const s of subsData) {
+      if (s.temperature === 'hot') temperature.hot++;
+      else if (s.temperature === 'warm') temperature.warm++;
+      else if (s.temperature === 'cold') temperature.cold++;
+    }
+
+    const dayMap = new Map<string, { starts: number; completions: number }>();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      dayMap.set(d, { starts: 0, completions: 0 });
+    }
+    for (const e of evs) {
+      const d = e.created_at.slice(0, 10);
+      const bucket = dayMap.get(d);
+      if (!bucket) continue;
+      if (e.event_type === 'start') bucket.starts++;
+      else if (e.event_type === 'complete') bucket.completions++;
+    }
+    const dailySeries = Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v }));
+
+    const blockViews = new Map<string, number>();
+    for (const e of evs) {
+      if (e.event_type !== 'block_view' || !e.block_id) continue;
+      blockViews.set(e.block_id, (blockViews.get(e.block_id) ?? 0) + 1);
+    }
+    const dropOffByBlock = Array.from(blockViews.entries())
+      .map(([blockId, views]) => ({ blockId, views }))
+      .sort((a, b) => b.views - a.views);
+
+    return {
+      starts,
+      completions,
+      submissions,
+      conversionRate,
+      avgScore,
+      temperature,
+      dailySeries,
+      dropOffByBlock,
+      leadsCaptured,
+    };
+  },
+
+  async listSubmissions(quizId: string, limit = 100): Promise<Array<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    score: number | null;
+    temperature: string | null;
+    completed: boolean;
+    created_at: string;
+  }>> {
+    const { data, error } = await supabase
+      .from('quiz_submissions')
+      .select('id, answers, score, temperature, status, created_at')
+      .eq('quiz_id', quizId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    const rows = (data ?? []) as unknown as Array<{
+      id: string;
+      answers: Record<string, unknown> | null;
+      score: number | null;
+      temperature: string | null;
+      status: string | null;
+      created_at: string;
+    }>;
+    return rows.map((r) => {
+      const c = (r.answers?._contact ?? {}) as { email?: string | null; phone?: string | null; name?: string | null };
+      return {
+        id: r.id,
+        name: c.name ?? null,
+        email: c.email ?? null,
+        phone: c.phone ?? null,
+        score: r.score,
+        temperature: r.temperature,
+        completed: r.status === 'completed',
+        created_at: r.created_at,
+      };
+    });
   },
 };
