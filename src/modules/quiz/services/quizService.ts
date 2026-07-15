@@ -267,25 +267,27 @@ export const quizService = {
         .gte('created_at', since),
       supabase
         .from('quiz_submissions')
-        .select('id, score, temperature, email, phone, completed, created_at')
+        .select('id, score, temperature, answers, status, created_at')
         .eq('quiz_id', quizId)
         .gte('created_at', since),
     ]);
 
     const evs = (events ?? []) as Array<{ event_type: string; block_id: string | null; created_at: string }>;
-    const subsData = (subs ?? []) as Array<{
+    const subsData = (subs ?? []) as unknown as Array<{
       score: number | null;
       temperature: string | null;
-      email: string | null;
-      phone: string | null;
-      completed: boolean | null;
+      answers: Record<string, unknown> | null;
+      status: string | null;
       created_at: string;
     }>;
 
     const starts = evs.filter((e) => e.event_type === 'start').length;
     const completions = evs.filter((e) => e.event_type === 'complete').length;
     const submissions = subsData.length;
-    const leadsCaptured = subsData.filter((s) => s.email || s.phone).length;
+    const leadsCaptured = subsData.filter((s) => {
+      const c = (s.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
+      return !!(c.email || c.phone);
+    }).length;
     const conversionRate = starts > 0 ? (completions / starts) * 100 : 0;
     const scored = subsData.filter((s) => typeof s.score === 'number');
     const avgScore = scored.length > 0 ? scored.reduce((a, b) => a + (b.score ?? 0), 0) / scored.length : 0;
