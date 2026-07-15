@@ -1,5 +1,17 @@
 import { useMemo } from 'react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
+import { BeforeAfterSlider } from './BeforeAfterSlider';
+import { CountdownTimer } from './CountdownTimer';
+
+function getVideoEmbed(url: string, provider?: string): { kind: 'iframe' | 'mp4'; src: string } | null {
+  if (!url) return null;
+  if (provider === 'mp4' || /\.mp4($|\?)/i.test(url)) return { kind: 'mp4', src: url };
+  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+  if (yt) return { kind: 'iframe', src: `https://www.youtube.com/embed/${yt[1]}` };
+  const vim = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vim) return { kind: 'iframe', src: `https://player.vimeo.com/video/${vim[1]}` };
+  return { kind: 'iframe', src: url };
+}
 
 interface Props {
   schema: QuizSchema;
