@@ -200,21 +200,22 @@ export const quizService = {
     phone?: string;
     name?: string;
   }): Promise<string | null> {
+    const payload = {
+      quiz_id: params.quizId,
+      company_id: params.companyId,
+      responses: params.responses,
+      score: params.score,
+      tags: params.tags,
+      temperature: params.temperature,
+      email: params.email ?? null,
+      phone: params.phone ?? null,
+      name: params.name ?? null,
+      completed: true,
+      completed_at: new Date().toISOString(),
+    } as never;
     const { data, error } = await supabase
       .from('quiz_submissions')
-      .insert({
-        quiz_id: params.quizId,
-        company_id: params.companyId,
-        responses: params.responses as never,
-        score: params.score,
-        tags: params.tags as never,
-        temperature: params.temperature,
-        email: params.email ?? null,
-        phone: params.phone ?? null,
-        name: params.name ?? null,
-        completed: true,
-        completed_at: new Date().toISOString(),
-      })
+      .insert(payload)
       .select('id')
       .maybeSingle();
     if (error) throw error;
