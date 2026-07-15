@@ -342,16 +342,36 @@ export const quizService = {
     phone: string | null;
     score: number | null;
     temperature: string | null;
-    completed: boolean | null;
+    completed: boolean;
     created_at: string;
   }>> {
     const { data, error } = await supabase
       .from('quiz_submissions')
-      .select('id, name, email, phone, score, temperature, completed, created_at')
+      .select('id, answers, score, temperature, status, created_at')
       .eq('quiz_id', quizId)
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    return (data ?? []) as never;
+    const rows = (data ?? []) as unknown as Array<{
+      id: string;
+      answers: Record<string, unknown> | null;
+      score: number | null;
+      temperature: string | null;
+      status: string | null;
+      created_at: string;
+    }>;
+    return rows.map((r) => {
+      const c = (r.answers?._contact ?? {}) as { email?: string | null; phone?: string | null; name?: string | null };
+      return {
+        id: r.id,
+        name: c.name ?? null,
+        email: c.email ?? null,
+        phone: c.phone ?? null,
+        score: r.score,
+        temperature: r.temperature,
+        completed: r.status === 'completed',
+        created_at: r.created_at,
+      };
+    });
   },
 };
