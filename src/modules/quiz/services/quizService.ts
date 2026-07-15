@@ -239,4 +239,112 @@ export const quizService = {
       metadata: params.metadata ?? {},
     } as never);
   },
+
+  // ============ ANALYTICS ============
+  async getMetrics(quizId: string, days = 30): Promise<{
+    starts: number;
+    completions: number;
+    submissions: number;
+    conversionRate: number;
+    avgScore: number;
+    temperature: { hot: number; warm: number; cold: number };
+    dailySeries: { date: string; starts: number; completions: number }[];
+    dropOffByBlock: { blockId: string; views: number }[];
+    leadsCaptured: number;
+  }> {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    const [{ data: events }, { data: subs }] = await Promise.all([
+      supabase
+        .from('quiz_events')
+        .select('event_type, block_id, created_at')
+        .eq('quiz_id', quizId)
+        .gte('created_at', since),
+      supabase
+        .from('quiz_submissions')
+        .select('id, score, temperature, email, phone, completed, created_at')
+        .eq('quiz_id', quizId)
+        .gte('created_at', since),
+    ]);
+
+    const evs = (events ?? []) as Array<{ event_type: string; block_id: string | null; created_at: string }>;
+    const subsData = (subs ?? []) as Array<{
+      score: number | null;
+      temperature: string | null;
+      email: string | null;
+      phone: string | null;
+      completed: boolean | null;
+      created_at: string;
+    }>;
+
+    const starts = evs.filter((e) => e.event_type === 'start').length;
+    const completions = evs.filter((e) => e.event_type === 'complete').length;
+    const submissions = subsData.length;
+    const leadsCaptured = subsData.filter((s) => s.email || s.phone).length;
+    const conversionRate = starts > 0 ? (completions / starts) * 100 : 0;
+    const scored = subsData.filter((s) => typeof s.score === 'number');
+    const avgScore = scored.length > 0 ? scored.reduce((a, b) => a + (b.score ?? 0), 0) / scored.length : 0;
+
+    const temperature = { hot: 0, warm: 0, cold: 0 };
+    for (const s of subsData) {
+      if (s.temperature === 'hot') temperature.hot++;
+      else if (s.temperature === 'warm') temperature.warm++;
+      else if (s.temperature === 'cold') temperature.cold++;
+    }
+
+    const dayMap = new Map<string, { starts: number; completions: number }>();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      dayMap.set(d, { starts: 0, completions: 0 });
+    }
+    for (const e of evs) {
+      const d = e.created_at.slice(0, 10);
+      const bucket = dayMap.get(d);
+      if (!bucket) continue;
+      if (e.event_type === 'start') bucket.starts++;
+      else if (e.event_type === 'complete') bucket.completions++;
+    }
+    const dailySeries = Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v }));
+
+    const blockViews = new Map<string, number>();
+    for (const e of evs) {
+      if (e.event_type !== 'block_view' || !e.block_id) continue;
+      blockViews.set(e.block_id, (blockViews.get(e.block_id) ?? 0) + 1);
+    }
+    const dropOffByBlock = Array.from(blockViews.entries())
+      .map(([blockId, views]) => ({ blockId, views }))
+      .sort((a, b) => b.views - a.views);
+
+    return {
+      starts,
+      completions,
+      submissions,
+      conversionRate,
+      avgScore,
+      temperature,
+      dailySeries,
+      dropOffByBlock,
+      leadsCaptured,
+    };
+  },
+
+  async listSubmissions(quizId: string, limit = 100): Promise<Array<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    score: number | null;
+    temperature: string | null;
+    completed: boolean | null;
+    created_at: string;
+  }>> {
+    const { data, error } = await supabase
+      .from('quiz_submissions')
+      .select('id, name, email, phone, score, temperature, completed, created_at')
+      .eq('quiz_id', quizId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as never;
+  },
 };
