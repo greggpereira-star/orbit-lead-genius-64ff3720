@@ -1,6 +1,7 @@
 import type { BlockType, QuizBlock } from '@/modules/quiz/types';
 import {
   Rocket, ListChecks, CheckSquare, Type, AlignLeft, Mail, Phone, Star, Zap, Trophy,
+  Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
 } from 'lucide-react';
 
 interface BlockDef {
@@ -107,5 +108,73 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       resultBody: 'Baseado nas suas respostas, montamos um plano sob medida para você.',
       ctaLabel: 'Ver meu plano',
     }),
+  },
+  {
+    type: 'video',
+    label: 'Vídeo',
+    description: 'YouTube, Vimeo ou MP4',
+    icon: Video,
+    create: () => ({
+      type: 'video',
+      title: 'Assista antes de continuar',
+      mediaProvider: 'youtube',
+      mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    }),
+  },
+  {
+    type: 'audio',
+    label: 'Áudio',
+    description: 'Player de áudio (MP3)',
+    icon: Music,
+    create: () => ({ type: 'audio', title: 'Ouça essa mensagem', mediaUrl: '' }),
+  },
+  {
+    type: 'image',
+    label: 'Imagem',
+    description: 'Imagem destacada',
+    icon: ImageIcon,
+    create: () => ({
+      type: 'image',
+      mediaUrl: 'https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=1200',
+    }),
+  },
+  {
+    type: 'before-after',
+    label: 'Antes/Depois',
+    description: 'Comparador com slider',
+    icon: GitCompare,
+    create: () => ({
+      type: 'before-after',
+      title: 'Veja a transformação',
+      beforeUrl: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=800',
+      afterUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800',
+    }),
+  },
+  {
+    type: 'testimonial',
+    label: 'Depoimento',
+    description: 'Prova social',
+    icon: Quote,
+    create: () => ({
+      type: 'testimonial',
+      title: '"Resultado incrível em apenas 30 dias."',
+      testimonialAuthor: 'Maria Silva',
+      testimonialRole: 'CEO, Empresa X',
+      testimonialAvatar: 'https://i.pravatar.cc/120?img=47',
+    }),
+  },
+  {
+    type: 'countdown',
+    label: 'Countdown',
+    description: 'Timer de urgência',
+    icon: Timer,
+    create: () => ({ type: 'countdown', title: 'Oferta expira em:', countdownMinutes: 15 }),
+  },
+  {
+    type: 'divider',
+    label: 'Divisor',
+    description: 'Espaço visual',
+    icon: Minus,
+    create: () => ({ type: 'divider' }),
   },
 ];
