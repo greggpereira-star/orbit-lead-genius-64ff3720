@@ -22,6 +22,7 @@ import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth.forgot-password'
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppQuizzesRouteImport } from './routes/_app.quizzes'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppObservabilityRouteImport } from './routes/_app.observability'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
@@ -37,6 +38,10 @@ import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.c
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
+import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$id.publish'
+import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
+import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes.$id.performance'
+import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes.$id.builder'
 
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
@@ -99,6 +104,11 @@ const AppWhatsappRoute = AppWhatsappRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuizzesRoute = AppQuizzesRouteImport.update({
+  id: '/quizzes',
+  path: '/quizzes',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPipelineRoute = AppPipelineRouteImport.update({
@@ -177,6 +187,26 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
   path: '/tv',
   getParentRoute: () => AppAnalyticsRoute,
 } as any)
+const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
+  id: '/$id/publish',
+  path: '/$id/publish',
+  getParentRoute: () => AppQuizzesRoute,
+} as any)
+const AppQuizzesIdPreviewRoute = AppQuizzesIdPreviewRouteImport.update({
+  id: '/$id/preview',
+  path: '/$id/preview',
+  getParentRoute: () => AppQuizzesRoute,
+} as any)
+const AppQuizzesIdPerformanceRoute = AppQuizzesIdPerformanceRouteImport.update({
+  id: '/$id/performance',
+  path: '/$id/performance',
+  getParentRoute: () => AppQuizzesRoute,
+} as any)
+const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
+  id: '/$id/builder',
+  path: '/$id/builder',
+  getParentRoute: () => AppQuizzesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -188,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/leads': typeof AppLeadsRouteWithChildren
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
+  '/quizzes': typeof AppQuizzesRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
@@ -205,6 +236,10 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/': typeof AppSettingsIndexRoute
+  '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
+  '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
+  '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -216,6 +251,7 @@ export interface FileRoutesByTo {
   '/leads': typeof AppLeadsRouteWithChildren
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
+  '/quizzes': typeof AppQuizzesRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -232,6 +268,10 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings': typeof AppSettingsIndexRoute
+  '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
+  '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
+  '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -246,6 +286,7 @@ export interface FileRoutesById {
   '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/observability': typeof AppObservabilityRoute
   '/_app/pipeline': typeof AppPipelineRoute
+  '/_app/quizzes': typeof AppQuizzesRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/whatsapp': typeof AppWhatsappRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -263,6 +304,10 @@ export interface FileRoutesById {
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
+  '/_app/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/_app/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
+  '/_app/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
+  '/_app/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -276,6 +321,7 @@ export interface FileRouteTypes {
     | '/leads'
     | '/observability'
     | '/pipeline'
+    | '/quizzes'
     | '/settings'
     | '/whatsapp'
     | '/forgot-password'
@@ -293,6 +339,10 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/security'
     | '/settings/'
+    | '/quizzes/$id/builder'
+    | '/quizzes/$id/performance'
+    | '/quizzes/$id/preview'
+    | '/quizzes/$id/publish'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -304,6 +354,7 @@ export interface FileRouteTypes {
     | '/leads'
     | '/observability'
     | '/pipeline'
+    | '/quizzes'
     | '/whatsapp'
     | '/forgot-password'
     | '/login'
@@ -320,6 +371,10 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/security'
     | '/settings'
+    | '/quizzes/$id/builder'
+    | '/quizzes/$id/performance'
+    | '/quizzes/$id/preview'
+    | '/quizzes/$id/publish'
   id:
     | '__root__'
     | '/'
@@ -333,6 +388,7 @@ export interface FileRouteTypes {
     | '/_app/leads'
     | '/_app/observability'
     | '/_app/pipeline'
+    | '/_app/quizzes'
     | '/_app/settings'
     | '/_app/whatsapp'
     | '/_auth/forgot-password'
@@ -350,6 +406,10 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/security'
     | '/_app/settings/'
+    | '/_app/quizzes/$id/builder'
+    | '/_app/quizzes/$id/performance'
+    | '/_app/quizzes/$id/preview'
+    | '/_app/quizzes/$id/publish'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -452,6 +512,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quizzes': {
+      id: '/_app/quizzes'
+      path: '/quizzes'
+      fullPath: '/quizzes'
+      preLoaderRoute: typeof AppQuizzesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/pipeline': {
@@ -559,6 +626,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsTvRouteImport
       parentRoute: typeof AppAnalyticsRoute
     }
+    '/_app/quizzes/$id/publish': {
+      id: '/_app/quizzes/$id/publish'
+      path: '/$id/publish'
+      fullPath: '/quizzes/$id/publish'
+      preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
+      parentRoute: typeof AppQuizzesRoute
+    }
+    '/_app/quizzes/$id/preview': {
+      id: '/_app/quizzes/$id/preview'
+      path: '/$id/preview'
+      fullPath: '/quizzes/$id/preview'
+      preLoaderRoute: typeof AppQuizzesIdPreviewRouteImport
+      parentRoute: typeof AppQuizzesRoute
+    }
+    '/_app/quizzes/$id/performance': {
+      id: '/_app/quizzes/$id/performance'
+      path: '/$id/performance'
+      fullPath: '/quizzes/$id/performance'
+      preLoaderRoute: typeof AppQuizzesIdPerformanceRouteImport
+      parentRoute: typeof AppQuizzesRoute
+    }
+    '/_app/quizzes/$id/builder': {
+      id: '/_app/quizzes/$id/builder'
+      path: '/$id/builder'
+      fullPath: '/quizzes/$id/builder'
+      preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
+      parentRoute: typeof AppQuizzesRoute
+    }
   }
 }
 
@@ -584,6 +679,24 @@ const AppLeadsRouteChildren: AppLeadsRouteChildren = {
 
 const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
   AppLeadsRouteChildren,
+)
+
+interface AppQuizzesRouteChildren {
+  AppQuizzesIdBuilderRoute: typeof AppQuizzesIdBuilderRoute
+  AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
+  AppQuizzesIdPreviewRoute: typeof AppQuizzesIdPreviewRoute
+  AppQuizzesIdPublishRoute: typeof AppQuizzesIdPublishRoute
+}
+
+const AppQuizzesRouteChildren: AppQuizzesRouteChildren = {
+  AppQuizzesIdBuilderRoute: AppQuizzesIdBuilderRoute,
+  AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,
+  AppQuizzesIdPreviewRoute: AppQuizzesIdPreviewRoute,
+  AppQuizzesIdPublishRoute: AppQuizzesIdPublishRoute,
+}
+
+const AppQuizzesRouteWithChildren = AppQuizzesRoute._addFileChildren(
+  AppQuizzesRouteChildren,
 )
 
 interface AppSettingsRouteChildren {
@@ -616,6 +729,7 @@ interface AppRouteChildren {
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppObservabilityRoute: typeof AppObservabilityRoute
   AppPipelineRoute: typeof AppPipelineRoute
+  AppQuizzesRoute: typeof AppQuizzesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
 }
@@ -628,6 +742,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeadsRoute: AppLeadsRouteWithChildren,
   AppObservabilityRoute: AppObservabilityRoute,
   AppPipelineRoute: AppPipelineRoute,
+  AppQuizzesRoute: AppQuizzesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
 }
@@ -663,13 +778,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
