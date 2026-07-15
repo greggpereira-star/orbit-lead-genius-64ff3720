@@ -61,6 +61,16 @@ export interface BlockOption {
   value?: string;
   score?: number;
   emoji?: string;
+  tag?: string;
+  jumpToBlockId?: string; // conditional branching
+}
+
+export type BlockLogicOp = 'eq' | 'neq' | 'contains' | 'gt' | 'lt';
+export interface BlockLogicRule {
+  fieldBlockId: string;   // block whose response we test
+  op: BlockLogicOp;
+  value: string | number;
+  jumpToBlockId: string;  // where to go if true
 }
 
 export interface QuizBlock {
