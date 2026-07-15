@@ -13,6 +13,7 @@ import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as QSlugRouteImport } from './routes/q.$slug'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
@@ -59,6 +60,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QSlugRoute = QSlugRouteImport.update({
+  id: '/q/$slug',
+  path: '/q/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FSlugRoute = FSlugRouteImport.update({
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof AuthVerifyEmailRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof AuthVerifyEmailRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/q/$slug': typeof QSlugRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/embed-form/$id'
     | '/f/$slug'
+    | '/q/$slug'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/embed-form/$id'
     | '/f/$slug'
+    | '/q/$slug'
     | '/analytics/tv'
     | '/leads/$id'
     | '/settings/automations'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/_auth/verify-email'
     | '/embed-form/$id'
     | '/f/$slug'
+    | '/q/$slug'
     | '/_app/analytics/tv'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
@@ -419,6 +431,7 @@ export interface RootRouteChildren {
   DiagnosticsRoute: typeof DiagnosticsRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
+  QSlugRoute: typeof QSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -449,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/q/$slug': {
+      id: '/q/$slug'
+      path: '/q/$slug'
+      fullPath: '/q/$slug'
+      preLoaderRoute: typeof QSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/f/$slug': {
@@ -774,6 +794,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiagnosticsRoute: DiagnosticsRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
+  QSlugRoute: QSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
