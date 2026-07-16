@@ -1,19 +1,20 @@
  import { Outlet, createFileRoute, Link } from '@tanstack/react-router';
  import { Card, CardContent } from '@/components/ui/card';
- import { User, Building, Shield, Bell, Share2, Zap } from 'lucide-react';
- 
- export const Route = createFileRoute('/_app/settings')({
-   component: SettingsLayout,
- });
- 
- const settingsNav = [
-    { title: 'Profile', icon: User, to: '/settings/' },
-    { title: 'Company', icon: Building, to: '/settings/company' },
-    { title: 'Integrations', icon: Share2, to: '/settings/integrations' },
-   { title: 'Automations', icon: Zap, to: '/settings/automations' },
-    { title: 'Security', icon: Shield, to: '/settings/security' },
-    { title: 'Notifications', icon: Bell, to: '/settings/notifications' },
- ];
+import { User, Building, Shield, Bell, Share2, Zap, Users } from 'lucide-react';
+
+export const Route = createFileRoute('/_app/settings')({
+  component: SettingsLayout,
+});
+
+const settingsNav = [
+   { title: 'Profile', icon: User, to: '/settings/' },
+   { title: 'Company', icon: Building, to: '/settings/company' },
+   { title: 'Integrations', icon: Share2, to: '/settings/integrations' },
+  { title: 'Automations', icon: Zap, to: '/settings/automations' },
+  { title: 'Distribuição de Leads', icon: Users, to: '/settings/routing' },
+   { title: 'Security', icon: Shield, to: '/settings/security' },
+   { title: 'Notifications', icon: Bell, to: '/settings/notifications' },
+];
  
  function SettingsLayout() {
    return (
