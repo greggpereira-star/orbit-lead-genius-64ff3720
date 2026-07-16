@@ -257,6 +257,7 @@ function LeadsPage() {
               <TableHead>Status</TableHead>
               <TableHead>Temperatura</TableHead>
               <TableHead className="w-[170px]">Score</TableHead>
+              <TableHead>Atribuído</TableHead>
               <TableHead>Criado em</TableHead>
               <TableHead className="w-12" />
             </TableRow>
