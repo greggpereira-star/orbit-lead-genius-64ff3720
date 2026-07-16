@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { Send } from 'lucide-react';
 
