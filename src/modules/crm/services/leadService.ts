@@ -123,6 +123,12 @@ export async function listLeads(companyId: string, filters: LeadFilters = {}): P
     request = request.or(`temperature.eq.${filters.temperature},lead_temperature.eq.${filters.temperature}`);
   }
 
+  if (filters.assignment === 'mine' && filters.currentUserId) {
+    request = request.eq('assigned_to', filters.currentUserId);
+  } else if (filters.assignment === 'unassigned') {
+    request = request.is('assigned_to', null);
+  }
+
   const searchTerm = filters.search ? sanitizeSearchTerm(filters.search) : '';
   if (searchTerm.length >= 2) {
     request = request.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
