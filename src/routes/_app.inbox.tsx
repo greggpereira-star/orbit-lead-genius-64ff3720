@@ -56,6 +56,9 @@ function InboxPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
+            <Link to="/chat-reports">Relatórios</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/settings/widgets">Instalar widget</Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
