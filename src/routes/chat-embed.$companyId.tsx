@@ -212,6 +212,4 @@ function RatingBar({ conversation, onRated }: { conversation: ChatConversation; 
     </div>
   );
 }
-    </div>
-  );
-}
+
