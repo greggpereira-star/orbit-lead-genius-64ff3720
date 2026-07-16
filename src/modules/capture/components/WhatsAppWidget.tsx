@@ -6,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { captureService } from '../services/captureService';
-import { tracker } from '@/core/tracking/tracker';
 import { getSupabase } from '@/lib/supabase';
+
 
 export function WhatsAppWidget() {
   const [isOpen, setIsOpen] = useState(false);
