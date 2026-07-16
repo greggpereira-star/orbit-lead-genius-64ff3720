@@ -1,11 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
+import { useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Eye,
   Fingerprint,
   Key,
   LifeBuoy,
@@ -23,6 +25,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -127,6 +132,8 @@ function ObservabilityPage() {
   const companyId = company?.id;
   const queryClient = useQueryClient();
   const reprocessDlq = useServerFn(reprocessCvcrmDlqEntry);
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<string>('all');
+  const [selectedDlqEntry, setSelectedDlqEntry] = useState<DlqEntry | null>(null);
 
   const observabilityQuery = useQuery({
     queryKey: ['observability', companyId],
@@ -144,6 +151,7 @@ function ObservabilityPage() {
       await queryClient.invalidateQueries({ queryKey: ['observability'] });
       if (result.success) {
         toast.success(result.message);
+        setSelectedDlqEntry(null);
       } else {
         toast.error(result.message);
       }
@@ -159,8 +167,14 @@ function ObservabilityPage() {
   const systemLogs = data?.systemLogs ?? [];
   const summary = buildDeliverySummary(deliveries, dlq.length, data?.cvcrmStatus ?? 'disconnected');
 
+  const filteredDeliveries = useMemo(() => {
+    if (deliveryStatusFilter === 'all') return deliveries;
+    return deliveries.filter((d) => d.status === deliveryStatusFilter);
+  }, [deliveries, deliveryStatusFilter]);
+
   return (
     <div className="space-y-6">
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Observability Center</h1>
@@ -232,12 +246,27 @@ function ObservabilityPage() {
                 </CardTitle>
                 <CardDescription>Últimas tentativas, retries pendentes e envios concluídos.</CardDescription>
               </div>
-              <Badge variant={data?.cvcrmStatus === 'connected' ? 'default' : 'secondary'} className="w-fit uppercase">
-                {data?.cvcrmStatus ?? 'loading'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Select value={deliveryStatusFilter} onValueChange={setDeliveryStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="success">Sucesso</SelectItem>
+                    <SelectItem value="sending">Enviando</SelectItem>
+                    <SelectItem value="retrying">Retentando</SelectItem>
+                    <SelectItem value="failed">Falhou</SelectItem>
+                    <SelectItem value="dead_letter">Dead letter</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Badge variant={data?.cvcrmStatus === 'connected' ? 'default' : 'secondary'} className="uppercase">
+                  {data?.cvcrmStatus ?? 'loading'}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
-              <DeliveryTable deliveries={deliveries} isLoading={observabilityQuery.isLoading} />
+              <DeliveryTable deliveries={filteredDeliveries} isLoading={observabilityQuery.isLoading} />
             </CardContent>
           </Card>
 
@@ -255,10 +284,12 @@ function ObservabilityPage() {
                 isLoading={observabilityQuery.isLoading}
                 processingId={reprocessMutation.variables?.id ?? null}
                 onReprocess={(entry) => reprocessMutation.mutate(entry)}
+                onViewDetails={(entry) => setSelectedDlqEntry(entry)}
               />
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="auth" className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -376,7 +407,15 @@ function ObservabilityPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <DlqDetailsDialog
+        entry={selectedDlqEntry}
+        onOpenChange={(open) => !open && setSelectedDlqEntry(null)}
+        onReprocess={(entry) => reprocessMutation.mutate(entry)}
+        isProcessing={reprocessMutation.isPending}
+      />
     </div>
+
   );
 }
 
@@ -532,11 +571,13 @@ function DlqTable({
   isLoading,
   processingId,
   onReprocess,
+  onViewDetails,
 }: {
   dlq: DlqEntry[];
   isLoading: boolean;
   processingId: string | null;
   onReprocess: (entry: DlqEntry) => void;
+  onViewDetails: (entry: DlqEntry) => void;
 }) {
   if (isLoading) return <Skeleton className="h-80" />;
 
@@ -549,7 +590,7 @@ function DlqTable({
           <TableHead>Reason</TableHead>
           <TableHead>Retries</TableHead>
           <TableHead>Trace</TableHead>
-          <TableHead className="text-right">Action</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -566,10 +607,16 @@ function DlqTable({
               <TableCell className="text-xs font-bold">{entry.retry_count ?? 0}</TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground">{shortId(entry.trace_id)}</TableCell>
               <TableCell className="text-right">
-                <Button size="sm" variant="outline" className="gap-2" disabled={Boolean(processingId)} onClick={() => onReprocess(entry)}>
-                  {processingId === entry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
-                  Reprocessar
-                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" className="gap-2" onClick={() => onViewDetails(entry)}>
+                    <Eye className="h-4 w-4" />
+                    Detalhes
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-2" disabled={Boolean(processingId)} onClick={() => onReprocess(entry)}>
+                    {processingId === entry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+                    Reprocessar
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))
@@ -578,6 +625,92 @@ function DlqTable({
     </Table>
   );
 }
+
+function DlqDetailsDialog({
+  entry,
+  onOpenChange,
+  onReprocess,
+  isProcessing,
+}: {
+  entry: DlqEntry | null;
+  onOpenChange: (open: boolean) => void;
+  onReprocess: (entry: DlqEntry) => void;
+  isProcessing: boolean;
+}) {
+  return (
+    <Dialog open={Boolean(entry)} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            Detalhes da falha CV.CRM
+          </DialogTitle>
+          <DialogDescription>
+            Payload original enviado e mensagem de erro completa retornada pela CV.CRM.
+          </DialogDescription>
+        </DialogHeader>
+
+        {entry ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <DetailField label="Lead ID" value={entry.lead_id} mono />
+              <DetailField label="Trace ID" value={entry.trace_id ?? '—'} mono />
+              <DetailField label="Tentativas" value={String(entry.retry_count ?? 0)} />
+              <DetailField label="Criado em" value={formatDateTime(entry.created_at)} />
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Motivo da falha</p>
+              <div className="rounded-md border bg-destructive/5 p-3 text-sm">
+                {entry.failure_reason ?? 'Não informado'}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Erro detalhado</p>
+              <ScrollArea className="h-32 rounded-md border bg-muted p-3">
+                <pre className="text-[11px] font-mono whitespace-pre-wrap break-all">
+                  {entry.last_error ?? 'Sem detalhes adicionais.'}
+                </pre>
+              </ScrollArea>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Payload enviado</p>
+              <ScrollArea className="h-64 rounded-md border bg-muted p-3">
+                <pre className="text-[11px] font-mono whitespace-pre-wrap break-all">
+                  {entry.payload ? JSON.stringify(entry.payload, null, 2) : 'Payload indisponível.'}
+                </pre>
+              </ScrollArea>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+              <Button
+                className="gap-2"
+                disabled={isProcessing}
+                onClick={() => onReprocess(entry)}
+              >
+                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+                Reprocessar agora
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={`mt-1 ${mono ? 'font-mono' : ''}`}>{value}</p>
+    </div>
+  );
+}
+
 
 function StatusBadge({ status }: { status: string }) {
   const variant = status === 'success' ? 'default' : status === 'retrying' || status === 'sending' ? 'secondary' : 'destructive';
