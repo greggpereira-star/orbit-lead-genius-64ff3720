@@ -283,10 +283,13 @@ function LeadsPage() {
   );
 }
 
-function LeadTableRow({ lead, onArchive }: { lead: LeadRow; onArchive: () => void }) {
+function LeadTableRow({ lead, currentUserId, onArchive }: { lead: LeadRow; currentUserId: string | null; onArchive: () => void }) {
   const score = getLeadScore(lead);
   const source = lead.source || lead.utm_source || 'direct';
   const temperature = getLeadTemperature(lead);
+  const assignedLabel = lead.assigned_to
+    ? lead.assigned_to === currentUserId ? 'Você' : `${lead.assigned_to.slice(0, 8)}…`
+    : '—';
 
   return (
     <TableRow className="group transition-colors hover:bg-muted/60">
