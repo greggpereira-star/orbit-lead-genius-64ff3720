@@ -1,13 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Check, MessageSquare, Phone } from 'lucide-react';
+import { Copy, Check, MessageSquare, Phone, Shield, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 export const Route = createFileRoute('/_app/settings/widgets')({
   component: WidgetsSettings,
@@ -50,6 +52,44 @@ function WidgetsSettings() {
   const [waMessage, setWaMessage] = useState('Olá! Vim pelo site e quero saber mais.');
   const [waLabel, setWaLabel] = useState('Fale no WhatsApp');
   const [waColor, setWaColor] = useState('#25D366');
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+  const [newDomain, setNewDomain] = useState('');
+  const [savingDomains, setSavingDomains] = useState(false);
+
+  useEffect(() => {
+    if (!company?.id) return;
+    (async () => {
+      const { data } = await supabase.from('companies' as never).select('chat_allowed_domains').eq('id' as never, company.id as never).maybeSingle();
+      const row = data as { chat_allowed_domains?: string[] } | null;
+      setAllowedDomains(row?.chat_allowed_domains ?? []);
+    })();
+  }, [company?.id]);
+
+  function normalizeDomain(raw: string): string {
+    let v = raw.trim().toLowerCase();
+    if (!v) return '';
+    try { v = new URL(v.startsWith('http') ? v : `https://${v}`).hostname; } catch { /* noop */ }
+    return v.replace(/^www\./, '');
+  }
+
+  async function saveDomains(next: string[]) {
+    if (!company?.id) return;
+    setSavingDomains(true);
+    const { error } = await supabase.from('companies' as never).update({ chat_allowed_domains: next } as never).eq('id' as never, company.id as never);
+    setSavingDomains(false);
+    if (error) { toast.error('Não foi possível salvar'); return; }
+    setAllowedDomains(next);
+    toast.success('Domínios atualizados');
+  }
+
+  function addDomain() {
+    const d = normalizeDomain(newDomain);
+    if (!d) return;
+    if (allowedDomains.includes(d)) { toast.info('Domínio já está na lista'); return; }
+    saveDomains([...allowedDomains, d]);
+    setNewDomain('');
+  }
+  function removeDomain(d: string) { saveDomains(allowedDomains.filter((x) => x !== d)); }
 
   const chatSnippet = useMemo(
     () => `<script src="${host}/chat-widget.js"
@@ -141,7 +181,42 @@ function WidgetsSettings() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4" /> Domínios autorizados</CardTitle>
+              <CardDescription>
+                Restrinja o chat a domínios específicos. Deixe em branco para permitir qualquer site. Subdomínios são aceitos automaticamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="exemplo.com.br"
+                  value={newDomain}
+                  onChange={(e) => setNewDomain(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDomain(); } }}
+                />
+                <Button onClick={addDomain} disabled={savingDomains || !newDomain.trim()}>Adicionar</Button>
+              </div>
+              {allowedDomains.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum domínio configurado — o chat funcionará em qualquer site.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {allowedDomains.map((d) => (
+                    <Badge key={d} variant="secondary" className="gap-1 pr-1">
+                      {d}
+                      <button type="button" onClick={() => removeDomain(d)} className="hover:bg-muted-foreground/20 rounded-sm p-0.5" aria-label={`Remover ${d}`}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
+
 
         <TabsContent value="whatsapp" className="mt-4">
           <Card>

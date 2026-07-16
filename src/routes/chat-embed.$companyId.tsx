@@ -29,7 +29,26 @@ function EmbedChat() {
   const [started, setStarted] = useState(false);
   const [visitorName, setVisitorName] = useState('');
   const [visitorEmail, setVisitorEmail] = useState('');
+  const [domainAllowed, setDomainAllowed] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = new URLSearchParams(window.location.search);
+        const pageUrl = qs.get('lf_page') || document.referrer || '';
+        let domain = '';
+        try { domain = pageUrl ? new URL(pageUrl).hostname : ''; } catch { /* noop */ }
+        const { data, error } = await supabase.rpc('is_chat_domain_allowed' as never, { p_company_id: companyId, p_domain: domain } as never);
+        if (cancelled) return;
+        setDomainAllowed(error ? true : !!data);
+      } catch {
+        if (!cancelled) setDomainAllowed(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [companyId]);
 
   useEffect(() => {
     if (!conversation) return;
@@ -102,6 +121,17 @@ function EmbedChat() {
       companyId,
       content,
     });
+  }
+
+  if (domainAllowed === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center">
+        <div className="max-w-sm space-y-2">
+          <h2 className="text-base font-semibold">Chat indisponível</h2>
+          <p className="text-sm text-muted-foreground">Este site não está autorizado a usar o chat.</p>
+        </div>
+      </div>
+    );
   }
 
   if (!started) {

@@ -23,7 +23,14 @@ function ChatReportsPage() {
     enabled: !!company?.id,
   });
 
+  const agentsQ = useQuery({
+    queryKey: ['chat-reports-agents', company?.id, days],
+    queryFn: () => chatReportsService.perAgent(company!.id, days),
+    enabled: !!company?.id,
+  });
+
   const data = q.data;
+  const agents = agentsQ.data ?? [];
 
   return (
     <div className="p-6 space-y-6">
@@ -105,10 +112,55 @@ function ChatReportsPage() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Desempenho por atendente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {agents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma atividade de atendente no período.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground uppercase">
+                      <tr className="border-b">
+                        <th className="text-left py-2 font-medium">Atendente</th>
+                        <th className="text-right py-2 font-medium">Conversas</th>
+                        <th className="text-right py-2 font-medium">Mensagens</th>
+                        <th className="text-right py-2 font-medium">Resp. média</th>
+                        <th className="text-right py-2 font-medium">CSAT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agents.map((a) => (
+                        <tr key={a.agentId} className="border-b last:border-0">
+                          <td className="py-2">{a.agentName}</td>
+                          <td className="py-2 text-right">{a.conversations}</td>
+                          <td className="py-2 text-right">{a.messages}</td>
+                          <td className="py-2 text-right">{a.avgResponseSeconds != null ? formatDuration(a.avgResponseSeconds) : '—'}</td>
+                          <td className="py-2 text-right">{a.avgRating != null ? `${a.avgRating.toFixed(1)} (${a.ratingCount})` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
   );
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
 }
 
 function KPI({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
