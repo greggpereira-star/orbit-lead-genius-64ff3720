@@ -93,7 +93,7 @@ function MetaIntegrationsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Facebook className="w-6 h-6 text-primary" />
+            <Link2 className="w-6 h-6 text-primary" />
             Meta Lead Ads
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -121,7 +121,7 @@ function MetaIntegrationsPage() {
               {startMutation.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <Facebook className="w-4 h-4 mr-2" />
+                <Link2 className="w-4 h-4 mr-2" />
               )}
               Conectar com Facebook
             </Button>
