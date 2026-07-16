@@ -23,7 +23,14 @@ function ChatReportsPage() {
     enabled: !!company?.id,
   });
 
+  const agentsQ = useQuery({
+    queryKey: ['chat-reports-agents', company?.id, days],
+    queryFn: () => chatReportsService.perAgent(company!.id, days),
+    enabled: !!company?.id,
+  });
+
   const data = q.data;
+  const agents = agentsQ.data ?? [];
 
   return (
     <div className="p-6 space-y-6">
