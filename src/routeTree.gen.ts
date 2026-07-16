@@ -44,6 +44,7 @@ import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.r
 import { Route as AppSettingsQuickRepliesRouteImport } from './routes/_app.settings.quick-replies'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
+import { Route as AppSettingsInstallRouteImport } from './routes/_app.settings.install'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
 import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
@@ -231,6 +232,11 @@ const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsInstallRoute = AppSettingsInstallRouteImport.update({
+  id: '/install',
+  path: '/install',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   id: '/company',
   path: '/company',
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/install': typeof AppSettingsInstallRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
@@ -363,6 +370,7 @@ export interface FileRoutesByTo {
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/install': typeof AppSettingsInstallRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
@@ -412,6 +420,7 @@ export interface FileRoutesById {
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
   '/_app/settings/chat': typeof AppSettingsChatRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
+  '/_app/settings/install': typeof AppSettingsInstallRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
@@ -460,6 +469,7 @@ export interface FileRouteTypes {
     | '/settings/automations'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/install'
     | '/settings/integrations'
     | '/settings/notifications'
     | '/settings/quick-replies'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/settings/automations'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/install'
     | '/settings/integrations'
     | '/settings/notifications'
     | '/settings/quick-replies'
@@ -553,6 +564,7 @@ export interface FileRouteTypes {
     | '/_app/settings/automations'
     | '/_app/settings/chat'
     | '/_app/settings/company'
+    | '/_app/settings/install'
     | '/_app/settings/integrations'
     | '/_app/settings/notifications'
     | '/_app/settings/quick-replies'
@@ -831,6 +843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/install': {
+      id: '/_app/settings/install'
+      path: '/install'
+      fullPath: '/settings/install'
+      preLoaderRoute: typeof AppSettingsInstallRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/company': {
       id: '/_app/settings/company'
       path: '/company'
@@ -957,6 +976,7 @@ interface AppSettingsRouteChildren {
   AppSettingsAutomationsRoute: typeof AppSettingsAutomationsRoute
   AppSettingsChatRoute: typeof AppSettingsChatRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppSettingsInstallRoute: typeof AppSettingsInstallRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsQuickRepliesRoute: typeof AppSettingsQuickRepliesRoute
@@ -970,6 +990,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAutomationsRoute: AppSettingsAutomationsRoute,
   AppSettingsChatRoute: AppSettingsChatRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppSettingsInstallRoute: AppSettingsInstallRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsQuickRepliesRoute: AppSettingsQuickRepliesRoute,
@@ -1062,13 +1083,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
