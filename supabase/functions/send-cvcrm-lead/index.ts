@@ -149,6 +149,13 @@ serve(async (req) => {
         event_type: 'cvcrm_delivery_success',
         metadata: { cvcrm_lead_id: result.id_lead || result.id, latency_ms: latency }
       });
+
+      if (source_dlq_id) {
+        await supabaseAdmin.from('cvcrm_dead_letter_queue')
+          .update({ resolved_at: new Date().toISOString() })
+          .eq('id', source_dlq_id)
+          .eq('company_id', tenant_id);
+      }
     } else {
       // Timeline Event failure
       await supabaseAdmin.from('lead_timeline_events').insert({
