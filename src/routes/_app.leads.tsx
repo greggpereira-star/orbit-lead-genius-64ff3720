@@ -68,19 +68,21 @@ const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'won', 'los
 const TEMPERATURE_OPTIONS = ['hot', 'warm', 'cold'] as const;
 
 function LeadsPage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [temperature, setTemperature] = useState<'all' | 'hot' | 'warm' | 'cold'>('all');
+  const [assignment, setAssignment] = useState<'all' | 'mine' | 'unassigned'>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
 
   const companyId = company?.id;
+  const currentUserId = user?.id ?? null;
   const leadsQuery = useQuery({
-    queryKey: ['leads', companyId, search, status, temperature],
-    queryFn: () => listLeads(companyId ?? '', { search, status, temperature }),
+    queryKey: ['leads', companyId, search, status, temperature, assignment, currentUserId],
+    queryFn: () => listLeads(companyId ?? '', { search, status, temperature, assignment, currentUserId }),
     enabled: Boolean(companyId),
   });
 
