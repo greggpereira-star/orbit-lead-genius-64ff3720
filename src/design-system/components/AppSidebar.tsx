@@ -35,7 +35,7 @@ import {
     { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
    { title: 'Forms', icon: FileText, to: '/forms' },
    { title: 'Alt Quiz', icon: Sparkles, to: '/quizzes' },
-     { title: 'Inbox', icon: MessageSquare, to: '/inbox', notify: 'inbox' as const },
+     { title: 'Chat ao vivo', icon: MessageSquare, to: '/inbox', notify: 'inbox' as const },
      { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
      { title: 'Automations', icon: Zap, to: '/automations' },
     { title: 'Analytics', icon: BarChart3, to: '/analytics' },
