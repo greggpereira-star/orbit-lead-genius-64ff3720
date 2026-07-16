@@ -36,6 +36,7 @@ import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
 import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
+import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.widgets'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
 import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
@@ -184,6 +185,11 @@ const ApiPublicMetaWebhookRoute = ApiPublicMetaWebhookRouteImport.update({
   path: '/api/public/meta-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSettingsWidgetsRoute = AppSettingsWidgetsRouteImport.update({
+  id: '/widgets',
+  path: '/widgets',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
   id: '/security',
   path: '/security',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/settings/': typeof AppSettingsIndexRoute
@@ -329,6 +336,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/settings': typeof AppSettingsIndexRoute
@@ -373,6 +381,7 @@ export interface FileRoutesById {
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/routing': typeof AppSettingsRoutingRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
+  '/_app/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
@@ -416,6 +425,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/routing'
     | '/settings/security'
+    | '/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/whatsapp-click'
     | '/settings/'
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/routing'
     | '/settings/security'
+    | '/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/whatsapp-click'
     | '/settings'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/routing'
     | '/_app/settings/security'
+    | '/_app/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/whatsapp-click'
     | '/_app/settings/'
@@ -713,6 +725,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMetaWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/settings/widgets': {
+      id: '/_app/settings/widgets'
+      path: '/widgets'
+      fullPath: '/settings/widgets'
+      preLoaderRoute: typeof AppSettingsWidgetsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/security': {
       id: '/_app/settings/security'
       path: '/security'
@@ -863,6 +882,7 @@ interface AppSettingsRouteChildren {
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsRoutingRoute: typeof AppSettingsRoutingRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
+  AppSettingsWidgetsRoute: typeof AppSettingsWidgetsRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -873,6 +893,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsRoutingRoute: AppSettingsRoutingRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
+  AppSettingsWidgetsRoute: AppSettingsWidgetsRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
@@ -956,13 +977,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
