@@ -41,7 +41,7 @@ export function useOnlineVisitors(companyId: string | undefined) {
       .on('presence', { event: 'sync' }, sync)
       .on('presence', { event: 'join' }, sync)
       .on('presence', { event: 'leave' }, sync)
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') await channel.track({ role: 'agent' });
       });
 
