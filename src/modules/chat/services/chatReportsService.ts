@@ -80,6 +80,9 @@ export const chatReportsService = {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
+    const ratings = conversations.map((c) => c.rating).filter((r): r is number => typeof r === 'number');
+    const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+
     return {
       total,
       open,
@@ -91,6 +94,8 @@ export const chatReportsService = {
       avgMessagesPerConversation: total > 0 ? messages.length / total : 0,
       leadsCaptured,
       conversionRate: total > 0 ? (leadsCaptured / total) * 100 : 0,
+      avgRating,
+      ratingCount: ratings.length,
       byDay: Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v })),
       topPages,
     };
