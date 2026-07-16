@@ -26,7 +26,7 @@ export const chatReportsService = {
 
     const { data: convs } = await supabase
       .from(CONV)
-      .select('id,status,page_url,lead_id,created_at')
+      .select('id,status,page_url,lead_id,created_at,rating')
       .eq('company_id' as never, companyId as never)
       .gte('created_at' as never, since as never);
 
@@ -36,7 +36,7 @@ export const chatReportsService = {
       .eq('company_id' as never, companyId as never)
       .gte('created_at' as never, since as never);
 
-    const conversations = (convs ?? []) as Array<{ id: string; status: string; page_url: string | null; lead_id: string | null; created_at: string }>;
+    const conversations = (convs ?? []) as Array<{ id: string; status: string; page_url: string | null; lead_id: string | null; created_at: string; rating: number | null }>;
     const messages = (msgs ?? []) as Array<{ id: string; sender_type: string; created_at: string }>;
 
     const open = conversations.filter((c) => c.status === 'open').length;
