@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { Send } from 'lucide-react';
 
@@ -47,6 +48,27 @@ function EmbedChat() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length]);
+
+  // Presence: announce this visitor while the widget is open
+  useEffect(() => {
+    if (!companyId) return;
+    const qs = new URLSearchParams(window.location.search);
+    const pageUrl = qs.get('lf_page') || document.referrer || window.location.href;
+    const channel = supabase.channel(`presence_visitors_${companyId}`, {
+      config: { presence: { key: visitorId } },
+    });
+    channel.subscribe(async (status: string) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          visitor_id: visitorId,
+          page_url: pageUrl,
+          visitor_name: visitorName || null,
+          online_at: new Date().toISOString(),
+        });
+      }
+    });
+    return () => { supabase.removeChannel(channel); };
+  }, [companyId, visitorId, visitorName]);
 
   async function start(e: React.FormEvent) {
     e.preventDefault();

@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from '@tanstack/react-router';
-import { Send, MessageCircle, Circle, CheckCheck, User, Zap, ArrowRightLeft } from 'lucide-react';
+import { Send, MessageCircle, Circle, CheckCheck, User, Zap, ArrowRightLeft, Users } from 'lucide-react';
+import { useOnlineVisitors } from '@/modules/chat/hooks/useOnlineVisitors';
 import {
   Popover,
   PopoverContent,
@@ -62,6 +63,7 @@ function InboxPage() {
           <p className="text-sm text-muted-foreground">Atenda visitantes do site em tempo real, capture leads e acompanhe toda a jornada de origem.</p>
         </div>
         <div className="flex items-center gap-2">
+          <OnlineVisitorsPopover companyId={companyId} />
           <Button variant="outline" size="sm" asChild>
             <Link to="/chat-reports">Relatórios</Link>
           </Button>
@@ -407,6 +409,46 @@ function TransferPopover({ conversation, onDone }: { conversation: ChatConversat
         <Button className="w-full" size="sm" onClick={submit} disabled={saving}>
           {saving ? 'Transferindo…' : 'Confirmar transferência'}
         </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function OnlineVisitorsPopover({ companyId }: { companyId: string | undefined }) {
+  const visitors = useOnlineVisitors(companyId);
+  const count = visitors.length;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <Users className="h-4 w-4" />
+          <span>Online</span>
+          <Badge variant={count > 0 ? 'default' : 'secondary'} className="ml-1">{count}</Badge>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="px-3 py-2 border-b">
+          <div className="text-sm font-semibold">Visitantes online agora</div>
+          <div className="text-xs text-muted-foreground">Atualização em tempo real</div>
+        </div>
+        <ScrollArea className="max-h-72">
+          {count === 0 && (
+            <div className="p-4 text-xs text-muted-foreground">Nenhum visitante com o chat aberto no momento.</div>
+          )}
+          {visitors.map((v) => {
+            let host = v.page_url;
+            try { host = new URL(v.page_url).host + new URL(v.page_url).pathname; } catch { /* noop */ }
+            return (
+              <div key={v.visitor_id} className="px-3 py-2 border-b last:border-b-0">
+                <div className="flex items-center gap-2 text-sm">
+                  <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                  <span className="font-medium truncate">{v.visitor_name || 'Visitante anônimo'}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate">{host}</div>
+              </div>
+            );
+          })}
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
