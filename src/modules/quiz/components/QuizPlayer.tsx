@@ -106,6 +106,11 @@ function PlayerRunner({
   const finish = async (finalState: QuizRunState) => {
     setSaving(true);
     try {
+      if (preview) {
+        setState(finalState);
+        setDone(true);
+        return;
+      }
       const max = maxPossibleScore(schema);
       const temperature = classifyTemperature(finalState.score, max);
       const email = extract(finalState.responses, blocks, 'email');
