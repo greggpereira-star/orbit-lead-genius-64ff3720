@@ -63,6 +63,7 @@ export const reprocessCvcrmDlqEntry = createServerFn({ method: 'POST' })
         lead_id: dlqEntry.lead_id,
         tenant_id: dlqEntry.company_id,
         trace_id: traceId,
+        source_dlq_id: dlqEntry.id,
       },
     });
 
