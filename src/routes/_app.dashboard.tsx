@@ -182,7 +182,7 @@ function DashboardPage() {
       </div>
 
       {/* WhatsApp + Meta + Leads recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-[#25D366]" />WhatsApp</CardTitle>
