@@ -24,7 +24,9 @@ export type Database = {
           lead_id: string | null
           metadata: Json
           page_url: string | null
+          referrer: string | null
           status: string
+          tracking: Json
           unread_agent: number
           unread_visitor: number
           updated_at: string
@@ -42,7 +44,9 @@ export type Database = {
           lead_id?: string | null
           metadata?: Json
           page_url?: string | null
+          referrer?: string | null
           status?: string
+          tracking?: Json
           unread_agent?: number
           unread_visitor?: number
           updated_at?: string
@@ -60,7 +64,9 @@ export type Database = {
           lead_id?: string | null
           metadata?: Json
           page_url?: string | null
+          referrer?: string | null
           status?: string
+          tracking?: Json
           unread_agent?: number
           unread_visitor?: number
           updated_at?: string
@@ -2921,6 +2927,72 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_click_events: {
+        Row: {
+          company_id: string
+          created_at: string
+          final_url: string | null
+          id: string
+          lead_id: string | null
+          message: string | null
+          page_url: string | null
+          phone_destination: string | null
+          referrer: string | null
+          session_id: string | null
+          trace_id: string | null
+          tracking: Json
+          user_agent: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          final_url?: string | null
+          id?: string
+          lead_id?: string | null
+          message?: string | null
+          page_url?: string | null
+          phone_destination?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          trace_id?: string | null
+          tracking?: Json
+          user_agent?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          final_url?: string | null
+          id?: string
+          lead_id?: string | null
+          message?: string | null
+          page_url?: string | null
+          phone_destination?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          trace_id?: string | null
+          tracking?: Json
+          user_agent?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_click_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_click_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
