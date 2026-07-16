@@ -80,6 +80,8 @@ export const chatService = {
     visitorName?: string;
     visitorEmail?: string;
     pageUrl?: string;
+    referrer?: string;
+    tracking?: Record<string, string | null>;
   }): Promise<ChatConversation> {
     const { data: existing } = await supabase
       .from(CONV)
@@ -101,12 +103,15 @@ export const chatService = {
         visitor_name: input.visitorName ?? null,
         visitor_email: input.visitorEmail ?? null,
         page_url: input.pageUrl ?? null,
+        referrer: input.referrer ?? null,
+        tracking: input.tracking ?? {},
       } as never)
       .select('*')
       .single();
     if (error) throw error;
     return data as unknown as ChatConversation;
   },
+
 
   async markRead(conversationId: string, side: 'agent' | 'visitor'): Promise<void> {
     const patch = side === 'agent' ? { unread_agent: 0 } : { unread_visitor: 0 };

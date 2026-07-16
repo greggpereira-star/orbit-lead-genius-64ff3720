@@ -45,16 +45,25 @@ function EmbedChat() {
   async function start(e: React.FormEvent) {
     e.preventDefault();
     if (!visitorName.trim()) return;
+    const qs = new URLSearchParams(window.location.search);
+    const trackingKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','fbc','fbp','gclid','gbraid','wbraid'];
+    const tracking: Record<string, string | null> = {};
+    for (const k of trackingKeys) { const v = qs.get(k); if (v) tracking[k] = v; }
+    const parentUrl = qs.get('lf_page') || document.referrer || window.location.href;
+    const parentReferrer = qs.get('lf_ref') || document.referrer || '';
     const conv = await chatService.getOrCreateConversation({
       companyId,
       visitorId,
       visitorName: visitorName.trim(),
       visitorEmail: visitorEmail.trim() || undefined,
-      pageUrl: document.referrer || window.location.href,
+      pageUrl: parentUrl,
+      referrer: parentReferrer,
+      tracking,
     });
     setConversation(conv);
     setStarted(true);
   }
+
 
   async function send() {
     if (!text.trim() || !conversation) return;

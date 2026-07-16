@@ -6,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { captureService } from '../services/captureService';
-import { tracker } from '@/core/tracking/tracker';
 import { getSupabase } from '@/lib/supabase';
+
 
 export function WhatsAppWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,37 +46,46 @@ export function WhatsAppWidget() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a landing page, we might not have a company context, or use a default one
     const targetCompanyId = companyId || 'default-landing-context';
-    
     setIsSubmitting(true);
-    const trackingData = tracker.getTrackingParams();
-    
-      const result = await captureService.submitLead(targetCompanyId, {
-      name,
-      email,
-        metadata: { 
-          channel: 'whatsapp_widget',
-          source_origin: window.location.href,
-          browser: navigator.userAgent
-        }
-    }, trackingData);
 
-    setIsSubmitting(false);
+    const qs = new URLSearchParams(window.location.search);
+    const trackingKeys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','fbc','fbp','gclid','gbraid','wbraid'] as const;
+    const tracking: Record<string, string> = {};
+    for (const k of trackingKeys) { const v = qs.get(k); if (v) tracking[k] = v; }
 
-    if (result.success) {
-      toast.success('Lead captured! Redirecting to WhatsApp...');
+    const phone = '5511999999999';
+    const message = 'Olá, vim pelo site e gostaria de mais informações.';
+
+    try {
+      const res = await fetch('/api/public/whatsapp-click', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          companyId: targetCompanyId,
+          phone,
+          message,
+          name,
+          email,
+          pageUrl: window.location.href,
+          referrer: document.referrer,
+          userAgent: navigator.userAgent,
+          tracking,
+        }),
+      });
+      const data = await res.json() as { whatsappUrl?: string };
+      const url = data.whatsappUrl ?? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      toast.success('Redirecionando para o WhatsApp...');
       setIsOpen(false);
-      
-      const selectedNumber = '5511999999999'; // Example
-      
-      setTimeout(() => {
-        window.open(`https://wa.me/${selectedNumber}?text=Hi, I am interested in more information.`, '_blank');
-      }, 1000);
-    } else {
-      toast.error('Error starting conversation');
+      setTimeout(() => window.open(url, '_blank'), 500);
+    } catch {
+      toast.error('Não foi possível registrar o clique, abrindo WhatsApp assim mesmo.');
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
