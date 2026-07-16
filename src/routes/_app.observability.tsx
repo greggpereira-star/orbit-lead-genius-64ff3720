@@ -132,6 +132,8 @@ function ObservabilityPage() {
   const companyId = company?.id;
   const queryClient = useQueryClient();
   const reprocessDlq = useServerFn(reprocessCvcrmDlqEntry);
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState<string>('all');
+  const [selectedDlqEntry, setSelectedDlqEntry] = useState<DlqEntry | null>(null);
 
   const observabilityQuery = useQuery({
     queryKey: ['observability', companyId],
@@ -149,6 +151,7 @@ function ObservabilityPage() {
       await queryClient.invalidateQueries({ queryKey: ['observability'] });
       if (result.success) {
         toast.success(result.message);
+        setSelectedDlqEntry(null);
       } else {
         toast.error(result.message);
       }
@@ -164,8 +167,14 @@ function ObservabilityPage() {
   const systemLogs = data?.systemLogs ?? [];
   const summary = buildDeliverySummary(deliveries, dlq.length, data?.cvcrmStatus ?? 'disconnected');
 
+  const filteredDeliveries = useMemo(() => {
+    if (deliveryStatusFilter === 'all') return deliveries;
+    return deliveries.filter((d) => d.status === deliveryStatusFilter);
+  }, [deliveries, deliveryStatusFilter]);
+
   return (
     <div className="space-y-6">
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Observability Center</h1>
