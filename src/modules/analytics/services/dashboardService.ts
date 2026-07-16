@@ -16,6 +16,12 @@ export interface DashboardKpis {
   dailySeries: { date: string; leads: number; submissions: number }[];
   sources: { name: string; value: number }[];
   temperature: { hot: number; warm: number; cold: number };
+  whatsapp: {
+    clicks: number;
+    leadsFromClicks: number;
+    conversionRate: number;
+    topSources: { name: string; value: number }[];
+  };
   recentLeads: Array<{
     id: string;
     name: string | null;
