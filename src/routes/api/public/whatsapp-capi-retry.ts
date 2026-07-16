@@ -13,15 +13,30 @@ export const Route = createFileRoute('/api/public/whatsapp-capi-retry')({
       POST: async ({ request }) => {
         const traceId = `retry_${crypto.randomUUID()}`;
 
-        // Simple bearer to prevent public abuse; PUBLIC_APP_URL/retry secret shared with cron.
         const authHeader = request.headers.get('authorization') ?? '';
-        const expected = process.env.WA_CAPI_RETRY_SECRET;
-        if (expected && authHeader !== `Bearer ${expected}`) {
+        const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+        const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+
+        // Accept either the env-configured secret or the DB-stored bearer used by pg_cron.
+        const envSecret = process.env.WA_CAPI_RETRY_SECRET;
+        let authorized = !!envSecret && bearer === envSecret;
+        if (!authorized) {
+          const { data: cfg } = await supabaseAdmin
+            .from('app_internal_config' as never)
+            .select('value')
+            .eq('key', 'wa_capi_retry_bearer')
+            .maybeSingle();
+          const dbSecret = (cfg as { value?: string } | null)?.value;
+          authorized = !!dbSecret && bearer === dbSecret;
+        }
+        if (!authorized) {
+          log('warn', traceId, 'unauthorized');
           return new Response('unauthorized', { status: 401 });
         }
 
-        const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
         const { sendWhatsAppCapi } = await import('@/lib/whatsapp-capi.server');
+
 
         const { data: rows, error } = await supabaseAdmin
           .from('whatsapp_click_events')
