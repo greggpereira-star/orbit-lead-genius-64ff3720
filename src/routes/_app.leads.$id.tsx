@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import {
   Activity,
@@ -236,7 +237,7 @@ function LeadDetailsPage() {
   );
 }
 
-function ContactRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function ContactRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-3 text-sm">
       <div className="text-muted-foreground">{icon}</div>
@@ -257,7 +258,7 @@ function KeyValue({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LeadTab({ value, icon, label }: { value: string; icon: React.ReactNode; label: string }) {
+function LeadTab({ value, icon, label }: { value: string; icon: ReactNode; label: string }) {
   return (
     <TabsTrigger value={value} className="gap-2 rounded-none border-b-2 border-transparent px-1 pb-3 data-[state=active]:border-primary data-[state=active]:bg-transparent">
       {icon}

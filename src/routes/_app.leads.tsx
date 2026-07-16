@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Archive, Filter, Globe, Loader2, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
@@ -321,7 +321,7 @@ function LeadTableRow({ lead, onArchive }: { lead: LeadRow; onArchive: () => voi
   );
 }
 
-function LeadField({ label, children }: { label: string; children: React.ReactNode }) {
+function LeadField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-2">
       <Label className="text-xs font-bold uppercase text-muted-foreground">{label}</Label>
@@ -366,7 +366,7 @@ function buildMetrics(leads: LeadRow[]) {
   };
 }
 
-function setFormField(field: keyof LeadFormState, value: string, setForm: React.Dispatch<React.SetStateAction<LeadFormState>>) {
+function setFormField(field: keyof LeadFormState, value: string, setForm: Dispatch<SetStateAction<LeadFormState>>) {
   setForm((current) => ({ ...current, [field]: value }));
 }
 

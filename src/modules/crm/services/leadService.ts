@@ -202,6 +202,7 @@ export async function updateLeadStatus(input: UpdateLeadStatusInput): Promise<Le
 }
 
 export async function archiveLead(input: ArchiveLeadInput): Promise<LeadRow> {
+  const archivedAt = new Date().toISOString();
   const { data: currentLead, error: readError } = await supabase
     .from('leads')
     .select('*')
@@ -213,7 +214,7 @@ export async function archiveLead(input: ArchiveLeadInput): Promise<LeadRow> {
 
   const metadata: Record<string, Json> = {
     ...getLeadMetadata(currentLead as LeadRow),
-    archived_at: new Date().toISOString(),
+    archived_at: archivedAt,
   };
 
   const { data, error } = await supabase
@@ -227,7 +228,7 @@ export async function archiveLead(input: ArchiveLeadInput): Promise<LeadRow> {
   if (error) throw error;
 
   await createLeadEvent(input.leadId, 'lead_archived', 'Lead arquivado para manter histórico sem exclusão física.', {
-    archived_at: metadata.archived_at,
+    archived_at: archivedAt,
   });
 
   return data as LeadRow;
