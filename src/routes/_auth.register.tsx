@@ -52,7 +52,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
           if (result?.session) {
             navigate({ to: '/dashboard' });
           } else {
-            navigate({ to: '/auth/verify-email' });
+            navigate({ to: '/verify-email' });
           }
         } catch (error: any) {
          console.error('Signup: Error occurred', error);
