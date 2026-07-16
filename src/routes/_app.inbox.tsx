@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from '@tanstack/react-router';
-import { Send, MessageCircle, Circle, CheckCheck, User, Zap, ArrowRightLeft } from 'lucide-react';
+import { Send, MessageCircle, Circle, CheckCheck, User, Zap, ArrowRightLeft, Users } from 'lucide-react';
+import { useOnlineVisitors } from '@/modules/chat/hooks/useOnlineVisitors';
 import {
   Popover,
   PopoverContent,
