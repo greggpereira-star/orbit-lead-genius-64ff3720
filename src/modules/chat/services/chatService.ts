@@ -15,6 +15,9 @@ export interface ChatConversation {
   unread_agent: number;
   unread_visitor: number;
   lead_id: string | null;
+  rating: number | null;
+  rating_comment: string | null;
+  rated_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -120,6 +123,14 @@ export const chatService = {
 
   async closeConversation(conversationId: string): Promise<void> {
     await supabase.from(CONV).update({ status: 'closed' } as never).eq('id' as never, conversationId as never);
+  },
+
+  async rateConversation(conversationId: string, rating: number, comment?: string): Promise<void> {
+    const { error } = await supabase
+      .from(CONV)
+      .update({ rating, rating_comment: comment ?? null, rated_at: new Date().toISOString() } as never)
+      .eq('id' as never, conversationId as never);
+    if (error) throw error;
   },
 
   subscribeToConversations(companyId: string, onChange: () => void) {

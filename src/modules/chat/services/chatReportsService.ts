@@ -11,6 +11,8 @@ export interface ChatReportSummary {
   avgMessagesPerConversation: number;
   leadsCaptured: number;
   conversionRate: number;
+  avgRating: number | null;
+  ratingCount: number;
   byDay: { date: string; conversations: number; messages: number }[];
   topPages: { url: string; count: number }[];
 }
@@ -24,7 +26,7 @@ export const chatReportsService = {
 
     const { data: convs } = await supabase
       .from(CONV)
-      .select('id,status,page_url,lead_id,created_at')
+      .select('id,status,page_url,lead_id,created_at,rating')
       .eq('company_id' as never, companyId as never)
       .gte('created_at' as never, since as never);
 
@@ -34,7 +36,7 @@ export const chatReportsService = {
       .eq('company_id' as never, companyId as never)
       .gte('created_at' as never, since as never);
 
-    const conversations = (convs ?? []) as Array<{ id: string; status: string; page_url: string | null; lead_id: string | null; created_at: string }>;
+    const conversations = (convs ?? []) as Array<{ id: string; status: string; page_url: string | null; lead_id: string | null; created_at: string; rating: number | null }>;
     const messages = (msgs ?? []) as Array<{ id: string; sender_type: string; created_at: string }>;
 
     const open = conversations.filter((c) => c.status === 'open').length;
@@ -78,6 +80,9 @@ export const chatReportsService = {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
+    const ratings = conversations.map((c) => c.rating).filter((r): r is number => typeof r === 'number');
+    const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+
     return {
       total,
       open,
@@ -89,6 +94,8 @@ export const chatReportsService = {
       avgMessagesPerConversation: total > 0 ? messages.length / total : 0,
       leadsCaptured,
       conversionRate: total > 0 ? (leadsCaptured / total) * 100 : 0,
+      avgRating,
+      ratingCount: ratings.length,
       byDay: Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v })),
       topPages,
     };

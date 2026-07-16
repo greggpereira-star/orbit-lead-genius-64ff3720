@@ -33,9 +33,15 @@ function EmbedChat() {
   useEffect(() => {
     if (!conversation) return;
     chatService.listMessages(conversation.id).then(setMessages);
-    return chatService.subscribeToMessages(conversation.id, (m) => {
+    const offMsg = chatService.subscribeToMessages(conversation.id, (m) => {
       setMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
     });
+    const offConv = chatService.subscribeToConversations(conversation.company_id, async () => {
+      const list = await chatService.listConversations(conversation.company_id);
+      const current = list.find((c) => c.id === conversation.id);
+      if (current) setConversation(current);
+    });
+    return () => { offMsg(); offConv(); };
   }, [conversation]);
 
   useEffect(() => {
@@ -125,17 +131,85 @@ function EmbedChat() {
           </div>
         ))}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); send(); }} className="border-t p-2 flex gap-2 bg-card">
-        <input
-          className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
-          placeholder="Escreva uma mensagem…"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <button type="submit" className="bg-primary text-primary-foreground rounded-md px-3" disabled={!text.trim()}>
-          <Send className="h-4 w-4" />
-        </button>
-      </form>
+      {conversation?.status === 'closed' ? (
+        <RatingBar conversation={conversation} onRated={(c) => setConversation(c)} />
+      ) : (
+        <form onSubmit={(e) => { e.preventDefault(); send(); }} className="border-t p-2 flex gap-2 bg-card">
+          <input
+            className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
+            placeholder="Escreva uma mensagem…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <button type="submit" className="bg-primary text-primary-foreground rounded-md px-3" disabled={!text.trim()}>
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
+      )}
     </div>
   );
 }
+
+function RatingBar({ conversation, onRated }: { conversation: ChatConversation; onRated: (c: ChatConversation) => void }) {
+  const [rating, setRating] = useState<number | null>(conversation.rating);
+  const [hover, setHover] = useState<number | null>(null);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const alreadyRated = !!conversation.rating;
+
+  async function submit(value: number) {
+    if (alreadyRated || submitting) return;
+    setSubmitting(true);
+    try {
+      await chatService.rateConversation(conversation.id, value, comment.trim() || undefined);
+      onRated({ ...conversation, rating: value, rating_comment: comment.trim() || null, rated_at: new Date().toISOString() });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (alreadyRated) {
+    return (
+      <div className="border-t p-4 bg-card text-center text-sm text-muted-foreground">
+        Obrigado pela sua avaliação! ⭐ {conversation.rating}/5
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t p-4 bg-card space-y-2">
+      <div className="text-sm font-medium">Como foi o atendimento?</div>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setRating(n)}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(null)}
+            className="text-2xl leading-none transition-transform hover:scale-110"
+            aria-label={`${n} estrela${n > 1 ? 's' : ''}`}
+          >
+            <span className={cn((hover ?? rating ?? 0) >= n ? 'text-amber-500' : 'text-muted-foreground/40')}>★</span>
+          </button>
+        ))}
+      </div>
+      <textarea
+        className="w-full border rounded-md px-2 py-1.5 text-xs bg-background resize-none"
+        placeholder="Comentário (opcional)"
+        rows={2}
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
+      <button
+        type="button"
+        className="w-full bg-primary text-primary-foreground rounded-md py-1.5 text-xs font-medium disabled:opacity-50"
+        disabled={!rating || submitting}
+        onClick={() => rating && submit(rating)}
+      >
+        {submitting ? 'Enviando…' : 'Enviar avaliação'}
+      </button>
+    </div>
+  );
+}
+

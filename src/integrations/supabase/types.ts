@@ -43,6 +43,9 @@ export type Database = {
           lead_id: string | null
           metadata: Json
           page_url: string | null
+          rated_at: string | null
+          rating: number | null
+          rating_comment: string | null
           referrer: string | null
           status: string
           tracking: Json
@@ -64,6 +67,9 @@ export type Database = {
           lead_id?: string | null
           metadata?: Json
           page_url?: string | null
+          rated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
           referrer?: string | null
           status?: string
           tracking?: Json
@@ -85,6 +91,9 @@ export type Database = {
           lead_id?: string | null
           metadata?: Json
           page_url?: string | null
+          rated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
           referrer?: string | null
           status?: string
           tracking?: Json
