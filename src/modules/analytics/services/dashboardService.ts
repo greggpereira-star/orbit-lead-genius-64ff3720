@@ -21,6 +21,8 @@ export interface DashboardKpis {
     leadsFromClicks: number;
     conversionRate: number;
     topSources: { name: string; value: number }[];
+    topCampaigns: { name: string; value: number }[];
+    capi: { sent: number; pending: number; failed: number; deadLetter: number; skipped: number };
   };
   recentLeads: Array<{
     id: string;
