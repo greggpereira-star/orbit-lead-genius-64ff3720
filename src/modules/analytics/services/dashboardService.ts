@@ -16,6 +16,12 @@ export interface DashboardKpis {
   dailySeries: { date: string; leads: number; submissions: number }[];
   sources: { name: string; value: number }[];
   temperature: { hot: number; warm: number; cold: number };
+  whatsapp: {
+    clicks: number;
+    leadsFromClicks: number;
+    conversionRate: number;
+    topSources: { name: string; value: number }[];
+  };
   recentLeads: Array<{
     id: string;
     name: string | null;
@@ -36,7 +42,7 @@ export const dashboardService = {
     const since = new Date(now - days * 86400000).toISOString();
     const prevSince = new Date(now - days * 2 * 86400000).toISOString();
 
-    const [leadsRes, prevLeadsRes, totalLeadsRes, submissionsRes, metaRes, cvcrmRes] = await Promise.all([
+    const [leadsRes, prevLeadsRes, totalLeadsRes, submissionsRes, metaRes, cvcrmRes, waRes] = await Promise.all([
       supabase
         .from('leads')
         .select('id, name, source, temperature, score, created_at')
@@ -66,6 +72,11 @@ export const dashboardService = {
       supabase
         .from('cvcrm_delivery_logs')
         .select('status')
+        .eq('company_id', companyId)
+        .gte('created_at', since),
+      supabase
+        .from('whatsapp_click_events')
+        .select('id, lead_id, tracking, created_at')
         .eq('company_id', companyId)
         .gte('created_at', since),
     ]);
@@ -124,6 +135,22 @@ export const dashboardService = {
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
 
+    const waEvents = (waRes.data ?? []) as Array<{
+      id: string;
+      lead_id: string | null;
+      tracking: Record<string, string | null> | null;
+    }>;
+    const waLeadsFromClicks = waEvents.filter((e) => !!e.lead_id).length;
+    const waSourceMap = new Map<string, number>();
+    for (const e of waEvents) {
+      const src = e.tracking?.utm_source || 'Direto';
+      waSourceMap.set(src, (waSourceMap.get(src) ?? 0) + 1);
+    }
+    const waTopSources = Array.from(waSourceMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
     return {
       totalLeads: totalLeadsRes.count ?? 0,
       leadsThisPeriod,
@@ -140,6 +167,12 @@ export const dashboardService = {
       dailySeries,
       sources,
       temperature,
+      whatsapp: {
+        clicks: waEvents.length,
+        leadsFromClicks: waLeadsFromClicks,
+        conversionRate: waEvents.length > 0 ? (waLeadsFromClicks / waEvents.length) * 100 : 0,
+        topSources: waTopSources,
+      },
       recentLeads: leads.slice(0, 8),
     };
   },
