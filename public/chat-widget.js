@@ -4,6 +4,8 @@
  *   <script src="https://www.altleadflow.com.br/chat-widget.js"
  *           data-company-id="SEU_COMPANY_ID"
  *           data-color="#4f46e5"
+ *           data-invite-message="Posso ajudar? 👋"
+ *           data-invite-delay="8"
  *           defer></script>
  */
 (function () {
@@ -11,7 +13,10 @@
   var companyId = script && script.getAttribute('data-company-id');
   if (!companyId) { console.warn('[AltChat] data-company-id ausente'); return; }
   var color = (script && script.getAttribute('data-color')) || '#4f46e5';
+  var inviteMessage = script && script.getAttribute('data-invite-message');
+  var inviteDelay = parseInt((script && script.getAttribute('data-invite-delay')) || '0', 10);
   var host = new URL(script.src).origin;
+  var storageKey = 'altchat_invite_' + companyId;
 
   var container = document.createElement('div');
   container.id = 'altchat-widget';
@@ -33,15 +38,41 @@
   frame.style.cssText = 'display:none;width:380px;height:560px;max-width:calc(100vw - 40px);max-height:calc(100vh - 120px);border:none;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.25);background:#fff;position:absolute;bottom:72px;right:0;';
   frame.title = 'Chat de atendimento';
 
-
+  var invite = null;
+  function dismissInvite() {
+    if (invite && invite.parentNode) invite.parentNode.removeChild(invite);
+    invite = null;
+    try { sessionStorage.setItem(storageKey, '1'); } catch (e) { /* noop */ }
+  }
+  function showInvite() {
+    if (open || invite) return;
+    try { if (sessionStorage.getItem(storageKey)) return; } catch (e) { /* noop */ }
+    invite = document.createElement('div');
+    invite.style.cssText = 'position:absolute;bottom:72px;right:0;max-width:260px;background:#fff;color:#111;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.18);padding:12px 32px 12px 14px;font:14px/1.4 system-ui,-apple-system,sans-serif;cursor:pointer;animation:altchat-in .25s ease-out;';
+    invite.textContent = inviteMessage;
+    invite.addEventListener('click', function () { dismissInvite(); toggle(true); });
+    var close = document.createElement('button');
+    close.setAttribute('aria-label', 'Fechar');
+    close.innerHTML = '×';
+    close.style.cssText = 'position:absolute;top:4px;right:6px;background:transparent;border:none;font-size:18px;line-height:1;color:#666;cursor:pointer;padding:2px 6px;';
+    close.addEventListener('click', function (e) { e.stopPropagation(); dismissInvite(); });
+    invite.appendChild(close);
+    container.appendChild(invite);
+  }
 
   var open = false;
-  btn.addEventListener('click', function () {
-    open = !open;
+  function toggle(force) {
+    open = typeof force === 'boolean' ? force : !open;
     frame.style.display = open ? 'block' : 'none';
-  });
+    if (open) dismissInvite();
+  }
+  btn.addEventListener('click', function () { toggle(); });
 
   container.appendChild(frame);
   container.appendChild(btn);
   document.body.appendChild(container);
+
+  if (inviteMessage && inviteDelay > 0) {
+    setTimeout(showInvite, inviteDelay * 1000);
+  }
 })();
