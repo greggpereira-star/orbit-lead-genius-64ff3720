@@ -35,7 +35,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
           navigate({ to: '/dashboard' });
         } catch (error: any) {
           if (error.message.includes('Email not confirmed')) {
-            navigate({ to: '/auth/verify-email' });
+            navigate({ to: '/verify-email' });
             return;
           }
           setRetryCount(prev => prev + 1);
