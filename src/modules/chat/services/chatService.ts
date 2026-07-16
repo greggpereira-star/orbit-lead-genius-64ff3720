@@ -9,6 +9,7 @@ export interface ChatConversation {
   visitor_phone: string | null;
   status: 'open' | 'pending' | 'closed';
   assigned_to: string | null;
+  department_id: string | null;
   page_url: string | null;
   metadata: Record<string, unknown>;
   last_message_at: string;
