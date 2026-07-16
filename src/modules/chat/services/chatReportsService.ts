@@ -110,4 +110,92 @@ export const chatReportsService = {
       topPages,
     };
   },
+
+  async perAgent(companyId: string, days = 30): Promise<AgentReportRow[]> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: msgs } = await supabase
+      .from(MSG)
+      .select('conversation_id,sender_id,sender_type,created_at')
+      .eq('company_id' as never, companyId as never)
+      .gte('created_at' as never, since as never)
+      .order('created_at' as never, { ascending: true });
+
+    const messages = (msgs ?? []) as Array<{ conversation_id: string; sender_id: string | null; sender_type: string; created_at: string }>;
+
+    const { data: convs } = await supabase
+      .from(CONV)
+      .select('id,assigned_to,rating')
+      .eq('company_id' as never, companyId as never)
+      .gte('created_at' as never, since as never);
+    const conversations = (convs ?? []) as Array<{ id: string; assigned_to: string | null; rating: number | null }>;
+
+    const agentIds = new Set<string>();
+    conversations.forEach((c) => { if (c.assigned_to) agentIds.add(c.assigned_to); });
+    messages.forEach((m) => { if (m.sender_type === 'agent' && m.sender_id) agentIds.add(m.sender_id); });
+    if (agentIds.size === 0) return [];
+
+    const { data: profs } = await supabase
+      .from('profiles' as never)
+      .select('id,full_name')
+      .in('id' as never, Array.from(agentIds) as never);
+    const nameMap = new Map<string, string>();
+    ((profs ?? []) as Array<{ id: string; full_name: string | null }>).forEach((p) => nameMap.set(p.id, p.full_name || 'Atendente'));
+
+    // Response times: for each conversation, pair visitor msg -> next agent msg
+    const perConv = new Map<string, typeof messages>();
+    messages.forEach((m) => {
+      const arr = perConv.get(m.conversation_id) ?? [];
+      arr.push(m);
+      perConv.set(m.conversation_id, arr);
+    });
+    const responseByAgent = new Map<string, number[]>();
+    perConv.forEach((arr) => {
+      for (let i = 0; i < arr.length - 1; i++) {
+        const a = arr[i], b = arr[i + 1];
+        if (a.sender_type === 'visitor' && b.sender_type === 'agent' && b.sender_id) {
+          const diff = (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) / 1000;
+          if (diff >= 0 && diff < 60 * 60 * 24) {
+            const list = responseByAgent.get(b.sender_id) ?? [];
+            list.push(diff);
+            responseByAgent.set(b.sender_id, list);
+          }
+        }
+      }
+    });
+
+    const convByAgent = new Map<string, string[]>();
+    const ratingsByAgent = new Map<string, number[]>();
+    conversations.forEach((c) => {
+      if (!c.assigned_to) return;
+      const list = convByAgent.get(c.assigned_to) ?? [];
+      list.push(c.id);
+      convByAgent.set(c.assigned_to, list);
+      if (typeof c.rating === 'number') {
+        const r = ratingsByAgent.get(c.assigned_to) ?? [];
+        r.push(c.rating);
+        ratingsByAgent.set(c.assigned_to, r);
+      }
+    });
+
+    const msgByAgent = new Map<string, number>();
+    messages.forEach((m) => {
+      if (m.sender_type !== 'agent' || !m.sender_id) return;
+      msgByAgent.set(m.sender_id, (msgByAgent.get(m.sender_id) ?? 0) + 1);
+    });
+
+    return Array.from(agentIds).map((id) => {
+      const responses = responseByAgent.get(id) ?? [];
+      const ratings = ratingsByAgent.get(id) ?? [];
+      return {
+        agentId: id,
+        agentName: nameMap.get(id) ?? 'Atendente',
+        messages: msgByAgent.get(id) ?? 0,
+        conversations: (convByAgent.get(id) ?? []).length,
+        avgResponseSeconds: responses.length > 0 ? responses.reduce((a, b) => a + b, 0) / responses.length : null,
+        avgRating: ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
+        ratingCount: ratings.length,
+      };
+    }).sort((a, b) => b.messages - a.messages);
+  },
 };
