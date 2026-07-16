@@ -30,6 +30,9 @@
   forward.set('lf_page', window.location.href);
   if (document.referrer) forward.set('lf_ref', document.referrer);
   frame.src = host + '/chat-embed/' + encodeURIComponent(companyId) + '?' + forward.toString();
+  frame.style.cssText = 'display:none;width:380px;height:560px;max-width:calc(100vw - 40px);max-height:calc(100vh - 120px);border:none;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.25);background:#fff;position:absolute;bottom:72px;right:0;';
+  frame.title = 'Chat de atendimento';
+
 
 
   var open = false;
