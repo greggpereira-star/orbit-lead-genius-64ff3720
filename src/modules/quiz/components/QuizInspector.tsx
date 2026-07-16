@@ -7,8 +7,10 @@ import { Trash2, Plus, GripVertical } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { MediaUploader } from './MediaUploader';
 
 interface Props {
+  quizId: string;
   block: QuizBlock | null;
   design: QuizDesign;
   onChangeBlock: (patch: Partial<QuizBlock>) => void;
