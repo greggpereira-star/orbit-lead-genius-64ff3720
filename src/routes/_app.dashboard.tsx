@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Users, TrendingUp, TrendingDown, Flame, ListChecks, Megaphone, Zap, ArrowUpRight,
+  Users, TrendingUp, TrendingDown, Flame, ListChecks, Megaphone, Zap, ArrowUpRight, MessageSquare,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
