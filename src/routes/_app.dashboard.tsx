@@ -185,7 +185,7 @@ function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Facebook className="h-4 w-4" />Meta Lead Ads</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Megaphone className="h-4 w-4" />Meta Lead Ads</CardTitle>
             <CardDescription>Eventos recebidos no período</CardDescription>
           </CardHeader>
           <CardContent>
