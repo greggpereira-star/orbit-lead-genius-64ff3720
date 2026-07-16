@@ -246,12 +246,27 @@ function ObservabilityPage() {
                 </CardTitle>
                 <CardDescription>Últimas tentativas, retries pendentes e envios concluídos.</CardDescription>
               </div>
-              <Badge variant={data?.cvcrmStatus === 'connected' ? 'default' : 'secondary'} className="w-fit uppercase">
-                {data?.cvcrmStatus ?? 'loading'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Select value={deliveryStatusFilter} onValueChange={setDeliveryStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="success">Sucesso</SelectItem>
+                    <SelectItem value="sending">Enviando</SelectItem>
+                    <SelectItem value="retrying">Retentando</SelectItem>
+                    <SelectItem value="failed">Falhou</SelectItem>
+                    <SelectItem value="dead_letter">Dead letter</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Badge variant={data?.cvcrmStatus === 'connected' ? 'default' : 'secondary'} className="uppercase">
+                  {data?.cvcrmStatus ?? 'loading'}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
-              <DeliveryTable deliveries={deliveries} isLoading={observabilityQuery.isLoading} />
+              <DeliveryTable deliveries={filteredDeliveries} isLoading={observabilityQuery.isLoading} />
             </CardContent>
           </Card>
 
@@ -269,10 +284,12 @@ function ObservabilityPage() {
                 isLoading={observabilityQuery.isLoading}
                 processingId={reprocessMutation.variables?.id ?? null}
                 onReprocess={(entry) => reprocessMutation.mutate(entry)}
+                onViewDetails={(entry) => setSelectedDlqEntry(entry)}
               />
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="auth" className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
