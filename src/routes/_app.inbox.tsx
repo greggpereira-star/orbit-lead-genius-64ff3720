@@ -250,20 +250,54 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
         </div>
       </ScrollArea>
 
-      <form
-        onSubmit={(e) => { e.preventDefault(); send(); }}
-        className="border-t p-3 flex items-center gap-2"
-      >
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Escreva uma resposta…"
-          disabled={sending || conversation.status === 'closed'}
-        />
-        <Button type="submit" disabled={sending || !text.trim() || conversation.status === 'closed'}>
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
+      <div className="border-t relative">
+        {showReplies && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 mx-3 rounded-md border bg-popover shadow-lg max-h-64 overflow-y-auto z-10">
+            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Respostas rápidas
+            </div>
+            {filteredReplies.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => applyReply(r)}
+                className="w-full text-left px-3 py-2 hover:bg-muted/60 border-b last:border-b-0"
+              >
+                <div className="text-xs font-medium">
+                  <code className="bg-muted px-1 rounded">/{r.shortcut}</code>
+                </div>
+                <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{r.content}</div>
+              </button>
+            ))}
+          </div>
+        )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+          className="p-3 flex items-center gap-2"
+        >
+          <Input
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Escreva uma resposta… ( / para atalhos)"
+            disabled={sending || conversation.status === 'closed'}
+            onKeyDown={(e) => {
+              if (e.key === 'Tab' && filteredReplies.length > 0) {
+                e.preventDefault();
+                applyReply(filteredReplies[0]);
+              } else if (e.key === 'Escape') {
+                setShowReplies(false);
+              }
+            }}
+          />
+          <Button type="submit" disabled={sending || !text.trim() || conversation.status === 'closed'}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
     </>
   );
 }
