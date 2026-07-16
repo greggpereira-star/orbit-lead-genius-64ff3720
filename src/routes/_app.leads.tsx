@@ -367,7 +367,7 @@ function LoadingRows() {
     <>
       {[0, 1, 2, 3].map((row) => (
         <TableRow key={`loading-lead-${row}`}>
-          <TableCell colSpan={7} className="p-4">
+          <TableCell colSpan={8} className="p-4">
             <Skeleton className="h-10 w-full" />
           </TableCell>
         </TableRow>
