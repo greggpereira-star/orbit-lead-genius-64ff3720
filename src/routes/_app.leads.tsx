@@ -211,7 +211,7 @@ function LeadsPage() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:w-[420px]">
+        <div className="grid grid-cols-2 gap-3 lg:w-[620px] lg:grid-cols-3">
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
@@ -233,6 +233,16 @@ function LeadsPage() {
               {TEMPERATURE_OPTIONS.map((option) => (
                 <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={assignment} onValueChange={(value) => setAssignment(value as typeof assignment)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Atribuição" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os vendedores</SelectItem>
+              <SelectItem value="mine">Meus leads</SelectItem>
+              <SelectItem value="unassigned">Sem atribuição</SelectItem>
             </SelectContent>
           </Select>
         </div>
