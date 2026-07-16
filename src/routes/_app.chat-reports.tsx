@@ -154,6 +154,15 @@ function ChatReportsPage() {
   );
 }
 
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
 function KPI({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
   return (
     <Card>
