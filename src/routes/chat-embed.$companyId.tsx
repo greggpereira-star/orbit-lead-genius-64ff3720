@@ -123,6 +123,17 @@ function EmbedChat() {
     });
   }
 
+  if (domainAllowed === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center">
+        <div className="max-w-sm space-y-2">
+          <h2 className="text-base font-semibold">Chat indisponível</h2>
+          <p className="text-sm text-muted-foreground">Este site não está autorizado a usar o chat.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!started) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
