@@ -39,6 +39,7 @@ import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.setti
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
+import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$id.publish'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
@@ -195,6 +196,11 @@ const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppLeadsRoute,
 } as any)
+const AppIntegrationsMetaRoute = AppIntegrationsMetaRouteImport.update({
+  id: '/integrations/meta',
+  path: '/integrations/meta',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
   id: '/tv',
   path: '/tv',
@@ -222,9 +228,9 @@ const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
 } as any)
 const AppIntegrationsMetaCallbackRoute =
   AppIntegrationsMetaCallbackRouteImport.update({
-    id: '/integrations/meta/callback',
-    path: '/integrations/meta/callback',
-    getParentRoute: () => AppRoute,
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => AppIntegrationsMetaRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
+  '/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/company': typeof AppSettingsCompanyRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
+  '/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/company': typeof AppSettingsCompanyRoute
@@ -323,6 +331,7 @@ export interface FileRoutesById {
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
+  '/_app/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/q/$slug'
     | '/analytics/tv'
+    | '/integrations/meta'
     | '/leads/$id'
     | '/settings/automations'
     | '/settings/company'
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/q/$slug'
     | '/analytics/tv'
+    | '/integrations/meta'
     | '/leads/$id'
     | '/settings/automations'
     | '/settings/company'
@@ -434,6 +445,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/q/$slug'
     | '/_app/analytics/tv'
+    | '/_app/integrations/meta'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
     | '/_app/settings/company'
@@ -672,6 +684,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsIdRouteImport
       parentRoute: typeof AppLeadsRoute
     }
+    '/_app/integrations/meta': {
+      id: '/_app/integrations/meta'
+      path: '/integrations/meta'
+      fullPath: '/integrations/meta'
+      preLoaderRoute: typeof AppIntegrationsMetaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/analytics/tv': {
       id: '/_app/analytics/tv'
       path: '/tv'
@@ -709,10 +728,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/integrations/meta/callback': {
       id: '/_app/integrations/meta/callback'
-      path: '/integrations/meta/callback'
+      path: '/callback'
       fullPath: '/integrations/meta/callback'
       preLoaderRoute: typeof AppIntegrationsMetaCallbackRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppIntegrationsMetaRoute
     }
   }
 }
@@ -781,6 +800,17 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
   AppSettingsRouteChildren,
 )
 
+interface AppIntegrationsMetaRouteChildren {
+  AppIntegrationsMetaCallbackRoute: typeof AppIntegrationsMetaCallbackRoute
+}
+
+const AppIntegrationsMetaRouteChildren: AppIntegrationsMetaRouteChildren = {
+  AppIntegrationsMetaCallbackRoute: AppIntegrationsMetaCallbackRoute,
+}
+
+const AppIntegrationsMetaRouteWithChildren =
+  AppIntegrationsMetaRoute._addFileChildren(AppIntegrationsMetaRouteChildren)
+
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
   AppAutomationsRoute: typeof AppAutomationsRoute
@@ -792,7 +822,7 @@ interface AppRouteChildren {
   AppQuizzesRoute: typeof AppQuizzesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
-  AppIntegrationsMetaCallbackRoute: typeof AppIntegrationsMetaCallbackRoute
+  AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -806,7 +836,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuizzesRoute: AppQuizzesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
-  AppIntegrationsMetaCallbackRoute: AppIntegrationsMetaCallbackRoute,
+  AppIntegrationsMetaRoute: AppIntegrationsMetaRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

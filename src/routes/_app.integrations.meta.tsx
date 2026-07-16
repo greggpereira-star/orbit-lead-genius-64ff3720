@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Facebook, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   startMetaOAuth,
