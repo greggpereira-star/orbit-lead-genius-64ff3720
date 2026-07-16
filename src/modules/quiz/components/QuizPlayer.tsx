@@ -52,10 +52,12 @@ function PlayerRunner({
   quizId,
   companyId,
   schema,
+  preview = false,
 }: {
   quizId: string;
   companyId: string;
   schema: QuizSchema;
+  preview?: boolean;
 }) {
   const [state, setState] = useState<QuizRunState>(createInitialState);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
