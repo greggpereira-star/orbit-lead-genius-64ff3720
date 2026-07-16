@@ -1,236 +1,235 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  Users, 
-  GitPullRequest, 
-  TrendingUp, 
-  Target, 
-  MousePointer2, 
-  FormInput, 
-  CheckCircle2,
-  Globe,
-  Search,
-  Plus
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Users, TrendingUp, TrendingDown, Flame, ListChecks, Facebook, Zap, ArrowUpRight,
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import ReactECharts from 'echarts-for-react';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { dashboardService } from '@/modules/analytics/services/dashboardService';
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/_app/dashboard')({
+  head: () => ({
+    meta: [
+      { title: 'Dashboard Executivo — Alt LeadFlow' },
+      { name: 'description', content: 'KPIs consolidados de leads, quiz, Meta Ads e integrações CRM.' },
+    ],
+  }),
   component: DashboardPage,
 });
 
-const stats = [
-  { title: 'Total Leads', value: '1,284', icon: Users, change: '+12.5%', trend: 'up' },
-  { title: 'Deals in Pipeline', value: '$42,500', icon: Target, change: '+8.2%', trend: 'up' },
-  { title: 'Conversion Rate', value: '3.2%', icon: TrendingUp, change: '-0.4%', trend: 'down' },
-  { title: 'Active Automations', value: '12', icon: GitPullRequest, change: '+2', trend: 'up' },
-];
+const RANGES = [
+  { label: '7d', days: 7 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
+] as const;
 
-const chartData = [
-  { name: 'Mon', leads: 40, conversions: 24 },
-  { name: 'Tue', leads: 30, conversions: 13 },
-  { name: 'Wed', leads: 20, conversions: 98 },
-  { name: 'Thu', leads: 27, conversions: 39 },
-  { name: 'Fri', leads: 18, conversions: 48 },
-  { name: 'Sat', leads: 23, conversions: 38 },
-  { name: 'Sun', leads: 34, conversions: 43 },
-];
-
-const attributionData = [
-  { name: 'Google Ads', value: 45, color: 'var(--primary)' },
-  { name: 'Meta Ads', value: 30, color: 'oklch(0.68 0.19 145)' }, // Success/Green
-  { name: 'Organic', value: 15, color: 'oklch(0.65 0.23 300)' }, // Purple
-  { name: 'Direct', value: 10, color: 'oklch(0.59 0.23 27)' }, // Danger/Red
-];
-
-const liveEvents = [
-  { id: 1, type: 'page_view', text: 'Someone from São Paulo viewed Pricing', time: '2m ago', icon: MousePointer2, color: 'text-blue-500' },
-  { id: 2, type: 'form_submission', text: 'New lead "Alice M." via Enterprise Form', time: '5m ago', icon: FormInput, color: 'text-emerald-500' },
-  { id: 3, type: 'status_change', text: 'Lead "Bob R." moved to Qualified', time: '12m ago', icon: CheckCircle2, color: 'text-amber-500' },
-  { id: 4, type: 'whatsapp', text: 'Message sent to "John Doe"', time: '15m ago', icon: Globe, color: 'text-green-500' },
+const PIE_COLORS = [
+  'hsl(var(--primary))',
+  'oklch(0.68 0.19 145)',
+  'oklch(0.75 0.15 80)',
+  'oklch(0.65 0.23 300)',
+  'oklch(0.59 0.23 27)',
+  'oklch(0.7 0.14 220)',
 ];
 
 function DashboardPage() {
-  const [isLoading, setIsLoading] = useState(true);
+  const { company } = useAuth();
+  const companyId = company?.id;
+  const [days, setDays] = useState<number>(30);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard', companyId, days],
+    queryFn: () => dashboardService.getKpis(companyId as string, days),
+    enabled: !!companyId,
+    staleTime: 60_000,
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Welcome back to your CRM overview.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
+          <p className="text-sm text-muted-foreground">
+            Visão consolidada de leads, quiz e integrações — últimos {days} dias.
+          </p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" className="h-9 gap-2">
-             <Search className="h-4 w-4" />
-             Search Intelligence
-           </Button>
-           <Button size="sm" className="h-9 gap-2">
-             <Plus className="h-4 w-4" />
-             New Report
-           </Button>
+          <div className="flex rounded-md border bg-card p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.days}
+                onClick={() => setDays(r.days)}
+                className={cn(
+                  'rounded px-3 py-1.5 text-xs font-medium transition',
+                  days === r.days ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/leads"><ArrowUpRight className="h-4 w-4 mr-1" />Ver leads</Link>
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-32" />
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          stats.map((stat) => (
-          <Card key={stat.title} className="border-none shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                <span className={stat.trend === 'up' ? 'text-emerald-500 font-medium' : 'text-rose-500 font-medium'}>
-                  {stat.change}
-                </span>
-                {' '}from last month
-              </p>
-            </CardContent>
-          </Card>
-          ))
-        )}
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Leads no período"
+          value={isLoading ? null : data?.leadsThisPeriod ?? 0}
+          delta={data?.leadsDelta}
+          icon={Users}
+          hint={`Total geral: ${data?.totalLeads ?? 0}`}
+        />
+        <KpiCard
+          title="Leads quentes 🔥"
+          value={isLoading ? null : data?.hotLeads ?? 0}
+          icon={Flame}
+          tone="warning"
+          hint={`Warm: ${data?.temperature.warm ?? 0} · Cold: ${data?.temperature.cold ?? 0}`}
+        />
+        <KpiCard
+          title="Conversão Quiz"
+          value={isLoading ? null : `${(data?.quizConversion ?? 0).toFixed(1)}%`}
+          icon={ListChecks}
+          tone="success"
+          hint={`${data?.quizCompleted ?? 0} de ${data?.quizSubmissions ?? 0} completos`}
+        />
+        <KpiCard
+          title="CRM entregue"
+          value={isLoading ? null : `${(data?.cvcrmSuccessRate ?? 0).toFixed(1)}%`}
+          icon={Zap}
+          tone={data && data.cvcrmFailed > 0 ? 'danger' : 'success'}
+          hint={`${data?.cvcrmDelivered ?? 0} entregues · ${data?.cvcrmFailed ?? 0} falhas`}
+        />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 border-none shadow-sm">
+      {/* Séries e origens */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Lead Performance</CardTitle>
+            <CardTitle>Leads & submissões por dia</CardTitle>
+            <CardDescription>Volume diário — atualização em tempo quase real</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
-            {isLoading ? (
-              <Skeleton className="h-full w-full" />
+            {isLoading || !data ? (
+              <Skeleton className="w-full h-full" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-               <AreaChart data={chartData}>
-                 <defs>
-                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                  </linearGradient>
-                 </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 500 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 500 }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.2)' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: 600, color: 'var(--foreground)' }}
-                    labelStyle={{ fontWeight: 700, color: 'var(--foreground)', marginBottom: '4px' }}
+                <AreaChart data={data.dailySeries}>
+                  <defs>
+                    <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gSubs" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="oklch(0.68 0.19 145)" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="oklch(0.68 0.19 145)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                   />
-                    <Area type="monotone" dataKey="leads" stroke="var(--primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLeads)" />
-                 </AreaChart>
-             </ResponsiveContainer>
+                  <Area type="monotone" dataKey="leads" name="Leads" stroke="hsl(var(--primary))" fill="url(#gLeads)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="submissions" name="Quiz" stroke="oklch(0.68 0.19 145)" fill="url(#gSubs)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 border-none shadow-sm flex flex-col">
+        <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-             <CardDescription>Live events from your tracking pixel</CardDescription>
+            <CardTitle>Origem dos leads</CardTitle>
+            <CardDescription>Distribuição por canal</CardDescription>
           </CardHeader>
-           <CardContent className="flex-1">
-             <div className="space-y-5">
-               {liveEvents.map((event) => (
-                 <div key={event.id} className="flex items-start gap-4">
-                   <div className={`mt-0.5 p-1.5 rounded-lg bg-muted/50 ${event.color}`}>
-                     <event.icon className="h-4 w-4" />
-                   </div>
-                   <div className="flex-1 space-y-1">
-                     <p className="text-sm font-medium leading-none text-foreground/90">{event.text}</p>
-                     <p className="text-xs text-muted-foreground">{event.time}</p>
-                   </div>
-                 </div>
-               ))}
-             </div>
-             <div className="mt-8 pt-6 border-t">
-               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Channel Attribution</h4>
-               <div className="space-y-3">
-                 {attributionData.map((item) => (
-                   <div key={item.name} className="space-y-1.5">
-                     <div className="flex justify-between text-[11px]">
-                       <span className="font-medium">{item.name}</span>
-                       <span className="text-muted-foreground">{item.value}%</span>
-                     </div>
-                     <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                       <div 
-                         className="h-full rounded-full" 
-                         style={{ width: `${item.value}%`, backgroundColor: item.color }} 
-                       />
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </div>
-           </CardContent>
+          <CardContent className="h-[300px]">
+            {isLoading || !data ? (
+              <Skeleton className="w-full h-full" />
+            ) : data.sources.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Sem dados</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data.sources} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
+                    {data.sources.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Meta + Leads recentes */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Facebook className="h-4 w-4" />Meta Lead Ads</CardTitle>
+            <CardDescription>Eventos recebidos no período</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{isLoading ? '—' : data?.metaLeads ?? 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Leads via webhook do Facebook/Instagram</p>
+            <Button asChild variant="link" className="px-0 mt-2">
+              <Link to="/integrations/meta">Configurar integração <ArrowUpRight className="h-3 w-3 ml-1" /></Link>
+            </Button>
+          </CardContent>
         </Card>
 
-        <Card className="col-span-7 border-none shadow-sm">
-          <CardHeader>
-            <CardTitle>Conversion Funnel Intelligence</CardTitle>
-            <CardDescription>Visualizing lead conversion through the sales pipeline</CardDescription>
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Leads recentes</CardTitle>
+              <CardDescription>Últimas capturas no período</CardDescription>
+            </div>
+            <Button asChild size="sm" variant="ghost"><Link to="/leads">Ver todos</Link></Button>
           </CardHeader>
-          <CardContent className="h-[350px]">
-            <ReactECharts 
-              option={{
-                tooltip: { trigger: 'item', formatter: '{b} : {c}%' },
-                series: [{
-                  name: 'Funnel',
-                  type: 'funnel',
-                  left: '10%',
-                  top: 20,
-                  bottom: 20,
-                  width: '80%',
-                  min: 0,
-                  max: 100,
-                  minSize: '0%',
-                  maxSize: '100%',
-                  sort: 'descending',
-                  gap: 2,
-                  label: { show: true, position: 'inside', color: '#fff' },
-                  itemStyle: { borderColor: '#fff', borderWidth: 1 },
-                  data: [
-                    { value: 100, name: 'Visits' },
-                    { value: 60, name: 'Leads' },
-                    { value: 40, name: 'Qualified' },
-                    { value: 20, name: 'Deals' },
-                    { value: 10, name: 'Closed' }
-                  ]
-                }]
-              }} 
-              style={{ height: '100%', width: '100%' }}
-            />
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+              </div>
+            ) : (data?.recentLeads.length ?? 0) === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">Sem leads no período.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {data!.recentLeads.map((l) => (
+                  <div key={l.id} className="flex items-center justify-between py-2.5">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{l.name ?? 'Sem nome'}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {l.source ?? 'Direto'} · {new Date(l.created_at).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {typeof l.score === 'number' && <Badge variant="outline">{l.score}</Badge>}
+                      {l.temperature && <TemperatureBadge t={l.temperature} />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -238,4 +237,49 @@ function DashboardPage() {
   );
 }
 
-// Fixed missing imports
+interface KpiCardProps {
+  title: string;
+  value: number | string | null;
+  delta?: number;
+  icon: React.ComponentType<{ className?: string }>;
+  hint?: string;
+  tone?: 'default' | 'success' | 'warning' | 'danger';
+}
+
+function KpiCard({ title, value, delta, icon: Icon, hint, tone = 'default' }: KpiCardProps) {
+  const toneClass = {
+    default: 'text-primary',
+    success: 'text-emerald-500',
+    warning: 'text-amber-500',
+    danger: 'text-red-500',
+  }[tone];
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className={cn('h-4 w-4', toneClass)} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value === null ? <Skeleton className="h-7 w-16" /> : value}</div>
+        {typeof delta === 'number' && (
+          <p className={cn('text-xs mt-1 flex items-center gap-1', delta >= 0 ? 'text-emerald-500' : 'text-red-500')}>
+            {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {delta >= 0 ? '+' : ''}{delta.toFixed(1)}% vs período anterior
+          </p>
+        )}
+        {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TemperatureBadge({ t }: { t: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    hot: { label: '🔥 Hot', cls: 'bg-red-500/10 text-red-500 border-red-500/20' },
+    warm: { label: 'Warm', cls: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+    cold: { label: 'Cold', cls: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+  };
+  const cfg = map[t] ?? { label: t, cls: '' };
+  return <Badge variant="outline" className={cfg.cls}>{cfg.label}</Badge>;
+}
