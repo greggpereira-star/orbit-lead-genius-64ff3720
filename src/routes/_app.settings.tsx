@@ -1,6 +1,6 @@
  import { Outlet, createFileRoute, Link } from '@tanstack/react-router';
  import { Card, CardContent } from '@/components/ui/card';
-import { User, Building, Shield, Bell, Share2, Zap, Users, Code2, MessageCircle } from 'lucide-react';
+import { User, Building, Shield, Bell, Share2, Zap, Users, Code2, MessageCircle, Sparkles } from 'lucide-react';
 
 export const Route = createFileRoute('/_app/settings')({
   component: SettingsLayout,
