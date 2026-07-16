@@ -12,6 +12,8 @@ export interface LeadFilters {
   status?: string;
   temperature?: LeadTemperature | 'all';
   includeArchived?: boolean;
+  assignment?: 'all' | 'mine' | 'unassigned';
+  currentUserId?: string | null;
 }
 
 export interface CreateLeadInput {
