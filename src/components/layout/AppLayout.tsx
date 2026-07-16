@@ -15,15 +15,26 @@ export function AppLayout() {
   const router = useRouter();
   const [retryCount, setRetryCount] = useState(0);
 
+   const needsLogin = state === 'UNAUTHENTICATED';
+   const needsVerify = state === 'EMAIL_SENT' || state === 'WAITING_EMAIL_CONFIRMATION';
+
    useEffect(() => {
-     if (state === 'UNAUTHENTICATED') {
+     if (needsLogin) {
        logger.info('User is unauthenticated, redirecting to login', { traceId });
-       router.navigate({ to: '/login' });
-     } else if (state === 'EMAIL_SENT' || state === 'WAITING_EMAIL_CONFIRMATION') {
+       router.navigate({ to: '/login', replace: true });
+     } else if (needsVerify) {
        logger.info('Email verification required, redirecting', { traceId });
-       router.navigate({ to: '/verify-email' });
+       router.navigate({ to: '/verify-email', replace: true });
      }
-   }, [state, router, traceId]);
+   }, [needsLogin, needsVerify, router, traceId]);
+
+   if (needsLogin || needsVerify) {
+     return (
+       <div className="flex h-screen items-center justify-center bg-background">
+         <Loader2 className="h-6 w-6 text-primary animate-spin" />
+       </div>
+     );
+   }
 
   useEffect(() => {
     if (state === 'READY' && company) {
