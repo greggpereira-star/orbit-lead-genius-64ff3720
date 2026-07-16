@@ -337,6 +337,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          chat_allowed_domains: string[]
           created_at: string
           created_by: string | null
           id: string
@@ -344,6 +345,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          chat_allowed_domains?: string[]
           created_at?: string
           created_by?: string | null
           id?: string
@@ -351,6 +353,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          chat_allowed_domains?: string[]
           created_at?: string
           created_by?: string | null
           id?: string
@@ -3283,6 +3286,7 @@ export type Database = {
       get_or_create_company: {
         Args: { p_name: string; p_slug: string; p_user_id: string }
         Returns: {
+          chat_allowed_domains: string[]
           created_at: string
           created_by: string | null
           id: string
@@ -3303,6 +3307,10 @@ export type Database = {
         }[]
       }
       get_workspace_context_v1: { Args: never; Returns: Json }
+      is_chat_domain_allowed: {
+        Args: { p_company_id: string; p_domain: string }
+        Returns: boolean
+      }
       pick_next_routing_member: {
         Args: { p_config_id: string; p_prefer_top?: boolean }
         Returns: string
