@@ -63,6 +63,7 @@ function InboxPage() {
           <p className="text-sm text-muted-foreground">Atenda visitantes do site em tempo real, capture leads e acompanhe toda a jornada de origem.</p>
         </div>
         <div className="flex items-center gap-2">
+          <OnlineVisitorsPopover companyId={companyId} />
           <Button variant="outline" size="sm" asChild>
             <Link to="/chat-reports">Relatórios</Link>
           </Button>
