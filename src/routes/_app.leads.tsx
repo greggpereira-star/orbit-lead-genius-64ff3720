@@ -317,6 +317,13 @@ function LeadTableRow({ lead, currentUserId, onArchive }: { lead: LeadRow; curre
           <span className="w-8 text-right text-xs font-bold tabular-nums">{score}</span>
         </div>
       </TableCell>
+      <TableCell className="text-xs font-semibold">
+        {lead.assigned_to ? (
+          <Badge variant={lead.assigned_to === currentUserId ? 'default' : 'outline'}>{assignedLabel}</Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
       <TableCell className="text-xs font-medium text-muted-foreground">{formatDate(lead.created_at)}</TableCell>
       <TableCell className="text-right">
         <DropdownMenu>
