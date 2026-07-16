@@ -407,7 +407,15 @@ function ObservabilityPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <DlqDetailsDialog
+        entry={selectedDlqEntry}
+        onOpenChange={(open) => !open && setSelectedDlqEntry(null)}
+        onReprocess={(entry) => reprocessMutation.mutate(entry)}
+        isProcessing={reprocessMutation.isPending}
+      />
     </div>
+
   );
 }
 
