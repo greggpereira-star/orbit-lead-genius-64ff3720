@@ -135,14 +135,13 @@ export const Route = createFileRoute('/api/public/whatsapp-click')({
           });
 
           if (click?.id) {
-            const patch: Record<string, unknown> = {
+            await supabaseAdmin.from('whatsapp_click_events').update({
               capi_status: capi.ok ? 'sent' : capi.status === 'skipped_no_integration' ? 'skipped' : 'retry',
               capi_attempts: 1,
               capi_last_error: capi.ok ? null : capi.error ?? null,
               capi_sent_at: capi.ok ? new Date().toISOString() : null,
-              capi_response: capi.response ?? null,
-            };
-            await supabaseAdmin.from('whatsapp_click_events').update(patch).eq('id', click.id);
+              capi_response: (capi.response ?? null) as never,
+            }).eq('id', click.id);
           }
 
           log(capi.ok ? 'info' : capi.status === 'skipped_no_integration' ? 'info' : 'warn', traceId,
