@@ -1,218 +1,379 @@
- import { createFileRoute, Link } from '@tanstack/react-router';
- import { useState, useEffect } from 'react';
- import { supabase } from '@/lib/supabase';
- import { useAuth } from '@/core/auth/hooks/useAuth';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-   TableHead,
-   TableHeader,
-   TableRow
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-  import { Search, Filter, Plus, MoreHorizontal, Globe, Share2, UserPlus, X } from 'lucide-react';
-  import { toast } from 'sonner';
-  import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogFooter
-  } from '@/components/ui/dialog';
-  import { Label } from '@/components/ui/label';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Archive, Filter, Globe, Loader2, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
 
-  export const Route = createFileRoute('/_app/leads')({
-    component: LeadsPage,
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import {
+  archiveLead,
+  createLead,
+  getLeadDisplayName,
+  getLeadScore,
+  getLeadTemperature,
+  listLeads,
+  type LeadRow,
+} from '@/modules/crm/services/leadService';
+
+export const Route = createFileRoute('/_app/leads')({
+  component: LeadsPage,
+});
+
+interface LeadFormState {
+  name: string;
+  email: string;
+  phone: string;
+  companyName: string;
+  source: string;
+}
+
+const INITIAL_FORM: LeadFormState = {
+  name: '',
+  email: '',
+  phone: '',
+  companyName: '',
+  source: 'manual',
+};
+
+const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost', 'archived'];
+const TEMPERATURE_OPTIONS = ['hot', 'warm', 'cold'] as const;
+
+function LeadsPage() {
+  const { company } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [temperature, setTemperature] = useState<'all' | 'hot' | 'warm' | 'cold'>('all');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
+
+  const companyId = company?.id;
+  const leadsQuery = useQuery({
+    queryKey: ['leads', companyId, search, status, temperature],
+    queryFn: () => listLeads(companyId ?? '', { search, status, temperature }),
+    enabled: Boolean(companyId),
   });
-  
-  function LeadsPage() {
-   const { company } = useAuth();
-   const [leads, setLeads] = useState<any[]>([]);
-   const [isLoading, setIsLoading] = useState(true);
- 
-   useEffect(() => {
-     if (company) {
-       fetchLeads();
-     }
-   }, [company]);
- 
-   const fetchLeads = async () => {
-     setIsLoading(true);
-     const { data, error } = await supabase
-       .from('leads')
-       .select('*')
-       .eq('company_id', company?.id)
-       .order('created_at', { ascending: false });
- 
-     if (data) setLeads(data);
-     setIsLoading(false);
-   };
-  const getSourceIcon = (source: string) => {
-    switch (source.toLowerCase()) {
-       case 'google ads': return <Globe className="h-3.5 w-3.5 text-blue-500" />;
-       case 'meta ads': return <Share2 className="h-3.5 w-3.5 text-blue-600" />;
-      default: return <Globe className="h-3.5 w-3.5 text-slate-400" />;
+
+  const createMutation = useMutation({
+    mutationFn: () => {
+      if (!companyId) throw new Error('Workspace não carregado.');
+      return createLead({
+        companyId,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        companyName: form.companyName,
+        source: form.source,
+      });
+    },
+    onSuccess: async (lead) => {
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      setForm(INITIAL_FORM);
+      setIsDialogOpen(false);
+      toast.success('Lead criado com histórico e score inicial.');
+      navigate({ to: '/leads/$id', params: { id: lead.id } });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível criar o lead.');
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (leadId: string) => {
+      if (!companyId) throw new Error('Workspace não carregado.');
+      return archiveLead({ leadId, companyId });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead arquivado sem perder histórico.');
+    },
+    onError: () => toast.error('Não foi possível arquivar o lead.'),
+  });
+
+  const leads = leadsQuery.data ?? [];
+  const metrics = useMemo(() => buildMetrics(leads), [leads]);
+
+  const handleCreateLead = () => {
+    if (!form.name.trim() && !form.email.trim() && !form.phone.trim()) {
+      toast.error('Informe ao menos nome, e-mail ou telefone.');
+      return;
     }
+    createMutation.mutate();
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
-        <div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Leads</h1>
-          <p className="text-muted-foreground text-sm">Manage and track your potential customers with attribution intelligence.</p>
+          <p className="text-sm text-muted-foreground">Pipeline de contatos com atribuição, score e origem de captura.</p>
         </div>
-         <Dialog>
-           <DialogTrigger asChild>
-             <Button className="flex items-center gap-2 font-bold h-10 shadow-lg shadow-primary/20">
-               <Plus className="h-4 w-4" />
-               Add Lead
-             </Button>
-           </DialogTrigger>
-           <DialogContent className="sm:max-w-[500px]">
-             <DialogHeader>
-               <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                 <UserPlus className="h-5 w-5 text-primary" />
-                 Create New Lead
-               </DialogTitle>
-               <DialogDescription>
-                 Add a lead manually to your CDP. All automated intelligence will trigger after creation.
-               </DialogDescription>
-             </DialogHeader>
-             <div className="space-y-4 py-4">
-               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label className="text-xs font-bold uppercase text-muted-foreground">Full Name</Label>
-                   <Input placeholder="John Doe" />
-                 </div>
-                 <div className="space-y-2">
-                   <Label className="text-xs font-bold uppercase text-muted-foreground">Work Email</Label>
-                   <Input type="email" placeholder="john@company.com" />
-                 </div>
-               </div>
-               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label className="text-xs font-bold uppercase text-muted-foreground">Phone Number</Label>
-                   <Input placeholder="+1..." />
-                 </div>
-                 <div className="space-y-2">
-                   <Label className="text-xs font-bold uppercase text-muted-foreground">Company</Label>
-                   <Input placeholder="Acme Inc" />
-                 </div>
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-xs font-bold uppercase text-muted-foreground">Lead Source (Manual Override)</Label>
-                  <select className="w-full h-10 rounded-md border border-input bg-input px-3 py-2 text-sm font-medium text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
-                   <option value="direct">Direct / Manual</option>
-                   <option value="referral">Referral</option>
-                   <option value="inbound">Inbound Content</option>
-                   <option value="cold_outreach">Cold Outreach</option>
-                 </select>
-               </div>
-             </div>
-             <DialogFooter>
-               <Button variant="outline" className="font-bold">Cancel</Button>
-               <Button className="font-bold gap-2" onClick={() => {
-                 toast.success('Lead created and intelligence processing started.');
-               }}>
-                 Create & Analyze Lead
-               </Button>
-             </DialogFooter>
-           </DialogContent>
-         </Dialog>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="h-10 gap-2 font-bold shadow-lg shadow-primary/20">
+              <Plus className="h-4 w-4" />
+              Novo lead
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <UserPlus className="h-5 w-5 text-primary" />
+                Criar lead manual
+              </DialogTitle>
+              <DialogDescription>
+                Use para leads recebidos fora dos formulários, quizzes ou integrações automáticas.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4 sm:grid-cols-2">
+              <LeadField label="Nome completo">
+                <Input value={form.name} onChange={(event) => setFormField('name', event.target.value, setForm)} placeholder="Maria Silva" />
+              </LeadField>
+              <LeadField label="E-mail">
+                <Input value={form.email} type="email" onChange={(event) => setFormField('email', event.target.value, setForm)} placeholder="maria@empresa.com" />
+              </LeadField>
+              <LeadField label="Telefone">
+                <Input value={form.phone} onChange={(event) => setFormField('phone', event.target.value, setForm)} placeholder="(11) 99999-0000" />
+              </LeadField>
+              <LeadField label="Empresa">
+                <Input value={form.companyName} onChange={(event) => setFormField('companyName', event.target.value, setForm)} placeholder="Empresa / Recanto" />
+              </LeadField>
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="text-xs font-bold uppercase text-muted-foreground">Origem</Label>
+                <Select value={form.source} onValueChange={(value) => setFormField('source', value, setForm)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="referral">Indicação</SelectItem>
+                    <SelectItem value="inbound">Inbound</SelectItem>
+                    <SelectItem value="cold_outreach">Prospecção ativa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={createMutation.isPending}>Cancelar</Button>
+              <Button className="gap-2 font-bold" onClick={handleCreateLead} disabled={createMutation.isPending}>
+                {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Criar lead
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search leads by name, email or company..." className="pl-10 h-9" />
-        </div>
-        <Button variant="outline" size="sm" className="h-9 gap-2">
-          <Filter className="h-4 w-4" />
-          Advanced Filters
-        </Button>
+      <div className="grid gap-3 md:grid-cols-4">
+        <MetricCard label="Leads ativos" value={metrics.total} />
+        <MetricCard label="Novos 7 dias" value={metrics.newThisWeek} />
+        <MetricCard label="Leads quentes" value={metrics.hot} />
+        <MetricCard label="Score médio" value={metrics.averageScore} suffix="/100" />
       </div>
 
-      <div className="border rounded-lg bg-card overflow-hidden">
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:w-[420px]">
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={temperature} onValueChange={(value) => setTemperature(value as typeof temperature)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Temperatura" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {TEMPERATURE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="w-[250px]">Name & Contact</TableHead>
-              <TableHead>Origin</TableHead>
+              <TableHead className="min-w-[260px]">Contato</TableHead>
+              <TableHead>Origem</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Temperature</TableHead>
-              <TableHead>Lead Score</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right"></TableHead>
+              <TableHead>Temperatura</TableHead>
+              <TableHead className="w-[170px]">Score</TableHead>
+              <TableHead>Criado em</TableHead>
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
-           <TableBody>
-             {isLoading ? (
-               <TableRow>
-                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading leads...</TableCell>
-               </TableRow>
-             ) : leads.length === 0 ? (
-               <TableRow>
-                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No leads found.</TableCell>
-               </TableRow>
-             ) : (
-               leads.map((lead) => (
-                  <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/80 odd:bg-muted/30 transition-colors group">
-                   <TableCell className="font-medium p-0">
-                     <Link to="/leads/$id" params={{ id: lead.id }} className="block p-4">
-                        <div className="text-sm font-bold text-foreground">{lead.name || 'Unnamed Lead'}</div>
-                        <div className="text-[11px] text-muted-foreground font-semibold">{lead.email}</div>
-                     </Link>
-                   </TableCell>
-                 <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getSourceIcon(lead.source || lead.utm_source || 'Direct')}
-                      <span className="text-xs font-semibold">{lead.source || lead.utm_source || 'Direct'}</span>
-                    </div>
-                 </TableCell>
-                 <TableCell>
-                   <Badge variant="secondary" className="capitalize text-[10px] py-0">{lead.status}</Badge>
-                 </TableCell>
-                 <TableCell>
-                   <div className="flex items-center gap-2">
-                     <div className={`h-1.5 w-1.5 rounded-full ${
-                       lead.temperature === 'hot' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 
-                       lead.temperature === 'warm' ? 'bg-amber-500' : 'bg-blue-500'
-                     }`} />
-                     <span className="capitalize text-xs">{lead.temperature}</span>
-                   </div>
-                 </TableCell>
-                 <TableCell>
-                   <div className="flex items-center gap-2 w-24">
-                     <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                       <div 
-                         className={`h-full ${
-                           (lead.score || 0) > 80 ? 'bg-emerald-500' : 
-                           (lead.score || 0) > 50 ? 'bg-primary' : 'bg-amber-500'
-                         }`}
-                         style={{ width: `${lead.score || 0}%` }}
-                       />
-                     </div>
-                     <span className="text-[11px] font-bold">{lead.score || 0}</span>
-                   </div>
-                 </TableCell>
-                 <TableCell className="text-[11px] text-muted-foreground">{new Date(lead.created_at).toLocaleDateString()}</TableCell>
-                 <TableCell className="text-right">
-                   <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <MoreHorizontal className="h-4 w-4" />
-                   </Button>
-                 </TableCell>
-               </TableRow>
-             ))
-             )}
-           </TableBody>
+          <TableBody>
+            {leadsQuery.isLoading ? (
+              <LoadingRows />
+            ) : leads.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                  Nenhum lead encontrado para os filtros atuais.
+                </TableCell>
+              </TableRow>
+            ) : (
+              leads.map((lead) => (
+                <LeadTableRow key={lead.id} lead={lead} onArchive={() => archiveMutation.mutate(lead.id)} />
+              ))
+            )}
+          </TableBody>
         </Table>
       </div>
     </div>
   );
+}
+
+function LeadTableRow({ lead, onArchive }: { lead: LeadRow; onArchive: () => void }) {
+  const score = getLeadScore(lead);
+  const source = lead.source || lead.utm_source || 'direct';
+  const temperature = getLeadTemperature(lead);
+
+  return (
+    <TableRow className="group transition-colors hover:bg-muted/60">
+      <TableCell className="p-0">
+        <Link to="/leads/$id" params={{ id: lead.id }} className="block p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <div className="font-bold text-foreground">{getLeadDisplayName(lead)}</div>
+          <div className="text-xs font-medium text-muted-foreground">{lead.email || lead.phone || 'Sem contato informado'}</div>
+        </Link>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+          {source.toLowerCase().includes('meta') ? <Share2 className="h-4 w-4 text-primary" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
+          {formatLabel(source)}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="secondary" className="capitalize">{formatLabel(lead.status || 'new')}</Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={temperature === 'hot' ? 'default' : 'outline'} className="capitalize">{formatLabel(temperature)}</Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Progress value={score} className="h-1.5" />
+          <span className="w-8 text-right text-xs font-bold tabular-nums">{score}</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-xs font-medium text-muted-foreground">{formatDate(lead.created_at)}</TableCell>
+      <TableCell className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onArchive} className="gap-2">
+              <Archive className="h-4 w-4" />
+              Arquivar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function LeadField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-bold uppercase text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, suffix = '' }: { label: string; value: number; suffix?: string }) {
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
+      <div className="mt-2 text-2xl font-black tracking-tight text-foreground">{value}{suffix}</div>
+    </div>
+  );
+}
+
+function LoadingRows() {
+  return (
+    <>
+      {[0, 1, 2, 3].map((row) => (
+        <TableRow key={`loading-lead-${row}`}>
+          <TableCell colSpan={7} className="p-4">
+            <Skeleton className="h-10 w-full" />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+function buildMetrics(leads: LeadRow[]) {
+  const now = Date.now();
+  const weekInMs = 7 * 24 * 60 * 60 * 1000;
+  const totalScore = leads.reduce((sum, lead) => sum + getLeadScore(lead), 0);
+
+  return {
+    total: leads.length,
+    hot: leads.filter((lead) => getLeadTemperature(lead) === 'hot').length,
+    newThisWeek: leads.filter((lead) => now - new Date(lead.created_at).getTime() <= weekInMs).length,
+    averageScore: leads.length ? Math.round(totalScore / leads.length) : 0,
+  };
+}
+
+function setFormField(field: keyof LeadFormState, value: string, setForm: Dispatch<SetStateAction<LeadFormState>>) {
+  setForm((current) => ({ ...current, [field]: value }));
+}
+
+function formatLabel(value: string): string {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(value));
 }
