@@ -1,6 +1,6 @@
  import { Outlet, createFileRoute, Link } from '@tanstack/react-router';
  import { Card, CardContent } from '@/components/ui/card';
-import { User, Building, Shield, Bell, Share2, Zap, Users, Code2 } from 'lucide-react';
+import { User, Building, Shield, Bell, Share2, Zap, Users, Code2, MessageCircle } from 'lucide-react';
 
 export const Route = createFileRoute('/_app/settings')({
   component: SettingsLayout,
@@ -11,6 +11,7 @@ const settingsNav = [
    { title: 'Company', icon: Building, to: '/settings/company' },
    { title: 'Integrations', icon: Share2, to: '/settings/integrations' },
   { title: 'Widgets do site', icon: Code2, to: '/settings/widgets' },
+  { title: 'Chat: setores e atendentes', icon: MessageCircle, to: '/settings/chat' },
   { title: 'Automations', icon: Zap, to: '/settings/automations' },
   { title: 'Distribuição de Leads', icon: Users, to: '/settings/routing' },
    { title: 'Security', icon: Shield, to: '/settings/security' },
