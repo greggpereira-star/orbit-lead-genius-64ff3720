@@ -46,19 +46,33 @@ function InboxPage() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
-      <header className="px-6 py-4 border-b">
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <MessageCircle className="h-6 w-6" /> Inbox
-        </h1>
-        <p className="text-sm text-muted-foreground">Chat ao vivo com visitantes do site em tempo real.</p>
+      <header className="px-6 py-4 border-b flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <MessageCircle className="h-6 w-6" /> Chat ao vivo
+          </h1>
+          <p className="text-sm text-muted-foreground">Atenda visitantes do site em tempo real, capture leads e acompanhe toda a jornada de origem.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/settings/widgets">Instalar widget</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/settings/widgets">Configurar WhatsApp</Link>
+          </Button>
+        </div>
       </header>
 
       <div className="flex-1 grid grid-cols-[320px_1fr] overflow-hidden">
         <aside className="border-r overflow-y-auto">
           {conversationsQuery.isLoading && <div className="p-4 text-sm text-muted-foreground">Carregando…</div>}
           {conversations.length === 0 && !conversationsQuery.isLoading && (
-            <div className="p-6 text-sm text-muted-foreground">
-              Nenhuma conversa ainda. Instale o widget no seu site para começar a receber mensagens.
+            <div className="p-6 text-sm text-muted-foreground space-y-3">
+              <p className="font-medium text-foreground">Nenhuma conversa ainda</p>
+              <p>Instale o widget no seu site ou ative o botão de WhatsApp para começar a receber mensagens.</p>
+              <Button size="sm" className="w-full" asChild>
+                <Link to="/settings/widgets">Ver instruções</Link>
+              </Button>
             </div>
           )}
           {conversations.map((c) => (
@@ -90,8 +104,22 @@ function InboxPage() {
           {active ? (
             <ConversationView key={active.id} conversation={active} agentId={user?.id ?? ''} />
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              Selecione uma conversa
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 p-8">
+              <MessageCircle className="h-12 w-12 text-muted-foreground/40" />
+              <div>
+                <p className="font-medium">Nenhuma conversa ainda</p>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Instale o widget no seu site ou ative o botão de WhatsApp para começar a receber mensagens.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" asChild>
+                  <Link to="/settings/widgets">Instalar widget</Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/settings/widgets">Configurar WhatsApp</Link>
+                </Button>
+              </div>
             </div>
           )}
         </section>
