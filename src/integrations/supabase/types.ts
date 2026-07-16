@@ -1648,6 +1648,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          assigned_to: string | null
           company_id: string
           created_at: string
           cvcrm_id: string | null
@@ -1680,6 +1681,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          assigned_to?: string | null
           company_id: string
           created_at?: string
           cvcrm_id?: string | null
@@ -1712,6 +1714,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          assigned_to?: string | null
           company_id?: string
           created_at?: string
           cvcrm_id?: string | null
@@ -2563,6 +2566,107 @@ export type Database = {
           },
         ]
       }
+      routing_configs: {
+        Row: {
+          company_id: string
+          created_at: string
+          fallback_user_id: string | null
+          hot_threshold: number
+          id: string
+          is_active: boolean
+          name: string
+          strategy: string
+          updated_at: string
+          warm_threshold: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          fallback_user_id?: string | null
+          hot_threshold?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          strategy?: string
+          updated_at?: string
+          warm_threshold?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          fallback_user_id?: string | null
+          hot_threshold?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          strategy?: string
+          updated_at?: string
+          warm_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routing_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routing_members: {
+        Row: {
+          company_id: string
+          config_id: string
+          created_at: string
+          id: string
+          is_available: boolean
+          last_assigned_at: string | null
+          performance_score: number
+          updated_at: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          company_id: string
+          config_id: string
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          last_assigned_at?: string | null
+          performance_score?: number
+          updated_at?: string
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          company_id?: string
+          config_id?: string
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          last_assigned_at?: string | null
+          performance_score?: number
+          updated_at?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routing_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routing_members_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "routing_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           company_id: string
@@ -2740,6 +2844,10 @@ export type Database = {
         }[]
       }
       get_workspace_context_v1: { Args: never; Returns: Json }
+      pick_next_routing_member: {
+        Args: { p_config_id: string; p_prefer_top?: boolean }
+        Returns: string
+      }
       save_form_builder_v1: {
         Args: {
           p_company_id: string

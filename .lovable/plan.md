@@ -1,70 +1,77 @@
-# Fase: Quiz/Formulário Público Polido
+# Lead Scoring & Routing — Fase 5
 
-Objetivo: transformar o Quiz Builder atual em ferramenta de produção — com templates prontos, upload de mídia real, publicação em slug custom e preview mobile fiel.
+Objetivo: transformar todo lead que entra (Quiz, Form, Meta) em um lead **pontuado, classificado (hot/warm/cold) e atribuído a um vendedor** automaticamente, com painel de configuração.
 
-## Escopo
+## 1. Banco de dados (migration única)
 
-### 1. Templates prontos
-- 4 templates seed em `src/modules/quiz/templates/`:
-  - **Lead Imobiliário** (perfil de compra + faixa de renda + região)
-  - **Consultoria Financeira** (objetivo + patrimônio + horizonte)
-  - **Fitness/Saúde** (objetivo + rotina + restrições)
-  - **Genérico Captura** (nome, e-mail, telefone, pergunta livre)
-- Cada template define: passos, campos, cores, textos de CTA e página de agradecimento.
-- Nova tela `/quizzes/new` com galeria de templates + opção "Em branco".
+Duas tabelas novas + coluna direta em `leads`:
 
-### 2. Upload de mídia
-- Bucket Supabase `quiz-media` (público, com RLS por `owner_id`).
-- Componente `MediaUploader` no builder para imagem/vídeo por passo.
-- Suporte no `BeforeAfterSlider` para upload direto (antes/depois).
-- Otimização: limite 5MB imagem / 20MB vídeo, formatos aceitos validados client-side.
+- `routing_configs` — 1 por empresa: `id, company_id, name, strategy ('round_robin'|'performance'|'hybrid'), is_active, fallback_user_id`.
+- `routing_members` — vendedores no pool: `id, config_id, user_id, performance_score (0-100), weight, is_available, last_assigned_at`.
+- `leads.assigned_to uuid` — coluna direta (hoje mora em `metadata`, difícil filtrar).
 
-### 3. Publicação
-- Campo `slug` editável em `quiz_funnels` com validação de unicidade.
-- Botão "Publicar" alterna `status: draft → published` e gera URL final:
-  `https://<domínio>/q/<slug>`.
-- Card com URL + copy button + QR code no builder.
-- Toggle "Requer confirmação de e-mail" (opcional, off por padrão).
+RLS: `authenticated` só acessa linhas onde é membro da company. GRANTs completos.
 
-### 4. Preview mobile fiel
-- Aba "Preview" no builder com toggle Desktop/Mobile/Tablet.
-- Iframe carregando `/q/<slug>?preview=true` em viewport fixo (375x812 mobile, 768x1024 tablet).
-- Refresh automático ao salvar alterações.
+Já existem: `form_scoring_rules`, `form_temperature_rules`, `form_tag_rules`, `lead_scores` — reaproveitados.
 
-## Arquivos afetados
+## 2. Engine de scoring unificado
 
-```text
-src/modules/quiz/
-├── templates/              (novo — 4 templates)
-│   ├── index.ts
-│   ├── real-estate.ts
-│   ├── finance.ts
-│   ├── fitness.ts
-│   └── generic-capture.ts
-├── components/
-│   ├── MediaUploader.tsx           (novo)
-│   ├── PublishCard.tsx             (novo)
-│   └── DevicePreview.tsx           (novo)
-└── services/
-    └── mediaService.ts             (novo — upload/list/delete)
+Novo módulo `src/modules/intelligence/services/leadScoringEngine.ts`:
 
-src/routes/
-├── _app.quizzes.new.tsx            (novo — galeria de templates)
-├── _app.quizzes.$id.builder.tsx    (ajustes: preview tab + publish card)
-└── q.$slug.tsx                     (respeitar ?preview=true)
-```
+- `scoreLead(lead, answers, companyId)` → aplica `form_scoring_rules` (condition JSONB avaliada com operadores `eq/gt/lt/contains/in`), soma `score_delta`, coleta tags e ação recomendada.
+- Deriva `temperature` via `form_temperature_rules` (faixa min/max) — fallback global hot≥70, warm≥40, cold<40.
+- Grava histórico em `lead_scores` (audit trail) + atualiza `leads.score`, `leads.temperature`.
 
-## Migração de banco
+## 3. Routing engine
 
-- Bucket `quiz-media` com policies:
-  - INSERT/DELETE: apenas dono do quiz correspondente.
-  - SELECT: público (mídia servida no quiz final).
-- Constraint `UNIQUE` em `quiz_funnels.slug`.
-- Coluna `published_at TIMESTAMPTZ` em `quiz_funnels`.
+Refactor de `routingService.assignLead`:
 
-## Fora de escopo (fica pra próxima fase)
-- A/B testing entre variantes.
-- Editor de tema avançado (fontes custom, CSS livre).
-- Analytics detalhado por passo (já parcialmente coberto em `performance.tsx`).
+- Estratégia `round_robin`: menor `last_assigned_at`.
+- `performance`: pondera por `performance_score` (leads hot vão para top ≥80).
+- `hybrid` (default): hot → performance; warm/cold → round_robin.
+- Cai no `fallback_user_id` se pool vazio.
+- Grava `leads.assigned_to`, atualiza `last_assigned_at`, cria evento em `lead_events`.
 
-Aprovar para eu executar?
+## 4. Integração automática
+
+Wire no pipeline de captura:
+
+- `quizService.submitPublic` (após criar lead) → `scoreLead` → `assignLead`.
+- `captureService` (form público) → mesmo hook.
+- `meta-lead-processor.server.ts` → mesmo hook.
+
+## 5. UI de configuração
+
+Nova rota `/_app.settings.routing.tsx`:
+
+- **Aba Regras**: CRUD de `form_scoring_rules` globais (sem `form_id`) — condição (campo/operador/valor), delta, tag, temperatura, ação.
+- **Aba Temperatura**: faixas hot/warm/cold com preview.
+- **Aba Distribuição**: pool de vendedores (busca membros da company), toggle disponibilidade, slider performance, estratégia global, fallback.
+
+Server functions autenticadas com `requireSupabaseAuth` para escrita; leitura via TanStack Query.
+
+## 6. Melhorias na página de leads
+
+- Coluna "Atribuído a" com avatar do vendedor.
+- Filtro por `assigned_to` (todos / meus leads / não atribuídos).
+- Ação bulk: reatribuir manualmente.
+
+## Detalhes técnicos
+
+- Avaliação de `condition` JSONB: `{ field: 'phone', op: 'exists' }`, `{ field: 'orcamento', op: 'gte', value: 500000 }`. Parser puro em TS testável.
+- Round-robin thread-safe: `UPDATE ... RETURNING` com `FOR UPDATE SKIP LOCKED` via RPC `pick_next_routing_member(config_id)` — evita corrida em picos.
+- Todas as escritas de scoring/routing rodam via `createServerFn` (service-role para bypass RLS quando o lead vem de webhook público).
+
+## Fora do escopo
+
+- ML/scoring por IA (fica para fase seguinte usando Lovable AI).
+- SLA e reassignment por inatividade.
+- Notificação push ao vendedor (WhatsApp Cloud é a próxima fase).
+
+## Ordem de entrega
+
+1. Migration (aguarda aprovação).
+2. RPC `pick_next_routing_member` + engines TS.
+3. Wire nos 3 pontos de captura.
+4. UI settings/routing.
+5. Página de leads com "assigned_to".
