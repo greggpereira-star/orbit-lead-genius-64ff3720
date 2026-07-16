@@ -44,6 +44,7 @@ import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes.$id.performance'
 import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes.$id.builder'
+import { Route as AppIntegrationsMetaCallbackRouteImport } from './routes/_app.integrations.meta.callback'
 
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
@@ -219,6 +220,12 @@ const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
   path: '/$id/builder',
   getParentRoute: () => AppQuizzesRoute,
 } as any)
+const AppIntegrationsMetaCallbackRoute =
+  AppIntegrationsMetaCallbackRouteImport.update({
+    id: '/integrations/meta/callback',
+    path: '/integrations/meta/callback',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/settings/': typeof AppSettingsIndexRoute
+  '/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
@@ -284,6 +292,7 @@ export interface FileRoutesByTo {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/settings': typeof AppSettingsIndexRoute
+  '/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
@@ -322,6 +331,7 @@ export interface FileRoutesById {
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
+  '/_app/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/_app/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
   '/_app/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/public/meta-webhook'
     | '/settings/'
+    | '/integrations/meta/callback'
     | '/quizzes/$id/builder'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/public/meta-webhook'
     | '/settings'
+    | '/integrations/meta/callback'
     | '/quizzes/$id/builder'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
@@ -430,6 +442,7 @@ export interface FileRouteTypes {
     | '/_app/settings/security'
     | '/api/public/meta-webhook'
     | '/_app/settings/'
+    | '/_app/integrations/meta/callback'
     | '/_app/quizzes/$id/builder'
     | '/_app/quizzes/$id/performance'
     | '/_app/quizzes/$id/preview'
@@ -694,6 +707,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
       parentRoute: typeof AppQuizzesRoute
     }
+    '/_app/integrations/meta/callback': {
+      id: '/_app/integrations/meta/callback'
+      path: '/integrations/meta/callback'
+      fullPath: '/integrations/meta/callback'
+      preLoaderRoute: typeof AppIntegrationsMetaCallbackRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -772,6 +792,7 @@ interface AppRouteChildren {
   AppQuizzesRoute: typeof AppQuizzesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
+  AppIntegrationsMetaCallbackRoute: typeof AppIntegrationsMetaCallbackRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -785,6 +806,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuizzesRoute: AppQuizzesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
+  AppIntegrationsMetaCallbackRoute: AppIntegrationsMetaCallbackRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
