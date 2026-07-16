@@ -571,11 +571,13 @@ function DlqTable({
   isLoading,
   processingId,
   onReprocess,
+  onViewDetails,
 }: {
   dlq: DlqEntry[];
   isLoading: boolean;
   processingId: string | null;
   onReprocess: (entry: DlqEntry) => void;
+  onViewDetails: (entry: DlqEntry) => void;
 }) {
   if (isLoading) return <Skeleton className="h-80" />;
 
@@ -588,7 +590,7 @@ function DlqTable({
           <TableHead>Reason</TableHead>
           <TableHead>Retries</TableHead>
           <TableHead>Trace</TableHead>
-          <TableHead className="text-right">Action</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -605,10 +607,16 @@ function DlqTable({
               <TableCell className="text-xs font-bold">{entry.retry_count ?? 0}</TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground">{shortId(entry.trace_id)}</TableCell>
               <TableCell className="text-right">
-                <Button size="sm" variant="outline" className="gap-2" disabled={Boolean(processingId)} onClick={() => onReprocess(entry)}>
-                  {processingId === entry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
-                  Reprocessar
-                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" className="gap-2" onClick={() => onViewDetails(entry)}>
+                    <Eye className="h-4 w-4" />
+                    Detalhes
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-2" disabled={Boolean(processingId)} onClick={() => onReprocess(entry)}>
+                    {processingId === entry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+                    Reprocessar
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))
@@ -617,6 +625,92 @@ function DlqTable({
     </Table>
   );
 }
+
+function DlqDetailsDialog({
+  entry,
+  onOpenChange,
+  onReprocess,
+  isProcessing,
+}: {
+  entry: DlqEntry | null;
+  onOpenChange: (open: boolean) => void;
+  onReprocess: (entry: DlqEntry) => void;
+  isProcessing: boolean;
+}) {
+  return (
+    <Dialog open={Boolean(entry)} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            Detalhes da falha CV.CRM
+          </DialogTitle>
+          <DialogDescription>
+            Payload original enviado e mensagem de erro completa retornada pela CV.CRM.
+          </DialogDescription>
+        </DialogHeader>
+
+        {entry ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <DetailField label="Lead ID" value={entry.lead_id} mono />
+              <DetailField label="Trace ID" value={entry.trace_id ?? '—'} mono />
+              <DetailField label="Tentativas" value={String(entry.retry_count ?? 0)} />
+              <DetailField label="Criado em" value={formatDateTime(entry.created_at)} />
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Motivo da falha</p>
+              <div className="rounded-md border bg-destructive/5 p-3 text-sm">
+                {entry.failure_reason ?? 'Não informado'}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Erro detalhado</p>
+              <ScrollArea className="h-32 rounded-md border bg-muted p-3">
+                <pre className="text-[11px] font-mono whitespace-pre-wrap break-all">
+                  {entry.last_error ?? 'Sem detalhes adicionais.'}
+                </pre>
+              </ScrollArea>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Payload enviado</p>
+              <ScrollArea className="h-64 rounded-md border bg-muted p-3">
+                <pre className="text-[11px] font-mono whitespace-pre-wrap break-all">
+                  {entry.payload ? JSON.stringify(entry.payload, null, 2) : 'Payload indisponível.'}
+                </pre>
+              </ScrollArea>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+              <Button
+                className="gap-2"
+                disabled={isProcessing}
+                onClick={() => onReprocess(entry)}
+              >
+                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+                Reprocessar agora
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={`mt-1 ${mono ? 'font-mono' : ''}`}>{value}</p>
+    </div>
+  );
+}
+
 
 function StatusBadge({ status }: { status: string }) {
   const variant = status === 'success' ? 'default' : status === 'retrying' || status === 'sending' ? 'secondary' : 'destructive';
