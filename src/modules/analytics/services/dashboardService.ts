@@ -78,7 +78,7 @@ export const dashboardService = {
         .gte('created_at', since),
       supabase
         .from('whatsapp_click_events')
-        .select('id, lead_id, tracking, created_at')
+        .select('id, lead_id, tracking, capi_status, created_at')
         .eq('company_id', companyId)
         .gte('created_at', since),
     ]);
