@@ -174,29 +174,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
     };
    }, []);
  
-    // Only show bootstrap UI if we ARE in a bootstrap state AND we don't have a workspace ready cache
-    // This prevents background re-validations (e.g. on tab focus) from unmounting the active UI.
-    const isBootstrapping = [
-      'TENANT_VALIDATING', 
-      'TENANT_RECOVERING', 
-      'MEMBERSHIP_RECOVERING', 
-      'ROLE_RECOVERING', 
-      'PERMISSIONS_RECOVERING',
-      'WORKSPACE_READY'
-    ].includes(state as string);
- 
-    const hasWorkspaceCache = typeof window !== 'undefined' && !!localStorage.getItem('workspace_readiness_snapshot');
+    // Bootstrap/loading UI is owned by AppLayout (for protected routes) and by
+    // individual auth screens (for public/auth routes). Root only intercepts
+    // truly app-wide states: onboarding and recovery mode.
 
-    if (isBootstrapping && !hasWorkspaceCache) {
-     const statusMap: Record<string, any> = {
-       TENANT_VALIDATING: 'BOOTSTRAPPING',
-       TENANT_RECOVERING: 'BOOTSTRAPPING',
-       MEMBERSHIP_RECOVERING: 'BOOTSTRAPPING',
-       WORKSPACE_READY: 'FINALIZING',
-     };
-     
-     return <TenantBootstrap status={statusMap[state as string] || 'BOOTSTRAPPING'} />;
-   }
 
    if (state === 'ONBOARDING_REQUIRED') {
      // Fallback to TenantBootstrap with the starting status or redirect to an onboarding flow if we had one.
