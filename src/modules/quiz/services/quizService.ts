@@ -275,6 +275,14 @@ export const quizService = {
 
         const leadId = (lead as { id?: string } | null)?.id;
         if (leadId) {
+          // Auto-assign to sales rep via routing engine
+          try {
+            const { leadRoutingEngine } = await import('@/modules/intelligence/services/leadRoutingEngine');
+            await leadRoutingEngine.assignLead(leadId, params.companyId, params.temperature);
+          } catch (e) {
+            console.warn('Lead routing failed', e);
+          }
+
           // Check if CV.CRM is connected and dispatch (fire-and-forget)
           const { data: integ } = await supabase
             .from('cvcrm_integrations')

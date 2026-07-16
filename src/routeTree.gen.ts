@@ -34,6 +34,7 @@ import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
+import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
@@ -170,6 +171,11 @@ const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
   path: '/security',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsRoutingRoute = AppSettingsRoutingRouteImport.update({
+  id: '/routing',
+  path: '/routing',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsNotificationsRoute =
   AppSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/settings/': typeof AppSettingsIndexRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/settings': typeof AppSettingsIndexRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/_app/settings/routing': typeof AppSettingsRoutingRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
@@ -376,6 +385,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/notifications'
+    | '/settings/routing'
     | '/settings/security'
     | '/api/public/meta-webhook'
     | '/settings/'
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/notifications'
+    | '/settings/routing'
     | '/settings/security'
     | '/api/public/meta-webhook'
     | '/settings'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/_app/settings/company'
     | '/_app/settings/integrations'
     | '/_app/settings/notifications'
+    | '/_app/settings/routing'
     | '/_app/settings/security'
     | '/api/public/meta-webhook'
     | '/_app/settings/'
@@ -649,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsSecurityRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/routing': {
+      id: '/_app/settings/routing'
+      path: '/routing'
+      fullPath: '/settings/routing'
+      preLoaderRoute: typeof AppSettingsRoutingRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/notifications': {
       id: '/_app/settings/notifications'
       path: '/notifications'
@@ -783,6 +802,7 @@ interface AppSettingsRouteChildren {
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsRoutingRoute: typeof AppSettingsRoutingRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
@@ -792,6 +812,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsRoutingRoute: AppSettingsRoutingRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
@@ -872,13 +893,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
