@@ -52,11 +52,17 @@ function ChatReportsPage() {
 
       {data && (
         <>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
             <KPI icon={<MessageCircle className="h-4 w-4" />} label="Conversas" value={data.total} sub={`${data.open} abertas · ${data.closed} encerradas`} />
             <KPI icon={<TrendingUp className="h-4 w-4" />} label="Mensagens" value={data.messagesTotal} sub={`${data.messagesFromAgents} atendentes · ${data.messagesFromVisitors} visitantes`} />
             <KPI icon={<Users className="h-4 w-4" />} label="Leads capturados" value={data.leadsCaptured} sub={`${data.conversionRate.toFixed(1)}% de conversão`} />
             <KPI icon={<Clock className="h-4 w-4" />} label="Msgs / conversa" value={data.avgMessagesPerConversation.toFixed(1)} sub="Média no período" />
+            <KPI
+              icon={<span className="text-amber-500">★</span>}
+              label="CSAT"
+              value={data.avgRating != null ? `${data.avgRating.toFixed(1)}/5` : '—'}
+              sub={`${data.ratingCount} avaliação${data.ratingCount === 1 ? '' : 'ões'}`}
+            />
           </div>
 
           <Card>
