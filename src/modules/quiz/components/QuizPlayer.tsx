@@ -70,16 +70,18 @@ function PlayerRunner({
   const isLast = state.currentIndex >= blocks.length - 1;
 
   useEffect(() => {
+    if (preview) return;
     quizService.trackEvent({ quizId, companyId, eventType: 'start' }).catch(() => {});
-  }, [quizId, companyId]);
+  }, [quizId, companyId, preview]);
 
   useEffect(() => {
+    if (preview) return;
     if (block) {
       quizService
         .trackEvent({ quizId, companyId, submissionId, eventType: 'block_view', blockId: block.id })
         .catch(() => {});
     }
-  }, [block?.id, quizId, companyId, submissionId]);
+  }, [block?.id, quizId, companyId, submissionId, preview]);
 
   if (!block) {
     return <EmptyState message="Quiz sem blocos" />;
