@@ -208,9 +208,12 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
           <div className="font-medium">
             {conversation.visitor_name || conversation.visitor_email || `Visitante ${conversation.visitor_id.slice(0, 8)}`}
           </div>
-          <div className="text-xs text-muted-foreground">
-            {conversation.visitor_email && <span>{conversation.visitor_email} · </span>}
-            {conversation.page_url && <span className="truncate">{conversation.page_url}</span>}
+          <div className="text-xs text-muted-foreground flex items-center gap-2">
+            {conversation.visitor_email && <span>{conversation.visitor_email}</span>}
+            {conversation.page_url && <span className="truncate">· {conversation.page_url}</span>}
+            {conversation.rating && (
+              <span className="text-amber-500 font-medium">· ★ {conversation.rating}/5</span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
