@@ -332,7 +332,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
              full_name: email.split('@')[0],
              company_name: companyName,
            },
-           emailRedirectTo: window.location.origin + '/auth/verify-email',
+           emailRedirectTo: window.location.origin + '/verify-email',
          }
        });
        
