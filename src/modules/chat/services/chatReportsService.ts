@@ -11,6 +11,8 @@ export interface ChatReportSummary {
   avgMessagesPerConversation: number;
   leadsCaptured: number;
   conversionRate: number;
+  avgRating: number | null;
+  ratingCount: number;
   byDay: { date: string; conversations: number; messages: number }[];
   topPages: { url: string; count: number }[];
 }
