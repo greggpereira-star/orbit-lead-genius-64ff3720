@@ -15,6 +15,9 @@ export interface ChatConversation {
   unread_agent: number;
   unread_visitor: number;
   lead_id: string | null;
+  rating: number | null;
+  rating_comment: string | null;
+  rated_at: string | null;
   created_at: string;
   updated_at: string;
 }
