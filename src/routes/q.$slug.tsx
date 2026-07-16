@@ -1,8 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Suspense } from 'react';
+import { z } from 'zod';
 import { QuizPlayer } from '@/modules/quiz/components/QuizPlayer';
 
+const searchSchema = z.object({
+  preview: z.union([z.literal('1'), z.literal('true'), z.boolean()]).optional(),
+});
+
 export const Route = createFileRoute('/q/$slug')({
+  validateSearch: (s) => searchSchema.parse(s),
   head: () => ({
     meta: [
       { title: 'Quiz interativo' },
@@ -16,6 +22,8 @@ export const Route = createFileRoute('/q/$slug')({
 
 function QuizPage() {
   const { slug } = Route.useParams();
+  const { preview } = Route.useSearch();
+  const isPreview = preview === '1' || preview === 'true' || preview === true;
   return (
     <Suspense
       fallback={
@@ -24,7 +32,7 @@ function QuizPage() {
         </div>
       }
     >
-      <QuizPlayer slug={slug} />
+      <QuizPlayer slug={slug} preview={isPreview} />
     </Suspense>
   );
 }
