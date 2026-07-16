@@ -9,6 +9,7 @@ export interface ChatConversation {
   visitor_phone: string | null;
   status: 'open' | 'pending' | 'closed';
   assigned_to: string | null;
+  department_id: string | null;
   page_url: string | null;
   metadata: Record<string, unknown>;
   last_message_at: string;
@@ -131,6 +132,32 @@ export const chatService = {
       .update({ rating, rating_comment: comment ?? null, rated_at: new Date().toISOString() } as never)
       .eq('id' as never, conversationId as never);
     if (error) throw error;
+  },
+
+  async transferConversation(input: {
+    conversationId: string;
+    companyId: string;
+    departmentId?: string | null;
+    assignedTo?: string | null;
+    note?: string;
+    actorLabel?: string;
+  }): Promise<void> {
+    const patch: Record<string, unknown> = { status: 'pending', unread_agent: 0 };
+    if (input.departmentId !== undefined) patch.department_id = input.departmentId;
+    if (input.assignedTo !== undefined) patch.assigned_to = input.assignedTo;
+    const { error } = await supabase.from(CONV).update(patch as never).eq('id' as never, input.conversationId as never);
+    if (error) throw error;
+
+    const parts: string[] = [];
+    if (input.actorLabel) parts.push(input.actorLabel);
+    parts.push('transferiu a conversa');
+    if (input.note) parts.push(`— ${input.note}`);
+    await supabase.from(MSG).insert({
+      conversation_id: input.conversationId,
+      company_id: input.companyId,
+      sender_type: 'system',
+      content: parts.join(' '),
+    } as never);
   },
 
   subscribeToConversations(companyId: string, onChange: () => void) {

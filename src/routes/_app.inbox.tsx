@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
+import { chatTeamService, type ChatDepartment, type ChatOperator } from '@/modules/chat/services/chatTeamService';
 import { quickReplyService, type ChatQuickReply } from '@/modules/chat/services/quickReplyService';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from '@tanstack/react-router';
-import { Send, MessageCircle, Circle, CheckCheck, User, Zap } from 'lucide-react';
+import { Send, MessageCircle, Circle, CheckCheck, User, Zap, ArrowRightLeft } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -224,6 +231,7 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
               </Link>
             </Button>
           )}
+          <TransferPopover conversation={conversation} onDone={() => queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', conversation.company_id] })} />
           <Button
             variant="outline"
             size="sm"
@@ -305,5 +313,101 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
         </form>
       </div>
     </>
+  );
+}
+
+function TransferPopover({ conversation, onDone }: { conversation: ChatConversation; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [departmentId, setDepartmentId] = useState<string>(conversation.department_id ?? '');
+  const [assignedTo, setAssignedTo] = useState<string>(conversation.assigned_to ?? '');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+
+  const departmentsQuery = useQuery({
+    queryKey: ['chat', 'departments', conversation.company_id],
+    queryFn: () => chatTeamService.listDepartments(conversation.company_id),
+    enabled: open,
+  });
+  const operatorsQuery = useQuery({
+    queryKey: ['chat', 'operators', conversation.company_id],
+    queryFn: () => chatTeamService.listOperators(conversation.company_id),
+    enabled: open,
+  });
+  const departments: ChatDepartment[] = departmentsQuery.data ?? [];
+  const operators: ChatOperator[] = operatorsQuery.data ?? [];
+  const filteredOps = departmentId
+    ? operators.filter((o) => o.department_id === departmentId && o.is_active)
+    : operators.filter((o) => o.is_active);
+
+  async function submit() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const deptLabel = departments.find((d) => d.id === departmentId)?.name;
+      const opLabel = operators.find((o) => o.user_id === assignedTo)?.display_name;
+      const dest = [deptLabel, opLabel].filter(Boolean).join(' / ') || 'fila geral';
+      await chatService.transferConversation({
+        conversationId: conversation.id,
+        companyId: conversation.company_id,
+        departmentId: departmentId || null,
+        assignedTo: assignedTo || null,
+        note: note.trim() ? `${note.trim()} → ${dest}` : `para ${dest}`,
+        actorLabel: user?.email ?? 'Atendente',
+      });
+      setOpen(false);
+      setNote('');
+      onDone();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm">
+          <ArrowRightLeft className="h-4 w-4 mr-1" /> Transferir
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-3" align="end">
+        <div className="font-medium text-sm">Transferir conversa</div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Setor</Label>
+          <select
+            className="w-full border rounded-md px-2 py-1.5 text-sm bg-background"
+            value={departmentId}
+            onChange={(e) => { setDepartmentId(e.target.value); setAssignedTo(''); }}
+          >
+            <option value="">Sem setor</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Atendente</Label>
+          <select
+            className="w-full border rounded-md px-2 py-1.5 text-sm bg-background"
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+          >
+            <option value="">Qualquer atendente do setor</option>
+            {filteredOps.map((o) => (
+              <option key={o.id} value={o.user_id}>
+                {o.display_name || o.user_id.slice(0, 8)} · {o.status}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Nota interna (opcional)</Label>
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Contexto da transferência" />
+        </div>
+        <Button className="w-full" size="sm" onClick={submit} disabled={saving}>
+          {saving ? 'Transferindo…' : 'Confirmar transferência'}
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 }
