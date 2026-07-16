@@ -33,9 +33,15 @@ function EmbedChat() {
   useEffect(() => {
     if (!conversation) return;
     chatService.listMessages(conversation.id).then(setMessages);
-    return chatService.subscribeToMessages(conversation.id, (m) => {
+    const offMsg = chatService.subscribeToMessages(conversation.id, (m) => {
       setMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
     });
+    const offConv = chatService.subscribeToConversations(conversation.company_id, async () => {
+      const list = await chatService.listConversations(conversation.company_id);
+      const current = list.find((c) => c.id === conversation.id);
+      if (current) setConversation(current);
+    });
+    return () => { offMsg(); offConv(); };
   }, [conversation]);
 
   useEffect(() => {
