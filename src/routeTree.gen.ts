@@ -40,6 +40,7 @@ import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/me
 import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.widgets'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
 import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
+import { Route as AppSettingsQuickRepliesRouteImport } from './routes/_app.settings.quick-replies'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
@@ -208,6 +209,11 @@ const AppSettingsRoutingRoute = AppSettingsRoutingRouteImport.update({
   path: '/routing',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsQuickRepliesRoute = AppSettingsQuickRepliesRouteImport.update({
+  id: '/quick-replies',
+  path: '/quick-replies',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsNotificationsRoute =
   AppSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -307,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/widgets': typeof AppSettingsWidgetsRoute
@@ -350,6 +357,7 @@ export interface FileRoutesByTo {
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/widgets': typeof AppSettingsWidgetsRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/_app/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
   '/_app/settings/routing': typeof AppSettingsRoutingRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/widgets': typeof AppSettingsWidgetsRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/notifications'
+    | '/settings/quick-replies'
     | '/settings/routing'
     | '/settings/security'
     | '/settings/widgets'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/notifications'
+    | '/settings/quick-replies'
     | '/settings/routing'
     | '/settings/security'
     | '/settings/widgets'
@@ -532,6 +543,7 @@ export interface FileRouteTypes {
     | '/_app/settings/company'
     | '/_app/settings/integrations'
     | '/_app/settings/notifications'
+    | '/_app/settings/quick-replies'
     | '/_app/settings/routing'
     | '/_app/settings/security'
     | '/_app/settings/widgets'
@@ -779,6 +791,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRoutingRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/quick-replies': {
+      id: '/_app/settings/quick-replies'
+      path: '/quick-replies'
+      fullPath: '/settings/quick-replies'
+      preLoaderRoute: typeof AppSettingsQuickRepliesRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/notifications': {
       id: '/_app/settings/notifications'
       path: '/notifications'
@@ -921,6 +940,7 @@ interface AppSettingsRouteChildren {
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsQuickRepliesRoute: typeof AppSettingsQuickRepliesRoute
   AppSettingsRoutingRoute: typeof AppSettingsRoutingRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsWidgetsRoute: typeof AppSettingsWidgetsRoute
@@ -933,6 +953,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsQuickRepliesRoute: AppSettingsQuickRepliesRoute,
   AppSettingsRoutingRoute: AppSettingsRoutingRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsWidgetsRoute: AppSettingsWidgetsRoute,
