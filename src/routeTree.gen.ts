@@ -31,6 +31,7 @@ import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppChatReportsRouteImport } from './routes/_app.chat-reports'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
@@ -163,6 +164,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppChatReportsRoute = AppChatReportsRouteImport.update({
+  id: '/chat-reports',
+  path: '/chat-reports',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAutomationsRoute = AppAutomationsRouteImport.update({
   id: '/automations',
   path: '/automations',
@@ -287,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/diagnostics': typeof DiagnosticsRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
+  '/chat-reports': typeof AppChatReportsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
   '/inbox': typeof AppInboxRoute
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/diagnostics': typeof DiagnosticsRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
+  '/chat-reports': typeof AppChatReportsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
   '/inbox': typeof AppInboxRoute
@@ -379,6 +387,7 @@ export interface FileRoutesById {
   '/diagnostics': typeof DiagnosticsRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
+  '/_app/chat-reports': typeof AppChatReportsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/forms': typeof AppFormsRoute
   '/_app/inbox': typeof AppInboxRoute
@@ -426,6 +435,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/analytics'
     | '/automations'
+    | '/chat-reports'
     | '/dashboard'
     | '/forms'
     | '/inbox'
@@ -471,6 +481,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/analytics'
     | '/automations'
+    | '/chat-reports'
     | '/dashboard'
     | '/forms'
     | '/inbox'
@@ -517,6 +528,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/_app/analytics'
     | '/_app/automations'
+    | '/_app/chat-reports'
     | '/_app/dashboard'
     | '/_app/forms'
     | '/_app/inbox'
@@ -726,6 +738,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/chat-reports': {
+      id: '/_app/chat-reports'
+      path: '/chat-reports'
+      fullPath: '/chat-reports'
+      preLoaderRoute: typeof AppChatReportsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/automations': {
@@ -978,6 +997,7 @@ const AppIntegrationsMetaRouteWithChildren =
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
   AppAutomationsRoute: typeof AppAutomationsRoute
+  AppChatReportsRoute: typeof AppChatReportsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppFormsRoute: typeof AppFormsRoute
   AppInboxRoute: typeof AppInboxRoute
@@ -993,6 +1013,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAnalyticsRoute: AppAnalyticsRouteWithChildren,
   AppAutomationsRoute: AppAutomationsRoute,
+  AppChatReportsRoute: AppChatReportsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppFormsRoute: AppFormsRoute,
   AppInboxRoute: AppInboxRoute,
