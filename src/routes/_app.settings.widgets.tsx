@@ -44,6 +44,8 @@ function WidgetsSettings() {
   const host = typeof window !== 'undefined' ? window.location.origin : 'https://www.altleadflow.com.br';
 
   const [chatColor, setChatColor] = useState('#4f46e5');
+  const [inviteMessage, setInviteMessage] = useState('Posso ajudar? 👋');
+  const [inviteDelay, setInviteDelay] = useState('8');
   const [waPhone, setWaPhone] = useState('5511999999999');
   const [waMessage, setWaMessage] = useState('Olá! Vim pelo site e quero saber mais.');
   const [waLabel, setWaLabel] = useState('Fale no WhatsApp');
@@ -52,9 +54,11 @@ function WidgetsSettings() {
   const chatSnippet = useMemo(
     () => `<script src="${host}/chat-widget.js"
   data-company-id="${companyId}"
-  data-color="${chatColor}"
+  data-color="${chatColor}"${inviteMessage ? `
+  data-invite-message="${inviteMessage}"
+  data-invite-delay="${inviteDelay || '0'}"` : ''}
   defer></script>`,
-    [host, companyId, chatColor],
+    [host, companyId, chatColor, inviteMessage, inviteDelay],
   );
 
   const waSnippet = useMemo(
@@ -97,17 +101,38 @@ function WidgetsSettings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2 max-w-xs">
-                <Label htmlFor="chat-color">Cor do botão</Label>
-                <div className="flex gap-2 items-center">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="chat-color">Cor do botão</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="chat-color"
+                      type="color"
+                      value={chatColor}
+                      onChange={(e) => setChatColor(e.target.value)}
+                      className="w-16 h-10 p-1"
+                    />
+                    <Input value={chatColor} onChange={(e) => setChatColor(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invite-delay">Convite proativo após (segundos)</Label>
                   <Input
-                    id="chat-color"
-                    type="color"
-                    value={chatColor}
-                    onChange={(e) => setChatColor(e.target.value)}
-                    className="w-16 h-10 p-1"
+                    id="invite-delay"
+                    type="number"
+                    min="0"
+                    value={inviteDelay}
+                    onChange={(e) => setInviteDelay(e.target.value)}
                   />
-                  <Input value={chatColor} onChange={(e) => setChatColor(e.target.value)} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="invite-msg">Mensagem do convite (vazio = desativado)</Label>
+                  <Input
+                    id="invite-msg"
+                    value={inviteMessage}
+                    onChange={(e) => setInviteMessage(e.target.value)}
+                    placeholder="Posso ajudar? 👋"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
