@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as QSlugRouteImport } from './routes/q.$slug'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
+import { Route as ChatEmbedCompanyIdRouteImport } from './routes/chat-embed.$companyId'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
@@ -27,6 +28,7 @@ import { Route as AppQuizzesRouteImport } from './routes/_app.quizzes'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppObservabilityRouteImport } from './routes/_app.observability'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
+import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
@@ -79,6 +81,11 @@ const FSlugRoute = FSlugRouteImport.update({
 const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
   id: '/embed-form/$id',
   path: '/embed-form/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatEmbedCompanyIdRoute = ChatEmbedCompanyIdRouteImport.update({
+  id: '/chat-embed/$companyId',
+  path: '/chat-embed/$companyId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
@@ -134,6 +141,11 @@ const AppObservabilityRoute = AppObservabilityRouteImport.update({
 const AppLeadsRoute = AppLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFormsRoute = AppFormsRouteImport.update({
@@ -246,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
+  '/inbox': typeof AppInboxRoute
   '/leads': typeof AppLeadsRouteWithChildren
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
@@ -257,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
@@ -284,6 +298,7 @@ export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsRoute
   '/dashboard': typeof AppDashboardRoute
   '/forms': typeof AppFormsRoute
+  '/inbox': typeof AppInboxRoute
   '/leads': typeof AppLeadsRouteWithChildren
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
@@ -294,6 +309,7 @@ export interface FileRoutesByTo {
   '/register': typeof AuthRegisterRoute
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
@@ -324,6 +340,7 @@ export interface FileRoutesById {
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/forms': typeof AppFormsRoute
+  '/_app/inbox': typeof AppInboxRoute
   '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/observability': typeof AppObservabilityRoute
   '/_app/pipeline': typeof AppPipelineRoute
@@ -335,6 +352,7 @@ export interface FileRoutesById {
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
@@ -364,6 +382,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/dashboard'
     | '/forms'
+    | '/inbox'
     | '/leads'
     | '/observability'
     | '/pipeline'
@@ -375,6 +394,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/chat-embed/$companyId'
     | '/embed-form/$id'
     | '/f/$slug'
     | '/q/$slug'
@@ -402,6 +422,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/dashboard'
     | '/forms'
+    | '/inbox'
     | '/leads'
     | '/observability'
     | '/pipeline'
@@ -412,6 +433,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/chat-embed/$companyId'
     | '/embed-form/$id'
     | '/f/$slug'
     | '/q/$slug'
@@ -441,6 +463,7 @@ export interface FileRouteTypes {
     | '/_app/automations'
     | '/_app/dashboard'
     | '/_app/forms'
+    | '/_app/inbox'
     | '/_app/leads'
     | '/_app/observability'
     | '/_app/pipeline'
@@ -452,6 +475,7 @@ export interface FileRouteTypes {
     | '/_auth/register'
     | '/_auth/reset-password'
     | '/_auth/verify-email'
+    | '/chat-embed/$companyId'
     | '/embed-form/$id'
     | '/f/$slug'
     | '/q/$slug'
@@ -478,6 +502,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
+  ChatEmbedCompanyIdRoute: typeof ChatEmbedCompanyIdRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
   QSlugRoute: typeof QSlugRoute
@@ -533,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/embed-form/$id'
       fullPath: '/embed-form/$id'
       preLoaderRoute: typeof EmbedFormIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat-embed/$companyId': {
+      id: '/chat-embed/$companyId'
+      path: '/chat-embed/$companyId'
+      fullPath: '/chat-embed/$companyId'
+      preLoaderRoute: typeof ChatEmbedCompanyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth/verify-email': {
@@ -610,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/leads'
       preLoaderRoute: typeof AppLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inbox': {
+      id: '/_app/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/forms': {
@@ -837,6 +876,7 @@ interface AppRouteChildren {
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppFormsRoute: typeof AppFormsRoute
+  AppInboxRoute: typeof AppInboxRoute
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppObservabilityRoute: typeof AppObservabilityRoute
   AppPipelineRoute: typeof AppPipelineRoute
@@ -851,6 +891,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAutomationsRoute: AppAutomationsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppFormsRoute: AppFormsRoute,
+  AppInboxRoute: AppInboxRoute,
   AppLeadsRoute: AppLeadsRouteWithChildren,
   AppObservabilityRoute: AppObservabilityRoute,
   AppPipelineRoute: AppPipelineRoute,
@@ -885,6 +926,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
+  ChatEmbedCompanyIdRoute: ChatEmbedCompanyIdRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
   QSlugRoute: QSlugRoute,
@@ -893,13 +935,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
