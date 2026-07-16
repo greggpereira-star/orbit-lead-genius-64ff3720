@@ -14,6 +14,7 @@ export interface ChatConversation {
   last_message_at: string;
   unread_agent: number;
   unread_visitor: number;
+  lead_id: string | null;
   created_at: string;
   updated_at: string;
 }

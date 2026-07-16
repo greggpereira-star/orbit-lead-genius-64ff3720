@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           id: string
           last_message_at: string
+          lead_id: string | null
           metadata: Json
           page_url: string | null
           status: string
@@ -38,6 +39,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_message_at?: string
+          lead_id?: string | null
           metadata?: Json
           page_url?: string | null
           status?: string
@@ -55,6 +57,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_message_at?: string
+          lead_id?: string | null
           metadata?: Json
           page_url?: string | null
           status?: string
@@ -72,6 +75,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]

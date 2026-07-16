@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageCircle, Circle, CheckCheck } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Send, MessageCircle, Circle, CheckCheck, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -154,16 +155,25 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
             {conversation.page_url && <span className="truncate">{conversation.page_url}</span>}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={async () => {
-            await chatService.closeConversation(conversation.id);
-            queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', conversation.company_id] });
-          }}
-        >
-          Encerrar
-        </Button>
+        <div className="flex items-center gap-2">
+          {(conversation as ChatConversation & { lead_id?: string | null }).lead_id && (
+            <Button variant="secondary" size="sm" asChild>
+              <Link to="/leads/$id" params={{ id: (conversation as ChatConversation & { lead_id?: string | null }).lead_id! }}>
+                <User className="h-4 w-4 mr-1" /> Ver lead
+              </Link>
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await chatService.closeConversation(conversation.id);
+              queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', conversation.company_id] });
+            }}
+          >
+            Encerrar
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1">
