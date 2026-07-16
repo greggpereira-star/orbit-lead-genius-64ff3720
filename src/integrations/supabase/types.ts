@@ -275,6 +275,57 @@ export type Database = {
           },
         ]
       }
+      chat_quick_replies: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          id: string
+          shortcut: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          id?: string
+          shortcut: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          id?: string
+          shortcut?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_quick_replies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_quick_replies_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "chat_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string

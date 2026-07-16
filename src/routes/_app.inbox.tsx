@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
+import { quickReplyService, type ChatQuickReply } from '@/modules/chat/services/quickReplyService';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from '@tanstack/react-router';
-import { Send, MessageCircle, Circle, CheckCheck, User } from 'lucide-react';
+import { Send, MessageCircle, Circle, CheckCheck, User, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -132,13 +133,33 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
   const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const messagesQuery = useQuery({
     queryKey: ['chat', 'messages', conversation.id],
     queryFn: () => chatService.listMessages(conversation.id),
   });
   const messages: ChatMessage[] = messagesQuery.data ?? [];
+
+  const repliesQuery = useQuery({
+    queryKey: ['chat', 'quick-replies', conversation.company_id],
+    queryFn: () => quickReplyService.list(conversation.company_id),
+  });
+  const replies: ChatQuickReply[] = repliesQuery.data ?? [];
+
+  const filteredReplies = useMemo(() => {
+    if (!text.startsWith('/')) return [] as ChatQuickReply[];
+    const q = text.slice(1).toLowerCase();
+    return replies
+      .filter((r) => r.shortcut.toLowerCase().includes(q) || r.content.toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [text, replies]);
+
+  useEffect(() => {
+    setShowReplies(text.startsWith('/') && filteredReplies.length > 0);
+  }, [text, filteredReplies.length]);
 
   useEffect(() => {
     chatService.markRead(conversation.id, 'agent');
@@ -153,6 +174,12 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length]);
+
+  function applyReply(r: ChatQuickReply) {
+    setText(r.content);
+    setShowReplies(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
 
   async function send() {
     const content = text.trim();
@@ -223,20 +250,54 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
         </div>
       </ScrollArea>
 
-      <form
-        onSubmit={(e) => { e.preventDefault(); send(); }}
-        className="border-t p-3 flex items-center gap-2"
-      >
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Escreva uma resposta…"
-          disabled={sending || conversation.status === 'closed'}
-        />
-        <Button type="submit" disabled={sending || !text.trim() || conversation.status === 'closed'}>
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
+      <div className="border-t relative">
+        {showReplies && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 mx-3 rounded-md border bg-popover shadow-lg max-h-64 overflow-y-auto z-10">
+            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Respostas rápidas
+            </div>
+            {filteredReplies.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => applyReply(r)}
+                className="w-full text-left px-3 py-2 hover:bg-muted/60 border-b last:border-b-0"
+              >
+                <div className="text-xs font-medium">
+                  <code className="bg-muted px-1 rounded">/{r.shortcut}</code>
+                </div>
+                <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{r.content}</div>
+              </button>
+            ))}
+          </div>
+        )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+          className="p-3 flex items-center gap-2"
+        >
+          <Input
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Escreva uma resposta… ( / para atalhos)"
+            disabled={sending || conversation.status === 'closed'}
+            onKeyDown={(e) => {
+              if (e.key === 'Tab' && filteredReplies.length > 0) {
+                e.preventDefault();
+                applyReply(filteredReplies[0]);
+              } else if (e.key === 'Escape') {
+                setShowReplies(false);
+              }
+            }}
+          />
+          <Button type="submit" disabled={sending || !text.trim() || conversation.status === 'closed'}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </div>
     </>
   );
 }
