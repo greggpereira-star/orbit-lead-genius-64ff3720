@@ -181,8 +181,38 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {/* Meta + Leads recentes */}
+      {/* WhatsApp + Meta + Leads recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-[#25D366]" />WhatsApp</CardTitle>
+            <CardDescription>Cliques rastreados no período</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <div className="text-3xl font-bold">{isLoading ? '—' : data?.whatsapp.clicks ?? 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {data?.whatsapp.leadsFromClicks ?? 0} viraram lead ·{' '}
+                <span className="font-medium text-emerald-500">{(data?.whatsapp.conversionRate ?? 0).toFixed(1)}%</span> conversão
+              </p>
+            </div>
+            {data && data.whatsapp.topSources.length > 0 && (
+              <div className="pt-2 border-t space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Top origens</p>
+                {data.whatsapp.topSources.map((s) => (
+                  <div key={s.name} className="flex items-center justify-between text-xs">
+                    <span className="truncate">{s.name}</span>
+                    <Badge variant="outline" className="ml-2">{s.value}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button asChild variant="link" className="px-0">
+              <Link to="/settings/widgets">Instalar widget <ArrowUpRight className="h-3 w-3 ml-1" /></Link>
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Megaphone className="h-4 w-4" />Meta Lead Ads</CardTitle>
