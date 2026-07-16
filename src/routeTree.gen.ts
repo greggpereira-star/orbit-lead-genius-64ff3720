@@ -34,6 +34,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
+import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
 import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
 import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
@@ -173,6 +174,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const ApiPublicWhatsappClickRoute = ApiPublicWhatsappClickRouteImport.update({
+  id: '/api/public/whatsapp-click',
+  path: '/api/public/whatsapp-click',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMetaWebhookRoute = ApiPublicMetaWebhookRouteImport.update({
   id: '/api/public/meta-webhook',
   path: '/api/public/meta-webhook',
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
+  '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
@@ -323,6 +330,7 @@ export interface FileRoutesByTo {
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
+  '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/settings': typeof AppSettingsIndexRoute
   '/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/_app/settings/routing': typeof AppSettingsRoutingRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
+  '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/_app/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
@@ -408,6 +417,7 @@ export interface FileRouteTypes {
     | '/settings/routing'
     | '/settings/security'
     | '/api/public/meta-webhook'
+    | '/api/public/whatsapp-click'
     | '/settings/'
     | '/integrations/meta/callback'
     | '/quizzes/$id/builder'
@@ -447,6 +457,7 @@ export interface FileRouteTypes {
     | '/settings/routing'
     | '/settings/security'
     | '/api/public/meta-webhook'
+    | '/api/public/whatsapp-click'
     | '/settings'
     | '/integrations/meta/callback'
     | '/quizzes/$id/builder'
@@ -489,6 +500,7 @@ export interface FileRouteTypes {
     | '/_app/settings/routing'
     | '/_app/settings/security'
     | '/api/public/meta-webhook'
+    | '/api/public/whatsapp-click'
     | '/_app/settings/'
     | '/_app/integrations/meta/callback'
     | '/_app/quizzes/$id/builder'
@@ -507,6 +519,7 @@ export interface RootRouteChildren {
   FSlugRoute: typeof FSlugRoute
   QSlugRoute: typeof QSlugRoute
   ApiPublicMetaWebhookRoute: typeof ApiPublicMetaWebhookRoute
+  ApiPublicWhatsappClickRoute: typeof ApiPublicWhatsappClickRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -685,6 +698,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof AppSettingsIndexRouteImport
       parentRoute: typeof AppSettingsRoute
+    }
+    '/api/public/whatsapp-click': {
+      id: '/api/public/whatsapp-click'
+      path: '/api/public/whatsapp-click'
+      fullPath: '/api/public/whatsapp-click'
+      preLoaderRoute: typeof ApiPublicWhatsappClickRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/meta-webhook': {
       id: '/api/public/meta-webhook'
@@ -931,6 +951,7 @@ const rootRouteChildren: RootRouteChildren = {
   FSlugRoute: FSlugRoute,
   QSlugRoute: QSlugRoute,
   ApiPublicMetaWebhookRoute: ApiPublicMetaWebhookRoute,
+  ApiPublicWhatsappClickRoute: ApiPublicWhatsappClickRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
