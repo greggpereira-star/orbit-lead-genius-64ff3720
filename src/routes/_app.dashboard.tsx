@@ -182,31 +182,68 @@ function DashboardPage() {
       </div>
 
       {/* WhatsApp + Meta + Leads recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-[#25D366]" />WhatsApp</CardTitle>
-            <CardDescription>Cliques rastreados no período</CardDescription>
+            <CardDescription>Cliques, conversão em lead e envio para Meta CAPI</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <div className="text-3xl font-bold">{isLoading ? '—' : data?.whatsapp.clicks ?? 0}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {data?.whatsapp.leadsFromClicks ?? 0} viraram lead ·{' '}
-                <span className="font-medium text-emerald-500">{(data?.whatsapp.conversionRate ?? 0).toFixed(1)}%</span> conversão
-              </p>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Cliques</p>
+                <div className="text-2xl font-bold">{isLoading ? '—' : data?.whatsapp.clicks ?? 0}</div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Viraram lead</p>
+                <div className="text-2xl font-bold">{data?.whatsapp.leadsFromClicks ?? 0}</div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Conversão</p>
+                <div className="text-2xl font-bold text-emerald-500">{(data?.whatsapp.conversionRate ?? 0).toFixed(1)}%</div>
+              </div>
             </div>
-            {data && data.whatsapp.topSources.length > 0 && (
-              <div className="pt-2 border-t space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">Top origens</p>
-                {data.whatsapp.topSources.map((s) => (
-                  <div key={s.name} className="flex items-center justify-between text-xs">
-                    <span className="truncate">{s.name}</span>
-                    <Badge variant="outline" className="ml-2">{s.value}</Badge>
-                  </div>
-                ))}
+
+            {data && (
+              <div className="pt-3 border-t grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Top origens (utm_source)</p>
+                  {data.whatsapp.topSources.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sem dados</p>
+                  ) : data.whatsapp.topSources.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between text-xs py-0.5">
+                      <span className="truncate">{s.name}</span>
+                      <Badge variant="outline" className="ml-2">{s.value}</Badge>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Top campanhas</p>
+                  {data.whatsapp.topCampaigns.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sem dados</p>
+                  ) : data.whatsapp.topCampaigns.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between text-xs py-0.5">
+                      <span className="truncate">{s.name}</span>
+                      <Badge variant="outline" className="ml-2">{s.value}</Badge>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {data && (
+              <div className="pt-3 border-t">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Meta CAPI (Conversions API)</p>
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30">Enviados: {data.whatsapp.capi.sent}</Badge>
+                  <Badge variant="outline">Pendentes: {data.whatsapp.capi.pending}</Badge>
+                  <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30">Retry: {data.whatsapp.capi.failed}</Badge>
+                  <Badge variant="outline" className="bg-red-500/10 border-red-500/30">DLQ: {data.whatsapp.capi.deadLetter}</Badge>
+                  <Badge variant="outline" className="text-muted-foreground">Sem integração: {data.whatsapp.capi.skipped}</Badge>
+                </div>
+              </div>
+            )}
+
             <Button asChild variant="link" className="px-0">
               <Link to="/settings/widgets">Instalar widget <ArrowUpRight className="h-3 w-3 ml-1" /></Link>
             </Button>

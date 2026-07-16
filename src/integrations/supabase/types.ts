@@ -2931,10 +2931,70 @@ export type Database = {
           },
         ]
       }
-      whatsapp_click_events: {
+      whatsapp_capi_dlq: {
         Row: {
+          attempts: number
+          click_event_id: string | null
           company_id: string
           created_at: string
+          event_id: string | null
+          id: string
+          last_error: string | null
+          payload: Json | null
+          resolved_at: string | null
+          trace_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          click_event_id?: string | null
+          company_id: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          resolved_at?: string | null
+          trace_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          click_event_id?: string | null
+          company_id?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          resolved_at?: string | null
+          trace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_capi_dlq_click_event_id_fkey"
+            columns: ["click_event_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_click_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_capi_dlq_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_click_events: {
+        Row: {
+          capi_attempts: number
+          capi_last_error: string | null
+          capi_response: Json | null
+          capi_sent_at: string | null
+          capi_status: string
+          company_id: string
+          created_at: string
+          event_id: string
           final_url: string | null
           id: string
           lead_id: string | null
@@ -2949,8 +3009,14 @@ export type Database = {
           visitor_id: string | null
         }
         Insert: {
+          capi_attempts?: number
+          capi_last_error?: string | null
+          capi_response?: Json | null
+          capi_sent_at?: string | null
+          capi_status?: string
           company_id: string
           created_at?: string
+          event_id?: string
           final_url?: string | null
           id?: string
           lead_id?: string | null
@@ -2965,8 +3031,14 @@ export type Database = {
           visitor_id?: string | null
         }
         Update: {
+          capi_attempts?: number
+          capi_last_error?: string | null
+          capi_response?: Json | null
+          capi_sent_at?: string | null
+          capi_status?: string
           company_id?: string
           created_at?: string
+          event_id?: string
           final_url?: string | null
           id?: string
           lead_id?: string | null

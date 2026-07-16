@@ -21,6 +21,8 @@ export interface DashboardKpis {
     leadsFromClicks: number;
     conversionRate: number;
     topSources: { name: string; value: number }[];
+    topCampaigns: { name: string; value: number }[];
+    capi: { sent: number; pending: number; failed: number; deadLetter: number; skipped: number };
   };
   recentLeads: Array<{
     id: string;
@@ -76,7 +78,7 @@ export const dashboardService = {
         .gte('created_at', since),
       supabase
         .from('whatsapp_click_events')
-        .select('id, lead_id, tracking, created_at')
+        .select('id, lead_id, tracking, capi_status, created_at')
         .eq('company_id', companyId)
         .gte('created_at', since),
     ]);
@@ -139,17 +141,27 @@ export const dashboardService = {
       id: string;
       lead_id: string | null;
       tracking: Record<string, string | null> | null;
+      capi_status: string | null;
     }>;
     const waLeadsFromClicks = waEvents.filter((e) => !!e.lead_id).length;
     const waSourceMap = new Map<string, number>();
+    const waCampaignMap = new Map<string, number>();
+    const capi = { sent: 0, pending: 0, failed: 0, deadLetter: 0, skipped: 0 };
     for (const e of waEvents) {
       const src = e.tracking?.utm_source || 'Direto';
       waSourceMap.set(src, (waSourceMap.get(src) ?? 0) + 1);
+      const camp = e.tracking?.utm_campaign;
+      if (camp) waCampaignMap.set(camp, (waCampaignMap.get(camp) ?? 0) + 1);
+      switch (e.capi_status) {
+        case 'sent': capi.sent++; break;
+        case 'skipped': capi.skipped++; break;
+        case 'dead_letter': capi.deadLetter++; break;
+        case 'retry': case 'failed': capi.failed++; break;
+        default: capi.pending++;
+      }
     }
-    const waTopSources = Array.from(waSourceMap.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+    const sortTop = (m: Map<string, number>) =>
+      Array.from(m.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
 
     return {
       totalLeads: totalLeadsRes.count ?? 0,
@@ -171,7 +183,9 @@ export const dashboardService = {
         clicks: waEvents.length,
         leadsFromClicks: waLeadsFromClicks,
         conversionRate: waEvents.length > 0 ? (waLeadsFromClicks / waEvents.length) * 100 : 0,
-        topSources: waTopSources,
+        topSources: sortTop(waSourceMap),
+        topCampaigns: sortTop(waCampaignMap),
+        capi,
       },
       recentLeads: leads.slice(0, 8),
     };
