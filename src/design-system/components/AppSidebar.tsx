@@ -45,6 +45,7 @@ import {
  
  export function AppSidebar() {
    const { company } = useAuth();
+   const { unreadCount } = useInboxNotifications(company?.id);
  
    return (
      <Sidebar collapsible="icon" className="border-r">
@@ -68,7 +69,12 @@ import {
                    <SidebarMenuButton asChild tooltip={item.title}>
                      <Link to={item.to as any}>
                        <item.icon className="h-4 w-4" />
-                       <span>{item.title}</span>
+                       <span className="flex-1">{item.title}</span>
+                       {'notify' in item && item.notify === 'inbox' && unreadCount > 0 && (
+                         <Badge className="h-5 min-w-5 rounded-full px-1.5 text-[10px]">
+                           {unreadCount > 99 ? '99+' : unreadCount}
+                         </Badge>
+                       )}
                      </Link>
                    </SidebarMenuButton>
                  </SidebarMenuItem>
