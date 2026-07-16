@@ -181,7 +181,42 @@ function WidgetsSettings() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base"><Shield className="h-4 w-4" /> Domínios autorizados</CardTitle>
+              <CardDescription>
+                Restrinja o chat a domínios específicos. Deixe em branco para permitir qualquer site. Subdomínios são aceitos automaticamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="exemplo.com.br"
+                  value={newDomain}
+                  onChange={(e) => setNewDomain(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDomain(); } }}
+                />
+                <Button onClick={addDomain} disabled={savingDomains || !newDomain.trim()}>Adicionar</Button>
+              </div>
+              {allowedDomains.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum domínio configurado — o chat funcionará em qualquer site.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {allowedDomains.map((d) => (
+                    <Badge key={d} variant="secondary" className="gap-1 pr-1">
+                      {d}
+                      <button type="button" onClick={() => removeDomain(d)} className="hover:bg-muted-foreground/20 rounded-sm p-0.5" aria-label={`Remover ${d}`}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
+
 
         <TabsContent value="whatsapp" className="mt-4">
           <Card>
