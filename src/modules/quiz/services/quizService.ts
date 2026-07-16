@@ -170,6 +170,30 @@ export const quizService = {
     return { quiz: quiz as unknown as QuizFunnel, schema };
   },
 
+  async getDraftBySlug(slug: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
+    const { data: quiz, error } = await supabase
+      .from('quiz_funnels')
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (error) throw error;
+    if (!quiz) return null;
+    const { data: version } = await supabase
+      .from('quiz_versions')
+      .select('schema')
+      .eq('quiz_id', (quiz as { id: string }).id)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const raw = ((version?.schema ?? {}) as Partial<QuizSchema>);
+    const schema: QuizSchema = {
+      blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
+      design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
+      results: raw.results ?? [],
+    };
+    return { quiz: quiz as unknown as QuizFunnel, schema };
+  },
+
   async publish(quizId: string): Promise<void> {
     const { data: latest } = await supabase
       .from('quiz_versions')
