@@ -9,7 +9,7 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const traceId = crypto.randomUUID();
+  let traceId = crypto.randomUUID();
   
   try {
     const supabaseAdmin = createClient(
@@ -17,8 +17,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { lead_id, tenant_id } = await req.json()
+    const { lead_id, tenant_id, trace_id, source_dlq_id } = await req.json()
     if (!lead_id || !tenant_id) throw new Error('lead_id and tenant_id are required');
+    if (typeof trace_id === 'string' && trace_id.trim().length > 0) {
+      traceId = trace_id;
+    }
 
     console.log(`[send-cvcrm-lead] [${traceId}] Processing lead ${lead_id} for tenant ${tenant_id}`);
 
@@ -146,6 +149,13 @@ serve(async (req) => {
         event_type: 'cvcrm_delivery_success',
         metadata: { cvcrm_lead_id: result.id_lead || result.id, latency_ms: latency }
       });
+
+      if (source_dlq_id) {
+        await supabaseAdmin.from('cvcrm_dead_letter_queue')
+          .update({ resolved_at: new Date().toISOString() })
+          .eq('id', source_dlq_id)
+          .eq('company_id', tenant_id);
+      }
     } else {
       // Timeline Event failure
       await supabaseAdmin.from('lead_timeline_events').insert({
@@ -169,15 +179,32 @@ serve(async (req) => {
           await supabaseAdmin.from('cvcrm_delivery_logs')
             .update({ status: 'dead_letter' })
             .eq('id', logRecord.id);
-          await supabaseAdmin.from('cvcrm_dead_letter_queue').insert({
-            company_id: tenant_id,
-            lead_id: lead_id,
-            trace_id: traceId,
-            delivery_log_id: logRecord.id,
-            failure_reason: `Non-retryable API error (HTTP ${response.status})`,
-            payload: cvPayload,
-            last_error: JSON.stringify(result)
-          });
+          const failureReason = `Non-retryable API error (HTTP ${response.status})`;
+          const lastError = JSON.stringify(result);
+
+          if (source_dlq_id) {
+            await supabaseAdmin.from('cvcrm_dead_letter_queue')
+              .update({
+                trace_id: traceId,
+                delivery_log_id: logRecord.id,
+                failure_reason: failureReason,
+                payload: cvPayload,
+                last_error: lastError,
+                resolved_at: null
+              })
+              .eq('id', source_dlq_id)
+              .eq('company_id', tenant_id);
+          } else {
+            await supabaseAdmin.from('cvcrm_dead_letter_queue').insert({
+              company_id: tenant_id,
+              lead_id: lead_id,
+              trace_id: traceId,
+              delivery_log_id: logRecord.id,
+              failure_reason: failureReason,
+              payload: cvPayload,
+              last_error: lastError
+            });
+          }
       }
     }
 
