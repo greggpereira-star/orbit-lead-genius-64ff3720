@@ -213,6 +213,7 @@ function QuizBuilderPage() {
 
         {/* Right: inspector */}
         <QuizInspector
+          quizId={id}
           block={activeBlock}
           design={schema.design}
           onChangeBlock={patchBlock}

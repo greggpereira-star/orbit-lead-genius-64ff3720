@@ -1,97 +1,70 @@
-# Fase 4 — Meta OAuth v25 + Lead Ads
+# Fase: Quiz/Formulário Público Polido
 
-Integração completa para conectar contas Meta (Facebook/Instagram), listar páginas e formulários de Lead Ads, receber leads em tempo real via webhook, salvar em `leads` e enviar ao CV.CRM.
+Objetivo: transformar o Quiz Builder atual em ferramenta de produção — com templates prontos, upload de mídia real, publicação em slug custom e preview mobile fiel.
 
 ## Escopo
 
-1. **Credenciais da Meta App** (usuário fornece)
-   - `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`, `META_WEBHOOK_SECRET`
-   - Instruído a criar app em developers.facebook.com com produto "Facebook Login" e "Webhooks", permissões `leads_retrieval`, `pages_show_list`, `pages_manage_metadata`, `pages_read_engagement`, `ads_management`
-   - API version: `v25.0`
+### 1. Templates prontos
+- 4 templates seed em `src/modules/quiz/templates/`:
+  - **Lead Imobiliário** (perfil de compra + faixa de renda + região)
+  - **Consultoria Financeira** (objetivo + patrimônio + horizonte)
+  - **Fitness/Saúde** (objetivo + rotina + restrições)
+  - **Genérico Captura** (nome, e-mail, telefone, pergunta livre)
+- Cada template define: passos, campos, cores, textos de CTA e página de agradecimento.
+- Nova tela `/quizzes/new` com galeria de templates + opção "Em branco".
 
-2. **Migration `meta_lead_connections`**
-   - Guarda por `company_id`: `user_access_token` (long-lived), `user_id_meta`, `expires_at`, `granted_scopes`
-   - Tabela `meta_lead_pages`: page_id, page_name, page_access_token, subscribed
-   - Tabela `meta_lead_forms`: form_id, form_name, page_id, field_mapping (JSONB)
-   - Tabela `meta_lead_events`: raw payload + processing status (idempotência via leadgen_id)
-   - RLS por company_id + GRANTs
+### 2. Upload de mídia
+- Bucket Supabase `quiz-media` (público, com RLS por `owner_id`).
+- Componente `MediaUploader` no builder para imagem/vídeo por passo.
+- Suporte no `BeforeAfterSlider` para upload direto (antes/depois).
+- Otimização: limite 5MB imagem / 20MB vídeo, formatos aceitos validados client-side.
 
-3. **OAuth flow** (server functions)
-   - `src/lib/meta-oauth.functions.ts`:
-     - `startMetaOAuth()`: gera state assinado, retorna URL de autorização v25 (`/dialog/oauth`)
-     - `completeMetaOAuth({ code, state })`: troca code por token, faz `/oauth/access_token?grant_type=fb_exchange_token` para long-lived (60d), salva conexão
-   - Rota `src/routes/_authenticated/integrations.meta.callback.tsx`: recebe `?code&state`, chama server fn, redireciona para settings
-   - UI em `_authenticated/integrations.meta.tsx`: botão "Conectar Meta", lista páginas, toggle de subscribe por página, lista de formulários com mapeamento de campos → leads
+### 3. Publicação
+- Campo `slug` editável em `quiz_funnels` com validação de unicidade.
+- Botão "Publicar" alterna `status: draft → published` e gera URL final:
+  `https://<domínio>/q/<slug>`.
+- Card com URL + copy button + QR code no builder.
+- Toggle "Requer confirmação de e-mail" (opcional, off por padrão).
 
-4. **Assinatura de páginas e formulários**
-   - `subscribePageToLeadgen(pageId)`: `POST /{page-id}/subscribed_apps?subscribed_fields=leadgen` com page access token
-   - `listPageForms(pageId)`: `GET /{page-id}/leadgen_forms?fields=id,name,questions,status`
-   - Mapeamento de campos: fullname→name, phone_number→phone, email→email + custom fields → metadata
+### 4. Preview mobile fiel
+- Aba "Preview" no builder com toggle Desktop/Mobile/Tablet.
+- Iframe carregando `/q/<slug>?preview=true` em viewport fixo (375x812 mobile, 768x1024 tablet).
+- Refresh automático ao salvar alterações.
 
-5. **Webhook público** `src/routes/api/public/meta-leads-webhook.ts`
-   - GET: verifica `hub.mode=subscribe` + `hub.verify_token === META_VERIFY_TOKEN`, retorna `hub.challenge`
-   - POST: valida `x-hub-signature-256` (HMAC-SHA256 com app secret, timing-safe), insere raw event, aciona `processMetaLeadEvent()` inline (Response 200 rápido)
-   - Idempotência: `unique(leadgen_id)` em `meta_lead_events`
+## Arquivos afetados
 
-6. **Processamento de lead**
-   - Server-only helper `src/lib/meta-lead-processor.server.ts`:
-     - Recebe `leadgen_id` + `page_id` + `form_id`
-     - Busca token da página → `GET /{leadgen-id}?fields=field_data,created_time,ad_id,adset_id,campaign_id`
-     - Aplica field_mapping → cria `leads` (com source=meta_leadads, utm_source=facebook, metadata com ad/campaign IDs)
-     - Chama `send-cvcrm-lead` Edge Function (reaproveitando pipeline com retries + DLQ da Fase 3)
+```text
+src/modules/quiz/
+├── templates/              (novo — 4 templates)
+│   ├── index.ts
+│   ├── real-estate.ts
+│   ├── finance.ts
+│   ├── fitness.ts
+│   └── generic-capture.ts
+├── components/
+│   ├── MediaUploader.tsx           (novo)
+│   ├── PublishCard.tsx             (novo)
+│   └── DevicePreview.tsx           (novo)
+└── services/
+    └── mediaService.ts             (novo — upload/list/delete)
 
-7. **UI de gestão** `_authenticated/integrations.meta.tsx`
-   - Status da conexão (conectado/expirado, dias restantes)
-   - Lista de páginas com switch de subscribe
-   - Por página: lista de formulários com editor de field_mapping (drag-and-drop ou selects)
-   - Últimos 20 eventos recebidos (do `meta_lead_events`) com status
-   - Botão "Reconectar" quando expirado
+src/routes/
+├── _app.quizzes.new.tsx            (novo — galeria de templates)
+├── _app.quizzes.$id.builder.tsx    (ajustes: preview tab + publish card)
+└── q.$slug.tsx                     (respeitar ?preview=true)
+```
 
-8. **Observability**
-   - Adicionar aba "Meta Lead Ads" em `_app.observability.tsx` mostrando eventos recentes + falhas de processamento
+## Migração de banco
 
-## Detalhes técnicos
+- Bucket `quiz-media` com policies:
+  - INSERT/DELETE: apenas dono do quiz correspondente.
+  - SELECT: público (mídia servida no quiz final).
+- Constraint `UNIQUE` em `quiz_funnels.slug`.
+- Coluna `published_at TIMESTAMPTZ` em `quiz_funnels`.
 
-- **Graph API base**: `https://graph.facebook.com/v25.0`
-- **Long-lived token refresh**: server fn agendada (usar cron existente ou dispararsob demanda quando `expires_at < now() + 7d`)
-- **Redirect URI**: `${VITE_APP_URL}/integrations/meta/callback` — usuário adiciona em Facebook App Settings
-- **Segurança**: state HMAC-assinado com `META_APP_SECRET`, TTL 10min; webhook signature obrigatória; tokens nunca no client
-- **Reuso**: pipeline CV.CRM (Fase 3) já lida com retries; só criamos o lead e disparamos
+## Fora de escopo (fica pra próxima fase)
+- A/B testing entre variantes.
+- Editor de tema avançado (fontes custom, CSS livre).
+- Analytics detalhado por passo (já parcialmente coberto em `performance.tsx`).
 
-## Arquivos
-
-**Novos:**
-- `supabase/migrations/<ts>_meta_lead_ads.sql`
-- `src/lib/meta-oauth.functions.ts`
-- `src/lib/meta-lead-processor.server.ts`
-- `src/lib/meta-graph.server.ts` (helpers HTTP para Graph API)
-- `src/routes/api/public/meta-leads-webhook.ts`
-- `src/routes/_authenticated/integrations.meta.tsx`
-- `src/routes/_authenticated/integrations.meta.callback.tsx`
-- `src/modules/meta/components/PageList.tsx`
-- `src/modules/meta/components/FormMappingEditor.tsx`
-
-**Modificados:**
-- `src/routes/_app.observability.tsx` (aba Meta)
-- Sidebar/nav em `AppLayout` (item "Integrações Meta")
-
-## Secrets solicitados
-
-Via `add_secret`:
-- `META_APP_ID` (público, mas armazenado server-side pra consistência)
-- `META_APP_SECRET`
-- `META_VERIFY_TOKEN` (gerado — usuário cola no Facebook Webhook config)
-- `META_WEBHOOK_SECRET` (= App Secret; usado para HMAC do webhook)
-
-## Ordem de execução
-
-1. Migration + GRANTs + RLS
-2. Solicitar secrets Meta (add_secret)
-3. Helpers Graph API + processor
-4. Server functions OAuth
-5. Webhook route
-6. UI (conectar, páginas, formulários, mapeamento)
-7. Aba Observability
-8. Typecheck + smoke test
-
-**Confirma?** Ao aprovar eu já solicito os 4 secrets Meta e começo a migration.
+Aprovar para eu executar?

@@ -7,8 +7,10 @@ import { Trash2, Plus, GripVertical } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { MediaUploader } from './MediaUploader';
 
 interface Props {
+  quizId: string;
   block: QuizBlock | null;
   design: QuizDesign;
   onChangeBlock: (patch: Partial<QuizBlock>) => void;
@@ -16,11 +18,11 @@ interface Props {
   onChangeDesign: (patch: Partial<QuizDesign>) => void;
 }
 
-export function QuizInspector({ block, design, onChangeBlock, onDeleteBlock, onChangeDesign }: Props) {
+export function QuizInspector({ quizId, block, design, onChangeBlock, onDeleteBlock, onChangeDesign }: Props) {
   return (
     <div className="w-80 border-l bg-card overflow-y-auto">
       {block ? (
-        <BlockInspector block={block} onChange={onChangeBlock} onDelete={onDeleteBlock} />
+        <BlockInspector quizId={quizId} block={block} onChange={onChangeBlock} onDelete={onDeleteBlock} />
       ) : (
         <DesignInspector design={design} onChange={onChangeDesign} />
       )}
@@ -29,10 +31,12 @@ export function QuizInspector({ block, design, onChangeBlock, onDeleteBlock, onC
 }
 
 function BlockInspector({
+  quizId,
   block,
   onChange,
   onDelete,
 }: {
+  quizId: string;
   block: QuizBlock;
   onChange: (p: Partial<QuizBlock>) => void;
   onDelete: () => void;
@@ -84,8 +88,13 @@ function BlockInspector({
       )}
 
       {block.type === 'intro' && (
-        <Field label="Imagem (URL)">
-          <Input value={block.imageUrl ?? ''} onChange={(e) => onChange({ imageUrl: e.target.value })} placeholder="https://..." />
+        <Field label="Imagem de capa">
+          <MediaUploader
+            quizId={quizId}
+            accept="image"
+            value={block.imageUrl}
+            onChange={(url) => onChange({ imageUrl: url })}
+          />
         </Field>
       )}
 
@@ -101,30 +110,70 @@ function BlockInspector({
         </Field>
       )}
 
-      {(block.type === 'video' || block.type === 'audio' || block.type === 'image') && (
-        <Field label={block.type === 'video' ? 'URL do vídeo' : block.type === 'audio' ? 'URL do áudio (MP3)' : 'URL da imagem'}>
-          <Input value={block.mediaUrl ?? ''} onChange={(e) => onChange({ mediaUrl: e.target.value })} placeholder="https://..." />
+      {block.type === 'image' && (
+        <Field label="Imagem">
+          <MediaUploader
+            quizId={quizId}
+            accept="image"
+            value={block.mediaUrl}
+            onChange={(url) => onChange({ mediaUrl: url })}
+          />
+        </Field>
+      )}
+      {block.type === 'audio' && (
+        <Field label="Áudio">
+          <MediaUploader
+            quizId={quizId}
+            accept="audio"
+            value={block.mediaUrl}
+            onChange={(url) => onChange({ mediaUrl: url })}
+          />
         </Field>
       )}
       {block.type === 'video' && (
-        <Field label="Provedor">
-          <Select value={block.mediaProvider ?? 'youtube'} onValueChange={(v) => onChange({ mediaProvider: v as QuizBlock['mediaProvider'] })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="youtube">YouTube</SelectItem>
-              <SelectItem value="vimeo">Vimeo</SelectItem>
-              <SelectItem value="mp4">MP4 direto</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
+        <>
+          <Field label="Provedor">
+            <Select value={block.mediaProvider ?? 'youtube'} onValueChange={(v) => onChange({ mediaProvider: v as QuizBlock['mediaProvider'] })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="vimeo">Vimeo</SelectItem>
+                <SelectItem value="mp4">MP4 direto</SelectItem>
+                <SelectItem value="file">Upload</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={block.mediaProvider === 'file' || block.mediaProvider === 'mp4' ? 'Vídeo' : 'URL do vídeo'}>
+            {block.mediaProvider === 'file' ? (
+              <MediaUploader
+                quizId={quizId}
+                accept="video"
+                value={block.mediaUrl}
+                onChange={(url) => onChange({ mediaUrl: url })}
+              />
+            ) : (
+              <Input value={block.mediaUrl ?? ''} onChange={(e) => onChange({ mediaUrl: e.target.value })} placeholder="https://..." />
+            )}
+          </Field>
+        </>
       )}
       {block.type === 'before-after' && (
         <>
-          <Field label="Imagem ANTES (URL)">
-            <Input value={block.beforeUrl ?? ''} onChange={(e) => onChange({ beforeUrl: e.target.value })} placeholder="https://..." />
+          <Field label="Antes">
+            <MediaUploader
+              quizId={quizId}
+              accept="image"
+              value={block.beforeUrl}
+              onChange={(url) => onChange({ beforeUrl: url })}
+            />
           </Field>
-          <Field label="Imagem DEPOIS (URL)">
-            <Input value={block.afterUrl ?? ''} onChange={(e) => onChange({ afterUrl: e.target.value })} placeholder="https://..." />
+          <Field label="Depois">
+            <MediaUploader
+              quizId={quizId}
+              accept="image"
+              value={block.afterUrl}
+              onChange={(url) => onChange({ afterUrl: url })}
+            />
           </Field>
         </>
       )}
@@ -136,8 +185,14 @@ function BlockInspector({
           <Field label="Cargo / Empresa">
             <Input value={block.testimonialRole ?? ''} onChange={(e) => onChange({ testimonialRole: e.target.value })} />
           </Field>
-          <Field label="Avatar (URL)">
-            <Input value={block.testimonialAvatar ?? ''} onChange={(e) => onChange({ testimonialAvatar: e.target.value })} placeholder="https://..." />
+          <Field label="Avatar">
+            <MediaUploader
+              quizId={quizId}
+              accept="image"
+              value={block.testimonialAvatar}
+              onChange={(url) => onChange({ testimonialAvatar: url })}
+              compact
+            />
           </Field>
         </>
       )}
