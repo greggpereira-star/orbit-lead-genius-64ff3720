@@ -29,7 +29,26 @@ function EmbedChat() {
   const [started, setStarted] = useState(false);
   const [visitorName, setVisitorName] = useState('');
   const [visitorEmail, setVisitorEmail] = useState('');
+  const [domainAllowed, setDomainAllowed] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = new URLSearchParams(window.location.search);
+        const pageUrl = qs.get('lf_page') || document.referrer || '';
+        let domain = '';
+        try { domain = pageUrl ? new URL(pageUrl).hostname : ''; } catch { /* noop */ }
+        const { data, error } = await supabase.rpc('is_chat_domain_allowed' as never, { p_company_id: companyId, p_domain: domain } as never);
+        if (cancelled) return;
+        setDomainAllowed(error ? true : !!data);
+      } catch {
+        if (!cancelled) setDomainAllowed(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [companyId]);
 
   useEffect(() => {
     if (!conversation) return;
