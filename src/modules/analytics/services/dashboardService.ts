@@ -42,7 +42,7 @@ export const dashboardService = {
     const since = new Date(now - days * 86400000).toISOString();
     const prevSince = new Date(now - days * 2 * 86400000).toISOString();
 
-    const [leadsRes, prevLeadsRes, totalLeadsRes, submissionsRes, metaRes, cvcrmRes] = await Promise.all([
+    const [leadsRes, prevLeadsRes, totalLeadsRes, submissionsRes, metaRes, cvcrmRes, waRes] = await Promise.all([
       supabase
         .from('leads')
         .select('id, name, source, temperature, score, created_at')
@@ -72,6 +72,11 @@ export const dashboardService = {
       supabase
         .from('cvcrm_delivery_logs')
         .select('status')
+        .eq('company_id', companyId)
+        .gte('created_at', since),
+      supabase
+        .from('whatsapp_click_events')
+        .select('id, lead_id, tracking, created_at')
         .eq('company_id', companyId)
         .gte('created_at', since),
     ]);
