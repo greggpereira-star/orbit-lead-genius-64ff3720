@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
+import { chatTeamService, type ChatDepartment, type ChatOperator } from '@/modules/chat/services/chatTeamService';
 import { quickReplyService, type ChatQuickReply } from '@/modules/chat/services/quickReplyService';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
