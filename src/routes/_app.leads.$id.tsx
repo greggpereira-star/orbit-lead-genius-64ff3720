@@ -1,374 +1,440 @@
- import { createFileRoute } from '@tanstack/react-router';
- import { useState, useEffect } from 'react';
- import { supabase } from '@/lib/supabase';
- import { useAuth } from '@/core/auth/hooks/useAuth';
- import { toast } from 'sonner';
- import { Button } from '@/components/ui/button';
- import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
- import { Badge } from '@/components/ui/badge';
- import { 
-   ArrowLeft, 
-   Mail, 
-   Phone, 
-   MapPin, 
-    Calendar,
-    Activity,
-    MessageCircle,
-    History,
-    Tags,
-    MoreVertical,
-    Edit2,
-    Target,
-    Brain,
-    Layers,
-    ShieldCheck,
-    Zap
- } from 'lucide-react';
- import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
- import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
- import { LeadScoreCard } from '@/modules/ai/components/LeadScoreCard';
- 
- export const Route = createFileRoute('/_app/leads/$id')({
-   component: LeadDetailsPage,
- });
- 
- function LeadDetailsPage() {
-   const { id } = Route.useParams();
-   const { company } = useAuth();
-    const [lead, setLead] = useState<any>(null);
-    const [events, setEvents] = useState<any[]>([]);
-    const [analysis, setAnalysis] = useState<any>(null);
-    const [tracking, setTracking] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
- 
-   useEffect(() => {
-     if (company && id) {
-       fetchLeadDetails();
-     }
-   }, [company, id]);
- 
-   const fetchLeadDetails = async () => {
-     setIsLoading(true);
-     try {
-       const { data: leadData, error: leadError } = await supabase
-         .from('leads')
-         .select('*')
-         .eq('id', id)
-         .single();
- 
-       if (leadError) throw leadError;
-       setLead(leadData);
- 
-       const { data: eventsData, error: eventsError } = await supabase
-         .from('lead_events')
-         .select('*')
-         .eq('lead_id', id)
-         .order('created_at', { ascending: false });
- 
-        if (eventsError) throw eventsError;
-        setEvents(eventsData);
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  Activity,
+  Archive,
+  ArrowLeft,
+  Brain,
+  Calendar,
+  Layers,
+  Mail,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Target,
+  Zap,
+} from 'lucide-react';
 
-        // Fetch AI Analysis
-        const { data: aiData } = await supabase
-          .from('ai_analysis')
-          .select('*')
-          .eq('lead_id', id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        setAnalysis(aiData);
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import {
+  archiveLead,
+  getLeadCompanyName,
+  getLeadDetails,
+  getLeadDisplayName,
+  getLeadMetadata,
+  getLeadScore,
+  getLeadTemperature,
+  updateLeadStatus,
+  type LeadDetails,
+  type LeadEventRow,
+} from '@/modules/crm/services/leadService';
 
-        // Fetch Page Views / Tracking (simulated via events for now, or direct table if it exists)
-        const { data: trackData } = await supabase
-          .from('page_views')
-          .select('*, sessions!inner(*)')
-          .eq('sessions.visitor_id', leadData.visitor_id || leadData.metadata?.visitor_id);
-        
-        setTracking(trackData || []);
-     } catch (error) {
-       console.error('Error fetching lead details:', error);
-       toast.error('Failed to load lead details');
-     } finally {
-       setIsLoading(false);
-     }
-   };
- 
-   if (isLoading) return <div className="p-8 text-center">Loading lead details...</div>;
-   if (!lead) return <div className="p-8 text-center text-rose-500 font-bold">Lead not found</div>;
- 
-   return (
-     <div className="space-y-6">
-       <div className="flex items-center gap-4">
-         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-           <ArrowLeft className="h-4 w-4" />
-         </Button>
-         <div className="flex-1">
-           <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">{lead.name}</h1>
-             <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 capitalize">
-               {lead.status}
-             </Badge>
-             <Badge 
-               variant="outline" 
-               className={`capitalize ${
-                 lead.temperature === 'hot' ? 'text-rose-600 bg-rose-50 border-rose-100' : 
-                 lead.temperature === 'warm' ? 'text-amber-600 bg-amber-50 border-amber-100' : 
-                 'text-blue-600 bg-blue-50 border-blue-100'
-               }`}
-             >
-               {lead.temperature || 'cold'}
-             </Badge>
-           </div>
-            <p className="text-muted-foreground text-sm font-semibold">{lead.role} at {lead.company}</p>
-         </div>
-         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" className="gap-2">
-             <Edit2 className="h-4 w-4" />
-             Edit
-           </Button>
-           <Button size="sm" className="gap-2">
-             <MessageCircle className="h-4 w-4" />
-             WhatsApp
-           </Button>
-           <Button variant="ghost" size="icon">
-             <MoreVertical className="h-4 w-4" />
-           </Button>
-         </div>
-       </div>
- 
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         <div className="lg:col-span-1 space-y-6">
-           <Card className="border-none shadow-sm">
-             <CardHeader>
-               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                 Contact Information
-               </CardTitle>
-             </CardHeader>
-             <CardContent className="space-y-4">
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 text-primary" />
-                  <span className="text-foreground font-bold">{lead.email}</span>
-                </div>
-               <div className="flex items-center gap-3 text-sm">
-                 <Phone className="h-4 w-4 text-muted-foreground" />
-                 <span className="text-foreground">{lead.phone}</span>
-               </div>
-               <div className="flex items-center gap-3 text-sm">
-                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                 <span className="text-foreground">{lead.city}</span>
-               </div>
-               <div className="flex items-center gap-3 text-sm">
-                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                 <span className="text-foreground">Created on {lead.created_at}</span>
-               </div>
-             </CardContent>
-           </Card>
- 
-            <LeadScoreCard leadData={lead} />
+export const Route = createFileRoute('/_app/leads/$id')({
+  component: LeadDetailsPage,
+});
 
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  Marketing Attribution
-                </CardTitle>
-              </CardHeader>
-             <CardContent className="space-y-3">
-               <div className="flex justify-between text-xs">
-                 <span className="text-muted-foreground">Source</span>
-                 <Badge variant="secondary" className="text-[10px] py-0">{lead.utm_source || lead.source || 'Direct'}</Badge>
-               </div>
-               <div className="flex justify-between text-xs">
-                 <span className="text-muted-foreground">Campaign</span>
-                 <span className="font-medium truncate ml-4 text-right text-foreground/80">{lead.utm_campaign || 'None'}</span>
-               </div>
-               <div className="flex justify-between text-xs">
-                 <span className="text-muted-foreground">GCLID</span>
-                 <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-foreground/70">
-                   {lead.gclid || 'None'}
-                 </span>
-               </div>
-             </CardContent>
-            </Card>
-         </div>
- 
-         <div className="lg:col-span-2 space-y-6">
-           <Tabs defaultValue="activity" className="w-full">
-             <TabsList className="bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-6">
-               <TabsTrigger 
-                 value="activity" 
-                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 h-auto"
-               >
-                 <Activity className="h-4 w-4 mr-2" />
-                 Activity Timeline
-               </TabsTrigger>
-               <TabsTrigger 
-                 value="history" 
-                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 h-auto"
-               >
-                 <History className="h-4 w-4 mr-2" />
-                 Status History
-               </TabsTrigger>
-                <TabsTrigger 
-                  value="intelligence" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 h-auto"
-                >
-                  <Brain className="h-4 w-4 mr-2" />
-                  AI Intelligence
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="tracking" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 h-auto"
-                >
-                  <Layers className="h-4 w-4 mr-2" />
-                  Session Tracking
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="compliance" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-3 h-auto"
-                >
-                  <ShieldCheck className="h-4 w-4 mr-2" />
-                  Compliance
-                </TabsTrigger>
-             </TabsList>
-               <TabsContent value="activity" className="pt-6">
-                 <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-muted before:via-muted before:to-transparent">
-                   {events.length === 0 ? (
-                     <p className="text-sm text-muted-foreground italic ml-10">No activities recorded yet.</p>
-                   ) : (
-                     events.map((event) => (
-                       <div key={event.id} className="relative flex items-start gap-6">
-                         <div className="absolute left-0 flex items-center justify-center w-10 h-10 rounded-full bg-background border shadow-sm ring-8 ring-background">
-                           <Activity className="h-4 w-4 text-primary" />
-                         </div>
-                         <div className="flex-1 ml-10">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-bold capitalize text-foreground">{event.event_type.replace('_', ' ')}</h4>
-                              <span className="text-xs text-muted-foreground font-bold">{new Date(event.created_at).toLocaleString()}</span>
-                            </div>
-                           <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                         </div>
-                       </div>
-                     ))
-                   )}
-                 </div>
-               </TabsContent>
-             <TabsContent value="history" className="pt-6">
-                <p className="text-sm text-muted-foreground italic">No history available yet.</p>
-             </TabsContent>
-              <TabsContent value="intelligence" className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="border shadow-none">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-amber-500" />
-                        Deep Analysis Summary
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-foreground/80 leading-relaxed">
-                        {analysis?.summary || lead.metadata?.summary || "Analyzing intent signals..."}
-                      </p>
-                      {lead.metadata?.pain_points && (
-                        <div className="mt-4 space-y-2">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Detected Pain Points</p>
-                          <div className="flex flex-wrap gap-2">
-                            {lead.metadata.pain_points.map((p: string) => (
-                              <Badge key={p} variant="secondary" className="font-normal">{p}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Card className="border shadow-none">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Recommended Action</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg">
-                        <p className="text-sm font-semibold text-primary">
-                          {lead.metadata?.recommended_next_step || "Nurture with attribution content"}
-                        </p>
-                      </div>
-                      <div className="mt-4 flex justify-between text-xs">
-                        <span className="text-muted-foreground">Buying Intent</span>
-                        <Badge variant="outline" className="capitalize">{lead.metadata?.buying_intent || "Medium"}</Badge>
-                      </div>
-                      <div className="mt-2 flex justify-between text-xs">
-                        <span className="text-muted-foreground">Est. Deal Value</span>
-                        <span className="font-mono font-bold">${lead.metadata?.estimated_deal_value || '0'}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
+const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost', 'archived'];
 
-              <TabsContent value="tracking" className="pt-6">
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 border-b">
-                      <tr>
-                        <th className="text-left p-3 font-medium text-xs text-muted-foreground">Page Title</th>
-                        <th className="text-left p-3 font-medium text-xs text-muted-foreground">URL Path</th>
-                        <th className="text-left p-3 font-medium text-xs text-muted-foreground text-right">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {tracking.length === 0 ? (
-                        <tr>
-                          <td colSpan={3} className="p-8 text-center text-muted-foreground italic">No visitor tracking data yet.</td>
-                        </tr>
-                      ) : (
-                        tracking.map((track, i) => (
-                          <tr key={i} className="hover:bg-muted/30 transition-colors">
-                            <td className="p-3 font-medium">{track.title}</td>
-                            <td className="p-3 font-mono text-xs text-muted-foreground">{track.url.split('/').pop() || '/'}</td>
-                            <td className="p-3 text-right text-xs text-muted-foreground">{new Date(track.created_at).toLocaleTimeString()}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </TabsContent>
+function LeadDetailsPage() {
+  const { id } = Route.useParams();
+  const { company } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const companyId = company?.id;
 
-              <TabsContent value="compliance" className="pt-6">
-                <Card className="border shadow-none max-w-2xl">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Data Privacy & Consent (LGPD)</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Marketing Consent</p>
-                        <Badge variant={lead.metadata?.consents?.marketing ? "default" : "secondary"}>
-                          {lead.metadata?.consents?.marketing ? "Granted" : "Not Provided"}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Tracking Consent</p>
-                        <Badge variant={lead.metadata?.consents?.tracking ? "default" : "secondary"}>
-                          {lead.metadata?.consents?.tracking ? "Granted" : "Not Provided"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-muted rounded-md font-mono text-[10px] text-muted-foreground">
-                      <p>Consent Version: {lead.metadata?.consent_version || "N/A"}</p>
-                      <p>IP Address: {lead.metadata?.ip || "Masked"}</p>
-                      <p>Timestamp: {lead.created_at}</p>
-                    </div>
-                    <div className="flex gap-3 pt-2">
-                      <Button variant="outline" size="sm" className="h-8 text-xs">Export Data</Button>
-                      <Button variant="destructive" size="sm" className="h-8 text-xs">Purge Personal Data</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-           </Tabs>
-         </div>
-       </div>
-     </div>
-   );
- }
+  const detailsQuery = useQuery({
+    queryKey: ['lead-details', companyId, id],
+    queryFn: () => getLeadDetails(id, companyId ?? ''),
+    enabled: Boolean(companyId && id),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => {
+      if (!companyId) throw new Error('Workspace não carregado.');
+      return updateLeadStatus({ leadId: id, companyId, status });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['lead-details', companyId, id] });
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Status atualizado.');
+    },
+    onError: () => toast.error('Não foi possível atualizar o status.'),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: () => {
+      if (!companyId) throw new Error('Workspace não carregado.');
+      return archiveLead({ leadId: id, companyId });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead arquivado sem exclusão física.');
+      navigate({ to: '/leads' });
+    },
+    onError: () => toast.error('Não foi possível arquivar o lead.'),
+  });
+
+  if (detailsQuery.isLoading) return <LeadDetailsSkeleton />;
+  if (detailsQuery.isError) return <StateMessage title="Erro ao carregar lead" description="Tente novamente ou volte para a lista de leads." />;
+  if (!detailsQuery.data) return <StateMessage title="Lead não encontrado" description="O lead pode ter sido arquivado, removido ou pertencer a outro workspace." />;
+
+  const details = detailsQuery.data;
+  const lead = details.lead;
+  const score = getLeadScore(lead);
+  const temperature = getLeadTemperature(lead);
+  const metadata = getLeadMetadata(lead);
+  const phoneUrl = createWhatsAppUrl(lead.phone);
+  const companyName = getLeadCompanyName(lead);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/leads' })} aria-label="Voltar para leads">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{getLeadDisplayName(lead)}</h1>
+              <Badge variant="secondary">{formatLabel(lead.status || 'new')}</Badge>
+              <Badge variant={temperature === 'hot' ? 'default' : 'outline'}>{formatLabel(temperature)}</Badge>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">
+              {companyName ? `${companyName} • ` : ''}{lead.source || lead.utm_source || 'Origem direta'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={lead.status || 'new'} onValueChange={(value) => statusMutation.mutate(value)} disabled={statusMutation.isPending}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" className="gap-2" disabled={!phoneUrl} onClick={() => phoneUrl && window.open(phoneUrl, '_blank', 'noopener,noreferrer')}>
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Archive className="h-4 w-4" />
+                Arquivar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Arquivar este lead?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  O contato sairá da lista principal, mas histórico, eventos e dados de auditoria permanecem preservados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => archiveMutation.mutate()} disabled={archiveMutation.isPending}>Arquivar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <aside className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">Contato</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ContactRow icon={<Mail className="h-4 w-4" />} label="E-mail" value={lead.email || 'Não informado'} />
+              <ContactRow icon={<Phone className="h-4 w-4" />} label="Telefone" value={lead.phone || 'Não informado'} />
+              <ContactRow icon={<Calendar className="h-4 w-4" />} label="Criado" value={formatDateTime(lead.created_at)} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">Score comercial</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-end justify-between">
+                <div className="text-4xl font-black tracking-tight text-foreground">{score}</div>
+                <Badge variant={temperature === 'hot' ? 'default' : 'secondary'}>{formatLabel(temperature)}</Badge>
+              </div>
+              <Progress value={score} />
+              <p className="text-xs text-muted-foreground">Score consolidado entre captura, formulários, quizzes e regras de qualificação.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase text-muted-foreground">
+                <Target className="h-4 w-4" />
+                Atribuição
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <KeyValue label="Origem" value={lead.utm_source || lead.source || 'Direto'} />
+              <KeyValue label="Campanha" value={lead.utm_campaign || 'Sem campanha'} />
+              <KeyValue label="GCLID" value={lead.gclid || 'Não capturado'} />
+              <KeyValue label="FBCLID" value={lead.fbclid || 'Não capturado'} />
+            </CardContent>
+          </Card>
+        </aside>
+
+        <section className="lg:col-span-2">
+          <Tabs defaultValue="activity" className="w-full">
+            <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-none border-b bg-transparent p-0">
+              <LeadTab value="activity" icon={<Activity className="h-4 w-4" />} label="Atividade" />
+              <LeadTab value="intelligence" icon={<Brain className="h-4 w-4" />} label="Inteligência" />
+              <LeadTab value="tracking" icon={<Layers className="h-4 w-4" />} label="Tracking" />
+              <LeadTab value="compliance" icon={<ShieldCheck className="h-4 w-4" />} label="LGPD" />
+            </TabsList>
+
+            <TabsContent value="activity" className="pt-6">
+              <ActivityTimeline events={details.events} />
+            </TabsContent>
+
+            <TabsContent value="intelligence" className="pt-6">
+              <IntelligencePanel details={details} />
+            </TabsContent>
+
+            <TabsContent value="tracking" className="pt-6">
+              <TrackingPanel details={details} />
+            </TabsContent>
+
+            <TabsContent value="compliance" className="pt-6">
+              <CompliancePanel metadata={metadata} createdAt={lead.created_at} />
+            </TabsContent>
+          </Tabs>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ContactRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <div className="text-muted-foreground">{icon}</div>
+      <div className="min-w-0">
+        <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
+        <div className="truncate font-semibold text-foreground">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function KeyValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="truncate text-right font-semibold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function LeadTab({ value, icon, label }: { value: string; icon: React.ReactNode; label: string }) {
+  return (
+    <TabsTrigger value={value} className="gap-2 rounded-none border-b-2 border-transparent px-1 pb-3 data-[state=active]:border-primary data-[state=active]:bg-transparent">
+      {icon}
+      {label}
+    </TabsTrigger>
+  );
+}
+
+function ActivityTimeline({ events }: { events: LeadEventRow[] }) {
+  if (events.length === 0) {
+    return <EmptyPanel title="Sem eventos registrados" description="Novas mudanças de status, capturas e integrações aparecerão aqui." />;
+  }
+
+  return (
+    <div className="relative space-y-6 before:absolute before:bottom-0 before:left-5 before:top-0 before:w-px before:bg-border">
+      {events.map((event) => (
+        <div key={event.id} className="relative flex gap-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background ring-4 ring-background">
+            <Activity className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1 rounded-lg border bg-card p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="font-bold text-foreground">{formatLabel(event.event_type)}</h3>
+              <span className="text-xs font-medium text-muted-foreground">{event.created_at ? formatDateTime(event.created_at) : 'Sem data'}</span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">{event.description || 'Evento registrado.'}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IntelligencePanel({ details }: { details: LeadDetails }) {
+  const metadata = getLeadMetadata(details.lead);
+  const analysisSummary = readRecordString(details.analysis, 'summary') ?? readRecordString(metadata, 'summary');
+  const nextStep = readRecordString(metadata, 'recommended_next_step') ?? 'Priorizar contato humano com contexto de origem e intenção.';
+  const buyingIntent = readRecordString(metadata, 'buying_intent') ?? 'Médio';
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Zap className="h-4 w-4 text-primary" />
+            Resumo de intenção
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm leading-relaxed text-muted-foreground">{analysisSummary || 'Ainda não há análise de IA para este lead.'}</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Próxima ação recomendada</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border bg-primary/5 p-3 text-sm font-semibold text-primary">{nextStep}</div>
+          <KeyValue label="Intenção de compra" value={buyingIntent} />
+          <KeyValue label="Origem do score" value={details.lead.source || details.lead.utm_source || 'Captura direta'} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function TrackingPanel({ details }: { details: LeadDetails }) {
+  if (details.tracking.length === 0) {
+    return <EmptyPanel title="Sem tracking de sessão" description="Quando houver visitor_id associado ao lead, as páginas visitadas aparecerão aqui." />;
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border bg-card">
+      <table className="w-full text-sm">
+        <thead className="border-b bg-muted/50">
+          <tr>
+            <th className="p-3 text-left text-xs font-bold uppercase text-muted-foreground">Página</th>
+            <th className="p-3 text-left text-xs font-bold uppercase text-muted-foreground">URL</th>
+            <th className="p-3 text-right text-xs font-bold uppercase text-muted-foreground">Horário</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {details.tracking.map((view) => (
+            <tr key={view.id} className="hover:bg-muted/40">
+              <td className="p-3 font-semibold text-foreground">{view.title || 'Página sem título'}</td>
+              <td className="max-w-[320px] truncate p-3 font-mono text-xs text-muted-foreground">{view.url}</td>
+              <td className="p-3 text-right text-xs text-muted-foreground">{view.created_at ? formatDateTime(view.created_at) : 'Sem data'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CompliancePanel({ metadata, createdAt }: { metadata: Record<string, unknown>; createdAt: string }) {
+  const consents = typeof metadata.consents === 'object' && metadata.consents !== null ? metadata.consents as Record<string, unknown> : {};
+  const marketingConsent = consents.marketing === true;
+  const trackingConsent = consents.tracking === true;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Privacidade e consentimento</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ConsentItem label="Marketing" granted={marketingConsent} />
+          <ConsentItem label="Tracking" granted={trackingConsent} />
+        </div>
+        <div className="rounded-lg border bg-muted/40 p-3 font-mono text-xs text-muted-foreground">
+          <p>Consent version: {readRecordString(metadata, 'consent_version') || 'N/A'}</p>
+          <p>IP: {readRecordString(metadata, 'ip') || 'Masked'}</p>
+          <p>Created: {formatDateTime(createdAt)}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConsentItem({ label, granted }: { label: string; granted: boolean }) {
+  return (
+    <div className="space-y-2 rounded-lg border p-4">
+      <p className="text-xs font-bold uppercase text-muted-foreground">{label}</p>
+      <Badge variant={granted ? 'default' : 'secondary'}>{granted ? 'Concedido' : 'Não informado'}</Badge>
+    </div>
+  );
+}
+
+function EmptyPanel({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-lg border bg-card p-8 text-center">
+      <p className="font-bold text-foreground">{title}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function StateMessage({ title, description }: { title: string; description: string }) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex min-h-[420px] items-center justify-center">
+      <div className="max-w-md space-y-4 text-center">
+        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <p className="text-sm text-muted-foreground">{description}</p>
+        <Button onClick={() => navigate({ to: '/leads' })}>Voltar para leads</Button>
+      </div>
+    </div>
+  );
+}
+
+function LeadDetailsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-16 w-full" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Skeleton className="h-80" />
+        <Skeleton className="h-80 lg:col-span-2" />
+      </div>
+    </div>
+  );
+}
+
+function createWhatsAppUrl(phone: string | null): string | null {
+  const digits = phone?.replace(/\D/g, '');
+  return digits ? `https://wa.me/${digits}` : null;
+}
+
+function readRecordString(record: Record<string, unknown> | null, key: string): string | null {
+  const value = record?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function formatLabel(value: string): string {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+}
