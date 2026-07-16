@@ -43,6 +43,7 @@ import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.r
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
+import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
@@ -223,6 +224,11 @@ const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   path: '/company',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsChatRoute = AppSettingsChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsAutomationsRoute = AppSettingsAutomationsRouteImport.update({
   id: '/automations',
   path: '/automations',
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
+  '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByTo {
   '/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
+  '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
@@ -385,6 +393,7 @@ export interface FileRoutesById {
   '/_app/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
+  '/_app/settings/chat': typeof AppSettingsChatRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
@@ -430,6 +439,7 @@ export interface FileRouteTypes {
     | '/integrations/meta'
     | '/leads/$id'
     | '/settings/automations'
+    | '/settings/chat'
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/notifications'
@@ -472,6 +482,7 @@ export interface FileRouteTypes {
     | '/integrations/meta'
     | '/leads/$id'
     | '/settings/automations'
+    | '/settings/chat'
     | '/settings/company'
     | '/settings/integrations'
     | '/settings/notifications'
@@ -517,6 +528,7 @@ export interface FileRouteTypes {
     | '/_app/integrations/meta'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
+    | '/_app/settings/chat'
     | '/_app/settings/company'
     | '/_app/settings/integrations'
     | '/_app/settings/notifications'
@@ -788,6 +800,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsCompanyRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/chat': {
+      id: '/_app/settings/chat'
+      path: '/chat'
+      fullPath: '/settings/chat'
+      preLoaderRoute: typeof AppSettingsChatRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/automations': {
       id: '/_app/settings/automations'
       path: '/automations'
@@ -898,6 +917,7 @@ const AppQuizzesRouteWithChildren = AppQuizzesRoute._addFileChildren(
 
 interface AppSettingsRouteChildren {
   AppSettingsAutomationsRoute: typeof AppSettingsAutomationsRoute
+  AppSettingsChatRoute: typeof AppSettingsChatRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
@@ -909,6 +929,7 @@ interface AppSettingsRouteChildren {
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAutomationsRoute: AppSettingsAutomationsRoute,
+  AppSettingsChatRoute: AppSettingsChatRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
@@ -999,13 +1020,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

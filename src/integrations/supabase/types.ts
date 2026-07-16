@@ -37,6 +37,7 @@ export type Database = {
           assigned_to: string | null
           company_id: string
           created_at: string
+          department_id: string | null
           id: string
           last_message_at: string
           lead_id: string | null
@@ -57,6 +58,7 @@ export type Database = {
           assigned_to?: string | null
           company_id: string
           created_at?: string
+          department_id?: string | null
           id?: string
           last_message_at?: string
           lead_id?: string | null
@@ -77,6 +79,7 @@ export type Database = {
           assigned_to?: string | null
           company_id?: string
           created_at?: string
+          department_id?: string | null
           id?: string
           last_message_at?: string
           lead_id?: string | null
@@ -102,10 +105,58 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chat_conversations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "chat_departments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chat_conversations_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_departments: {
+        Row: {
+          color: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_departments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -157,6 +208,69 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_operators: {
+        Row: {
+          avatar_url: string | null
+          company_id: string
+          created_at: string
+          department_id: string | null
+          display_name: string | null
+          id: string
+          is_active: boolean
+          last_seen_at: string | null
+          max_concurrent: number
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id: string
+          created_at?: string
+          department_id?: string | null
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string | null
+          max_concurrent?: number
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string
+          created_at?: string
+          department_id?: string | null
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string | null
+          max_concurrent?: number
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_operators_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_operators_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "chat_departments"
             referencedColumns: ["id"]
           },
         ]
