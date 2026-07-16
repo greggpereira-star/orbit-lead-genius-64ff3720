@@ -14,15 +14,16 @@ import {
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 
-const playerQuery = (slug: string) =>
+const playerQuery = (slug: string, preview: boolean) =>
   queryOptions({
-    queryKey: ['quiz-public', slug],
-    queryFn: () => quizService.getPublishedBySlug(slug),
-    staleTime: 60_000,
+    queryKey: ['quiz-public', slug, preview ? 'preview' : 'published'],
+    queryFn: () =>
+      preview ? quizService.getDraftBySlug(slug) : quizService.getPublishedBySlug(slug),
+    staleTime: preview ? 0 : 60_000,
   });
 
-export function QuizPlayer({ slug }: { slug: string }) {
-  const { data } = useSuspenseQuery(playerQuery(slug));
+export function QuizPlayer({ slug, preview = false }: { slug: string; preview?: boolean }) {
+  const { data } = useSuspenseQuery(playerQuery(slug, preview));
 
   if (!data) {
     return (
@@ -35,7 +36,16 @@ export function QuizPlayer({ slug }: { slug: string }) {
     );
   }
 
-  return <PlayerRunner quizId={data.quiz.id} companyId={data.quiz.company_id} schema={data.schema} />;
+  return (
+    <>
+      {preview && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-full bg-yellow-500 text-black text-xs font-semibold shadow">
+          Preview (rascunho)
+        </div>
+      )}
+      <PlayerRunner quizId={data.quiz.id} companyId={data.quiz.company_id} schema={data.schema} preview={preview} />
+    </>
+  );
 }
 
 function PlayerRunner({
