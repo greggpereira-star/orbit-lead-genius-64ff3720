@@ -267,13 +267,13 @@ function LeadsPage() {
               <LoadingRows />
             ) : leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
                   Nenhum lead encontrado para os filtros atuais.
                 </TableCell>
               </TableRow>
             ) : (
               leads.map((lead) => (
-                <LeadTableRow key={lead.id} lead={lead} onArchive={() => archiveMutation.mutate(lead.id)} />
+                <LeadTableRow key={lead.id} lead={lead} currentUserId={currentUserId} onArchive={() => archiveMutation.mutate(lead.id)} />
               ))
             )}
           </TableBody>
