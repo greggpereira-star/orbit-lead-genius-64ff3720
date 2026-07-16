@@ -134,6 +134,32 @@ export const chatService = {
     if (error) throw error;
   },
 
+  async transferConversation(input: {
+    conversationId: string;
+    companyId: string;
+    departmentId?: string | null;
+    assignedTo?: string | null;
+    note?: string;
+    actorLabel?: string;
+  }): Promise<void> {
+    const patch: Record<string, unknown> = { status: 'pending', unread_agent: 0 };
+    if (input.departmentId !== undefined) patch.department_id = input.departmentId;
+    if (input.assignedTo !== undefined) patch.assigned_to = input.assignedTo;
+    const { error } = await supabase.from(CONV).update(patch as never).eq('id' as never, input.conversationId as never);
+    if (error) throw error;
+
+    const parts: string[] = [];
+    if (input.actorLabel) parts.push(input.actorLabel);
+    parts.push('transferiu a conversa');
+    if (input.note) parts.push(`— ${input.note}`);
+    await supabase.from(MSG).insert({
+      conversation_id: input.conversationId,
+      company_id: input.companyId,
+      sender_type: 'system',
+      content: parts.join(' '),
+    } as never);
+  },
+
   subscribeToConversations(companyId: string, onChange: () => void) {
     const channel = supabase
       .channel(`chat_conv_${companyId}`)
