@@ -155,20 +155,26 @@ serve(async (req) => {
         metadata: { status_code: response.status, error: result }
       });
 
-      // Handle Retries or DLQ (Logic would go here or in a separate worker)
-      if (response.status >= 500 || response.status === 429) {
-          // Scheduled retry logic would update next_retry_at
+      // Handle Retries or DLQ
+      const isRetryable = response.status >= 500 || response.status === 429 || response.status === 408;
+      if (isRetryable) {
+          // Exponential backoff: 30s, 2min, 8min, 30min, 2h (cap)
+          const attempt = (logRecord?.attempt_count ?? 0) + 1;
+          const delayMs = Math.min(30_000 * Math.pow(4, attempt - 1), 2 * 60 * 60 * 1000);
           await supabaseAdmin.from('cvcrm_delivery_logs')
-            .update({ status: 'retrying', next_retry_at: new Date(Date.now() + 30000).toISOString() })
+            .update({ status: 'retrying', next_retry_at: new Date(Date.now() + delayMs).toISOString() })
             .eq('id', logRecord.id);
       } else {
-          // Move to DLQ
+          // Move to DLQ (non-retryable: 4xx client errors)
+          await supabaseAdmin.from('cvcrm_delivery_logs')
+            .update({ status: 'dead_letter' })
+            .eq('id', logRecord.id);
           await supabaseAdmin.from('cvcrm_dead_letter_queue').insert({
             company_id: tenant_id,
             lead_id: lead_id,
             trace_id: traceId,
             delivery_log_id: logRecord.id,
-            failure_reason: 'Non-retryable API error',
+            failure_reason: `Non-retryable API error (HTTP ${response.status})`,
             payload: cvPayload,
             last_error: JSON.stringify(result)
           });
