@@ -15,6 +15,7 @@ export interface ChatReportSummary {
   ratingCount: number;
   byDay: { date: string; conversations: number; messages: number }[];
   topPages: { url: string; count: number }[];
+}
 
 export interface AgentReportRow {
   agentId: string;
