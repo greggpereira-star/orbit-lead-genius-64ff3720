@@ -52,6 +52,44 @@ function WidgetsSettings() {
   const [waMessage, setWaMessage] = useState('Olá! Vim pelo site e quero saber mais.');
   const [waLabel, setWaLabel] = useState('Fale no WhatsApp');
   const [waColor, setWaColor] = useState('#25D366');
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([]);
+  const [newDomain, setNewDomain] = useState('');
+  const [savingDomains, setSavingDomains] = useState(false);
+
+  useEffect(() => {
+    if (!company?.id) return;
+    (async () => {
+      const { data } = await supabase.from('companies' as never).select('chat_allowed_domains').eq('id' as never, company.id as never).maybeSingle();
+      const row = data as { chat_allowed_domains?: string[] } | null;
+      setAllowedDomains(row?.chat_allowed_domains ?? []);
+    })();
+  }, [company?.id]);
+
+  function normalizeDomain(raw: string): string {
+    let v = raw.trim().toLowerCase();
+    if (!v) return '';
+    try { v = new URL(v.startsWith('http') ? v : `https://${v}`).hostname; } catch { /* noop */ }
+    return v.replace(/^www\./, '');
+  }
+
+  async function saveDomains(next: string[]) {
+    if (!company?.id) return;
+    setSavingDomains(true);
+    const { error } = await supabase.from('companies' as never).update({ chat_allowed_domains: next } as never).eq('id' as never, company.id as never);
+    setSavingDomains(false);
+    if (error) { toast.error('Não foi possível salvar'); return; }
+    setAllowedDomains(next);
+    toast.success('Domínios atualizados');
+  }
+
+  function addDomain() {
+    const d = normalizeDomain(newDomain);
+    if (!d) return;
+    if (allowedDomains.includes(d)) { toast.info('Domínio já está na lista'); return; }
+    saveDomains([...allowedDomains, d]);
+    setNewDomain('');
+  }
+  function removeDomain(d: string) { saveDomains(allowedDomains.filter((x) => x !== d)); }
 
   const chatSnippet = useMemo(
     () => `<script src="${host}/chat-widget.js"
