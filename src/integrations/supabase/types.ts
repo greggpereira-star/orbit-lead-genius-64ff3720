@@ -1824,6 +1824,229 @@ export type Database = {
           },
         ]
       }
+      meta_lead_connections: {
+        Row: {
+          access_token: string
+          company_id: string
+          connected_by: string | null
+          created_at: string
+          granted_scopes: string[]
+          id: string
+          meta_user_id: string
+          meta_user_name: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          company_id: string
+          connected_by?: string | null
+          created_at?: string
+          granted_scopes?: string[]
+          id?: string
+          meta_user_id: string
+          meta_user_name?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          company_id?: string
+          connected_by?: string | null
+          created_at?: string
+          granted_scopes?: string[]
+          id?: string
+          meta_user_id?: string
+          meta_user_name?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_lead_events: {
+        Row: {
+          ad_id: string | null
+          company_id: string | null
+          created_at: string
+          error_message: string | null
+          form_id: string | null
+          id: string
+          lead_id: string | null
+          leadgen_id: string
+          page_id: string
+          processed_at: string | null
+          raw_payload: Json
+          received_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ad_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          form_id?: string | null
+          id?: string
+          lead_id?: string | null
+          leadgen_id: string
+          page_id: string
+          processed_at?: string | null
+          raw_payload: Json
+          received_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ad_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          form_id?: string | null
+          id?: string
+          lead_id?: string | null
+          leadgen_id?: string
+          page_id?: string
+          processed_at?: string | null
+          raw_payload?: Json
+          received_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_lead_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_lead_forms: {
+        Row: {
+          company_id: string
+          created_at: string
+          field_mapping: Json
+          form_id: string
+          form_name: string
+          id: string
+          is_active: boolean
+          page_id: string
+          questions: Json
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          field_mapping?: Json
+          form_id: string
+          form_name: string
+          id?: string
+          is_active?: boolean
+          page_id: string
+          questions?: Json
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          field_mapping?: Json
+          form_id?: string
+          form_name?: string
+          id?: string
+          is_active?: boolean
+          page_id?: string
+          questions?: Json
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_forms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_lead_pages: {
+        Row: {
+          category: string | null
+          company_id: string
+          connection_id: string
+          created_at: string
+          id: string
+          page_access_token: string
+          page_id: string
+          page_name: string
+          subscribed: boolean
+          subscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          connection_id: string
+          created_at?: string
+          id?: string
+          page_access_token: string
+          page_id: string
+          page_name: string
+          subscribed?: boolean
+          subscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          connection_id?: string
+          created_at?: string
+          id?: string
+          page_access_token?: string
+          page_id?: string
+          page_name?: string
+          subscribed?: boolean
+          subscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_pages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_lead_pages_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "meta_lead_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oauth_connections: {
         Row: {
           access_token: string
