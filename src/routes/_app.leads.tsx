@@ -68,19 +68,21 @@ const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'won', 'los
 const TEMPERATURE_OPTIONS = ['hot', 'warm', 'cold'] as const;
 
 function LeadsPage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [temperature, setTemperature] = useState<'all' | 'hot' | 'warm' | 'cold'>('all');
+  const [assignment, setAssignment] = useState<'all' | 'mine' | 'unassigned'>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
 
   const companyId = company?.id;
+  const currentUserId = user?.id ?? null;
   const leadsQuery = useQuery({
-    queryKey: ['leads', companyId, search, status, temperature],
-    queryFn: () => listLeads(companyId ?? '', { search, status, temperature }),
+    queryKey: ['leads', companyId, search, status, temperature, assignment, currentUserId],
+    queryFn: () => listLeads(companyId ?? '', { search, status, temperature, assignment, currentUserId }),
     enabled: Boolean(companyId),
   });
 
@@ -209,7 +211,7 @@ function LeadsPage() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:w-[420px]">
+        <div className="grid grid-cols-2 gap-3 lg:w-[620px] lg:grid-cols-3">
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
@@ -233,6 +235,16 @@ function LeadsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={assignment} onValueChange={(value) => setAssignment(value as typeof assignment)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Atribuição" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os vendedores</SelectItem>
+              <SelectItem value="mine">Meus leads</SelectItem>
+              <SelectItem value="unassigned">Sem atribuição</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -245,6 +257,7 @@ function LeadsPage() {
               <TableHead>Status</TableHead>
               <TableHead>Temperatura</TableHead>
               <TableHead className="w-[170px]">Score</TableHead>
+              <TableHead>Atribuído</TableHead>
               <TableHead>Criado em</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -254,13 +267,13 @@ function LeadsPage() {
               <LoadingRows />
             ) : leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
                   Nenhum lead encontrado para os filtros atuais.
                 </TableCell>
               </TableRow>
             ) : (
               leads.map((lead) => (
-                <LeadTableRow key={lead.id} lead={lead} onArchive={() => archiveMutation.mutate(lead.id)} />
+                <LeadTableRow key={lead.id} lead={lead} currentUserId={currentUserId} onArchive={() => archiveMutation.mutate(lead.id)} />
               ))
             )}
           </TableBody>
@@ -270,10 +283,13 @@ function LeadsPage() {
   );
 }
 
-function LeadTableRow({ lead, onArchive }: { lead: LeadRow; onArchive: () => void }) {
+function LeadTableRow({ lead, currentUserId, onArchive }: { lead: LeadRow; currentUserId: string | null; onArchive: () => void }) {
   const score = getLeadScore(lead);
   const source = lead.source || lead.utm_source || 'direct';
   const temperature = getLeadTemperature(lead);
+  const assignedLabel = lead.assigned_to
+    ? lead.assigned_to === currentUserId ? 'Você' : `${lead.assigned_to.slice(0, 8)}…`
+    : '—';
 
   return (
     <TableRow className="group transition-colors hover:bg-muted/60">
@@ -300,6 +316,13 @@ function LeadTableRow({ lead, onArchive }: { lead: LeadRow; onArchive: () => voi
           <Progress value={score} className="h-1.5" />
           <span className="w-8 text-right text-xs font-bold tabular-nums">{score}</span>
         </div>
+      </TableCell>
+      <TableCell className="text-xs font-semibold">
+        {lead.assigned_to ? (
+          <Badge variant={lead.assigned_to === currentUserId ? 'default' : 'outline'}>{assignedLabel}</Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell className="text-xs font-medium text-muted-foreground">{formatDate(lead.created_at)}</TableCell>
       <TableCell className="text-right">
@@ -344,7 +367,7 @@ function LoadingRows() {
     <>
       {[0, 1, 2, 3].map((row) => (
         <TableRow key={`loading-lead-${row}`}>
-          <TableCell colSpan={7} className="p-4">
+          <TableCell colSpan={8} className="p-4">
             <Skeleton className="h-10 w-full" />
           </TableCell>
         </TableRow>

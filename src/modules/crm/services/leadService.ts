@@ -12,6 +12,8 @@ export interface LeadFilters {
   status?: string;
   temperature?: LeadTemperature | 'all';
   includeArchived?: boolean;
+  assignment?: 'all' | 'mine' | 'unassigned';
+  currentUserId?: string | null;
 }
 
 export interface CreateLeadInput {
@@ -119,6 +121,12 @@ export async function listLeads(companyId: string, filters: LeadFilters = {}): P
 
   if (filters.temperature && filters.temperature !== 'all') {
     request = request.or(`temperature.eq.${filters.temperature},lead_temperature.eq.${filters.temperature}`);
+  }
+
+  if (filters.assignment === 'mine' && filters.currentUserId) {
+    request = request.eq('assigned_to', filters.currentUserId);
+  } else if (filters.assignment === 'unassigned') {
+    request = request.is('assigned_to', null);
   }
 
   const searchTerm = filters.search ? sanitizeSearchTerm(filters.search) : '';
