@@ -231,6 +231,7 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
               </Link>
             </Button>
           )}
+          <TransferPopover conversation={conversation} onDone={() => queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', conversation.company_id] })} />
           <Button
             variant="outline"
             size="sm"
