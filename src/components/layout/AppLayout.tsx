@@ -21,7 +21,7 @@ export function AppLayout() {
        router.navigate({ to: '/login' });
      } else if (state === 'EMAIL_SENT' || state === 'WAITING_EMAIL_CONFIRMATION') {
        logger.info('Email verification required, redirecting', { traceId });
-       router.navigate({ to: '/auth/verify-email' });
+       router.navigate({ to: '/verify-email' });
      }
    }, [state, router, traceId]);
 
