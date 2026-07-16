@@ -133,13 +133,33 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
   const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const messagesQuery = useQuery({
     queryKey: ['chat', 'messages', conversation.id],
     queryFn: () => chatService.listMessages(conversation.id),
   });
   const messages: ChatMessage[] = messagesQuery.data ?? [];
+
+  const repliesQuery = useQuery({
+    queryKey: ['chat', 'quick-replies', conversation.company_id],
+    queryFn: () => quickReplyService.list(conversation.company_id),
+  });
+  const replies: ChatQuickReply[] = repliesQuery.data ?? [];
+
+  const filteredReplies = useMemo(() => {
+    if (!text.startsWith('/')) return [] as ChatQuickReply[];
+    const q = text.slice(1).toLowerCase();
+    return replies
+      .filter((r) => r.shortcut.toLowerCase().includes(q) || r.content.toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [text, replies]);
+
+  useEffect(() => {
+    setShowReplies(text.startsWith('/') && filteredReplies.length > 0);
+  }, [text, filteredReplies.length]);
 
   useEffect(() => {
     chatService.markRead(conversation.id, 'agent');
@@ -154,6 +174,12 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length]);
+
+  function applyReply(r: ChatQuickReply) {
+    setText(r.content);
+    setShowReplies(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
 
   async function send() {
     const content = text.trim();
