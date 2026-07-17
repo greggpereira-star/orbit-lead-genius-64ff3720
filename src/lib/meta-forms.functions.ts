@@ -101,7 +101,7 @@ export const syncMetaLeadForms = createServerFn({ method: "POST" })
           status: f.status ?? null,
           questions: f.questions ?? [],
           leads_count: f.leads_count ?? 0,
-          raw_payload: f as unknown as Record<string, unknown>,
+          raw_payload: f as never,
           last_synced_at: now,
         },
         { onConflict: "company_id,form_id" },
