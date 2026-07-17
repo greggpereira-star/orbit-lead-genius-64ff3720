@@ -212,6 +212,19 @@ function MetaIntegrationsPage() {
                         ) : (
                           <Badge variant="outline">Inativo</Badge>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => syncFormsMutation.mutate(p.page_id)}
+                          disabled={syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id}
+                        >
+                          {syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                          )}
+                          Sincronizar formulários
+                        </Button>
                         <Switch
                           checked={p.subscribed}
                           onCheckedChange={(checked) =>
