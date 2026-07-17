@@ -477,6 +477,80 @@ function MetaIntegrationsPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                Histórico de importações
+              </CardTitle>
+              <CardDescription>
+                Últimas execuções retroativas de leads Meta, com contagem de importados, duplicados e falhas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {jobsQuery.isLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : jobs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma importação retroativa executada ainda.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 pr-2">Status</th>
+                        <th className="text-left py-2 pr-2">Formulário</th>
+                        <th className="text-left py-2 pr-2">Período</th>
+                        <th className="text-right py-2 pr-2">Encontrados</th>
+                        <th className="text-right py-2 pr-2">Importados</th>
+                        <th className="text-right py-2 pr-2">Duplicados</th>
+                        <th className="text-right py-2 pr-2">Falhas</th>
+                        <th className="text-left py-2">Finalizado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {jobs.map((job) => (
+                        <tr key={job.id}>
+                          <td className="py-2 pr-2">
+                            <Badge
+                              variant={
+                                job.status === "completed" || job.status === "completed_with_errors"
+                                  ? "default"
+                                  : job.status === "failed"
+                                    ? "destructive"
+                                    : "outline"
+                              }
+                            >
+                              {job.status}
+                            </Badge>
+                            {job.error_message && (
+                              <div className="mt-1 max-w-xs text-xs text-destructive">{job.error_message}</div>
+                            )}
+                          </td>
+                          <td className="py-2 pr-2">
+                            <div className="font-medium">{job.form_id}</div>
+                            <div className="text-xs text-muted-foreground">Página {job.page_id ?? "—"}</div>
+                          </td>
+                          <td className="py-2 pr-2 text-xs text-muted-foreground">
+                            {job.since ? new Date(job.since).toLocaleDateString("pt-BR") : "início"} →{" "}
+                            {job.until ? new Date(job.until).toLocaleDateString("pt-BR") : "agora"}
+                          </td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_found}</td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_imported}</td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_duplicates}</td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_failed}</td>
+                          <td className="py-2 text-xs text-muted-foreground">
+                            {job.finished_at ? new Date(job.finished_at).toLocaleString("pt-BR") : "em andamento"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+
+          <Card>
+            <CardHeader>
               <CardTitle>Eventos recentes</CardTitle>
               <CardDescription>Últimos leads recebidos via webhook do Meta.</CardDescription>
             </CardHeader>
