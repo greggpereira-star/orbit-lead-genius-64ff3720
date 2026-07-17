@@ -1,17 +1,19 @@
 import * as React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  GitPullRequest, 
-  FileText, 
-  BarChart3, 
-  Settings, 
-   Zap,
-   MessageSquare,
-   Monitor,
-   ShieldCheck,
-   Sparkles
+import {
+  LayoutDashboard,
+  Users,
+  GitPullRequest,
+  FileText,
+  BarChart3,
+  Settings,
+  Zap,
+  MessageSquare,
+  Monitor,
+  ShieldCheck,
+  Sparkles,
+  Facebook,
 } from 'lucide-react';
+
  import {
    Sidebar,
    SidebarContent,
