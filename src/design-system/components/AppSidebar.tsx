@@ -40,7 +40,9 @@ import {
      { title: 'Chat ao vivo', icon: MessageSquare, to: '/inbox', notify: 'inbox' as const },
      { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
      { title: 'Automations', icon: Zap, to: '/automations' },
+    { title: 'Meta Lead Ads', icon: Share2, to: '/integrations/meta' },
     { title: 'Analytics', icon: BarChart3, to: '/analytics' },
+
     { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
     { title: 'Observability', icon: ShieldCheck, to: '/observability' },
  ];
