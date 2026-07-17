@@ -89,6 +89,7 @@ function MetaIntegrationsPage() {
   const listForms = useServerFn(listMetaForms);
   const importLeads = useServerFn(importMetaFormLeads);
   const listImportJobs = useServerFn(listMetaImportJobs);
+  const retryJob = useServerFn(retryMetaImportJob);
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
   const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
