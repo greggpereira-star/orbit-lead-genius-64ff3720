@@ -434,8 +434,14 @@ function MetaIntegrationsPage() {
           </a>
         </CardContent>
       </Card>
+      <MetaFormMappingDrawer
+        open={drawerForm !== null}
+        form={drawerForm}
+        onOpenChange={(v) => !v && setDrawerForm(null)}
+      />
     </div>
   );
+
 }
 
 export const Route = createFileRoute("/_app/integrations/meta")({
