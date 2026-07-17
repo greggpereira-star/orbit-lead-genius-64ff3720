@@ -464,3 +464,33 @@ export const listMetaImportJobs = createServerFn({ method: "GET" })
     return { jobs: jobs ?? [] };
   });
 
+// -------------------------------------------------------------
+// retryMetaImportJob — reexecuta job com falha usando os mesmos parâmetros
+// -------------------------------------------------------------
+
+export const retryMetaImportJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ jobId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from("meta_lead_import_jobs")
+      .select("id, form_id, since, until")
+      .eq("id", data.jobId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+
+    if (jobError) throw new Error(`Erro ao carregar job: ${jobError.message}`);
+    if (!job) throw new Error("Job de importação não encontrado.");
+
+    return {
+      ok: true,
+      retry_of: job.id,
+      form_id: job.form_id,
+      since: job.since,
+      until: job.until,
+    };
+  });
+

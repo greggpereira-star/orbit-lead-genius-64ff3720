@@ -10,7 +10,7 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs } from "@/lib/meta-forms.functions";
+import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs, retryMetaImportJob } from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +89,7 @@ function MetaIntegrationsPage() {
   const listForms = useServerFn(listMetaForms);
   const importLeads = useServerFn(importMetaFormLeads);
   const listImportJobs = useServerFn(listMetaImportJobs);
+  const retryJob = useServerFn(retryMetaImportJob);
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
   const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
@@ -161,6 +162,27 @@ function MetaIntegrationsPage() {
       );
       qc.invalidateQueries({ queryKey: ["meta-import-jobs"] });
       qc.invalidateQueries({ queryKey: ["meta-connection"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const params = await retryJob({ data: { jobId } });
+      return importLeads({
+        data: {
+          formId: params.form_id,
+          since: params.since,
+          until: params.until,
+          limit: 200,
+        },
+      });
+    },
+    onSuccess: (res) => {
+      toast.success(
+        `Retentativa concluída: ${res.total_imported} novo(s), ${res.total_duplicates} duplicado(s), ${res.total_failed} falha(s).`,
+      );
+      qc.invalidateQueries({ queryKey: ["meta-import-jobs"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -522,6 +544,22 @@ function MetaIntegrationsPage() {
                             </Badge>
                             {job.error_message && (
                               <div className="mt-1 max-w-xs text-xs text-destructive">{job.error_message}</div>
+                            )}
+                            {(job.status === "failed" || job.status === "completed_with_errors") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-1 h-6 px-2 text-xs"
+                                onClick={() => retryMutation.mutate(job.id)}
+                                disabled={retryMutation.isPending}
+                              >
+                                {retryMutation.isPending ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                Repetir
+                              </Button>
                             )}
                           </td>
                           <td className="py-2 pr-2">
