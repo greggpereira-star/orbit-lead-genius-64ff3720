@@ -41,8 +41,10 @@ import {
   getLeadScore,
   getLeadTemperature,
   listLeads,
+  listMetaFormsForCompany,
   type LeadRow,
 } from '@/modules/crm/services/leadService';
+
 
 export const Route = createFileRoute('/_app/leads')({
   component: LeadsPage,
