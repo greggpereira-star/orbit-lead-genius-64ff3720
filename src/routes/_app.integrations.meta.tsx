@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText } from "lucide-react";
+import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText, DownloadCloud, History } from "lucide-react";
 import { toast } from "sonner";
 import {
   startMetaOAuth,
@@ -10,12 +10,13 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms } from "@/lib/meta-forms.functions";
+import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs } from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   MetaFormMappingDrawer,
   type MetaFormForMapping,
@@ -48,6 +49,36 @@ interface ConnectionRow {
   granted_scopes: string[];
 }
 
+interface ImportJobRow {
+  id: string;
+  form_id: string;
+  page_id: string | null;
+  status: string;
+  since: string | null;
+  until: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  total_found: number;
+  total_imported: number;
+  total_duplicates: number;
+  total_failed: number;
+  error_message: string | null;
+  trace_id: string | null;
+  created_at: string;
+}
+
+interface ImportOptions {
+  since: string;
+  until: string;
+  limit: number;
+}
+
+const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
+  since: "",
+  until: "",
+  limit: 200,
+};
+
 function MetaIntegrationsPage() {
   const qc = useQueryClient();
   const start = useServerFn(startMetaOAuth);
@@ -56,8 +87,11 @@ function MetaIntegrationsPage() {
   const disconnect = useServerFn(disconnectMeta);
   const syncForms = useServerFn(syncMetaLeadForms);
   const listForms = useServerFn(listMetaForms);
+  const importLeads = useServerFn(importMetaFormLeads);
+  const listImportJobs = useServerFn(listMetaImportJobs);
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
+  const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
 
 
   const { data, isLoading } = useQuery({
@@ -103,6 +137,12 @@ function MetaIntegrationsPage() {
     staleTime: 30_000,
   });
 
+  const jobsQuery = useQuery({
+    queryKey: ["meta-import-jobs"],
+    queryFn: () => listImportJobs(),
+    staleTime: 15_000,
+  });
+
   const syncFormsMutation = useMutation({
     mutationFn: (pageId: string) => syncForms({ data: { pageId } }),
     onSuccess: (res) => {
@@ -112,13 +152,37 @@ function MetaIntegrationsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const importMutation = useMutation({
+    mutationFn: (input: { formId: string; since: string | null; until: string | null; limit: number }) =>
+      importLeads({ data: input }),
+    onSuccess: (res) => {
+      toast.success(
+        `Importação concluída: ${res.total_imported} novo(s), ${res.total_duplicates} duplicado(s), ${res.total_failed} falha(s).`,
+      );
+      qc.invalidateQueries({ queryKey: ["meta-import-jobs"] });
+      qc.invalidateQueries({ queryKey: ["meta-connection"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const connection = data?.connection as ConnectionRow | null;
   const pages = (data?.pages ?? []) as PageRow[];
   const events = (data?.recentEvents ?? []) as EventRow[];
+  const jobs = (jobsQuery.data?.jobs ?? []) as ImportJobRow[];
 
   const daysLeft = connection?.token_expires_at
     ? Math.max(0, Math.round((new Date(connection.token_expires_at).getTime() - Date.now()) / 86_400_000))
     : null;
+
+  const updateImportOption = (formId: string, patch: Partial<ImportOptions>) => {
+    setImportOptions((current) => ({
+      ...current,
+      [formId]: {
+        ...(current[formId] ?? DEFAULT_IMPORT_OPTIONS),
+        ...patch,
+      },
+    }));
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -278,6 +342,7 @@ function MetaIntegrationsPage() {
                         <th className="text-right py-2 pr-2">Leads (Meta)</th>
                         <th className="text-left py-2 pr-2">Última sync</th>
                         <th className="text-left py-2 pr-2">Mapeamento</th>
+                        <th className="text-left py-2 pr-2">Importação</th>
                         <th className="text-right py-2">Ações</th>
                       </tr>
                     </thead>
@@ -292,6 +357,8 @@ function MetaIntegrationsPage() {
                               external_crm_provider: string | null;
                             }
                           | null;
+                        const options = importOptions[f.form_id] ?? DEFAULT_IMPORT_OPTIONS;
+                        const isImporting = importMutation.isPending && importMutation.variables?.formId === f.form_id;
                         return (
                           <tr key={f.id}>
                             <td className="py-2 pr-2">
@@ -331,6 +398,54 @@ function MetaIntegrationsPage() {
                                 </Badge>
                               )}
                             </td>
+                            <td className="py-2 pr-2 min-w-[320px]">
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_88px_auto] md:items-center">
+                                <Input
+                                  type="date"
+                                  value={options.since}
+                                  onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
+                                  aria-label={`Data inicial para importar ${f.form_name}`}
+                                />
+                                <Input
+                                  type="date"
+                                  value={options.until}
+                                  onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
+                                  aria-label={`Data final para importar ${f.form_name}`}
+                                />
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={500}
+                                  value={options.limit}
+                                  onChange={(event) =>
+                                    updateImportOption(f.form_id, {
+                                      limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
+                                    })
+                                  }
+                                  aria-label={`Limite de leads para importar ${f.form_name}`}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    importMutation.mutate({
+                                      formId: f.form_id,
+                                      since: options.since || null,
+                                      until: options.until || null,
+                                      limit: options.limit,
+                                    })
+                                  }
+                                  disabled={isImporting}
+                                >
+                                  {isImporting ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                  ) : (
+                                    <DownloadCloud className="w-3.5 h-3.5 mr-1.5" />
+                                  )}
+                                  Importar
+                                </Button>
+                              </div>
+                            </td>
                             <td className="py-2 text-right">
                               <Button
                                 variant="ghost"
@@ -356,6 +471,80 @@ function MetaIntegrationsPage() {
                 </div>
               )}
 
+            </CardContent>
+          </Card>
+
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                Histórico de importações
+              </CardTitle>
+              <CardDescription>
+                Últimas execuções retroativas de leads Meta, com contagem de importados, duplicados e falhas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {jobsQuery.isLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : jobs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma importação retroativa executada ainda.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 pr-2">Status</th>
+                        <th className="text-left py-2 pr-2">Formulário</th>
+                        <th className="text-left py-2 pr-2">Período</th>
+                        <th className="text-right py-2 pr-2">Encontrados</th>
+                        <th className="text-right py-2 pr-2">Importados</th>
+                        <th className="text-right py-2 pr-2">Duplicados</th>
+                        <th className="text-right py-2 pr-2">Falhas</th>
+                        <th className="text-left py-2">Finalizado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {jobs.map((job) => (
+                        <tr key={job.id}>
+                          <td className="py-2 pr-2">
+                            <Badge
+                              variant={
+                                job.status === "completed" || job.status === "completed_with_errors"
+                                  ? "default"
+                                  : job.status === "failed"
+                                    ? "destructive"
+                                    : "outline"
+                              }
+                            >
+                              {job.status}
+                            </Badge>
+                            {job.error_message && (
+                              <div className="mt-1 max-w-xs text-xs text-destructive">{job.error_message}</div>
+                            )}
+                          </td>
+                          <td className="py-2 pr-2">
+                            <div className="font-medium">{job.form_id}</div>
+                            <div className="text-xs text-muted-foreground">Página {job.page_id ?? "—"}</div>
+                          </td>
+                          <td className="py-2 pr-2 text-xs text-muted-foreground">
+                            {job.since ? new Date(job.since).toLocaleDateString("pt-BR") : "início"} →{" "}
+                            {job.until ? new Date(job.until).toLocaleDateString("pt-BR") : "agora"}
+                          </td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_found}</td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_imported}</td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_duplicates}</td>
+                          <td className="py-2 pr-2 text-right tabular-nums">{job.total_failed}</td>
+                          <td className="py-2 text-xs text-muted-foreground">
+                            {job.finished_at ? new Date(job.finished_at).toLocaleString("pt-BR") : "em andamento"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
 

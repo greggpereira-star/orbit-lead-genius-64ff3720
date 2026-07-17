@@ -153,3 +153,53 @@ export async function fetchLead(leadgenId: string, pageAccessToken: string): Pro
     },
   });
 }
+
+interface LeadListResponse {
+  data?: MetaLead[];
+  paging?: {
+    cursors?: {
+      after?: string;
+    };
+  };
+}
+
+export interface ListFormLeadsParams {
+  formId: string;
+  pageAccessToken: string;
+  since?: string;
+  until?: string;
+  limit?: number;
+}
+
+export async function listFormLeads(params: ListFormLeadsParams): Promise<MetaLead[]> {
+  const leads: MetaLead[] = [];
+  const maxLeads = Math.max(1, Math.min(params.limit ?? 200, 500));
+  let after: string | undefined;
+
+  while (leads.length < maxLeads) {
+    const res = await request<LeadListResponse>(`/${params.formId}/leads`, {
+      query: {
+        access_token: params.pageAccessToken,
+        fields: "id,created_time,ad_id,adset_id,campaign_id,form_id,field_data",
+        limit: String(Math.min(100, maxLeads - leads.length)),
+        since: params.since ? String(Math.floor(Date.parse(params.since) / 1000)) : undefined,
+        until: params.until ? String(Math.floor(Date.parse(params.until) / 1000)) : undefined,
+        after,
+      },
+    });
+
+    const pageLeads = res.data ?? [];
+    const filtered = pageLeads.filter((lead) => {
+      const createdAt = Date.parse(lead.created_time);
+      if (params.since && createdAt < Date.parse(params.since)) return false;
+      if (params.until && createdAt > Date.parse(params.until)) return false;
+      return true;
+    });
+    leads.push(...filtered);
+
+    after = res.paging?.cursors?.after;
+    if (!after || pageLeads.length === 0) break;
+  }
+
+  return leads.slice(0, maxLeads);
+}
