@@ -242,6 +242,107 @@ function MetaIntegrationsPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Formulários Meta ({formsQuery.data?.forms.length ?? 0})
+              </CardTitle>
+              <CardDescription>
+                Formulários Lead Ads sincronizados. Configure cada um para direcionar os leads ao seu pipeline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {formsQuery.isLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : !formsQuery.data?.forms.length ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum formulário sincronizado ainda. Escolha uma página acima e clique em{" "}
+                  <strong>Sincronizar formulários</strong>.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 pr-2">Página</th>
+                        <th className="text-left py-2 pr-2">Formulário</th>
+                        <th className="text-left py-2 pr-2">Status Meta</th>
+                        <th className="text-right py-2 pr-2">Leads (Meta)</th>
+                        <th className="text-left py-2 pr-2">Última sync</th>
+                        <th className="text-left py-2 pr-2">Mapeamento</th>
+                        <th className="text-right py-2">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {formsQuery.data.forms.map((f) => {
+                        const mapping = f.mapping as
+                          | {
+                              id: string;
+                              is_active: boolean;
+                              stage_id: string | null;
+                              external_crm_enabled: boolean;
+                              external_crm_provider: string | null;
+                            }
+                          | null;
+                        return (
+                          <tr key={f.id}>
+                            <td className="py-2 pr-2">
+                              <div className="font-medium">{f.page_name ?? "—"}</div>
+                              <div className="text-xs text-muted-foreground">{f.page_id}</div>
+                            </td>
+                            <td className="py-2 pr-2">
+                              <div className="font-medium">{f.form_name}</div>
+                              <div className="text-xs text-muted-foreground">{f.form_id}</div>
+                            </td>
+                            <td className="py-2 pr-2">
+                              <Badge variant={f.status === "ACTIVE" ? "default" : "outline"}>
+                                {f.status ?? "—"}
+                              </Badge>
+                            </td>
+                            <td className="py-2 pr-2 text-right tabular-nums">{f.leads_count ?? 0}</td>
+                            <td className="py-2 pr-2 text-xs text-muted-foreground">
+                              {f.last_synced_at
+                                ? new Date(f.last_synced_at).toLocaleString("pt-BR")
+                                : "—"}
+                            </td>
+                            <td className="py-2 pr-2">
+                              {mapping ? (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <Badge variant={mapping.is_active ? "default" : "outline"}>
+                                    {mapping.is_active ? "Ativo" : "Pausado"}
+                                  </Badge>
+                                  {mapping.external_crm_enabled && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      → {mapping.external_crm_provider ?? "CRM"}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  Não mapeado
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="py-2 text-right">
+                              <Button variant="ghost" size="sm" disabled>
+                                Configurar
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    O drawer de configuração (pipeline, tags, CRM externo opcional) chega no próximo bloco.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+
+          <Card>
+            <CardHeader>
               <CardTitle>Eventos recentes</CardTitle>
               <CardDescription>Últimos leads recebidos via webhook do Meta.</CardDescription>
             </CardHeader>
