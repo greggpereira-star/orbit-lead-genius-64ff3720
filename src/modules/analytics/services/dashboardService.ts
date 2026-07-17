@@ -10,6 +10,8 @@ export interface DashboardKpis {
   quizCompleted: number;
   quizConversion: number; // %
   metaLeads: number;
+  metaTopForms: { name: string; value: number }[];
+  metaTopCampaigns: { name: string; value: number }[];
   cvcrmDelivered: number;
   cvcrmFailed: number;
   cvcrmSuccessRate: number; // %
