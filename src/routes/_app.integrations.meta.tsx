@@ -48,6 +48,8 @@ function MetaIntegrationsPage() {
   const getConn = useServerFn(getMetaConnection);
   const setSub = useServerFn(setPageSubscription);
   const disconnect = useServerFn(disconnectMeta);
+  const syncForms = useServerFn(syncMetaLeadForms);
+  const listForms = useServerFn(listMetaForms);
 
   const { data, isLoading } = useQuery({
     queryKey: ["meta-connection"],
