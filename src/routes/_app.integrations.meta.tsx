@@ -57,6 +57,11 @@ function MetaIntegrationsPage() {
   const startMutation = useMutation({
     mutationFn: () => start({ data: { origin: window.location.origin } }),
     onSuccess: (res) => {
+      if (!res?.authorizeUrl) {
+        console.error("[meta-oauth] resposta inválida do servidor", res);
+        toast.error("Não foi possível iniciar a conexão com o Meta. Verifique as credenciais no backend (META_APP_ID, META_APP_SECRET, META_OAUTH_STATE_SECRET).");
+        return;
+      }
       window.location.href = res.authorizeUrl;
     },
     onError: (err: Error) => toast.error(err.message),
