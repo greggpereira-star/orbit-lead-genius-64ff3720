@@ -229,7 +229,7 @@ export const saveMetaFormMapping = createServerFn({ method: "POST" })
 
     const { data: saved, error } = await supabaseAdmin
       .from("meta_form_mappings")
-      .upsert(row, { onConflict: "company_id,form_id" })
+      .upsert(row as never, { onConflict: "company_id,form_id" })
       .select("id, form_id")
       .single();
 
