@@ -342,6 +342,7 @@ function MetaIntegrationsPage() {
                         <th className="text-right py-2 pr-2">Leads (Meta)</th>
                         <th className="text-left py-2 pr-2">Última sync</th>
                         <th className="text-left py-2 pr-2">Mapeamento</th>
+                        <th className="text-left py-2 pr-2">Importação</th>
                         <th className="text-right py-2">Ações</th>
                       </tr>
                     </thead>
@@ -356,6 +357,8 @@ function MetaIntegrationsPage() {
                               external_crm_provider: string | null;
                             }
                           | null;
+                        const options = importOptions[f.form_id] ?? DEFAULT_IMPORT_OPTIONS;
+                        const isImporting = importMutation.isPending && importMutation.variables?.formId === f.form_id;
                         return (
                           <tr key={f.id}>
                             <td className="py-2 pr-2">
@@ -394,6 +397,54 @@ function MetaIntegrationsPage() {
                                   Não mapeado
                                 </Badge>
                               )}
+                            </td>
+                            <td className="py-2 pr-2 min-w-[320px]">
+                              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_88px_auto] md:items-center">
+                                <Input
+                                  type="date"
+                                  value={options.since}
+                                  onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
+                                  aria-label={`Data inicial para importar ${f.form_name}`}
+                                />
+                                <Input
+                                  type="date"
+                                  value={options.until}
+                                  onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
+                                  aria-label={`Data final para importar ${f.form_name}`}
+                                />
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={500}
+                                  value={options.limit}
+                                  onChange={(event) =>
+                                    updateImportOption(f.form_id, {
+                                      limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
+                                    })
+                                  }
+                                  aria-label={`Limite de leads para importar ${f.form_name}`}
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    importMutation.mutate({
+                                      formId: f.form_id,
+                                      since: options.since || null,
+                                      until: options.until || null,
+                                      limit: options.limit,
+                                    })
+                                  }
+                                  disabled={isImporting}
+                                >
+                                  {isImporting ? (
+                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                  ) : (
+                                    <DownloadCloud className="w-3.5 h-3.5 mr-1.5" />
+                                  )}
+                                  Importar
+                                </Button>
+                              </div>
                             </td>
                             <td className="py-2 text-right">
                               <Button
