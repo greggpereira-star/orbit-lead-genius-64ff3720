@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const META_API_VERSION = "v25.0";
-const META_OAUTH_DIALOG = "https://www.facebook.com/dialog/oauth";
+const META_OAUTH_DIALOG = `https://www.facebook.com/${META_API_VERSION}/dialog/oauth`;
 const DEFAULT_PUBLIC_ORIGIN = "https://altleadflow.com.br";
 const META_SCOPES = [
   "email",
@@ -119,6 +119,7 @@ export const startMetaOAuth = createServerFn({ method: "POST" })
     url.searchParams.set("scope", META_SCOPES);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
+    url.searchParams.set("auth_type", "rerequest");
 
     return { authorizeUrl: url.toString(), redirectUri };
   });
@@ -126,9 +127,8 @@ export const startMetaOAuth = createServerFn({ method: "POST" })
 // --------- COMPLETE OAUTH ---------
 
 export const completeMetaOAuth = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => z.object({ code: z.string().min(1), state: z.string().min(1) }).parse(raw))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const { createHmac } = await import("node:crypto");
     const stateSecret = readEnv("META_OAUTH_STATE_SECRET");
     const appId = readMetaAppId();
@@ -152,8 +152,16 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
       : `${userId}.${companyId}.${nonce}.${issuedAtStr}`;
     const expected = createHmac("sha256", stateSecret).update(payload).digest("hex");
     if (expected !== sig) throw new Error("Assinatura de state inválida.");
-    if (userId !== context.userId) throw new Error("State pertence a outro usuário.");
     if (Date.now() - Number(issuedAtStr) > 10 * 60 * 1000) throw new Error("State expirado. Tente conectar novamente.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: membership } = await supabaseAdmin
+      .from("memberships")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (!membership) throw new Error("Vínculo do usuário com a empresa não encontrado.");
 
     const { exchangeCodeForToken, exchangeForLongLivedToken, getMe, listUserPages } = await import(
       "@/lib/meta-graph.server"
@@ -164,7 +172,7 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
     console.info("[meta-oauth] completing", {
       resolvedOrigin: origin,
       redirectUri,
-      userId: context.userId,
+      userId,
       companyId,
     });
     const shortLived = await exchangeCodeForToken({ appId, appSecret, redirectUri, code: data.code });
@@ -180,7 +188,6 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
       ? new Date(Date.now() + longLived.expires_in * 1000).toISOString()
       : null;
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: connErr } = await supabaseAdmin.from("meta_lead_connections").upsert(
       {
         company_id: companyId,
@@ -190,7 +197,7 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
         token_expires_at: expiresAt,
         granted_scopes: META_SCOPES.split(","),
         status: "active",
-        connected_by: context.userId,
+        connected_by: userId,
       },
       { onConflict: "company_id" },
     );
