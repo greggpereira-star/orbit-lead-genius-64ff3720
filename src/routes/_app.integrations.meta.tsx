@@ -88,6 +88,21 @@ function MetaIntegrationsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const formsQuery = useQuery({
+    queryKey: ["meta-forms"],
+    queryFn: () => listForms(),
+    staleTime: 30_000,
+  });
+
+  const syncFormsMutation = useMutation({
+    mutationFn: (pageId: string) => syncForms({ data: { pageId } }),
+    onSuccess: (res) => {
+      toast.success(`${res.forms_synced} formulário(s) sincronizado(s)`);
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const connection = data?.connection as ConnectionRow | null;
   const pages = (data?.pages ?? []) as PageRow[];
   const events = (data?.recentEvents ?? []) as EventRow[];
