@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const META_API_VERSION = "v25.0";
-const META_OAUTH_DIALOG = `https://www.facebook.com/${META_API_VERSION}/dialog/oauth`;
+const META_OAUTH_DIALOG = "https://www.facebook.com/dialog/oauth";
 const META_SCOPES = [
   "email",
   "public_profile",
@@ -25,15 +25,61 @@ function getPublicUrl(): string {
   );
 }
 
+function normalizeOrigin(origin: string): string {
+  const normalized = origin.replace(/\/+$/, "");
+  return normalized === "https://www.altleadflow.com.br" ? "https://altleadflow.com.br" : normalized;
+}
+
+function getAllowedOrigins(): Set<string> {
+  return new Set(
+    [
+      getPublicUrl(),
+      "https://www.altleadflow.com.br",
+      "https://altleadflow.com.br",
+      "https://orbit-lead-genius.lovable.app",
+      "https://id-preview--5d4053e9-e197-4195-8f1f-86c12b809081.lovable.app",
+      "http://localhost:8080",
+    ].map(normalizeOrigin),
+  );
+}
+
+function resolveOAuthOrigin(origin?: string): string {
+  const fallback = normalizeOrigin(getPublicUrl());
+  if (!origin) return fallback;
+
+  const normalized = normalizeOrigin(origin);
+  if (!getAllowedOrigins().has(normalized)) return fallback;
+  return normalized;
+}
+
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim().replace(/^['"]|['"]$/g, "");
+  return value || undefined;
+}
+
+function readMetaAppId(): string {
+  const appId = readEnv("META_APP_ID");
+  if (!appId) throw new Error("META_APP_ID não configurado. Adicione o secret no backend.");
+  if (!/^\d+$/.test(appId)) {
+    throw new Error("META_APP_ID inválido. Use apenas o ID numérico do app Meta, sem aspas ou URL.");
+  }
+  return appId;
+}
+
 // --------- START OAUTH ---------
 
 export const startMetaOAuth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((raw: unknown) =>
+    z
+      .object({ origin: z.string().url().optional() })
+      .optional()
+      .parse(raw ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { createHmac, randomBytes } = await import("node:crypto");
-    const appId = process.env.META_APP_ID;
-    const stateSecret = process.env.META_OAUTH_STATE_SECRET;
-    if (!appId) throw new Error("META_APP_ID não configurado. Adicione o secret no backend.");
+    const appId = readMetaAppId();
+    const stateSecret = readEnv("META_OAUTH_STATE_SECRET");
     if (!stateSecret) throw new Error("META_OAUTH_STATE_SECRET ausente.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -47,11 +93,13 @@ export const startMetaOAuth = createServerFn({ method: "POST" })
 
     const nonce = randomBytes(16).toString("hex");
     const issuedAt = Date.now();
-    const payload = `${context.userId}.${mem.company_id}.${nonce}.${issuedAt}`;
+    const origin = resolveOAuthOrigin(data?.origin);
+    const originToken = Buffer.from(origin).toString("base64url");
+    const payload = `${context.userId}.${mem.company_id}.${nonce}.${issuedAt}.${originToken}`;
     const sig = createHmac("sha256", stateSecret).update(payload).digest("hex");
     const state = Buffer.from(`${payload}.${sig}`).toString("base64url");
 
-    const redirectUri = `${getPublicUrl()}/integrations/meta/callback`;
+    const redirectUri = `${origin}/integrations/meta/callback`;
     const url = new URL(META_OAUTH_DIALOG);
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", redirectUri);
@@ -69,10 +117,10 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ code: z.string().min(1), state: z.string().min(1) }).parse(raw))
   .handler(async ({ data, context }) => {
     const { createHmac } = await import("node:crypto");
-    const stateSecret = process.env.META_OAUTH_STATE_SECRET!;
-    const appId = process.env.META_APP_ID;
-    const appSecret = process.env.META_APP_SECRET;
-    if (!appId || !appSecret) throw new Error("Credenciais Meta ausentes no backend.");
+    const stateSecret = readEnv("META_OAUTH_STATE_SECRET");
+    const appId = readMetaAppId();
+    const appSecret = readEnv("META_APP_SECRET");
+    if (!stateSecret || !appSecret) throw new Error("Credenciais Meta ausentes no backend.");
 
     // Verify state
     let decoded = "";
@@ -82,9 +130,13 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
       throw new Error("State inválido.");
     }
     const parts = decoded.split(".");
-    if (parts.length !== 5) throw new Error("State malformado.");
-    const [userId, companyId, nonce, issuedAtStr, sig] = parts;
-    const payload = `${userId}.${companyId}.${nonce}.${issuedAtStr}`;
+    if (parts.length !== 5 && parts.length !== 6) throw new Error("State malformado.");
+    const [userId, companyId, nonce, issuedAtStr] = parts;
+    const originToken = parts.length === 6 ? parts[4] : Buffer.from(getPublicUrl()).toString("base64url");
+    const sig = parts.length === 6 ? parts[5] : parts[4];
+    const payload = parts.length === 6
+      ? `${userId}.${companyId}.${nonce}.${issuedAtStr}.${originToken}`
+      : `${userId}.${companyId}.${nonce}.${issuedAtStr}`;
     const expected = createHmac("sha256", stateSecret).update(payload).digest("hex");
     if (expected !== sig) throw new Error("Assinatura de state inválida.");
     if (userId !== context.userId) throw new Error("State pertence a outro usuário.");
@@ -94,7 +146,8 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
       "@/lib/meta-graph.server"
     );
 
-    const redirectUri = `${getPublicUrl()}/integrations/meta/callback`;
+    const origin = resolveOAuthOrigin(Buffer.from(originToken, "base64url").toString("utf8"));
+    const redirectUri = `${origin}/integrations/meta/callback`;
     const shortLived = await exchangeCodeForToken({ appId, appSecret, redirectUri, code: data.code });
     const longLived = await exchangeForLongLivedToken({
       appId,

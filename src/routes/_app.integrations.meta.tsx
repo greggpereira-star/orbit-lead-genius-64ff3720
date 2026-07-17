@@ -55,7 +55,7 @@ function MetaIntegrationsPage() {
   });
 
   const startMutation = useMutation({
-    mutationFn: () => start(),
+    mutationFn: () => start({ data: { origin: window.location.origin } }),
     onSuccess: (res) => {
       window.location.href = res.authorizeUrl;
     },
