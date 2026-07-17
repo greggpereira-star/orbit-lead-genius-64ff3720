@@ -34,7 +34,12 @@ export function useIntegration(companyId: string | undefined, provider: 'meta' |
 
   const connect = async () => {
     if (!companyId) return;
-    const url = await oauthService.getAuthUrl(provider, companyId);
+    if (provider !== 'google') {
+      // Meta OAuth uses the modern flow at /integrations/meta.
+      window.location.href = '/integrations/meta';
+      return;
+    }
+    const url = await oauthService.getAuthUrl('google', companyId);
     window.location.href = url;
   };
 
