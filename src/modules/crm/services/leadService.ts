@@ -14,7 +14,14 @@ export interface LeadFilters {
   includeArchived?: boolean;
   assignment?: 'all' | 'mine' | 'unassigned';
   currentUserId?: string | null;
+  metaFormId?: string | 'all';
 }
+
+export interface MetaFormOption {
+  form_id: string;
+  form_name: string;
+}
+
 
 export interface CreateLeadInput {
   companyId: string;
