@@ -117,6 +117,54 @@ export const chatService = {
   },
 
 
+  async findOpenByVisitor(companyId: string, visitorId: string): Promise<ChatConversation | null> {
+    const { data } = await supabase
+      .from(CONV)
+      .select('*')
+      .eq('company_id' as never, companyId as never)
+      .eq('visitor_id' as never, visitorId as never)
+      .neq('status' as never, 'closed' as never)
+      .order('last_message_at' as never, { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (data as unknown as ChatConversation) ?? null;
+  },
+
+  async startAgentConversation(input: {
+    companyId: string;
+    visitorId: string;
+    visitorName?: string | null;
+    pageUrl?: string | null;
+    agentId: string;
+    firstMessage: string;
+  }): Promise<ChatConversation> {
+    const existing = await this.findOpenByVisitor(input.companyId, input.visitorId);
+    let conv = existing;
+    if (!conv) {
+      const { data, error } = await supabase
+        .from(CONV)
+        .insert({
+          company_id: input.companyId,
+          visitor_id: input.visitorId,
+          visitor_name: input.visitorName ?? null,
+          page_url: input.pageUrl ?? null,
+          assigned_to: input.agentId,
+          status: 'open',
+        } as never)
+        .select('*')
+        .single();
+      if (error) throw error;
+      conv = data as unknown as ChatConversation;
+    }
+    await this.sendAgentMessage({
+      conversationId: conv.id,
+      companyId: input.companyId,
+      senderId: input.agentId,
+      content: input.firstMessage,
+    });
+    return conv;
+  },
+
   async markRead(conversationId: string, side: 'agent' | 'visitor'): Promise<void> {
     const patch = side === 'agent' ? { unread_agent: 0 } : { unread_visitor: 0 };
     await supabase.from(CONV).update(patch as never).eq('id' as never, conversationId as never);

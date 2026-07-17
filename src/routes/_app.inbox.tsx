@@ -417,6 +417,31 @@ function TransferPopover({ conversation, onDone }: { conversation: ChatConversat
 function OnlineVisitorsPopover({ companyId }: { companyId: string | undefined }) {
   const visitors = useOnlineVisitors(companyId);
   const count = visitors.length;
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [messageByVisitor, setMessageByVisitor] = useState<Record<string, string>>({});
+
+  async function startWith(v: { visitor_id: string; visitor_name?: string | null; page_url: string }) {
+    if (!companyId || !user?.id || openingId) return;
+    const msg = (messageByVisitor[v.visitor_id] || 'Olá! Posso te ajudar em algo?').trim();
+    if (!msg) return;
+    setOpeningId(v.visitor_id);
+    try {
+      await chatService.startAgentConversation({
+        companyId,
+        visitorId: v.visitor_id,
+        visitorName: v.visitor_name ?? null,
+        pageUrl: v.page_url,
+        agentId: user.id,
+        firstMessage: msg,
+      });
+      queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', companyId] });
+    } finally {
+      setOpeningId(null);
+    }
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -426,25 +451,42 @@ function OnlineVisitorsPopover({ companyId }: { companyId: string | undefined })
           <Badge variant={count > 0 ? 'default' : 'secondary'} className="ml-1">{count}</Badge>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
+      <PopoverContent align="end" className="w-96 p-0">
         <div className="px-3 py-2 border-b">
           <div className="text-sm font-semibold">Visitantes online agora</div>
-          <div className="text-xs text-muted-foreground">Atualização em tempo real</div>
+          <div className="text-xs text-muted-foreground">Puxe uma conversa proativa em tempo real</div>
         </div>
-        <ScrollArea className="max-h-72">
+        <ScrollArea className="max-h-96">
           {count === 0 && (
             <div className="p-4 text-xs text-muted-foreground">Nenhum visitante com o chat aberto no momento.</div>
           )}
           {visitors.map((v) => {
             let host = v.page_url;
             try { host = new URL(v.page_url).host + new URL(v.page_url).pathname; } catch { /* noop */ }
+            const msg = messageByVisitor[v.visitor_id] ?? '';
             return (
-              <div key={v.visitor_id} className="px-3 py-2 border-b last:border-b-0">
+              <div key={v.visitor_id} className="px-3 py-2 border-b last:border-b-0 space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Circle className="h-2 w-2 fill-green-500 text-green-500" />
                   <span className="font-medium truncate">{v.visitor_name || 'Visitante anônimo'}</span>
                 </div>
                 <div className="text-[11px] text-muted-foreground truncate">{host}</div>
+                <div className="flex gap-1.5">
+                  <Input
+                    value={msg}
+                    onChange={(e) => setMessageByVisitor((prev) => ({ ...prev, [v.visitor_id]: e.target.value }))}
+                    placeholder="Olá! Posso te ajudar em algo?"
+                    className="h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    disabled={openingId === v.visitor_id}
+                    onClick={() => startWith(v)}
+                  >
+                    {openingId === v.visitor_id ? '…' : 'Puxar'}
+                  </Button>
+                </div>
               </div>
             );
           })}
@@ -453,3 +495,4 @@ function OnlineVisitorsPopover({ companyId }: { companyId: string | undefined })
     </Popover>
   );
 }
+
