@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -15,6 +16,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  MetaFormMappingDrawer,
+  type MetaFormForMapping,
+} from "@/modules/integrations/components/MetaFormMappingDrawer";
+
 
 interface PageRow {
   id: string;
@@ -50,6 +56,9 @@ function MetaIntegrationsPage() {
   const disconnect = useServerFn(disconnectMeta);
   const syncForms = useServerFn(syncMetaLeadForms);
   const listForms = useServerFn(listMetaForms);
+
+  const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["meta-connection"],
@@ -323,7 +332,19 @@ function MetaIntegrationsPage() {
                               )}
                             </td>
                             <td className="py-2 text-right">
-                              <Button variant="ghost" size="sm" disabled>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setDrawerForm({
+                                    form_id: f.form_id,
+                                    form_name: f.form_name,
+                                    page_id: f.page_id,
+                                    page_name: f.page_name,
+                                    mapping: mapping as MetaFormForMapping["mapping"],
+                                  })
+                                }
+                              >
                                 Configurar
                               </Button>
                             </td>
@@ -332,11 +353,9 @@ function MetaIntegrationsPage() {
                       })}
                     </tbody>
                   </table>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    O drawer de configuração (pipeline, tags, CRM externo opcional) chega no próximo bloco.
-                  </p>
                 </div>
               )}
+
             </CardContent>
           </Card>
 
@@ -415,8 +434,14 @@ function MetaIntegrationsPage() {
           </a>
         </CardContent>
       </Card>
+      <MetaFormMappingDrawer
+        open={drawerForm !== null}
+        form={drawerForm}
+        onOpenChange={(v) => !v && setDrawerForm(null)}
+      />
     </div>
   );
+
 }
 
 export const Route = createFileRoute("/_app/integrations/meta")({

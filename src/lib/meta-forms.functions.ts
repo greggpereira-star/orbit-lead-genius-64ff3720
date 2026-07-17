@@ -257,3 +257,32 @@ export const deleteMetaFormMapping = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// -------------------------------------------------------------
+// listMetaMappingOptions — stages + members for drawer selects
+// -------------------------------------------------------------
+
+export const listMetaMappingOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const [stagesRes, membersRes] = await Promise.all([
+      supabaseAdmin
+        .from("stages")
+        .select("id, name, order_index")
+        .eq("company_id", companyId)
+        .order("order_index", { ascending: true }),
+      supabaseAdmin
+        .from("memberships")
+        .select("user_id, role")
+        .eq("company_id", companyId),
+    ]);
+
+    return {
+      stages: stagesRes.data ?? [],
+      members: membersRes.data ?? [],
+    };
+  });
+
