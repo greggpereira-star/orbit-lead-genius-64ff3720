@@ -286,3 +286,181 @@ export const listMetaMappingOptions = createServerFn({ method: "GET" })
     };
   });
 
+// -------------------------------------------------------------
+// importMetaFormLeads — importação retroativa paginada de leads
+// -------------------------------------------------------------
+
+const importSchema = z.object({
+  formId: z.string().min(1),
+  since: z.string().optional().nullable(),
+  until: z.string().optional().nullable(),
+  limit: z.number().int().min(1).max(500).default(200),
+});
+
+function normalizeDateBoundary(value: string | null | undefined, endOfDay: boolean): string | null {
+  if (!value) return null;
+  if (value.includes("T")) return new Date(value).toISOString();
+  return new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`).toISOString();
+}
+
+export const importMetaFormLeads = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => importSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const trace_id = newTraceId();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    const since = normalizeDateBoundary(data.since, false);
+    const until = normalizeDateBoundary(data.until, true);
+
+    const { data: form, error: formError } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .select("form_id, form_name, page_id")
+      .eq("company_id", companyId)
+      .eq("form_id", data.formId)
+      .maybeSingle();
+
+    if (formError) throw new Error(`Erro ao carregar formulário Meta: ${formError.message}`);
+    if (!form) throw new Error("Formulário não encontrado. Sincronize os formulários antes de importar leads.");
+
+    const { data: page, error: pageError } = await supabaseAdmin
+      .from("meta_lead_pages")
+      .select("page_access_token")
+      .eq("company_id", companyId)
+      .eq("page_id", form.page_id)
+      .maybeSingle();
+
+    if (pageError) throw new Error(`Erro ao carregar página Meta: ${pageError.message}`);
+    if (!page?.page_access_token) {
+      throw new Error("Página sem token ativo. Reconecte a integração Meta antes da importação.");
+    }
+
+    const { data: job, error: jobError } = await supabaseAdmin
+      .from("meta_lead_import_jobs")
+      .insert({
+        company_id: companyId,
+        form_id: form.form_id,
+        page_id: form.page_id,
+        status: "processing",
+        since,
+        until,
+        started_at: new Date().toISOString(),
+        trace_id,
+        created_by: context.userId,
+      })
+      .select("id")
+      .single();
+
+    if (jobError || !job) {
+      throw new Error(`Erro ao criar job de importação: ${jobError?.message ?? "job vazio"}`);
+    }
+
+    try {
+      const { listFormLeads, MetaGraphError } = await import("@/lib/meta-graph.server");
+      const { processMetaLeadEvent } = await import("@/lib/meta-lead-processor.server");
+      const leads = await listFormLeads({
+        formId: form.form_id,
+        pageAccessToken: page.page_access_token,
+        since: since ?? undefined,
+        until: until ?? undefined,
+        limit: data.limit,
+      });
+
+      let imported = 0;
+      let duplicates = 0;
+      let failed = 0;
+
+      for (const lead of leads) {
+        const result = await processMetaLeadEvent(supabaseAdmin as never, {
+          leadgenId: lead.id,
+          pageId: form.page_id,
+          formId: form.form_id,
+          adId: lead.ad_id,
+          createdTime: lead.created_time,
+          hydratedLead: lead,
+          rawPayload: {
+            source: "manual_meta_import",
+            job_id: job.id,
+            lead,
+          },
+        });
+
+        if (result.status === "processed") imported += 1;
+        else if (result.status === "skipped") duplicates += 1;
+        else failed += 1;
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("meta_lead_import_jobs")
+        .update({
+          status: failed > 0 ? "completed_with_errors" : "completed",
+          finished_at: new Date().toISOString(),
+          total_found: leads.length,
+          total_imported: imported,
+          total_duplicates: duplicates,
+          total_failed: failed,
+        })
+        .eq("id", job.id)
+        .eq("company_id", companyId);
+
+      if (updateError) throw new Error(`Erro ao finalizar job: ${updateError.message}`);
+
+      console.info("[meta-import] completed", {
+        trace_id,
+        companyId,
+        formId: form.form_id,
+        found: leads.length,
+        imported,
+        duplicates,
+        failed,
+      });
+
+      return {
+        ok: true,
+        job_id: job.id,
+        trace_id,
+        total_found: leads.length,
+        total_imported: imported,
+        total_duplicates: duplicates,
+        total_failed: failed,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const { MetaGraphError } = await import("@/lib/meta-graph.server");
+      const graphError = err instanceof MetaGraphError ? err.graph : undefined;
+      const safeMessage = graphError?.code === 190
+        ? "Token do Facebook expirado ou revogado. Reconecte a integração Meta."
+        : message;
+
+      await supabaseAdmin
+        .from("meta_lead_import_jobs")
+        .update({
+          status: "failed",
+          finished_at: new Date().toISOString(),
+          error_message: safeMessage,
+        })
+        .eq("id", job.id)
+        .eq("company_id", companyId);
+
+      throw new Error(safeMessage);
+    }
+  });
+
+export const listMetaImportJobs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { data: jobs, error } = await supabaseAdmin
+      .from("meta_lead_import_jobs")
+      .select("id, form_id, page_id, status, since, until, started_at, finished_at, total_found, total_imported, total_duplicates, total_failed, error_message, trace_id, created_at")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) throw new Error(`Erro ao listar importações: ${error.message}`);
+
+    return { jobs: jobs ?? [] };
+  });
+
