@@ -51,6 +51,20 @@ function resolveOAuthOrigin(origin?: string): string {
   return normalized;
 }
 
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim().replace(/^['"]|['"]$/g, "");
+  return value || undefined;
+}
+
+function readMetaAppId(): string {
+  const appId = readEnv("META_APP_ID");
+  if (!appId) throw new Error("META_APP_ID não configurado. Adicione o secret no backend.");
+  if (!/^\d+$/.test(appId)) {
+    throw new Error("META_APP_ID inválido. Use apenas o ID numérico do app Meta, sem aspas ou URL.");
+  }
+  return appId;
+}
+
 // --------- START OAUTH ---------
 
 export const startMetaOAuth = createServerFn({ method: "POST" })
@@ -63,9 +77,8 @@ export const startMetaOAuth = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { createHmac, randomBytes } = await import("node:crypto");
-    const appId = process.env.META_APP_ID;
-    const stateSecret = process.env.META_OAUTH_STATE_SECRET;
-    if (!appId) throw new Error("META_APP_ID não configurado. Adicione o secret no backend.");
+    const appId = readMetaAppId();
+    const stateSecret = readEnv("META_OAUTH_STATE_SECRET");
     if (!stateSecret) throw new Error("META_OAUTH_STATE_SECRET ausente.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -103,10 +116,10 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ code: z.string().min(1), state: z.string().min(1) }).parse(raw))
   .handler(async ({ data, context }) => {
     const { createHmac } = await import("node:crypto");
-    const stateSecret = process.env.META_OAUTH_STATE_SECRET!;
-    const appId = process.env.META_APP_ID;
-    const appSecret = process.env.META_APP_SECRET;
-    if (!appId || !appSecret) throw new Error("Credenciais Meta ausentes no backend.");
+    const stateSecret = readEnv("META_OAUTH_STATE_SECRET");
+    const appId = readMetaAppId();
+    const appSecret = readEnv("META_APP_SECRET");
+    if (!stateSecret || !appSecret) throw new Error("Credenciais Meta ausentes no backend.");
 
     // Verify state
     let decoded = "";
