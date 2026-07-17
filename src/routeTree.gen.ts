@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OauthCallbackRouteImport } from './routes/oauth-callback'
+import { Route as MetaOauthCallbackRouteImport } from './routes/meta-oauth-callback'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
@@ -57,6 +59,16 @@ import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizz
 import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes.$id.builder'
 import { Route as AppIntegrationsMetaCallbackRouteImport } from './routes/_app.integrations.meta.callback'
 
+const OauthCallbackRoute = OauthCallbackRouteImport.update({
+  id: '/oauth-callback',
+  path: '/oauth-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetaOauthCallbackRoute = MetaOauthCallbackRouteImport.update({
+  id: '/meta-oauth-callback',
+  path: '/meta-oauth-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
   path: '/diagnostics',
@@ -297,6 +309,8 @@ const AppIntegrationsMetaCallbackRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/meta-oauth-callback': typeof MetaOauthCallbackRoute
+  '/oauth-callback': typeof OauthCallbackRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/chat-reports': typeof AppChatReportsRoute
@@ -344,6 +358,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/meta-oauth-callback': typeof MetaOauthCallbackRoute
+  '/oauth-callback': typeof OauthCallbackRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/chat-reports': typeof AppChatReportsRoute
@@ -393,6 +409,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/diagnostics': typeof DiagnosticsRoute
+  '/meta-oauth-callback': typeof MetaOauthCallbackRoute
+  '/oauth-callback': typeof OauthCallbackRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/chat-reports': typeof AppChatReportsRoute
@@ -442,6 +460,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/diagnostics'
+    | '/meta-oauth-callback'
+    | '/oauth-callback'
     | '/analytics'
     | '/automations'
     | '/chat-reports'
@@ -489,6 +509,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/diagnostics'
+    | '/meta-oauth-callback'
+    | '/oauth-callback'
     | '/analytics'
     | '/automations'
     | '/chat-reports'
@@ -537,6 +559,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_auth'
     | '/diagnostics'
+    | '/meta-oauth-callback'
+    | '/oauth-callback'
     | '/_app/analytics'
     | '/_app/automations'
     | '/_app/chat-reports'
@@ -587,6 +611,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
+  MetaOauthCallbackRoute: typeof MetaOauthCallbackRoute
+  OauthCallbackRoute: typeof OauthCallbackRoute
   ChatEmbedCompanyIdRoute: typeof ChatEmbedCompanyIdRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
@@ -598,6 +624,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/oauth-callback': {
+      id: '/oauth-callback'
+      path: '/oauth-callback'
+      fullPath: '/oauth-callback'
+      preLoaderRoute: typeof OauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meta-oauth-callback': {
+      id: '/meta-oauth-callback'
+      path: '/meta-oauth-callback'
+      fullPath: '/meta-oauth-callback'
+      preLoaderRoute: typeof MetaOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/diagnostics': {
       id: '/diagnostics'
       path: '/diagnostics'
@@ -1072,6 +1112,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
+  MetaOauthCallbackRoute: MetaOauthCallbackRoute,
+  OauthCallbackRoute: OauthCallbackRoute,
   ChatEmbedCompanyIdRoute: ChatEmbedCompanyIdRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,

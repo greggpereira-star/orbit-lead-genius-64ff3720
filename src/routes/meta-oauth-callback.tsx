@@ -1,8 +1,12 @@
-import { Navigate, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 function MetaOAuthCallbackAlias() {
-  const search = typeof window === "undefined" ? "" : window.location.search;
-  return <Navigate to={`/integrations/meta/callback${search}`} replace />;
+  useEffect(() => {
+    window.location.replace(`/integrations/meta/callback${window.location.search}`);
+  }, []);
+
+  return null;
 }
 
 export const Route = createFileRoute("/meta-oauth-callback")({
