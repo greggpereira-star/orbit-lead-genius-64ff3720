@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
  
     const isBypassPath = useMemo(() => {
       const path = routerState.location.pathname;
-      const bypassList = ['/', '/auth', '/login', '/signup'];
+       const bypassList = ['/', '/auth', '/login', '/signup', '/integrations/meta/callback', '/oauth-callback', '/meta-oauth-callback', '/functions/v1/oauth-callback'];
       if (bypassList.includes(path)) return true;
       if (path.startsWith('/f/')) return true; // Public forms bypass
       return false;

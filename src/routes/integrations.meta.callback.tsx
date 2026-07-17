@@ -63,6 +63,6 @@ function CallbackPage() {
   );
 }
 
-export const Route = createFileRoute("/_app/integrations/meta/callback")({
+export const Route = createFileRoute("/integrations/meta/callback")({
   component: CallbackPage,
 });

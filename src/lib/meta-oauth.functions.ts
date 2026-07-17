@@ -7,6 +7,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const META_API_VERSION = "v25.0";
 const META_OAUTH_DIALOG = "https://www.facebook.com/dialog/oauth";
+const DEFAULT_PUBLIC_ORIGIN = "https://altleadflow.com.br";
 const META_SCOPES = [
   "email",
   "public_profile",
@@ -14,31 +15,36 @@ const META_SCOPES = [
   "pages_manage_metadata",
   "pages_read_engagement",
   "leads_retrieval",
-  "ads_management",
 ].join(",");
 
 function getPublicUrl(): string {
   return (
     process.env.PUBLIC_APP_URL ??
     process.env.VITE_APP_URL ??
-    "https://id-preview--5d4053e9-e197-4195-8f1f-86c12b809081.lovable.app"
+    DEFAULT_PUBLIC_ORIGIN
   );
 }
 
 function normalizeOrigin(origin: string): string {
-  const normalized = origin.replace(/\/+$/, "");
-  return normalized === "https://www.altleadflow.com.br" ? "https://altleadflow.com.br" : normalized;
+  return origin.replace(/\/+$/, "");
 }
 
 function getAllowedOrigins(): Set<string> {
+  const configuredOrigins = (readEnv("META_OAUTH_ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   return new Set(
     [
       getPublicUrl(),
+      DEFAULT_PUBLIC_ORIGIN,
       "https://www.altleadflow.com.br",
       "https://altleadflow.com.br",
       "https://orbit-lead-genius.lovable.app",
       "https://id-preview--5d4053e9-e197-4195-8f1f-86c12b809081.lovable.app",
       "http://localhost:8080",
+      ...configuredOrigins,
     ].map(normalizeOrigin),
   );
 }
@@ -100,6 +106,13 @@ export const startMetaOAuth = createServerFn({ method: "POST" })
     const state = Buffer.from(`${payload}.${sig}`).toString("base64url");
 
     const redirectUri = `${origin}/integrations/meta/callback`;
+    console.info("[meta-oauth] starting", {
+      requestedOrigin: data?.origin ?? null,
+      resolvedOrigin: origin,
+      redirectUri,
+      userId: context.userId,
+      companyId: mem.company_id,
+    });
     const url = new URL(META_OAUTH_DIALOG);
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", redirectUri);
@@ -148,6 +161,12 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
 
     const origin = resolveOAuthOrigin(Buffer.from(originToken, "base64url").toString("utf8"));
     const redirectUri = `${origin}/integrations/meta/callback`;
+    console.info("[meta-oauth] completing", {
+      resolvedOrigin: origin,
+      redirectUri,
+      userId: context.userId,
+      companyId,
+    });
     const shortLived = await exchangeCodeForToken({ appId, appSecret, redirectUri, code: data.code });
     const longLived = await exchangeForLongLivedToken({
       appId,
