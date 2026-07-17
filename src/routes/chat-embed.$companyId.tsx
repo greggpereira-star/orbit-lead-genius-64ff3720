@@ -50,6 +50,35 @@ function EmbedChat() {
     return () => { cancelled = true; };
   }, [companyId]);
 
+  // Auto-open existing conversation (or one just created by an agent proactively)
+  useEffect(() => {
+    if (started || !companyId) return;
+    let cancelled = false;
+    (async () => {
+      const existing = await chatService.findOpenByVisitor(companyId, visitorId);
+      if (!cancelled && existing) {
+        setConversation(existing);
+        setVisitorName(existing.visitor_name ?? '');
+        setStarted(true);
+      }
+    })();
+    const channel = supabase
+      .channel(`visitor_conv_${visitorId}`)
+      .on(
+        'postgres_changes' as never,
+        { event: 'INSERT', schema: 'public', table: 'chat_conversations', filter: `visitor_id=eq.${visitorId}` } as never,
+        (payload: { new: ChatConversation }) => {
+          if (payload.new.company_id !== companyId) return;
+          setConversation(payload.new);
+          setVisitorName(payload.new.visitor_name ?? '');
+          setStarted(true);
+        },
+      )
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [companyId, visitorId, started]);
+
+
   useEffect(() => {
     if (!conversation) return;
     chatService.listMessages(conversation.id).then(setMessages);
