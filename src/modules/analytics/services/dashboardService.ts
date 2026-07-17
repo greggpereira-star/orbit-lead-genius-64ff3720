@@ -92,6 +92,7 @@ export const dashboardService = {
       temperature: string | null;
       score: number | null;
       created_at: string;
+      metadata: Record<string, unknown> | null;
     }>;
     const submissions = (submissionsRes.data ?? []) as Array<{ status: string | null; created_at: string }>;
     const cvcrm = (cvcrmRes.data ?? []) as Array<{ status: string | null }>;
