@@ -182,6 +182,8 @@ export async function listFormLeads(params: ListFormLeadsParams): Promise<MetaLe
         access_token: params.pageAccessToken,
         fields: "id,created_time,ad_id,adset_id,campaign_id,form_id,field_data",
         limit: String(Math.min(100, maxLeads - leads.length)),
+        since: params.since ? String(Math.floor(Date.parse(params.since) / 1000)) : undefined,
+        until: params.until ? String(Math.floor(Date.parse(params.until) / 1000)) : undefined,
         after,
       },
     });
