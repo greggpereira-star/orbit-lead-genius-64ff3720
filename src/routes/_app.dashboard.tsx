@@ -255,10 +255,39 @@ function DashboardPage() {
             <CardTitle className="flex items-center gap-2"><Megaphone className="h-4 w-4" />Meta Lead Ads</CardTitle>
             <CardDescription>Eventos recebidos no período</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isLoading ? '—' : data?.metaLeads ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Leads via webhook do Facebook/Instagram</p>
-            <Button asChild variant="link" className="px-0 mt-2">
+          <CardContent className="space-y-3">
+            <div>
+              <div className="text-3xl font-bold">{isLoading ? '—' : data?.metaLeads ?? 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">Leads via webhook Facebook/Instagram</p>
+            </div>
+
+            {data && (
+              <div className="pt-2 border-t">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Top formulários</p>
+                {data.metaTopForms.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sem dados</p>
+                ) : data.metaTopForms.map((s) => (
+                  <div key={s.name} className="flex items-center justify-between text-xs py-0.5">
+                    <span className="truncate" title={s.name}>{s.name}</span>
+                    <Badge variant="outline" className="ml-2">{s.value}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {data && data.metaTopCampaigns.length > 0 && (
+              <div className="pt-2 border-t">
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Top campanhas</p>
+                {data.metaTopCampaigns.map((s) => (
+                  <div key={s.name} className="flex items-center justify-between text-xs py-0.5">
+                    <span className="truncate font-mono" title={s.name}>{s.name}</span>
+                    <Badge variant="outline" className="ml-2">{s.value}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Button asChild variant="link" className="px-0">
               <Link to="/integrations/meta">Configurar integração <ArrowUpRight className="h-3 w-3 ml-1" /></Link>
             </Button>
           </CardContent>
