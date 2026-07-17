@@ -356,7 +356,7 @@ export const importMetaFormLeads = createServerFn({ method: "POST" })
     }
 
     try {
-      const { listFormLeads, MetaGraphError } = await import("@/lib/meta-graph.server");
+      const { listFormLeads } = await import("@/lib/meta-graph.server");
       const { processMetaLeadEvent } = await import("@/lib/meta-lead-processor.server");
       const leads = await listFormLeads({
         formId: form.form_id,
