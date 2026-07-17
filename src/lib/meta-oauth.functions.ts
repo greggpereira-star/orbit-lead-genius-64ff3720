@@ -26,7 +26,8 @@ function getPublicUrl(): string {
 }
 
 function normalizeOrigin(origin: string): string {
-  return origin.replace(/\/+$/, "");
+  const normalized = origin.replace(/\/+$/, "");
+  return normalized === "https://www.altleadflow.com.br" ? "https://altleadflow.com.br" : normalized;
 }
 
 function getAllowedOrigins(): Set<string> {
