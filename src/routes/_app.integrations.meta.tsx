@@ -166,6 +166,27 @@ function MetaIntegrationsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const retryMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const params = await retryJob({ data: { jobId } });
+      return importLeads({
+        data: {
+          formId: params.form_id,
+          since: params.since,
+          until: params.until,
+          limit: 200,
+        },
+      });
+    },
+    onSuccess: (res) => {
+      toast.success(
+        `Retentativa concluída: ${res.total_imported} novo(s), ${res.total_duplicates} duplicado(s), ${res.total_failed} falha(s).`,
+      );
+      qc.invalidateQueries({ queryKey: ["meta-import-jobs"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const connection = data?.connection as ConnectionRow | null;
   const pages = (data?.pages ?? []) as PageRow[];
   const events = (data?.recentEvents ?? []) as EventRow[];
