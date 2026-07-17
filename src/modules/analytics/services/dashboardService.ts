@@ -140,6 +140,18 @@ export const dashboardService = {
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
 
+    // Meta form/campaign breakdown from lead metadata
+    const metaFormMap = new Map<string, number>();
+    const metaCampaignMap = new Map<string, number>();
+    for (const l of leads) {
+      if (l.source !== 'meta_leadads') continue;
+      const md = (l.metadata ?? {}) as Record<string, unknown>;
+      const formName = (md.meta_form_name as string) || (md.meta_form_id as string) || 'Sem formulário';
+      metaFormMap.set(formName, (metaFormMap.get(formName) ?? 0) + 1);
+      const camp = (md.meta_campaign_id as string) || null;
+      if (camp) metaCampaignMap.set(camp, (metaCampaignMap.get(camp) ?? 0) + 1);
+    }
+
     const waEvents = (waRes.data ?? []) as Array<{
       id: string;
       lead_id: string | null;
