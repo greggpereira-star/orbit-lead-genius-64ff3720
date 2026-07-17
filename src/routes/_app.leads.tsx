@@ -221,7 +221,7 @@ function LeadsPage() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:w-[620px] lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 lg:w-[820px] lg:grid-cols-4">
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
@@ -255,7 +255,19 @@ function LeadsPage() {
               <SelectItem value="unassigned">Sem atribuição</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={metaFormId} onValueChange={setMetaFormId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Formulário Meta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os formulários</SelectItem>
+              {(metaFormsQuery.data ?? []).map((f) => (
+                <SelectItem key={f.form_id} value={f.form_id}>{f.form_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-card">
