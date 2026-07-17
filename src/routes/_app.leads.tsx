@@ -77,16 +77,24 @@ function LeadsPage() {
   const [status, setStatus] = useState('all');
   const [temperature, setTemperature] = useState<'all' | 'hot' | 'warm' | 'cold'>('all');
   const [assignment, setAssignment] = useState<'all' | 'mine' | 'unassigned'>('all');
+  const [metaFormId, setMetaFormId] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
 
   const companyId = company?.id;
   const currentUserId = user?.id ?? null;
   const leadsQuery = useQuery({
-    queryKey: ['leads', companyId, search, status, temperature, assignment, currentUserId],
-    queryFn: () => listLeads(companyId ?? '', { search, status, temperature, assignment, currentUserId }),
+    queryKey: ['leads', companyId, search, status, temperature, assignment, metaFormId, currentUserId],
+    queryFn: () => listLeads(companyId ?? '', { search, status, temperature, assignment, metaFormId, currentUserId }),
     enabled: Boolean(companyId),
   });
+
+  const metaFormsQuery = useQuery({
+    queryKey: ['meta-forms', companyId],
+    queryFn: () => listMetaFormsForCompany(companyId ?? ''),
+    enabled: Boolean(companyId),
+  });
+
 
   const createMutation = useMutation({
     mutationFn: () => {
