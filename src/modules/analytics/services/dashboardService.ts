@@ -49,7 +49,7 @@ export const dashboardService = {
     const [leadsRes, prevLeadsRes, totalLeadsRes, submissionsRes, metaRes, cvcrmRes, waRes] = await Promise.all([
       supabase
         .from('leads')
-        .select('id, name, source, temperature, score, created_at')
+        .select('id, name, source, temperature, score, created_at, metadata')
         .eq('company_id', companyId)
         .gte('created_at', since)
         .order('created_at', { ascending: false }),
