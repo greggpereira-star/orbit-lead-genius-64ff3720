@@ -10,7 +10,7 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs } from "@/lib/meta-forms.functions";
+import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs, retryMetaImportJob } from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
