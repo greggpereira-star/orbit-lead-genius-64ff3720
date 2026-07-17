@@ -1,16 +1,30 @@
 import { createStart, createMiddleware } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 
 import { renderErrorPage } from "@/lib/error-page";
 import { consumeLastCapturedError } from "@/lib/error-capture";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+import { attachAppSupabaseAuth } from "@/lib/function-auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
   } catch (error) {
-    if (error != null && typeof error === "object" && "statusCode" in error) {
+    if (error instanceof Response || (error != null && typeof error === "object" && ("statusCode" in error || "status" in error))) {
       throw error;
     }
+
+    const request = getRequest();
+    const acceptHeader = request.headers.get("accept") ?? "";
+    const requestPath = new URL(request.url).pathname;
+    const isServerFunctionRequest =
+      requestPath.includes("_serverFn") ||
+      requestPath.includes("/_server") ||
+      !acceptHeader.includes("text/html");
+
+    if (isServerFunctionRequest) {
+      throw error;
+    }
+
     console.error(error);
     const lastError = consumeLastCapturedError() || error;
     const diagnostic = lastError instanceof Error 
@@ -25,6 +39,6 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],
+  functionMiddleware: [attachAppSupabaseAuth],
   requestMiddleware: [errorMiddleware],
 }));
