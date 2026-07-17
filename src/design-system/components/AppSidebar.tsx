@@ -11,7 +11,7 @@ import {
   Monitor,
   ShieldCheck,
   Sparkles,
-  Facebook,
+  Share2,
 } from 'lucide-react';
 
  import {
