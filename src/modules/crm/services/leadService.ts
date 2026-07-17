@@ -136,6 +136,10 @@ export async function listLeads(companyId: string, filters: LeadFilters = {}): P
     request = request.is('assigned_to', null);
   }
 
+  if (filters.metaFormId && filters.metaFormId !== 'all') {
+    request = request.eq('source', 'meta_leadads').filter('metadata->>meta_form_id', 'eq', filters.metaFormId);
+  }
+
   const searchTerm = filters.search ? sanitizeSearchTerm(filters.search) : '';
   if (searchTerm.length >= 2) {
     request = request.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
@@ -145,6 +149,17 @@ export async function listLeads(companyId: string, filters: LeadFilters = {}): P
   if (error) throw error;
   return (data ?? []) as LeadRow[];
 }
+
+export async function listMetaFormsForCompany(companyId: string): Promise<MetaFormOption[]> {
+  const { data, error } = await supabase
+    .from('meta_lead_forms')
+    .select('form_id, form_name')
+    .eq('company_id', companyId)
+    .order('form_name', { ascending: true });
+  if (error) return [];
+  return (data ?? []) as MetaFormOption[];
+}
+
 
 export async function createLead(input: CreateLeadInput): Promise<LeadRow> {
   const metadata: Record<string, Json> = {
