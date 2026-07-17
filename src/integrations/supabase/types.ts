@@ -2151,6 +2151,111 @@ export type Database = {
           },
         ]
       }
+      meta_form_mappings: {
+        Row: {
+          assigned_to: string | null
+          channel: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          default_score: number
+          default_tags: Json
+          default_temperature: string | null
+          default_utm_campaign: string | null
+          default_utm_medium: string | null
+          default_utm_source: string | null
+          external_crm_conditions: Json
+          external_crm_config: Json
+          external_crm_enabled: boolean
+          external_crm_provider: string | null
+          form_id: string
+          form_name: string | null
+          id: string
+          is_active: boolean
+          medium: string
+          page_id: string
+          page_name: string | null
+          pipeline_id: string | null
+          qualification_rules: Json
+          source: string
+          stage_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          channel?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          default_score?: number
+          default_tags?: Json
+          default_temperature?: string | null
+          default_utm_campaign?: string | null
+          default_utm_medium?: string | null
+          default_utm_source?: string | null
+          external_crm_conditions?: Json
+          external_crm_config?: Json
+          external_crm_enabled?: boolean
+          external_crm_provider?: string | null
+          form_id: string
+          form_name?: string | null
+          id?: string
+          is_active?: boolean
+          medium?: string
+          page_id: string
+          page_name?: string | null
+          pipeline_id?: string | null
+          qualification_rules?: Json
+          source?: string
+          stage_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          channel?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          default_score?: number
+          default_tags?: Json
+          default_temperature?: string | null
+          default_utm_campaign?: string | null
+          default_utm_medium?: string | null
+          default_utm_source?: string | null
+          external_crm_conditions?: Json
+          external_crm_config?: Json
+          external_crm_enabled?: boolean
+          external_crm_provider?: string | null
+          form_id?: string
+          form_name?: string | null
+          id?: string
+          is_active?: boolean
+          medium?: string
+          page_id?: string
+          page_name?: string | null
+          pipeline_id?: string | null
+          qualification_rules?: Json
+          source?: string
+          stage_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_form_mappings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_mappings_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_lead_connections: {
         Row: {
           access_token: string
@@ -2207,15 +2312,18 @@ export type Database = {
           company_id: string | null
           created_at: string
           error_message: string | null
+          fetched_lead_payload: Json | null
           form_id: string | null
           id: string
           lead_id: string | null
           leadgen_id: string
+          normalized_payload: Json | null
           page_id: string
           processed_at: string | null
           raw_payload: Json
           received_at: string
           status: string
+          trace_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2223,15 +2331,18 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           error_message?: string | null
+          fetched_lead_payload?: Json | null
           form_id?: string | null
           id?: string
           lead_id?: string | null
           leadgen_id: string
+          normalized_payload?: Json | null
           page_id: string
           processed_at?: string | null
           raw_payload: Json
           received_at?: string
           status?: string
+          trace_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2239,15 +2350,18 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           error_message?: string | null
+          fetched_lead_payload?: Json | null
           form_id?: string | null
           id?: string
           lead_id?: string | null
           leadgen_id?: string
+          normalized_payload?: Json | null
           page_id?: string
           processed_at?: string | null
           raw_payload?: Json
           received_at?: string
           status?: string
+          trace_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2276,8 +2390,12 @@ export type Database = {
           form_name: string
           id: string
           is_active: boolean
+          last_synced_at: string | null
+          leads_count: number
           page_id: string
+          page_name: string | null
           questions: Json
+          raw_payload: Json
           status: string | null
           updated_at: string
         }
@@ -2289,8 +2407,12 @@ export type Database = {
           form_name: string
           id?: string
           is_active?: boolean
+          last_synced_at?: string | null
+          leads_count?: number
           page_id: string
+          page_name?: string | null
           questions?: Json
+          raw_payload?: Json
           status?: string | null
           updated_at?: string
         }
@@ -2302,14 +2424,89 @@ export type Database = {
           form_name?: string
           id?: string
           is_active?: boolean
+          last_synced_at?: string | null
+          leads_count?: number
           page_id?: string
+          page_name?: string | null
           questions?: Json
+          raw_payload?: Json
           status?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "meta_lead_forms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_lead_import_jobs: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          finished_at: string | null
+          form_id: string
+          id: string
+          page_id: string | null
+          since: string | null
+          started_at: string | null
+          status: string
+          total_duplicates: number
+          total_failed: number
+          total_found: number
+          total_imported: number
+          trace_id: string | null
+          until: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          form_id: string
+          id?: string
+          page_id?: string | null
+          since?: string | null
+          started_at?: string | null
+          status?: string
+          total_duplicates?: number
+          total_failed?: number
+          total_found?: number
+          total_imported?: number
+          trace_id?: string | null
+          until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          form_id?: string
+          id?: string
+          page_id?: string | null
+          since?: string | null
+          started_at?: string | null
+          status?: string
+          total_duplicates?: number
+          total_failed?: number
+          total_found?: number
+          total_imported?: number
+          trace_id?: string | null
+          until?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_import_jobs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

@@ -1,77 +1,71 @@
-# Lead Scoring & Routing — Fase 5
+# Meta Lead Ads — Sincronização de formulários + roteamento para CRM
 
-Objetivo: transformar todo lead que entra (Quiz, Form, Meta) em um lead **pontuado, classificado (hot/warm/cold) e atribuído a um vendedor** automaticamente, com painel de configuração.
+Escopo grande. Vou entregar em 4 blocos, cada um funcional por si só. Você aprova este plano e eu começo pelo Bloco 1.
 
-## 1. Banco de dados (migration única)
+## Bloco 1 — Sincronização de formulários (base)
 
-Duas tabelas novas + coluna direta em `leads`:
+**Migration**
+- Ajustar `meta_lead_forms`: garantir colunas `page_name`, `leads_count`, `questions jsonb`, `raw_payload jsonb`, `last_synced_at`. Unique `(company_id, form_id)`. GRANTs.
+- Criar `meta_form_mappings` com todos os campos do STEP 6 (pipeline/stage/assigned_to/tags/score/temperature/qualification_rules/external_crm_*). Unique `(company_id, form_id)`. RLS por company.
+- Criar `meta_lead_import_jobs` (STEP 7). RLS por company.
+- Ajustar `meta_lead_events`: adicionar `fetched_lead_payload`, `normalized_payload`, `trace_id`, status `unmapped_form`.
 
-- `routing_configs` — 1 por empresa: `id, company_id, name, strategy ('round_robin'|'performance'|'hybrid'), is_active, fallback_user_id`.
-- `routing_members` — vendedores no pool: `id, config_id, user_id, performance_score (0-100), weight, is_available, last_assigned_at`.
-- `leads.assigned_to uuid` — coluna direta (hoje mora em `metadata`, difícil filtrar).
+**Server functions** (`src/lib/meta-forms.functions.ts`)
+- `syncMetaLeadForms({ pageId })` — busca `/v25.0/{page_id}/leadgen_forms` com o page_access_token salvo, upsert em `meta_lead_forms`, retorna resumo + trace_id.
+- `listMetaForms({ pageId? })` — lê formulários salvos + mapping ativo (join).
+- `saveMetaFormMapping(input)` — upsert em `meta_form_mappings`.
+- `deleteMetaFormMapping({ id })`.
+- Todas com `requireSupabaseAuth` + validação de `company_id` via membership.
 
-RLS: `authenticated` só acessa linhas onde é membro da company. GRANTs completos.
+**UI** (`_app.integrations.meta.tsx`)
+- Em cada card de página: botões **Sincronizar Formulários**, **Ver Formulários**.
+- Nova seção **Formulários Meta**: tabela com Página | Formulário | Status | Leads | Última sync | Pipeline | Etapa | CRM externo | Ações (Configurar / Importar / Testar / Desativar).
+- Estados vazio e diagnóstico de permissão (`leads_retrieval` / `pages_manage_metadata` / token expirado) com mensagens específicas quando Graph retorna 190/200/10.
 
-Já existem: `form_scoring_rules`, `form_temperature_rules`, `form_tag_rules`, `lead_scores` — reaproveitados.
+## Bloco 2 — Configurar mapeamento (drawer 5 etapas)
 
-## 2. Engine de scoring unificado
+Drawer com steps: Origem → Destino Alt LeadFlow → Qualificação → CRM externo opcional → Revisar.
+- Reaproveita `stages`/pipelines já existentes e `memberships` para responsáveis.
+- Editor simples de regras (`campo/operador/valor/ação`) salvo em `qualification_rules jsonb`.
+- CRM externo: select filtrado por integrações ativas da company (`cvcrm_integrations`, futuros); só mostra CV.CRM se company tem `cvcrm_integrations.is_active=true`. Sem integração ativa → mensagem "Nenhum CRM externo ativo. Leads serão salvos apenas no Alt LeadFlow." (não bloqueia).
+- Persistência via `saveMetaFormMapping`.
 
-Novo módulo `src/modules/intelligence/services/leadScoringEngine.ts`:
+## Bloco 3 — Pipeline de ingestão (webhook + normalização + processIncomingLead)
 
-- `scoreLead(lead, answers, companyId)` → aplica `form_scoring_rules` (condition JSONB avaliada com operadores `eq/gt/lt/contains/in`), soma `score_delta`, coleta tags e ação recomendada.
-- Deriva `temperature` via `form_temperature_rules` (faixa min/max) — fallback global hot≥70, warm≥40, cold<40.
-- Grava histórico em `lead_scores` (audit trail) + atualiza `leads.score`, `leads.temperature`.
+- Refactor `src/lib/meta-lead-processor.server.ts`:
+  - `normalizeMetaLead(payload, mapping)` puro e testável (mapeia full_name/email/phone_number/whatsapp, mantém answers, monta UTMs com fallback do mapping, extrai campaign/adset/ad quando disponíveis).
+  - `processIncomingLead(input)` como função central; a Meta é um dos callers.
+  - Enrichment opcional via Graph (`/{ad_id}`, `/{campaign_id}`, `/{adset_id}`) com try/catch — falha vira warning.
+  - Se não há mapping ativo → status `unmapped_form`, sem perder payload.
+  - Dedup por `(company_id, meta_leadgen_id)`.
+  - Envio a CRM externo só via `shouldSendToExternalCRM(lead, mapping, integrations)`; CV.CRM continua opcional (usa `cvcrm_integrations.is_active`).
+- Webhook `/api/public/meta-webhook`: chama o processor novo, gera `trace_id`, grava eventos com status correto.
 
-## 3. Routing engine
+## Bloco 4 — Importação, reprocessamento, teste, eventos e logs
 
-Refactor de `routingService.assignLead`:
-
-- Estratégia `round_robin`: menor `last_assigned_at`.
-- `performance`: pondera por `performance_score` (leads hot vão para top ≥80).
-- `hybrid` (default): hot → performance; warm/cold → round_robin.
-- Cai no `fallback_user_id` se pool vazio.
-- Grava `leads.assigned_to`, atualiza `last_assigned_at`, cria evento em `lead_events`.
-
-## 4. Integração automática
-
-Wire no pipeline de captura:
-
-- `quizService.submitPublic` (após criar lead) → `scoreLead` → `assignLead`.
-- `captureService` (form público) → mesmo hook.
-- `meta-lead-processor.server.ts` → mesmo hook.
-
-## 5. UI de configuração
-
-Nova rota `/_app.settings.routing.tsx`:
-
-- **Aba Regras**: CRUD de `form_scoring_rules` globais (sem `form_id`) — condição (campo/operador/valor), delta, tag, temperatura, ação.
-- **Aba Temperatura**: faixas hot/warm/cold com preview.
-- **Aba Distribuição**: pool de vendedores (busca membros da company), toggle disponibilidade, slider performance, estratégia global, fallback.
-
-Server functions autenticadas com `requireSupabaseAuth` para escrita; leitura via TanStack Query.
-
-## 6. Melhorias na página de leads
-
-- Coluna "Atribuído a" com avatar do vendedor.
-- Filtro por `assigned_to` (todos / meus leads / não atribuídos).
-- Ação bulk: reatribuir manualmente.
+- `importMetaLeads({ formId, since, until })` server fn — pagina `/v25.0/{form_id}/leads`, chama processor, retorna `total_found/imported/duplicates/failed` e persiste em `meta_lead_import_jobs`.
+- `reprocessMetaEvent({ eventId })` e `reprocessUnmappedForm({ formId })`.
+- `sendTestLead({ formMappingId })` — payload fake baseado em `questions`, marca `metadata.is_test=true`, respeita flag "enviar teste para CRM externo".
+- UI:
+  - Seção **Mapeamentos Ativos** (tabela + ações).
+  - Seção **Eventos Recentes** enriquecida (horário/página/form/lead/status/CRM/trace_id/erro).
+  - Botão **Reprocessar** individual e em massa (eventos com erro / eventos de um form recém-mapeado).
 
 ## Detalhes técnicos
 
-- Avaliação de `condition` JSONB: `{ field: 'phone', op: 'exists' }`, `{ field: 'orcamento', op: 'gte', value: 500000 }`. Parser puro em TS testável.
-- Round-robin thread-safe: `UPDATE ... RETURNING` com `FOR UPDATE SKIP LOCKED` via RPC `pick_next_routing_member(config_id)` — evita corrida em picos.
-- Todas as escritas de scoring/routing rodam via `createServerFn` (service-role para bypass RLS quando o lead vem de webhook público).
-
-## Fora do escopo
-
-- ML/scoring por IA (fica para fase seguinte usando Lovable AI).
-- SLA e reassignment por inatividade.
-- Notificação push ao vendedor (WhatsApp Cloud é a próxima fase).
+- Tokens Meta: reutilizar `page_access_token` salvo em `meta_lead_pages`. Nunca chamar Graph pelo browser.
+- Todas as chamadas Graph passam por `meta-graph.server.ts` (já existe `META_API_VERSION=v25.0`).
+- Idempotência: unique `(company_id, meta_leadgen_id)` em `meta_lead_events` + check por `metadata->>'meta_leadgen_id'` antes de criar lead.
+- CV.CRM permanece 100% opcional: nenhum caminho de código quebra se company não tem `cvcrm_integrations` ativa. Envio via `queueService.enqueue('send_cvcrm_lead', ...)`.
+- Abstração `dispatchLeadToCRM(provider, lead, config)` para permitir hubspot/rdstation/webhook depois — implementação inicial só com `cvcrm` e `webhook` genérico.
+- Logs estruturados com `trace_id` (uuid por evento) via `logger`.
+- Sem edge functions novas: tudo em TanStack server functions + processor server-only.
 
 ## Ordem de entrega
 
-1. Migration (aguarda aprovação).
-2. RPC `pick_next_routing_member` + engines TS.
-3. Wire nos 3 pontos de captura.
-4. UI settings/routing.
-5. Página de leads com "assigned_to".
+1. Bloco 1 (migration + sync + UI de listagem).
+2. Bloco 2 (drawer de mapeamento).
+3. Bloco 3 (ingestão real + dedup + CRM opcional).
+4. Bloco 4 (importação, reprocessamento, teste, eventos ricos).
+
+Aprova este plano para eu começar pelo Bloco 1?

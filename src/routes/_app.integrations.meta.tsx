@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
   startMetaOAuth,
@@ -9,6 +9,7 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
+import { syncMetaLeadForms, listMetaForms } from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,8 @@ function MetaIntegrationsPage() {
   const getConn = useServerFn(getMetaConnection);
   const setSub = useServerFn(setPageSubscription);
   const disconnect = useServerFn(disconnectMeta);
+  const syncForms = useServerFn(syncMetaLeadForms);
+  const listForms = useServerFn(listMetaForms);
 
   const { data, isLoading } = useQuery({
     queryKey: ["meta-connection"],
@@ -81,6 +84,21 @@ function MetaIntegrationsPage() {
     onSuccess: () => {
       toast.success("Conta Meta desconectada");
       qc.invalidateQueries({ queryKey: ["meta-connection"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const formsQuery = useQuery({
+    queryKey: ["meta-forms"],
+    queryFn: () => listForms(),
+    staleTime: 30_000,
+  });
+
+  const syncFormsMutation = useMutation({
+    mutationFn: (pageId: string) => syncForms({ data: { pageId } }),
+    onSuccess: (res) => {
+      toast.success(`${res.forms_synced} formulário(s) sincronizado(s)`);
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -194,6 +212,19 @@ function MetaIntegrationsPage() {
                         ) : (
                           <Badge variant="outline">Inativo</Badge>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => syncFormsMutation.mutate(p.page_id)}
+                          disabled={syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id}
+                        >
+                          {syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                          )}
+                          Sincronizar formulários
+                        </Button>
                         <Switch
                           checked={p.subscribed}
                           onCheckedChange={(checked) =>
@@ -208,6 +239,107 @@ function MetaIntegrationsPage() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Formulários Meta ({formsQuery.data?.forms.length ?? 0})
+              </CardTitle>
+              <CardDescription>
+                Formulários Lead Ads sincronizados. Configure cada um para direcionar os leads ao seu pipeline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {formsQuery.isLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : !formsQuery.data?.forms.length ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum formulário sincronizado ainda. Escolha uma página acima e clique em{" "}
+                  <strong>Sincronizar formulários</strong>.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground border-b">
+                      <tr>
+                        <th className="text-left py-2 pr-2">Página</th>
+                        <th className="text-left py-2 pr-2">Formulário</th>
+                        <th className="text-left py-2 pr-2">Status Meta</th>
+                        <th className="text-right py-2 pr-2">Leads (Meta)</th>
+                        <th className="text-left py-2 pr-2">Última sync</th>
+                        <th className="text-left py-2 pr-2">Mapeamento</th>
+                        <th className="text-right py-2">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {formsQuery.data.forms.map((f) => {
+                        const mapping = f.mapping as
+                          | {
+                              id: string;
+                              is_active: boolean;
+                              stage_id: string | null;
+                              external_crm_enabled: boolean;
+                              external_crm_provider: string | null;
+                            }
+                          | null;
+                        return (
+                          <tr key={f.id}>
+                            <td className="py-2 pr-2">
+                              <div className="font-medium">{f.page_name ?? "—"}</div>
+                              <div className="text-xs text-muted-foreground">{f.page_id}</div>
+                            </td>
+                            <td className="py-2 pr-2">
+                              <div className="font-medium">{f.form_name}</div>
+                              <div className="text-xs text-muted-foreground">{f.form_id}</div>
+                            </td>
+                            <td className="py-2 pr-2">
+                              <Badge variant={f.status === "ACTIVE" ? "default" : "outline"}>
+                                {f.status ?? "—"}
+                              </Badge>
+                            </td>
+                            <td className="py-2 pr-2 text-right tabular-nums">{f.leads_count ?? 0}</td>
+                            <td className="py-2 pr-2 text-xs text-muted-foreground">
+                              {f.last_synced_at
+                                ? new Date(f.last_synced_at).toLocaleString("pt-BR")
+                                : "—"}
+                            </td>
+                            <td className="py-2 pr-2">
+                              {mapping ? (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <Badge variant={mapping.is_active ? "default" : "outline"}>
+                                    {mapping.is_active ? "Ativo" : "Pausado"}
+                                  </Badge>
+                                  {mapping.external_crm_enabled && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      → {mapping.external_crm_provider ?? "CRM"}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  Não mapeado
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="py-2 text-right">
+                              <Button variant="ghost" size="sm" disabled>
+                                Configurar
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    O drawer de configuração (pipeline, tags, CRM externo opcional) chega no próximo bloco.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
 
           <Card>
             <CardHeader>
