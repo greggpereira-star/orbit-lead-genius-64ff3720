@@ -5,7 +5,7 @@
  * writes to `leads` and triggers downstream deliveries.
  */
 import { createHmac } from "node:crypto";
-import { fetchLead } from "./meta-graph.server";
+import { fetchLead, type MetaLead } from "./meta-graph.server";
 
 // Loose admin typing on purpose: this file is server-only and is invoked with
 // the generated supabaseAdmin client. Keeping it permissive avoids leaking
@@ -99,6 +99,7 @@ export interface ProcessMetaLeadInput {
   formId?: string;
   adId?: string;
   createdTime?: string;
+  hydratedLead?: MetaLead;
   rawPayload: unknown;
 }
 
@@ -167,7 +168,7 @@ export async function processMetaLeadEvent(
   }
 
   try {
-    const leadDetails = await fetchLead(input.leadgenId, page.page_access_token);
+    const leadDetails = input.hydratedLead ?? (await fetchLead(input.leadgenId, page.page_access_token));
     const parsed = normalizeFieldData(leadDetails.field_data ?? [], fieldMapping);
 
     const leadInsert: Record<string, unknown> = {
@@ -214,6 +215,8 @@ export async function processMetaLeadEvent(
       status: "processed",
       lead_id: insertedLead.id,
       company_id: page.company_id,
+      fetched_lead_payload: leadDetails,
+      normalized_payload: parsed,
       processed_at: new Date().toISOString(),
     });
 
