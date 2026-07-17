@@ -37,6 +37,7 @@ import { Route as AppChatReportsRouteImport } from './routes/_app.chat-reports'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
+import { Route as IntegrationsMetaCallbackRouteImport } from './routes/integrations.meta.callback'
 import { Route as FunctionsV1OauthCallbackRouteImport } from './routes/functions.v1.oauth-callback'
 import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
 import { Route as ApiPublicWhatsappCapiRetryRouteImport } from './routes/api/public/whatsapp-capi-retry'
@@ -58,7 +59,6 @@ import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes.$id.performance'
 import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes.$id.builder'
-import { Route as AppIntegrationsMetaCallbackRouteImport } from './routes/_app.integrations.meta.callback'
 
 const OauthCallbackRoute = OauthCallbackRouteImport.update({
   id: '/oauth-callback',
@@ -198,6 +198,12 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const IntegrationsMetaCallbackRoute =
+  IntegrationsMetaCallbackRouteImport.update({
+    id: '/integrations/meta/callback',
+    path: '/integrations/meta/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FunctionsV1OauthCallbackRoute =
   FunctionsV1OauthCallbackRouteImport.update({
     id: '/functions/v1/oauth-callback',
@@ -306,12 +312,6 @@ const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
   path: '/$id/builder',
   getParentRoute: () => AppQuizzesRoute,
 } as any)
-const AppIntegrationsMetaCallbackRoute =
-  AppIntegrationsMetaCallbackRouteImport.update({
-    id: '/callback',
-    path: '/callback',
-    getParentRoute: () => AppIntegrationsMetaRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -340,7 +340,7 @@ export interface FileRoutesByFullPath {
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
-  '/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
+  '/integrations/meta': typeof AppIntegrationsMetaRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/chat': typeof AppSettingsChatRoute
@@ -356,8 +356,8 @@ export interface FileRoutesByFullPath {
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
+  '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings/': typeof AppSettingsIndexRoute
-  '/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
@@ -389,7 +389,7 @@ export interface FileRoutesByTo {
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
-  '/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
+  '/integrations/meta': typeof AppIntegrationsMetaRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
   '/settings/chat': typeof AppSettingsChatRoute
@@ -405,8 +405,8 @@ export interface FileRoutesByTo {
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
+  '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings': typeof AppSettingsIndexRoute
-  '/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
@@ -442,7 +442,7 @@ export interface FileRoutesById {
   '/f/$slug': typeof FSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
-  '/_app/integrations/meta': typeof AppIntegrationsMetaRouteWithChildren
+  '/_app/integrations/meta': typeof AppIntegrationsMetaRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
   '/_app/settings/chat': typeof AppSettingsChatRoute
@@ -458,8 +458,8 @@ export interface FileRoutesById {
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
+  '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
-  '/_app/integrations/meta/callback': typeof AppIntegrationsMetaCallbackRoute
   '/_app/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
   '/_app/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
@@ -510,8 +510,8 @@ export interface FileRouteTypes {
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/functions/v1/oauth-callback'
-    | '/settings/'
     | '/integrations/meta/callback'
+    | '/settings/'
     | '/quizzes/$id/builder'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
@@ -559,8 +559,8 @@ export interface FileRouteTypes {
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/functions/v1/oauth-callback'
-    | '/settings'
     | '/integrations/meta/callback'
+    | '/settings'
     | '/quizzes/$id/builder'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
@@ -611,8 +611,8 @@ export interface FileRouteTypes {
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/functions/v1/oauth-callback'
+    | '/integrations/meta/callback'
     | '/_app/settings/'
-    | '/_app/integrations/meta/callback'
     | '/_app/quizzes/$id/builder'
     | '/_app/quizzes/$id/performance'
     | '/_app/quizzes/$id/preview'
@@ -634,6 +634,7 @@ export interface RootRouteChildren {
   ApiPublicWhatsappCapiRetryRoute: typeof ApiPublicWhatsappCapiRetryRoute
   ApiPublicWhatsappClickRoute: typeof ApiPublicWhatsappClickRoute
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
+  IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -834,6 +835,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsIndexRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/integrations/meta/callback': {
+      id: '/integrations/meta/callback'
+      path: '/integrations/meta/callback'
+      fullPath: '/integrations/meta/callback'
+      preLoaderRoute: typeof IntegrationsMetaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/functions/v1/oauth-callback': {
       id: '/functions/v1/oauth-callback'
       path: '/functions/v1/oauth-callback'
@@ -981,13 +989,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
       parentRoute: typeof AppQuizzesRoute
     }
-    '/_app/integrations/meta/callback': {
-      id: '/_app/integrations/meta/callback'
-      path: '/callback'
-      fullPath: '/integrations/meta/callback'
-      preLoaderRoute: typeof AppIntegrationsMetaCallbackRouteImport
-      parentRoute: typeof AppIntegrationsMetaRoute
-    }
   }
 }
 
@@ -1065,17 +1066,6 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
   AppSettingsRouteChildren,
 )
 
-interface AppIntegrationsMetaRouteChildren {
-  AppIntegrationsMetaCallbackRoute: typeof AppIntegrationsMetaCallbackRoute
-}
-
-const AppIntegrationsMetaRouteChildren: AppIntegrationsMetaRouteChildren = {
-  AppIntegrationsMetaCallbackRoute: AppIntegrationsMetaCallbackRoute,
-}
-
-const AppIntegrationsMetaRouteWithChildren =
-  AppIntegrationsMetaRoute._addFileChildren(AppIntegrationsMetaRouteChildren)
-
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
   AppAutomationsRoute: typeof AppAutomationsRoute
@@ -1089,7 +1079,7 @@ interface AppRouteChildren {
   AppQuizzesRoute: typeof AppQuizzesRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
-  AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRouteWithChildren
+  AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1105,7 +1095,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuizzesRoute: AppQuizzesRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
-  AppIntegrationsMetaRoute: AppIntegrationsMetaRouteWithChildren,
+  AppIntegrationsMetaRoute: AppIntegrationsMetaRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -1143,17 +1133,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWhatsappCapiRetryRoute: ApiPublicWhatsappCapiRetryRoute,
   ApiPublicWhatsappClickRoute: ApiPublicWhatsappClickRoute,
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
+  IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
