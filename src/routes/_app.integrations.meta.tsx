@@ -545,6 +545,22 @@ function MetaIntegrationsPage() {
                             {job.error_message && (
                               <div className="mt-1 max-w-xs text-xs text-destructive">{job.error_message}</div>
                             )}
+                            {(job.status === "failed" || job.status === "completed_with_errors") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mt-1 h-6 px-2 text-xs"
+                                onClick={() => retryMutation.mutate(job.id)}
+                                disabled={retryMutation.isPending}
+                              >
+                                {retryMutation.isPending ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3 h-3 mr-1" />
+                                )}
+                                Repetir
+                              </Button>
+                            )}
                           </td>
                           <td className="py-2 pr-2">
                             <div className="font-medium">{job.form_id}</div>
