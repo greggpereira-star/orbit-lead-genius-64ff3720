@@ -332,7 +332,19 @@ function MetaIntegrationsPage() {
                               )}
                             </td>
                             <td className="py-2 text-right">
-                              <Button variant="ghost" size="sm" disabled>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setDrawerForm({
+                                    form_id: f.form_id,
+                                    form_name: f.form_name,
+                                    page_id: f.page_id,
+                                    page_name: f.page_name,
+                                    mapping: mapping as MetaFormForMapping["mapping"],
+                                  })
+                                }
+                              >
                                 Configurar
                               </Button>
                             </td>
@@ -341,11 +353,9 @@ function MetaIntegrationsPage() {
                       })}
                     </tbody>
                   </table>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    O drawer de configuração (pipeline, tags, CRM externo opcional) chega no próximo bloco.
-                  </p>
                 </div>
               )}
+
             </CardContent>
           </Card>
 
