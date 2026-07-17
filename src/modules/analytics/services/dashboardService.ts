@@ -188,6 +188,8 @@ export const dashboardService = {
       quizCompleted,
       quizConversion,
       metaLeads: metaRes.count ?? 0,
+      metaTopForms: sortTop(metaFormMap),
+      metaTopCampaigns: sortTop(metaCampaignMap),
       cvcrmDelivered,
       cvcrmFailed,
       cvcrmSuccessRate,
