@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText } from "lucide-react";
+import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText, DownloadCloud, History } from "lucide-react";
 import { toast } from "sonner";
 import {
   startMetaOAuth,
@@ -10,12 +10,13 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms } from "@/lib/meta-forms.functions";
+import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs } from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   MetaFormMappingDrawer,
   type MetaFormForMapping,
@@ -48,6 +49,36 @@ interface ConnectionRow {
   granted_scopes: string[];
 }
 
+interface ImportJobRow {
+  id: string;
+  form_id: string;
+  page_id: string | null;
+  status: string;
+  since: string | null;
+  until: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  total_found: number;
+  total_imported: number;
+  total_duplicates: number;
+  total_failed: number;
+  error_message: string | null;
+  trace_id: string | null;
+  created_at: string;
+}
+
+interface ImportOptions {
+  since: string;
+  until: string;
+  limit: number;
+}
+
+const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
+  since: "",
+  until: "",
+  limit: 200,
+};
+
 function MetaIntegrationsPage() {
   const qc = useQueryClient();
   const start = useServerFn(startMetaOAuth);
@@ -56,8 +87,11 @@ function MetaIntegrationsPage() {
   const disconnect = useServerFn(disconnectMeta);
   const syncForms = useServerFn(syncMetaLeadForms);
   const listForms = useServerFn(listMetaForms);
+  const importLeads = useServerFn(importMetaFormLeads);
+  const listImportJobs = useServerFn(listMetaImportJobs);
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
+  const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
 
 
   const { data, isLoading } = useQuery({
@@ -103,6 +137,12 @@ function MetaIntegrationsPage() {
     staleTime: 30_000,
   });
 
+  const jobsQuery = useQuery({
+    queryKey: ["meta-import-jobs"],
+    queryFn: () => listImportJobs(),
+    staleTime: 15_000,
+  });
+
   const syncFormsMutation = useMutation({
     mutationFn: (pageId: string) => syncForms({ data: { pageId } }),
     onSuccess: (res) => {
@@ -112,13 +152,37 @@ function MetaIntegrationsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const importMutation = useMutation({
+    mutationFn: (input: { formId: string; since: string | null; until: string | null; limit: number }) =>
+      importLeads({ data: input }),
+    onSuccess: (res) => {
+      toast.success(
+        `Importação concluída: ${res.total_imported} novo(s), ${res.total_duplicates} duplicado(s), ${res.total_failed} falha(s).`,
+      );
+      qc.invalidateQueries({ queryKey: ["meta-import-jobs"] });
+      qc.invalidateQueries({ queryKey: ["meta-connection"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const connection = data?.connection as ConnectionRow | null;
   const pages = (data?.pages ?? []) as PageRow[];
   const events = (data?.recentEvents ?? []) as EventRow[];
+  const jobs = (jobsQuery.data?.jobs ?? []) as ImportJobRow[];
 
   const daysLeft = connection?.token_expires_at
     ? Math.max(0, Math.round((new Date(connection.token_expires_at).getTime() - Date.now()) / 86_400_000))
     : null;
+
+  const updateImportOption = (formId: string, patch: Partial<ImportOptions>) => {
+    setImportOptions((current) => ({
+      ...current,
+      [formId]: {
+        ...(current[formId] ?? DEFAULT_IMPORT_OPTIONS),
+        ...patch,
+      },
+    }));
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
