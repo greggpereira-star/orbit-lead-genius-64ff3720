@@ -336,13 +336,14 @@ function MetaIntegrationsPage() {
                             )}
                             Sincronizar formulários
                           </Button>
-                        <Switch
-                          checked={p.subscribed}
-                          onCheckedChange={(checked) =>
-                            subMutation.mutate({ pageId: p.page_id, subscribe: checked })
-                          }
-                          disabled={subMutation.isPending}
-                        />
+                          <Switch
+                            checked={p.subscribed}
+                            onCheckedChange={(checked) =>
+                              subMutation.mutate({ pageId: p.page_id, subscribe: checked })
+                            }
+                            disabled={subMutation.isPending}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
