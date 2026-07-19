@@ -277,12 +277,13 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-    <form 
-      onSubmit={handleSubmit(onSubmit)}
-      className="w-full mx-auto p-0 animate-in fade-in duration-700 overflow-hidden" 
-      style={{ color: 'var(--foreground)' }}
-    >
-      <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
+    <div className="w-full h-full overflow-hidden flex flex-col">
+      <form 
+        onSubmit={handleSubmit(onSubmit)}
+        className="w-full mx-auto p-0 animate-in fade-in duration-700 flex-1 overflow-y-auto" 
+        style={{ color: 'var(--foreground)' }}
+      >
+        <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep && (
           <div className="pt-6 px-8">
             <div className="flex justify-between items-center mb-2">
@@ -404,11 +405,12 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           </div>
         </CardContent>
       </Card>
+      </form>
       
-      <div className="mt-8 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
+      <div className="mt-4 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity pb-4 shrink-0">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Powered by</span>
         <span className="text-xs font-black uppercase tracking-tighter">LeadFlow Intelligence</span>
       </div>
-    </form>
+    </div>
   );
 }
