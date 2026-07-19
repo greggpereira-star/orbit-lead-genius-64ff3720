@@ -277,12 +277,13 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-    <form 
-      onSubmit={handleSubmit(onSubmit)}
-      className="w-full mx-auto p-0 animate-in fade-in duration-700 overflow-hidden" 
-      style={{ color: 'var(--foreground)' }}
-    >
-      <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
+    <div className="w-full h-full overflow-hidden flex flex-col">
+      <form 
+        onSubmit={handleSubmit(onSubmit)}
+        className="w-full mx-auto p-0 animate-in fade-in duration-700 flex-1 overflow-y-auto" 
+        style={{ color: 'var(--foreground)' }}
+      >
+        <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep && (
           <div className="pt-6 px-8">
             <div className="flex justify-between items-center mb-2">
