@@ -208,7 +208,7 @@ function MetaIntegrationsPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto overflow-x-hidden">
+    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
