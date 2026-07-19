@@ -55,6 +55,7 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
+import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$id.publish'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes.$id.performance'
@@ -292,6 +293,11 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
   path: '/tv',
   getParentRoute: () => AppAnalyticsRoute,
 } as any)
+const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
+  id: '/api/public/cron/meta-retry',
+  path: '/api/public/cron/meta-retry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
   id: '/$id/publish',
   path: '/$id/publish',
@@ -362,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -411,6 +418,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -464,6 +472,7 @@ export interface FileRoutesById {
   '/_app/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -516,6 +525,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/api/public/cron/meta-retry'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -565,6 +575,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/api/public/cron/meta-retry'
   id:
     | '__root__'
     | '/'
@@ -617,6 +628,7 @@ export interface FileRouteTypes {
     | '/_app/quizzes/$id/performance'
     | '/_app/quizzes/$id/preview'
     | '/_app/quizzes/$id/publish'
+    | '/api/public/cron/meta-retry'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -635,6 +647,7 @@ export interface RootRouteChildren {
   ApiPublicWhatsappClickRoute: typeof ApiPublicWhatsappClickRoute
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
+  ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -961,6 +974,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsTvRouteImport
       parentRoute: typeof AppAnalyticsRoute
     }
+    '/api/public/cron/meta-retry': {
+      id: '/api/public/cron/meta-retry'
+      path: '/api/public/cron/meta-retry'
+      fullPath: '/api/public/cron/meta-retry'
+      preLoaderRoute: typeof ApiPublicCronMetaRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/quizzes/$id/publish': {
       id: '/_app/quizzes/$id/publish'
       path: '/$id/publish'
@@ -1134,6 +1154,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWhatsappClickRoute: ApiPublicWhatsappClickRoute,
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
+  ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
