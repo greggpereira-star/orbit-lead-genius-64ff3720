@@ -216,15 +216,18 @@ function MetaIntegrationsPage() {
       >
 
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Link2 className="w-6 h-6 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <span className="p-2 bg-primary/10 rounded-lg">
+              <Link2 className="w-6 h-6 text-primary" />
+            </span>
             Meta Lead Ads
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Conecte suas páginas do Facebook/Instagram para receber leads em tempo real.
+          <p className="text-muted-foreground mt-2 max-w-2xl text-lg">
+            Sincronização inteligente de leads, roteamento automático e integração com CV.CRM.
           </p>
         </div>
-      </div>
+      </motion.div>
+
 
       {isLoading ? (
         <Skeleton className="h-48 w-full" />
