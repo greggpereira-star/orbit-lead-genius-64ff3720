@@ -60,7 +60,7 @@
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
     "embla-carousel-react": "^8.6.0",
-    "framer-motion": "^12.38.0",
+    "framer-motion": "^12.42.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.14.0",
     "nitro": "3.0.260603-beta",

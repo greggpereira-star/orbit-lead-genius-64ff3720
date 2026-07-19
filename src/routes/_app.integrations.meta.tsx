@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText, DownloadCloud, History } from "lucide-react";
+import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText, DownloadCloud, History, Settings, LayoutGrid, Database, Zap } from "lucide-react";
 import { toast } from "sonner";
 import {
   startMetaOAuth,
@@ -207,18 +208,26 @@ function MetaIntegrationsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between gap-4">
+    <div className="p-6 space-y-8 max-w-6xl mx-auto">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between gap-4"
+      >
+
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Link2 className="w-6 h-6 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <span className="p-2 bg-primary/10 rounded-lg">
+              <Link2 className="w-6 h-6 text-primary" />
+            </span>
             Meta Lead Ads
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Conecte suas páginas do Facebook/Instagram para receber leads em tempo real.
+          <p className="text-muted-foreground mt-2 max-w-2xl text-lg">
+            Sincronização inteligente de leads, roteamento automático e integração com CV.CRM.
           </p>
         </div>
-      </div>
+      </motion.div>
+
 
       {isLoading ? (
         <Skeleton className="h-48 w-full" />
@@ -631,36 +640,30 @@ function MetaIntegrationsPage() {
         </>
       )}
 
-      <Card className="bg-muted/30">
-        <CardHeader>
-          <CardTitle className="text-base">Configuração do webhook no Facebook Developers</CardTitle>
+      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-slate-100 overflow-hidden border-0">
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
+        <CardHeader className="relative z-10">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Zap className="w-5 h-5 text-yellow-400" /> Configuração do Webhook
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            No painel do seu app em <strong>developers.facebook.com</strong>, adicione o webhook de{" "}
-            <strong>Page</strong> com estes valores:
+        <CardContent className="relative z-10 space-y-4 text-sm">
+          <p className="text-slate-300">
+            Configure seu App no <strong className="text-white">Facebook Developers</strong> para disparar leads para:
           </p>
-          <div className="font-mono text-xs bg-background p-3 rounded border space-y-1">
-            <div>
-              <strong>Callback URL:</strong> {window.location.origin}/api/public/meta-webhook
+          <div className="font-mono text-[11px] bg-black/40 p-4 rounded-lg border border-white/10 space-y-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-slate-400 uppercase text-[10px] font-bold">Callback URL:</span>
+              <code className="text-green-400">{window.location.origin}/api/public/meta-webhook</code>
             </div>
-            <div>
-              <strong>Verify Token:</strong> definido em <code>META_VERIFY_TOKEN</code> (secret do backend)
-            </div>
-            <div>
-              <strong>Subscribed field:</strong> leadgen
+            <div className="flex flex-col gap-1">
+              <span className="text-slate-400 uppercase text-[10px] font-bold">Verify Token:</span>
+              <span className="text-white">definido via <code>META_VERIFY_TOKEN</code> no backend</span>
             </div>
           </div>
-          <a
-            href="https://developers.facebook.com/docs/marketing-api/guides/lead-ads/setup/graph-api"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-primary hover:underline"
-          >
-            Documentação Meta Lead Ads <ExternalLink className="w-3 h-3" />
-          </a>
         </CardContent>
       </Card>
+
       <MetaFormMappingDrawer
         open={drawerForm !== null}
         form={drawerForm}
