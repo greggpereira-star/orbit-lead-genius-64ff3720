@@ -459,18 +459,22 @@ function MetaIntegrationsPage() {
                                     aria-label={`Fim`}
                                   />
                                 </div>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  max={500}
-                                  value={options.limit}
-                                  onChange={(event) =>
-                                    updateImportOption(f.form_id, {
-                                      limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
-                                    })
-                                  }
-                                  aria-label={`Limite de leads para importar ${f.form_name}`}
-                                />
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={500}
+                                    value={options.limit}
+                                    onChange={(event) =>
+                                      updateImportOption(f.form_id, {
+                                        limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
+                                      })
+                                    }
+                                    className="h-8 w-20 text-[11px]"
+                                    aria-label={`Limite`}
+                                  />
+                                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Limite</span>
+                                </div>
                                 <Button
                                   variant="outline"
                                   size="sm"
