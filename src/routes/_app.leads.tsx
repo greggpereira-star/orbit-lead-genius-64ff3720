@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Archive, Filter, Globe, Loader2, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
+import { Archive, Download, Filter, Globe, Loader2, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -143,6 +143,42 @@ function LeadsPage() {
     createMutation.mutate();
   };
 
+  const handleExportCSV = () => {
+    if (leads.length === 0) {
+      toast.error('Nenhum lead para exportar.');
+      return;
+    }
+
+    const headers = ['Nome', 'Email', 'Telefone', 'Empresa', 'Origem', 'Status', 'Temperatura', 'Score', 'Atribuído', 'Criado em'];
+    const rows = leads.map(l => [
+      getLeadDisplayName(l),
+      l.email || '',
+      l.phone || '',
+      l.company_name || '',
+      l.source || '',
+      formatLabel(l.status || 'new'),
+      formatLabel(getLeadTemperature(l)),
+      getLeadScore(l),
+      l.assigned_to || 'N/A',
+      formatDate(l.created_at)
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `leads-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Arquivo CSV gerado com sucesso.');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -151,13 +187,23 @@ function LeadsPage() {
           <p className="text-sm text-muted-foreground">Pipeline de contatos com atribuição, score e origem de captura.</p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="h-10 gap-2 font-bold shadow-lg shadow-primary/20">
-              <Plus className="h-4 w-4" />
-              Novo lead
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="h-10 gap-2 font-bold"
+            onClick={handleExportCSV}
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </Button>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="h-10 gap-2 font-bold shadow-lg shadow-primary/20">
+                <Plus className="h-4 w-4" />
+                Novo lead
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[560px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold">
