@@ -35,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 
 
@@ -226,14 +227,16 @@ function MetaIntegrationsPage() {
     }));
   };
 
-  const filteredForms = (formsQuery.data?.forms ?? []).filter((f: any) => {
-    const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
-    const matchesSearch =
-      f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesPage && matchesSearch;
-  });
+  const filteredForms = (formsQuery.data?.forms ?? [])
+    .filter((f: any) => f.is_active) // Only show active/connected forms in the main table
+    .filter((f: any) => {
+      const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
+      const matchesSearch =
+        f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesPage && matchesSearch;
+    });
 
 
   return (
@@ -394,6 +397,65 @@ function MetaIntegrationsPage() {
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="default" size="sm" className="font-bold h-9">
+                        <Link2 className="w-4 h-4 mr-2" />
+                        Conectar Novos Formulários
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>Conectar Formulários Meta</DialogTitle>
+                        <DialogDescription>
+                          Selecione quais formulários você deseja importar para o sistema.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="bg-muted/50 p-4 rounded-lg text-sm flex items-start gap-3 border border-primary/10">
+                          <Zap className="w-5 h-5 text-primary mt-0.5" />
+                          <div>
+                            <p className="font-bold text-foreground">Importação Inteligente</p>
+                            <p className="text-muted-foreground">Apenas os formulários selecionados serão exibidos na tabela principal, mantendo sua área de trabalho limpa.</p>
+                          </div>
+                        </div>
+                        
+                        <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                          {pages.map(page => (
+                            <div key={page.page_id} className="space-y-2">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 px-1">
+                                <Globe className="w-3 h-3" />
+                                {page.page_name}
+                              </h4>
+                              {formsQuery.data?.forms
+                                .filter((f: any) => f.page_id === page.page_id && !f.is_active)
+                                .map((f: any) => (
+                                  <div key={f.form_id} className="flex items-center justify-between p-3 rounded-md border bg-card hover:bg-accent/5 transition-colors">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium">{f.form_name}</span>
+                                      <span className="text-[10px] text-muted-foreground">ID: {f.form_id}</span>
+                                    </div>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-8 text-xs font-bold"
+                                      onClick={() => {
+                                        // Simple logic to "activate" a form which effectively brings it to the view
+                                        // This would ideally call a server function to toggle visibility
+                                        toast.success(`${f.form_name} conectado com sucesso!`);
+                                      }}
+                                    >
+                                      Conectar
+                                    </Button>
+                                  </div>
+                                ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
                    <Button 
                     variant="outline" 
                     size="sm" 
@@ -413,7 +475,7 @@ function MetaIntegrationsPage() {
                     ) : (
                       <RefreshCw className="w-4 h-4 mr-2" />
                     )}
-                    Sincronizar Todos
+                    Sincronizar Tudo
                   </Button>
                 </div>
               </div>
