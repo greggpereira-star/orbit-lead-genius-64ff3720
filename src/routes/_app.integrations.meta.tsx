@@ -298,20 +298,20 @@ function MetaIntegrationsPage() {
                 <p className="text-sm text-muted-foreground">Nenhuma página encontrada.</p>
               ) : (
                 <div className="divide-y">
-                    {pages.map((p) => (
-                      <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-4">
-                        <div className="space-y-1">
-                          <div className="font-bold text-foreground flex items-center gap-2">
-                            {p.page_name}
-                            {p.subscribed && (
-                              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                            )}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded w-fit">
-                            ID: {p.page_id}
-                            {p.category && ` · ${p.category}`}
-                          </div>
+                  {pages.map((p) => (
+                    <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-4">
+                      <div className="space-y-1">
+                        <div className="font-bold text-foreground flex items-center gap-2">
+                          {p.page_name}
+                          {p.subscribed && (
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                          )}
                         </div>
+                        <div className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded w-fit">
+                          ID: {p.page_id}
+                          {p.category && ` · ${p.category}`}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-3">
                         {p.subscribed ? (
                           <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold">
