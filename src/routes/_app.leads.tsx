@@ -253,6 +253,7 @@ function LeadsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
