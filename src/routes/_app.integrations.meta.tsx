@@ -310,16 +310,18 @@ function MetaIntegrationsPage() {
     }));
   };
 
-  const filteredForms = (formsQuery.data?.forms ?? [])
-    .filter((f: any) => f.is_active) // Only show active/connected forms in the main table
-    .filter((f: any) => {
-      const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
-      const matchesSearch =
-        f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesPage && matchesSearch;
-    });
+  const filteredForms = useMemo(() => {
+    return (formsQuery.data?.forms ?? [])
+      .filter((f: any) => f.is_active)
+      .filter((f: any) => {
+        const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
+        const matchesSearch =
+          f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesPage && matchesSearch;
+      });
+  }, [formsQuery.data?.forms, pageFilter, searchQuery]);
 
 
   return (
