@@ -22,6 +22,21 @@ import {
   MetaFormMappingDrawer,
   type MetaFormForMapping,
 } from "@/modules/integrations/components/MetaFormMappingDrawer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
 
 
 interface PageRow {
