@@ -1063,6 +1063,55 @@ function MetaIntegrationsPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Deletion Dialogs */}
+      <AlertDialog open={!!formToDelete} onOpenChange={(open) => !open && setFormToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Formulário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este formulário deixará de ser exibido na tabela e a sincronização de leads para ele será pausada. Você pode reconectá-lo a qualquer momento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
+              onClick={() => {
+                if (formToDelete) {
+                  deactivateMutation.mutate(formToDelete);
+                  setFormToDelete(null);
+                }
+              }}
+            >
+              Confirmar Remoção
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover {selectedFormIds.length} Formulários?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os formulários selecionados deixarão de ser exibidos na tabela e a sincronização de leads será pausada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
+              onClick={() => {
+                bulkDeactivateMutation.mutate(selectedFormIds);
+                setIsBulkDeleteOpen(false);
+              }}
+            >
+              Remover Selecionados
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
