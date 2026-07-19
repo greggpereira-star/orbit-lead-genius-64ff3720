@@ -615,9 +615,48 @@ function MetaIntegrationsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
+                  <AnimatePresence>
+                    {selectedFormIds.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-primary/5 px-6 py-3 flex items-center justify-between border-b border-primary/10"
+                      >
+                        <div className="flex items-center gap-3">
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-bold text-primary">
+                            {selectedFormIds.length} selecionado(s)
+                          </span>
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="font-bold h-8"
+                          onClick={() => setIsBulkDeleteOpen(true)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Remover Selecionados
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b bg-muted/20">
+                        <th className="py-4 px-6 text-left w-10">
+                          <Checkbox 
+                            checked={filteredForms.length > 0 && selectedFormIds.length === filteredForms.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedFormIds(filteredForms.map((f: any) => f.form_id));
+                              } else {
+                                setSelectedFormIds([]);
+                              }
+                            }}
+                          />
+                        </th>
                         <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Formulário / Página</th>
                         <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Status Meta</th>
                         <th className="text-right py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Leads</th>
