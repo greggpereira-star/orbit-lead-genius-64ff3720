@@ -259,6 +259,28 @@ export const deleteMetaFormMapping = createServerFn({ method: "POST" })
   });
 
 // -------------------------------------------------------------
+// deactivateMetaForm — marca is_active = false
+// -------------------------------------------------------------
+
+export const deactivateMetaForm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ formId: z.string().min(1) }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { error } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .update({ is_active: false })
+      .eq("form_id", data.formId)
+      .eq("company_id", companyId);
+
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
+// -------------------------------------------------------------
 // listMetaMappingOptions — stages + members for drawer selects
 // -------------------------------------------------------------
 

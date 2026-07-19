@@ -16,7 +16,7 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs, retryMetaImportJob } from "@/lib/meta-forms.functions";
+import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs, retryMetaImportJob, deactivateMetaForm } from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +112,8 @@ function MetaIntegrationsPage() {
   const importLeads = useServerFn(importMetaFormLeads);
   const listImportJobs = useServerFn(listMetaImportJobs);
   const retryJob = useServerFn(retryMetaImportJob);
+  const deactivateForm = useServerFn(deactivateMetaForm);
+
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
   const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
