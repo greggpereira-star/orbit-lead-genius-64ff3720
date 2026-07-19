@@ -405,11 +405,12 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           </div>
         </CardContent>
       </Card>
+      </form>
       
-      <div className="mt-8 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
+      <div className="mt-4 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity pb-4 shrink-0">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Powered by</span>
         <span className="text-xs font-black uppercase tracking-tighter">LeadFlow Intelligence</span>
       </div>
-    </form>
+    </div>
   );
 }
