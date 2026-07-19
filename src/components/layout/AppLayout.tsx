@@ -163,9 +163,9 @@ export function AppLayout() {
    return (
      <SidebarProvider>
        <AppSidebar />
-        <SidebarInset className="flex flex-col min-h-screen">
+        <SidebarInset className="flex flex-col h-screen overflow-hidden">
           <Topbar />
-          <main className="flex-1 p-4 md:p-6 bg-background/50">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background/50">
             <div className="max-w-7xl mx-auto">
               <Outlet />
             </div>
