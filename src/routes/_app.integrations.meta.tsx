@@ -343,6 +343,7 @@ function MetaIntegrationsPage() {
                           }
                           disabled={subMutation.isPending}
                         />
+                        </div>
                       </div>
                     </div>
                   ))}
