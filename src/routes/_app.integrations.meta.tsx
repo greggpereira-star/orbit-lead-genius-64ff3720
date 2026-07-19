@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +7,7 @@ import {
   Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, 
   AlertCircle, RefreshCw, FileText, DownloadCloud, History, 
   Settings, LayoutGrid, Database, Zap, ChevronRight, Search, 
-  Filter, Eye, X, Globe, Trash2 
+  Filter, Eye, X, Globe, Trash2, CheckSquare, Square
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,7 +16,17 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs, retryMetaImportJob, deactivateMetaForm } from "@/lib/meta-forms.functions";
+import { 
+  syncMetaLeadForms, 
+  listMetaForms, 
+  importMetaFormLeads, 
+  listMetaImportJobs, 
+  retryMetaImportJob, 
+  deactivateMetaForm,
+  bulkDeactivateMetaForms,
+  reactivateMetaForm,
+  bulkReactivateMetaForms
+} from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +53,17 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 
