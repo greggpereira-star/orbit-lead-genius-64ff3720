@@ -314,26 +314,28 @@ function MetaIntegrationsPage() {
                         </div>
                       <div className="flex items-center gap-3">
                         {p.subscribed ? (
-                          <Badge variant="default">
+                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold">
                             <Power className="w-3 h-3 mr-1" />
                             Ativo
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Inativo</Badge>
+                          <Badge variant="secondary" className="font-bold">Inativo</Badge>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => syncFormsMutation.mutate(p.page_id)}
-                          disabled={syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id}
-                        >
-                          {syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          Sincronizar formulários
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => syncFormsMutation.mutate(p.page_id)}
+                            disabled={syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id}
+                            className="h-9 px-4 font-bold border-primary/20 hover:border-primary/50 text-primary"
+                          >
+                            {syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                            )}
+                            Sincronizar formulários
+                          </Button>
                         <Switch
                           checked={p.subscribed}
                           onCheckedChange={(checked) =>
