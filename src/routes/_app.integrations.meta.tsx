@@ -245,8 +245,46 @@ function MetaIntegrationsPage() {
 
   const deactivateMutation = useMutation({
     mutationFn: (formId: string) => deactivateForm({ data: { formId } }),
+    onSuccess: (_, formId) => {
+      toast.success("Formulário removido", {
+        action: {
+          label: "Desfazer",
+          onClick: () => reactivateMutation.mutate(formId)
+        }
+      });
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (formId: string) => reactivate({ data: { formId } }),
     onSuccess: () => {
-      toast.success("Formulário removido da visualização");
+      toast.success("Formulário restaurado");
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const bulkDeactivateMutation = useMutation({
+    mutationFn: (formIds: string[]) => bulkDeactivate({ data: { formIds } }),
+    onSuccess: (_, formIds) => {
+      toast.success(`${formIds.length} formulários removidos`, {
+        action: {
+          label: "Desfazer",
+          onClick: () => bulkReactivateMutation.mutate(formIds)
+        }
+      });
+      setSelectedFormIds([]);
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const bulkReactivateMutation = useMutation({
+    mutationFn: (formIds: string[]) => bulkReactivate({ data: { formIds } }),
+    onSuccess: () => {
+      toast.success("Formulários restaurados");
       qc.invalidateQueries({ queryKey: ["meta-forms"] });
     },
     onError: (err: Error) => toast.error(err.message),
