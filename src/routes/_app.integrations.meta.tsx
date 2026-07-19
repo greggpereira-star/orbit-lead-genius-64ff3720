@@ -211,6 +211,16 @@ function MetaIntegrationsPage() {
     }));
   };
 
+  const filteredForms = (formsQuery.data?.forms ?? []).filter((f: any) => {
+    const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
+    const matchesSearch =
+      f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesPage && matchesSearch;
+  });
+
+
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
       <motion.div 
