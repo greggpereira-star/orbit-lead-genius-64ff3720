@@ -166,11 +166,11 @@ export function AppLayout() {
        <SidebarInset>
          <div className="flex flex-col h-screen max-w-[100vw] overflow-hidden">
            <Topbar />
-           <main className="flex-1 overflow-hidden p-6 bg-background/50">
-             <div className="h-full w-full overflow-auto scrollbar-hide">
-               <Outlet />
-             </div>
-           </main>
+            <main className="flex-1 overflow-y-auto p-6 bg-background/50">
+              <div className="max-w-7xl mx-auto">
+                <Outlet />
+              </div>
+            </main>
          </div>
        </SidebarInset>
        <CommandPalette />
