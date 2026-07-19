@@ -279,6 +279,69 @@ export const deactivateMetaForm = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// -------------------------------------------------------------
+// bulkDeactivateMetaForms — desativa múltiplos formulários
+// -------------------------------------------------------------
+
+export const bulkDeactivateMetaForms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ formIds: z.array(z.string()) }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { error } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .update({ is_active: false })
+      .in("form_id", data.formIds)
+      .eq("company_id", companyId);
+
+    if (error) throw new Error(error.message);
+    return { ok: true, count: data.formIds.length };
+  });
+
+// -------------------------------------------------------------
+// reactivateMetaForm — marca is_active = true
+// -------------------------------------------------------------
+
+export const reactivateMetaForm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ formId: z.string().min(1) }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { error } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .update({ is_active: true })
+      .eq("form_id", data.formId)
+      .eq("company_id", companyId);
+
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// -------------------------------------------------------------
+// bulkReactivateMetaForms — reativa múltiplos formulários (útil para undo em massa)
+// -------------------------------------------------------------
+
+export const bulkReactivateMetaForms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ formIds: z.array(z.string()) }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { error } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .update({ is_active: true })
+      .in("form_id", data.formIds)
+      .eq("company_id", companyId);
+
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 // -------------------------------------------------------------
 // listMetaMappingOptions — stages + members for drawer selects
