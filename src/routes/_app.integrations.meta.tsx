@@ -94,6 +94,10 @@ function MetaIntegrationsPage() {
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
   const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
+  const [pageFilter, setPageFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [previewFormId, setPreviewFormId] = useState<string | null>(null);
+
 
 
   const { data, isLoading } = useQuery({
