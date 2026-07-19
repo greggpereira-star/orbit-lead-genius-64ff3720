@@ -368,7 +368,7 @@ function MetaIntegrationsPage() {
 
           <Card className="border-2 border-primary/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 pb-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2 text-xl">
                     <LayoutGrid className="w-5 h-5 text-primary" />
@@ -378,11 +378,11 @@ function MetaIntegrationsPage() {
                     Gerencie os formulários que estão ativos e sincronizando leads para seu pipeline.
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                    <Button 
                     variant="outline" 
                     size="sm" 
-                    className="font-bold border-primary/20"
+                    className="font-bold border-primary/20 h-9"
                     onClick={() => {
                       const firstPage = pages[0];
                       if (firstPage) {
@@ -402,6 +402,34 @@ function MetaIntegrationsPage() {
                   </Button>
                 </div>
               </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input 
+                    placeholder="Buscar formulário, ID ou página..." 
+                    className="pl-10 h-10 border-primary/10 bg-background/50 focus:bg-background"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2 sm:w-64">
+                  <div className="relative w-full">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Select value={pageFilter} onValueChange={setPageFilter}>
+                      <SelectTrigger className="pl-10 h-10 border-primary/10 bg-background/50 focus:bg-background">
+                        <SelectValue placeholder="Filtrar por Página" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as Páginas</SelectItem>
+                        {pages.map(p => (
+                          <SelectItem key={p.page_id} value={p.page_id}>{p.page_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {formsQuery.isLoading ? (
@@ -415,6 +443,7 @@ function MetaIntegrationsPage() {
                   <div className="mx-auto w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 mb-4">
                     <FileText className="w-8 h-8" />
                   </div>
+
                   <h3 className="text-lg font-bold">Nenhum formulário conectado</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                     Escolha uma página acima e utilize o botão <strong>Sincronizar formulários</strong> para carregar e selecionar quais formulários deseja importar.
