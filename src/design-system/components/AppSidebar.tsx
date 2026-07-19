@@ -31,21 +31,22 @@ import {
  import { Badge } from '@/components/ui/badge';
  import { useInboxNotifications } from '@/modules/chat/hooks/useInboxNotifications';
  
- const menuItems = [
-    { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
-    { title: 'Leads', icon: Users, to: '/leads' },
-    { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
-   { title: 'Forms', icon: FileText, to: '/forms' },
-   { title: 'Alt Quiz', icon: Sparkles, to: '/quizzes' },
-     { title: 'Chat ao vivo', icon: MessageSquare, to: '/inbox', notify: 'inbox' as const },
-     { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
-     { title: 'Automations', icon: Zap, to: '/automations' },
-    { title: 'Meta Lead Ads', icon: Share2, to: '/integrations/meta' },
-    { title: 'Analytics', icon: BarChart3, to: '/analytics' },
+const menuItems = [
+  { title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
+  { title: 'Leads', icon: Users, to: '/leads' },
+  { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
+  { title: 'Forms', icon: FileText, to: '/forms' },
+  { title: 'Alt Quiz', icon: Sparkles, to: '/quizzes' },
+  { title: 'Chat ao vivo', icon: MessageSquare, to: '/inbox', notify: 'inbox' as const },
+  { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
+  { title: 'Automations', icon: Zap, to: '/automations' },
+  { title: 'Meta Lead Ads', icon: Share2, to: '/integrations/meta' },
+  { title: 'Configurações Meta', icon: Settings, to: '/integrations/meta' },
+  { title: 'Analytics', icon: BarChart3, to: '/analytics' },
 
-    { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
-    { title: 'Observability', icon: ShieldCheck, to: '/observability' },
- ];
+  { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
+  { title: 'Observability', icon: ShieldCheck, to: '/observability' },
+];
  
  export function AppSidebar() {
    const { company } = useAuth();
