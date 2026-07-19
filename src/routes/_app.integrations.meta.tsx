@@ -135,6 +135,9 @@ function MetaIntegrationsPage() {
   const listImportJobs = useServerFn(listMetaImportJobs);
   const retryJob = useServerFn(retryMetaImportJob);
   const deactivateForm = useServerFn(deactivateMetaForm);
+  const bulkDeactivate = useServerFn(bulkDeactivateMetaForms);
+  const reactivate = useServerFn(reactivateMetaForm);
+  const bulkReactivate = useServerFn(bulkReactivateMetaForms);
 
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
@@ -142,6 +145,9 @@ function MetaIntegrationsPage() {
   const [pageFilter, setPageFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [previewFormId, setPreviewFormId] = useState<string | null>(null);
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [formToDelete, setFormToDelete] = useState<string | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
 
 
