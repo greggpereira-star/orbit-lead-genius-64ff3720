@@ -41,6 +41,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 
 
@@ -673,24 +674,44 @@ function MetaIntegrationsPage() {
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-9 px-3 font-bold text-muted-foreground hover:text-destructive transition-colors"
-                                  onClick={() => {
-                                    if (confirm("Deseja remover este formulário da lista de conectados? Ele poderá ser reconectado no botão 'Conectar Novos Formulários'.")) {
-                                      deactivateMutation.mutate(f.form_id);
-                                    }
-                                  }}
-                                  disabled={deactivateMutation.isPending && deactivateMutation.variables === f.form_id}
-                                  title="Desconectar formulário"
-                                >
-                                  {deactivateMutation.isPending && deactivateMutation.variables === f.form_id ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4" />
-                                  )}
-                                </Button>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-9 px-3 font-bold text-muted-foreground hover:text-destructive transition-colors"
+                                      title="Desconectar formulário"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Desconectar formulário?</DialogTitle>
+                                      <DialogDescription>
+                                        Deseja remover o formulário <strong>{f.form_name}</strong> da lista de ativos? 
+                                        Você poderá reconectá-lo a qualquer momento.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="flex justify-end gap-3 mt-4">
+                                      <DialogClose asChild>
+                                        <Button variant="ghost">Cancelar</Button>
+                                      </DialogClose>
+                                      <Button 
+                                        variant="destructive"
+                                        onClick={() => deactivateMutation.mutate(f.form_id)}
+                                        disabled={deactivateMutation.isPending}
+                                      >
+                                        {deactivateMutation.isPending ? (
+                                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                        )}
+                                        Confirmar Remoção
+                                      </Button>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
 
                                 <Button
                                   variant="default"
