@@ -852,10 +852,9 @@ function MetaIntegrationsPage() {
           })()}
         </DialogContent>
       </Dialog>
-
-      />
     </div>
   );
+
 
 }
 
