@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Save, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   saveMetaFormMapping,
