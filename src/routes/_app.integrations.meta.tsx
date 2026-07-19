@@ -440,9 +440,13 @@ function MetaIntegrationsPage() {
                                       variant="outline"
                                       className="h-8 text-xs font-bold"
                                       onClick={() => {
-                                        // Simple logic to "activate" a form which effectively brings it to the view
-                                        // This would ideally call a server function to toggle visibility
-                                        toast.success(`${f.form_name} conectado com sucesso!`);
+                                        setDrawerForm({
+                                          form_id: f.form_id,
+                                          form_name: f.form_name,
+                                          page_id: f.page_id,
+                                          page_name: page.page_name,
+                                          mapping: { is_active: true } as any
+                                        });
                                       }}
                                     >
                                       Conectar
