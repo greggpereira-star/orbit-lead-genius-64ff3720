@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +7,7 @@ import {
   Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, 
   AlertCircle, RefreshCw, FileText, DownloadCloud, History, 
   Settings, LayoutGrid, Database, Zap, ChevronRight, Search, 
-  Filter, Eye, X, Globe, Trash2 
+  Filter, Eye, X, Globe, Trash2, CheckSquare, Square
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,7 +16,17 @@ import {
   setPageSubscription,
   disconnectMeta,
 } from "@/lib/meta-oauth.functions";
-import { syncMetaLeadForms, listMetaForms, importMetaFormLeads, listMetaImportJobs, retryMetaImportJob, deactivateMetaForm } from "@/lib/meta-forms.functions";
+import { 
+  syncMetaLeadForms, 
+  listMetaForms, 
+  importMetaFormLeads, 
+  listMetaImportJobs, 
+  retryMetaImportJob, 
+  deactivateMetaForm,
+  bulkDeactivateMetaForms,
+  reactivateMetaForm,
+  bulkReactivateMetaForms
+} from "@/lib/meta-forms.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +53,17 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 
@@ -114,6 +135,9 @@ function MetaIntegrationsPage() {
   const listImportJobs = useServerFn(listMetaImportJobs);
   const retryJob = useServerFn(retryMetaImportJob);
   const deactivateForm = useServerFn(deactivateMetaForm);
+  const bulkDeactivate = useServerFn(bulkDeactivateMetaForms);
+  const reactivate = useServerFn(reactivateMetaForm);
+  const bulkReactivate = useServerFn(bulkReactivateMetaForms);
 
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
@@ -121,6 +145,9 @@ function MetaIntegrationsPage() {
   const [pageFilter, setPageFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [previewFormId, setPreviewFormId] = useState<string | null>(null);
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [formToDelete, setFormToDelete] = useState<string | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
 
 
@@ -218,8 +245,46 @@ function MetaIntegrationsPage() {
 
   const deactivateMutation = useMutation({
     mutationFn: (formId: string) => deactivateForm({ data: { formId } }),
+    onSuccess: (_, formId) => {
+      toast.success("Formulário removido", {
+        action: {
+          label: "Desfazer",
+          onClick: () => reactivateMutation.mutate(formId)
+        }
+      });
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (formId: string) => reactivate({ data: { formId } }),
     onSuccess: () => {
-      toast.success("Formulário removido da visualização");
+      toast.success("Formulário restaurado");
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const bulkDeactivateMutation = useMutation({
+    mutationFn: (formIds: string[]) => bulkDeactivate({ data: { formIds } }),
+    onSuccess: (_, formIds) => {
+      toast.success(`${formIds.length} formulários removidos`, {
+        action: {
+          label: "Desfazer",
+          onClick: () => bulkReactivateMutation.mutate(formIds)
+        }
+      });
+      setSelectedFormIds([]);
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const bulkReactivateMutation = useMutation({
+    mutationFn: (formIds: string[]) => bulkReactivate({ data: { formIds } }),
+    onSuccess: () => {
+      toast.success("Formulários restaurados");
       qc.invalidateQueries({ queryKey: ["meta-forms"] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -245,16 +310,18 @@ function MetaIntegrationsPage() {
     }));
   };
 
-  const filteredForms = (formsQuery.data?.forms ?? [])
-    .filter((f: any) => f.is_active) // Only show active/connected forms in the main table
-    .filter((f: any) => {
-      const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
-      const matchesSearch =
-        f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesPage && matchesSearch;
-    });
+  const filteredForms = useMemo(() => {
+    return (formsQuery.data?.forms ?? [])
+      .filter((f: any) => f.is_active)
+      .filter((f: any) => {
+        const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
+        const matchesSearch =
+          f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesPage && matchesSearch;
+      });
+  }, [formsQuery.data?.forms, pageFilter, searchQuery]);
 
 
   return (
@@ -550,9 +617,48 @@ function MetaIntegrationsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
+                  <AnimatePresence>
+                    {selectedFormIds.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-primary/5 px-6 py-3 flex items-center justify-between border-b border-primary/10"
+                      >
+                        <div className="flex items-center gap-3">
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-bold text-primary">
+                            {selectedFormIds.length} selecionado(s)
+                          </span>
+                        </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="font-bold h-8"
+                          onClick={() => setIsBulkDeleteOpen(true)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Remover Selecionados
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="border-b bg-muted/20">
+                        <th className="py-4 px-6 text-left w-10">
+                          <Checkbox 
+                            checked={filteredForms.length > 0 && selectedFormIds.length === filteredForms.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedFormIds(filteredForms.map((f: any) => f.form_id));
+                              } else {
+                                setSelectedFormIds([]);
+                              }
+                            }}
+                          />
+                        </th>
                         <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Formulário / Página</th>
                         <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Status Meta</th>
                         <th className="text-right py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Leads</th>
@@ -580,8 +686,20 @@ function MetaIntegrationsPage() {
                             key={f.id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="hover:bg-primary/[0.02] transition-colors group"
+                            className={`hover:bg-primary/[0.02] transition-colors group ${selectedFormIds.includes(f.form_id) ? 'bg-primary/[0.03]' : ''}`}
                           >
+                            <td className="py-4 px-6">
+                              <Checkbox 
+                                checked={selectedFormIds.includes(f.form_id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedFormIds(prev => [...prev, f.form_id]);
+                                  } else {
+                                    setSelectedFormIds(prev => prev.filter(id => id !== f.form_id));
+                                  }
+                                }}
+                              />
+                            </td>
                             <td className="py-4 px-6">
                               <div className="font-bold text-foreground group-hover:text-primary transition-colors">{f.form_name}</div>
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
@@ -674,44 +792,15 @@ function MetaIntegrationsPage() {
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-9 px-3 font-bold text-muted-foreground hover:text-destructive transition-colors"
-                                      title="Desconectar formulário"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Desconectar formulário?</DialogTitle>
-                                      <DialogDescription>
-                                        Deseja remover o formulário <strong>{f.form_name}</strong> da lista de ativos? 
-                                        Você poderá reconectá-lo a qualquer momento.
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="flex justify-end gap-3 mt-4">
-                                      <DialogClose asChild>
-                                        <Button variant="ghost">Cancelar</Button>
-                                      </DialogClose>
-                                      <Button 
-                                        variant="destructive"
-                                        onClick={() => deactivateMutation.mutate(f.form_id)}
-                                        disabled={deactivateMutation.isPending}
-                                      >
-                                        {deactivateMutation.isPending ? (
-                                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="w-4 h-4 mr-2" />
-                                        )}
-                                        Confirmar Remoção
-                                      </Button>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 px-3 font-bold text-muted-foreground hover:text-destructive transition-colors"
+                                  onClick={() => setFormToDelete(f.form_id)}
+                                  title="Desconectar formulário"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
 
                                 <Button
                                   variant="default"
@@ -976,6 +1065,55 @@ function MetaIntegrationsPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Deletion Dialogs */}
+      <AlertDialog open={!!formToDelete} onOpenChange={(open) => !open && setFormToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Formulário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este formulário deixará de ser exibido na tabela e a sincronização de leads para ele será pausada. Você pode reconectá-lo a qualquer momento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
+              onClick={() => {
+                if (formToDelete) {
+                  deactivateMutation.mutate(formToDelete);
+                  setFormToDelete(null);
+                }
+              }}
+            >
+              Confirmar Remoção
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover {selectedFormIds.length} Formulários?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os formulários selecionados deixarão de ser exibidos na tabela e a sincronização de leads será pausada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
+              onClick={() => {
+                bulkDeactivateMutation.mutate(selectedFormIds);
+                setIsBulkDeleteOpen(false);
+              }}
+            >
+              Remover Selecionados
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
