@@ -7,7 +7,7 @@ import {
   Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, 
   AlertCircle, RefreshCw, FileText, DownloadCloud, History, 
   Settings, LayoutGrid, Database, Zap, ChevronRight, Search, 
-  Filter, Eye, X, Globe 
+  Filter, Eye, X, Globe, Trash2 
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -214,6 +214,16 @@ function MetaIntegrationsPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (formId: string) => deactivateForm({ data: { formId } }),
+    onSuccess: () => {
+      toast.success("Formulário removido da visualização");
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
 
   const connection = data?.connection as ConnectionRow | null;
   const pages = (data?.pages ?? []) as PageRow[];
@@ -659,9 +669,29 @@ function MetaIntegrationsPage() {
                                   size="sm"
                                   className="h-9 px-3 font-bold text-muted-foreground hover:text-primary"
                                   onClick={() => setPreviewFormId(f.form_id)}
+                                  title="Visualizar perguntas"
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 px-3 font-bold text-muted-foreground hover:text-destructive transition-colors"
+                                  onClick={() => {
+                                    if (confirm("Deseja remover este formulário da lista de conectados? Ele poderá ser reconectado no botão 'Conectar Novos Formulários'.")) {
+                                      deactivateMutation.mutate(f.form_id);
+                                    }
+                                  }}
+                                  disabled={deactivateMutation.isPending && deactivateMutation.variables === f.form_id}
+                                  title="Desconectar formulário"
+                                >
+                                  {deactivateMutation.isPending && deactivateMutation.variables === f.form_id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </Button>
+
                                 <Button
                                   variant="default"
                                   size="sm"
