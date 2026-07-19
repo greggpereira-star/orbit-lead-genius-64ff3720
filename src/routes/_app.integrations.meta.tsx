@@ -352,40 +352,74 @@ function MetaIntegrationsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Formulários Meta ({formsQuery.data?.forms.length ?? 0})
-              </CardTitle>
-              <CardDescription>
-                Formulários Lead Ads sincronizados. Configure cada um para direcionar os leads ao seu pipeline.
-              </CardDescription>
+          <Card className="border-2 border-primary/5 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/30 pb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <LayoutGrid className="w-5 h-5 text-primary" />
+                    Formulários Conectados
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie os formulários que estão ativos e sincronizando leads para seu pipeline.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                   <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="font-bold border-primary/20"
+                    onClick={() => {
+                      const firstPage = pages[0];
+                      if (firstPage) {
+                        syncFormsMutation.mutate(firstPage.page_id);
+                      } else {
+                        toast.error("Nenhuma página encontrada para sincronizar.");
+                      }
+                    }}
+                    disabled={syncFormsMutation.isPending}
+                  >
+                    {syncFormsMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Sincronizar Todos
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {formsQuery.isLoading ? (
-                <Skeleton className="h-24 w-full" />
+                <div className="p-8 space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
               ) : !formsQuery.data?.forms.length ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum formulário sincronizado ainda. Escolha uma página acima e clique em{" "}
-                  <strong>Sincronizar formulários</strong>.
-                </p>
+                <div className="p-12 text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 mb-4">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold">Nenhum formulário conectado</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    Escolha uma página acima e utilize o botão <strong>Sincronizar formulários</strong> para carregar e selecionar quais formulários deseja importar.
+                  </p>
+                </div>
               ) : (
-                <div className="overflow-x-auto -mx-6 px-6 lg:mx-0 lg:px-0">
-                  <table className="w-full text-sm min-w-[1000px] lg:min-w-full">
-                    <thead className="text-xs text-muted-foreground border-b bg-muted/30">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Página</th>
-                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Formulário</th>
-                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Status Meta</th>
-                        <th className="text-right py-3 px-4 font-bold uppercase tracking-wider">Leads (Meta)</th>
-                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Última sync</th>
-                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Mapeamento</th>
-                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Importação</th>
-                        <th className="text-right py-3 px-4 font-bold uppercase tracking-wider">Ações</th>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b bg-muted/20">
+                        <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Formulário / Página</th>
+                        <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Status Meta</th>
+                        <th className="text-right py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Leads</th>
+                        <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Configuração</th>
+                        <th className="text-left py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Importação Retroativa</th>
+                        <th className="text-right py-4 px-6 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Ações</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y">
+                    <tbody className="divide-y divide-border">
                       {formsQuery.data.forms.map((f) => {
                         const mapping = f.mapping as
                           | {
@@ -399,88 +433,74 @@ function MetaIntegrationsPage() {
                         const options = importOptions[f.form_id] ?? DEFAULT_IMPORT_OPTIONS;
                         const isImporting = importMutation.isPending && importMutation.variables?.formId === f.form_id;
                         return (
-                          <tr key={f.id}>
-                            <td className="py-4 px-4 whitespace-nowrap">
-                              <div className="font-semibold text-foreground">{f.page_name ?? "—"}</div>
-                              <div className="text-[10px] text-muted-foreground font-mono">{f.page_id}</div>
+                          <motion.tr 
+                            key={f.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="hover:bg-primary/[0.02] transition-colors group"
+                          >
+                            <td className="py-4 px-6">
+                              <div className="font-bold text-foreground group-hover:text-primary transition-colors">{f.form_name}</div>
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                <Badge variant="outline" className="text-[9px] px-1 h-3.5 uppercase font-medium">{f.page_name ?? "Página Desconhecida"}</Badge>
+                                <span className="opacity-40">|</span>
+                                <span className="font-mono">ID: {f.form_id}</span>
+                              </div>
                             </td>
-                            <td className="py-4 px-4">
-                              <div className="font-semibold text-foreground">{f.form_name}</div>
-                              <div className="text-[10px] text-muted-foreground font-mono">{f.form_id}</div>
-                            </td>
-                            <td className="py-4 px-4">
-                              <Badge variant={f.status === "ACTIVE" ? "default" : "secondary"} className="font-bold">
-                                {f.status ?? "—"}
+                            <td className="py-4 px-6">
+                              <Badge 
+                                variant={f.status === "ACTIVE" ? "default" : "secondary"} 
+                                className={`font-bold text-[10px] ${f.status === 'ACTIVE' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+                              >
+                                {f.status ?? "INATIVO"}
                               </Badge>
                             </td>
-                            <td className="py-4 px-4 text-right tabular-nums font-medium text-foreground">{f.leads_count ?? 0}</td>
-                            <td className="py-4 px-4 text-[11px] text-muted-foreground leading-tight">
-                              {f.last_synced_at
-                                ? new Date(f.last_synced_at).toLocaleString("pt-BR", {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })
-                                : "—"}
+                            <td className="py-4 px-6 text-right">
+                              <div className="font-black text-base tabular-nums">{f.leads_count ?? 0}</div>
+                              <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">Total no Meta</div>
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-6">
                               {mapping ? (
-                                <div className="flex flex-col gap-1 items-start">
-                                  <Badge variant={mapping.is_active ? "default" : "outline"} className="text-[10px] h-5">
-                                    {mapping.is_active ? "Ativo" : "Pausado"}
-                                  </Badge>
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`h-2 w-2 rounded-full ${mapping.is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
+                                    <span className="text-xs font-bold">{mapping.is_active ? "Ativo" : "Pausado"}</span>
+                                  </div>
                                   {mapping.external_crm_enabled && (
-                                    <Badge variant="secondary" className="text-[9px] h-4 bg-primary/5 text-primary border-primary/10">
-                                      → {mapping.external_crm_provider ?? "CRM"}
+                                    <Badge variant="secondary" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/10 hover:bg-primary/20">
+                                      <Database className="w-3 h-3 mr-1" />
+                                      {mapping.external_crm_provider ?? "CRM"}
                                     </Badge>
                                   )}
                                 </div>
                               ) : (
-                                <Badge variant="outline" className="text-[10px] opacity-60">
-                                  Não mapeado
-                                </Badge>
+                                <div className="flex items-center gap-2 text-muted-foreground/60">
+                                  <Settings className="w-3.5 h-3.5" />
+                                  <span className="text-[10px] font-bold uppercase">Não Configurado</span>
+                                </div>
                               )}
                             </td>
-                            <td className="py-4 px-4 min-w-[280px]">
-                              <div className="flex flex-col gap-2">
+                            <td className="py-4 px-6">
+                              <div className="flex flex-col gap-2 min-w-[200px]">
                                 <div className="flex items-center gap-1">
                                   <Input
                                     type="date"
                                     value={options.since}
                                     onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
-                                    className="h-8 text-[11px] px-2"
-                                    aria-label={`Início`}
+                                    className="h-7 text-[10px] px-2 border-primary/10"
                                   />
-                                  <span className="text-muted-foreground">/</span>
+                                  <span className="text-muted-foreground text-xs font-bold">/</span>
                                   <Input
                                     type="date"
                                     value={options.until}
                                     onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
-                                    className="h-8 text-[11px] px-2"
-                                    aria-label={`Fim`}
+                                    className="h-7 text-[10px] px-2 border-primary/10"
                                   />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={500}
-                                    value={options.limit}
-                                    onChange={(event) =>
-                                      updateImportOption(f.form_id, {
-                                        limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
-                                      })
-                                    }
-                                    className="h-8 w-20 text-[11px]"
-                                    aria-label={`Limite`}
-                                  />
-                                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Limite</span>
                                 </div>
                                 <Button
-                                  variant="outline"
+                                  variant="secondary"
                                   size="sm"
+                                  className="h-7 text-[10px] font-bold gap-1.5"
                                   onClick={() =>
                                     importMutation.mutate({
                                       formId: f.form_id,
@@ -492,18 +512,19 @@ function MetaIntegrationsPage() {
                                   disabled={isImporting}
                                 >
                                   {isImporting ? (
-                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                    <Loader2 className="w-3 h-3 animate-spin" />
                                   ) : (
-                                    <DownloadCloud className="w-3.5 h-3.5 mr-1.5" />
+                                    <DownloadCloud className="w-3 h-3" />
                                   )}
-                                  Importar
+                                  Importar Dados
                                 </Button>
                               </div>
                             </td>
-                            <td className="py-2 text-right">
+                            <td className="py-4 px-6 text-right">
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="sm"
+                                className="h-9 px-4 font-bold shadow-sm shadow-primary/20"
                                 onClick={() =>
                                   setDrawerForm({
                                     form_id: f.form_id,
@@ -515,18 +536,19 @@ function MetaIntegrationsPage() {
                                 }
                               >
                                 Configurar
+                                <ChevronRight className="w-4 h-4 ml-1.5" />
                               </Button>
                             </td>
-                          </tr>
+                          </motion.tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
               )}
-
             </CardContent>
           </Card>
+
 
 
           <Card>
