@@ -784,6 +784,76 @@ function MetaIntegrationsPage() {
         form={drawerForm}
         onOpenChange={(v) => !v && setDrawerForm(null)}
       />
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewFormId} onOpenChange={(open) => !open && setPreviewFormId(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-primary" />
+              Pré-visualização do Formulário
+            </DialogTitle>
+            <DialogDescription>
+              Campos e perguntas configuradas no formulário do Meta.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewFormId && (() => {
+            const form = (formsQuery.data?.forms ?? []).find((f: any) => f.form_id === previewFormId);
+            if (!form) return <p className="text-center py-8 text-muted-foreground">Formulário não encontrado.</p>;
+
+            const questions = (form.questions ?? []) as Array<{ key: string; label: string; type: string }>;
+
+            return (
+              <div className="space-y-6 py-4">
+                <div className="p-4 rounded-xl bg-muted/50 space-y-2">
+                  <div className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Nome do Formulário</div>
+                  <div className="text-lg font-bold">{form.form_name}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase">ID: {form.form_id}</div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" />
+                    Campos e Perguntas ({questions.length})
+                  </div>
+                  
+                  {questions.length === 0 ? (
+                    <div className="text-center py-8 border-2 border-dashed rounded-xl text-muted-foreground">
+                      Nenhuma pergunta detectada neste formulário.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {questions.map((q, idx) => (
+                        <div key={idx} className="p-4 rounded-xl border bg-card/50 flex items-start gap-4 group hover:border-primary/20 transition-colors">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                            {idx + 1}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm">{q.label}</div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[9px] uppercase font-bold py-0 h-4">{q.type}</Badge>
+                              <span className="text-[10px] text-muted-foreground font-mono">Key: {q.key}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button variant="outline" onClick={() => setPreviewFormId(null)} className="font-bold">
+                    Fechar Visualização
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      />
     </div>
   );
 
