@@ -640,36 +640,30 @@ function MetaIntegrationsPage() {
         </>
       )}
 
-      <Card className="bg-muted/30">
-        <CardHeader>
-          <CardTitle className="text-base">Configuração do webhook no Facebook Developers</CardTitle>
+      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-slate-100 overflow-hidden border-0">
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
+        <CardHeader className="relative z-10">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Zap className="w-5 h-5 text-yellow-400" /> Configuração do Webhook
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            No painel do seu app em <strong>developers.facebook.com</strong>, adicione o webhook de{" "}
-            <strong>Page</strong> com estes valores:
+        <CardContent className="relative z-10 space-y-4 text-sm">
+          <p className="text-slate-300">
+            Configure seu App no <strong className="text-white">Facebook Developers</strong> para disparar leads para:
           </p>
-          <div className="font-mono text-xs bg-background p-3 rounded border space-y-1">
-            <div>
-              <strong>Callback URL:</strong> {window.location.origin}/api/public/meta-webhook
+          <div className="font-mono text-[11px] bg-black/40 p-4 rounded-lg border border-white/10 space-y-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-slate-400 uppercase text-[10px] font-bold">Callback URL:</span>
+              <code className="text-green-400">{window.location.origin}/api/public/meta-webhook</code>
             </div>
-            <div>
-              <strong>Verify Token:</strong> definido em <code>META_VERIFY_TOKEN</code> (secret do backend)
-            </div>
-            <div>
-              <strong>Subscribed field:</strong> leadgen
+            <div className="flex flex-col gap-1">
+              <span className="text-slate-400 uppercase text-[10px] font-bold">Verify Token:</span>
+              <span className="text-white">definido via <code>META_VERIFY_TOKEN</code> no backend</span>
             </div>
           </div>
-          <a
-            href="https://developers.facebook.com/docs/marketing-api/guides/lead-ads/setup/graph-api"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-primary hover:underline"
-          >
-            Documentação Meta Lead Ads <ExternalLink className="w-3 h-3" />
-          </a>
         </CardContent>
       </Card>
+
       <MetaFormMappingDrawer
         open={drawerForm !== null}
         form={drawerForm}
