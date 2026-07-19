@@ -440,20 +440,25 @@ function MetaIntegrationsPage() {
                                 </Badge>
                               )}
                             </td>
-                            <td className="py-2 pr-2 min-w-[320px]">
-                              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_88px_auto] md:items-center">
-                                <Input
-                                  type="date"
-                                  value={options.since}
-                                  onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
-                                  aria-label={`Data inicial para importar ${f.form_name}`}
-                                />
-                                <Input
-                                  type="date"
-                                  value={options.until}
-                                  onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
-                                  aria-label={`Data final para importar ${f.form_name}`}
-                                />
+                            <td className="py-4 px-4 min-w-[280px]">
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="date"
+                                    value={options.since}
+                                    onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
+                                    className="h-8 text-[11px] px-2"
+                                    aria-label={`Início`}
+                                  />
+                                  <span className="text-muted-foreground">/</span>
+                                  <Input
+                                    type="date"
+                                    value={options.until}
+                                    onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
+                                    className="h-8 text-[11px] px-2"
+                                    aria-label={`Fim`}
+                                  />
+                                </div>
                                 <Input
                                   type="number"
                                   min={1}
