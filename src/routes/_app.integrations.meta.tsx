@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText, DownloadCloud, History, Settings, LayoutGrid, Database, Zap, ChevronRight } from "lucide-react";
+import { Link2, Loader2, ExternalLink, Power, PowerOff, CheckCircle2, AlertCircle, RefreshCw, FileText, DownloadCloud, History, Settings, LayoutGrid, Database, Zap, ChevronRight, Search, Filter, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   startMetaOAuth,
@@ -22,6 +22,21 @@ import {
   MetaFormMappingDrawer,
   type MetaFormForMapping,
 } from "@/modules/integrations/components/MetaFormMappingDrawer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
 
 
 interface PageRow {
@@ -94,6 +109,10 @@ function MetaIntegrationsPage() {
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
   const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
+  const [pageFilter, setPageFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [previewFormId, setPreviewFormId] = useState<string | null>(null);
+
 
 
   const { data, isLoading } = useQuery({
@@ -206,6 +225,16 @@ function MetaIntegrationsPage() {
       },
     }));
   };
+
+  const filteredForms = (formsQuery.data?.forms ?? []).filter((f: any) => {
+    const matchesPage = pageFilter === "all" || f.page_id === pageFilter;
+    const matchesSearch =
+      f.form_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.form_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (f.page_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesPage && matchesSearch;
+  });
+
 
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
@@ -354,7 +383,7 @@ function MetaIntegrationsPage() {
 
           <Card className="border-2 border-primary/5 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 pb-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2 text-xl">
                     <LayoutGrid className="w-5 h-5 text-primary" />
@@ -364,11 +393,11 @@ function MetaIntegrationsPage() {
                     Gerencie os formulários que estão ativos e sincronizando leads para seu pipeline.
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                    <Button 
                     variant="outline" 
                     size="sm" 
-                    className="font-bold border-primary/20"
+                    className="font-bold border-primary/20 h-9"
                     onClick={() => {
                       const firstPage = pages[0];
                       if (firstPage) {
@@ -388,6 +417,34 @@ function MetaIntegrationsPage() {
                   </Button>
                 </div>
               </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input 
+                    placeholder="Buscar formulário, ID ou página..." 
+                    className="pl-10 h-10 border-primary/10 bg-background/50 focus:bg-background"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2 sm:w-64">
+                  <div className="relative w-full">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Select value={pageFilter} onValueChange={setPageFilter}>
+                      <SelectTrigger className="pl-10 h-10 border-primary/10 bg-background/50 focus:bg-background">
+                        <SelectValue placeholder="Filtrar por Página" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as Páginas</SelectItem>
+                        {pages.map(p => (
+                          <SelectItem key={p.page_id} value={p.page_id}>{p.page_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {formsQuery.isLoading ? (
@@ -401,6 +458,7 @@ function MetaIntegrationsPage() {
                   <div className="mx-auto w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 mb-4">
                     <FileText className="w-8 h-8" />
                   </div>
+
                   <h3 className="text-lg font-bold">Nenhum formulário conectado</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                     Escolha uma página acima e utilize o botão <strong>Sincronizar formulários</strong> para carregar e selecionar quais formulários deseja importar.
@@ -420,7 +478,7 @@ function MetaIntegrationsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {formsQuery.data.forms.map((f) => {
+                      {filteredForms.map((f: any) => {
                         const mapping = f.mapping as
                           | {
                               id: string;
@@ -432,6 +490,7 @@ function MetaIntegrationsPage() {
                           | null;
                         const options = importOptions[f.form_id] ?? DEFAULT_IMPORT_OPTIONS;
                         const isImporting = importMutation.isPending && importMutation.variables?.formId === f.form_id;
+
                         return (
                           <motion.tr 
                             key={f.id}
@@ -521,24 +580,35 @@ function MetaIntegrationsPage() {
                               </div>
                             </td>
                             <td className="py-4 px-6 text-right">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="h-9 px-4 font-bold shadow-sm shadow-primary/20"
-                                onClick={() =>
-                                  setDrawerForm({
-                                    form_id: f.form_id,
-                                    form_name: f.form_name,
-                                    page_id: f.page_id,
-                                    page_name: f.page_name,
-                                    mapping: mapping as MetaFormForMapping["mapping"],
-                                  })
-                                }
-                              >
-                                Configurar
-                                <ChevronRight className="w-4 h-4 ml-1.5" />
-                              </Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 px-3 font-bold text-muted-foreground hover:text-primary"
+                                  onClick={() => setPreviewFormId(f.form_id)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="h-9 px-4 font-bold shadow-sm shadow-primary/20"
+                                  onClick={() =>
+                                    setDrawerForm({
+                                      form_id: f.form_id,
+                                      form_name: f.form_name,
+                                      page_id: f.page_id,
+                                      page_name: f.page_name,
+                                      mapping: mapping as MetaFormForMapping["mapping"],
+                                    })
+                                  }
+                                >
+                                  Configurar
+                                  <ChevronRight className="w-4 h-4 ml-1.5" />
+                                </Button>
+                              </div>
                             </td>
+
                           </motion.tr>
                         );
                       })}
@@ -714,8 +784,77 @@ function MetaIntegrationsPage() {
         form={drawerForm}
         onOpenChange={(v) => !v && setDrawerForm(null)}
       />
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewFormId} onOpenChange={(open) => !open && setPreviewFormId(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-primary" />
+              Pré-visualização do Formulário
+            </DialogTitle>
+            <DialogDescription>
+              Campos e perguntas configuradas no formulário do Meta.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewFormId && (() => {
+            const form = (formsQuery.data?.forms ?? []).find((f: any) => f.form_id === previewFormId);
+            if (!form) return <p className="text-center py-8 text-muted-foreground">Formulário não encontrado.</p>;
+
+            const questions = (form.questions ?? []) as Array<{ key: string; label: string; type: string }>;
+
+            return (
+              <div className="space-y-6 py-4">
+                <div className="p-4 rounded-xl bg-muted/50 space-y-2">
+                  <div className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Nome do Formulário</div>
+                  <div className="text-lg font-bold">{form.form_name}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase">ID: {form.form_id}</div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" />
+                    Campos e Perguntas ({questions.length})
+                  </div>
+                  
+                  {questions.length === 0 ? (
+                    <div className="text-center py-8 border-2 border-dashed rounded-xl text-muted-foreground">
+                      Nenhuma pergunta detectada neste formulário.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {questions.map((q, idx) => (
+                        <div key={idx} className="p-4 rounded-xl border bg-card/50 flex items-start gap-4 group hover:border-primary/20 transition-colors">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                            {idx + 1}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm">{q.label}</div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-[9px] uppercase font-bold py-0 h-4">{q.type}</Badge>
+                              <span className="text-[10px] text-muted-foreground font-mono">Key: {q.key}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button variant="outline" onClick={() => setPreviewFormId(null)} className="font-bold">
+                    Fechar Visualização
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
 
 }
 
