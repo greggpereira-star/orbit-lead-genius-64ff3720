@@ -465,5 +465,3 @@ export function MetaFormMappingDrawer({ open, form, onOpenChange }: Props) {
     </Sheet>
   );
 }
-
-}
