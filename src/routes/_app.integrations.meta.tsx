@@ -684,8 +684,20 @@ function MetaIntegrationsPage() {
                             key={f.id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="hover:bg-primary/[0.02] transition-colors group"
+                            className={`hover:bg-primary/[0.02] transition-colors group ${selectedFormIds.includes(f.form_id) ? 'bg-primary/[0.03]' : ''}`}
                           >
+                            <td className="py-4 px-6">
+                              <Checkbox 
+                                checked={selectedFormIds.includes(f.form_id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedFormIds(prev => [...prev, f.form_id]);
+                                  } else {
+                                    setSelectedFormIds(prev => prev.filter(id => id !== f.form_id));
+                                  }
+                                }}
+                              />
+                            </td>
                             <td className="py-4 px-6">
                               <div className="font-bold text-foreground group-hover:text-primary transition-colors">{f.form_name}</div>
                               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
