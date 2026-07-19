@@ -87,6 +87,9 @@ export function MetaFormMappingDrawer({ open, form, onOpenChange }: Props) {
   const [crmEnabled, setCrmEnabled] = useState(false);
   const [crmProvider, setCrmProvider] = useState<string>(NONE);
   const [crmConfig, setCrmConfig] = useState("{}");
+  const [step, setStep] = useState(1);
+  const TOTAL_STEPS = 4;
+
 
   useEffect(() => {
     if (!open) return;
