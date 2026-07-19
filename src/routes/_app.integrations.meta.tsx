@@ -580,24 +580,35 @@ function MetaIntegrationsPage() {
                               </div>
                             </td>
                             <td className="py-4 px-6 text-right">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="h-9 px-4 font-bold shadow-sm shadow-primary/20"
-                                onClick={() =>
-                                  setDrawerForm({
-                                    form_id: f.form_id,
-                                    form_name: f.form_name,
-                                    page_id: f.page_id,
-                                    page_name: f.page_name,
-                                    mapping: mapping as MetaFormForMapping["mapping"],
-                                  })
-                                }
-                              >
-                                Configurar
-                                <ChevronRight className="w-4 h-4 ml-1.5" />
-                              </Button>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 px-3 font-bold text-muted-foreground hover:text-primary"
+                                  onClick={() => setPreviewFormId(f.form_id)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="h-9 px-4 font-bold shadow-sm shadow-primary/20"
+                                  onClick={() =>
+                                    setDrawerForm({
+                                      form_id: f.form_id,
+                                      form_name: f.form_name,
+                                      page_id: f.page_id,
+                                      page_name: f.page_name,
+                                      mapping: mapping as MetaFormForMapping["mapping"],
+                                    })
+                                  }
+                                >
+                                  Configurar
+                                  <ChevronRight className="w-4 h-4 ml-1.5" />
+                                </Button>
+                              </div>
                             </td>
+
                           </motion.tr>
                         );
                       })}
