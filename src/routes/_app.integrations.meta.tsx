@@ -478,7 +478,7 @@ function MetaIntegrationsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {formsQuery.data.forms.map((f) => {
+                      {filteredForms.map((f: any) => {
                         const mapping = f.mapping as
                           | {
                               id: string;
@@ -490,6 +490,7 @@ function MetaIntegrationsPage() {
                           | null;
                         const options = importOptions[f.form_id] ?? DEFAULT_IMPORT_OPTIONS;
                         const isImporting = importMutation.isPending && importMutation.variables?.formId === f.form_id;
+
                         return (
                           <motion.tr 
                             key={f.id}
