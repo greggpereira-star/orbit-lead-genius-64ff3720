@@ -208,22 +208,22 @@ function MetaIntegrationsPage() {
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto overflow-x-hidden">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-start justify-between gap-4"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6"
       >
-
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <span className="p-2 bg-primary/10 rounded-lg">
-              <Link2 className="w-6 h-6 text-primary" />
-            </span>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+            <Zap className="h-3 w-3 fill-primary" />
+            Integrations Hub
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight flex items-center gap-3 text-foreground">
             Meta Lead Ads
           </h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl text-lg">
-            Sincronização inteligente de leads, roteamento automático e integração com CV.CRM.
+          <p className="text-muted-foreground max-w-2xl text-base md:text-lg leading-relaxed">
+            Sincronização inteligente de leads, roteamento automático e integração profunda com CV.CRM.
           </p>
         </div>
       </motion.div>
@@ -299,43 +299,51 @@ function MetaIntegrationsPage() {
               ) : (
                 <div className="divide-y">
                   {pages.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <div className="font-medium">{p.page_name}</div>
-                        <div className="text-xs text-muted-foreground">
+                    <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-4">
+                      <div className="space-y-1">
+                        <div className="font-bold text-foreground flex items-center gap-2">
+                          {p.page_name}
+                          {p.subscribed && (
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                          )}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded w-fit">
                           ID: {p.page_id}
                           {p.category && ` · ${p.category}`}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         {p.subscribed ? (
-                          <Badge variant="default">
+                          <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold">
                             <Power className="w-3 h-3 mr-1" />
                             Ativo
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Inativo</Badge>
+                          <Badge variant="secondary" className="font-bold">Inativo</Badge>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => syncFormsMutation.mutate(p.page_id)}
-                          disabled={syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id}
-                        >
-                          {syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                          )}
-                          Sincronizar formulários
-                        </Button>
-                        <Switch
-                          checked={p.subscribed}
-                          onCheckedChange={(checked) =>
-                            subMutation.mutate({ pageId: p.page_id, subscribe: checked })
-                          }
-                          disabled={subMutation.isPending}
-                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => syncFormsMutation.mutate(p.page_id)}
+                            disabled={syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id}
+                            className="h-9 px-4 font-bold border-primary/20 hover:border-primary/50 text-primary"
+                          >
+                            {syncFormsMutation.isPending && syncFormsMutation.variables === p.page_id ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                            )}
+                            Sincronizar formulários
+                          </Button>
+                          <Switch
+                            checked={p.subscribed}
+                            onCheckedChange={(checked) =>
+                              subMutation.mutate({ pageId: p.page_id, subscribe: checked })
+                            }
+                            disabled={subMutation.isPending}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -363,18 +371,18 @@ function MetaIntegrationsPage() {
                   <strong>Sincronizar formulários</strong>.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-xs text-muted-foreground border-b">
+                <div className="overflow-x-auto -mx-6 px-6 lg:mx-0 lg:px-0">
+                  <table className="w-full text-sm min-w-[1000px] lg:min-w-full">
+                    <thead className="text-xs text-muted-foreground border-b bg-muted/30">
                       <tr>
-                        <th className="text-left py-2 pr-2">Página</th>
-                        <th className="text-left py-2 pr-2">Formulário</th>
-                        <th className="text-left py-2 pr-2">Status Meta</th>
-                        <th className="text-right py-2 pr-2">Leads (Meta)</th>
-                        <th className="text-left py-2 pr-2">Última sync</th>
-                        <th className="text-left py-2 pr-2">Mapeamento</th>
-                        <th className="text-left py-2 pr-2">Importação</th>
-                        <th className="text-right py-2">Ações</th>
+                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Página</th>
+                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Formulário</th>
+                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Status Meta</th>
+                        <th className="text-right py-3 px-4 font-bold uppercase tracking-wider">Leads (Meta)</th>
+                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Última sync</th>
+                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Mapeamento</th>
+                        <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Importação</th>
+                        <th className="text-right py-3 px-4 font-bold uppercase tracking-wider">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -392,69 +400,84 @@ function MetaIntegrationsPage() {
                         const isImporting = importMutation.isPending && importMutation.variables?.formId === f.form_id;
                         return (
                           <tr key={f.id}>
-                            <td className="py-2 pr-2">
-                              <div className="font-medium">{f.page_name ?? "—"}</div>
-                              <div className="text-xs text-muted-foreground">{f.page_id}</div>
+                            <td className="py-4 px-4 whitespace-nowrap">
+                              <div className="font-semibold text-foreground">{f.page_name ?? "—"}</div>
+                              <div className="text-[10px] text-muted-foreground font-mono">{f.page_id}</div>
                             </td>
-                            <td className="py-2 pr-2">
-                              <div className="font-medium">{f.form_name}</div>
-                              <div className="text-xs text-muted-foreground">{f.form_id}</div>
+                            <td className="py-4 px-4">
+                              <div className="font-semibold text-foreground">{f.form_name}</div>
+                              <div className="text-[10px] text-muted-foreground font-mono">{f.form_id}</div>
                             </td>
-                            <td className="py-2 pr-2">
-                              <Badge variant={f.status === "ACTIVE" ? "default" : "outline"}>
+                            <td className="py-4 px-4">
+                              <Badge variant={f.status === "ACTIVE" ? "default" : "secondary"} className="font-bold">
                                 {f.status ?? "—"}
                               </Badge>
                             </td>
-                            <td className="py-2 pr-2 text-right tabular-nums">{f.leads_count ?? 0}</td>
-                            <td className="py-2 pr-2 text-xs text-muted-foreground">
+                            <td className="py-4 px-4 text-right tabular-nums font-medium text-foreground">{f.leads_count ?? 0}</td>
+                            <td className="py-4 px-4 text-[11px] text-muted-foreground leading-tight">
                               {f.last_synced_at
-                                ? new Date(f.last_synced_at).toLocaleString("pt-BR")
+                                ? new Date(f.last_synced_at).toLocaleString("pt-BR", {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
                                 : "—"}
                             </td>
-                            <td className="py-2 pr-2">
+                            <td className="py-4 px-4">
                               {mapping ? (
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <Badge variant={mapping.is_active ? "default" : "outline"}>
+                                <div className="flex flex-col gap-1 items-start">
+                                  <Badge variant={mapping.is_active ? "default" : "outline"} className="text-[10px] h-5">
                                     {mapping.is_active ? "Ativo" : "Pausado"}
                                   </Badge>
                                   {mapping.external_crm_enabled && (
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge variant="secondary" className="text-[9px] h-4 bg-primary/5 text-primary border-primary/10">
                                       → {mapping.external_crm_provider ?? "CRM"}
                                     </Badge>
                                   )}
                                 </div>
                               ) : (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-[10px] opacity-60">
                                   Não mapeado
                                 </Badge>
                               )}
                             </td>
-                            <td className="py-2 pr-2 min-w-[320px]">
-                              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_88px_auto] md:items-center">
-                                <Input
-                                  type="date"
-                                  value={options.since}
-                                  onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
-                                  aria-label={`Data inicial para importar ${f.form_name}`}
-                                />
-                                <Input
-                                  type="date"
-                                  value={options.until}
-                                  onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
-                                  aria-label={`Data final para importar ${f.form_name}`}
-                                />
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  max={500}
-                                  value={options.limit}
-                                  onChange={(event) =>
-                                    updateImportOption(f.form_id, {
-                                      limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
-                                    })
-                                  }
-                                  aria-label={`Limite de leads para importar ${f.form_name}`}
-                                />
+                            <td className="py-4 px-4 min-w-[280px]">
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="date"
+                                    value={options.since}
+                                    onChange={(event) => updateImportOption(f.form_id, { since: event.target.value })}
+                                    className="h-8 text-[11px] px-2"
+                                    aria-label={`Início`}
+                                  />
+                                  <span className="text-muted-foreground">/</span>
+                                  <Input
+                                    type="date"
+                                    value={options.until}
+                                    onChange={(event) => updateImportOption(f.form_id, { until: event.target.value })}
+                                    className="h-8 text-[11px] px-2"
+                                    aria-label={`Fim`}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={500}
+                                    value={options.limit}
+                                    onChange={(event) =>
+                                      updateImportOption(f.form_id, {
+                                        limit: Math.max(1, Math.min(500, Number(event.target.value) || 200)),
+                                      })
+                                    }
+                                    className="h-8 w-20 text-[11px]"
+                                    aria-label={`Limite`}
+                                  />
+                                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Limite</span>
+                                </div>
                                 <Button
                                   variant="outline"
                                   size="sm"
