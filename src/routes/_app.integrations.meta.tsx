@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -148,6 +148,12 @@ function MetaIntegrationsPage() {
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
   const [formToDelete, setFormToDelete] = useState<string | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [currentOrigin, setCurrentOrigin] = useState("https://altleadflow.com.br");
+
+
+  useEffect(() => {
+    setCurrentOrigin(window.location.origin);
+  }, []);
 
 
 
@@ -983,7 +989,7 @@ function MetaIntegrationsPage() {
           <div className="font-mono text-[11px] bg-black/40 p-4 rounded-lg border border-white/10 space-y-2">
             <div className="flex flex-col gap-1">
               <span className="text-slate-400 uppercase text-[10px] font-bold">Callback URL:</span>
-              <code className="text-green-400">{window.location.origin}/api/public/meta-webhook</code>
+              <code className="text-green-400">{currentOrigin}/api/public/meta-webhook</code>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-slate-400 uppercase text-[10px] font-bold">Verify Token:</span>
