@@ -163,7 +163,7 @@ export function AppLayout() {
    return (
      <SidebarProvider>
        <AppSidebar />
-        <SidebarInset className="flex flex-col min-h-screen">
+        <SidebarInset className="flex flex-col min-h-screen relative z-0 pointer-events-auto">
           <Topbar />
           <main className="flex-1 p-4 md:p-6 bg-background/50">
             <div className="max-w-7xl mx-auto">

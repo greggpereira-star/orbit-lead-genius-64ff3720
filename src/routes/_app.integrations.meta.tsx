@@ -325,7 +325,7 @@ function MetaIntegrationsPage() {
 
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto relative z-10 pointer-events-auto">
+    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto relative z-0">
       <motion.div 
 
         initial={{ opacity: 0, y: -20 }}
