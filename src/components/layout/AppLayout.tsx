@@ -43,6 +43,7 @@ export function AppLayout() {
   }, [state, company?.id]);
 
    const isLoadingState = [
+      'IDLE',
      'BOOTSTRAP_START',
      'INITIALIZING',
      'SESSION_LOADING',
