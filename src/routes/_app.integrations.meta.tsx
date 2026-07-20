@@ -331,8 +331,9 @@ function MetaIntegrationsPage() {
 
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto relative z-0">
+    <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto relative z-0 pointer-events-auto">
       <motion.div 
+
 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -530,8 +531,10 @@ function MetaIntegrationsPage() {
                                     <Button 
                                       size="sm" 
                                       variant="outline"
-                                      className="h-8 text-xs font-bold"
-                                      onClick={() => {
+                                      className="h-8 text-xs font-bold relative z-50 pointer-events-auto"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         setDrawerForm({
                                           form_id: f.form_id,
                                           form_name: f.form_name,
@@ -542,6 +545,7 @@ function MetaIntegrationsPage() {
                                       }}
                                     >
                                       Conectar
+
                                     </Button>
                                   </div>
                                 ))}
