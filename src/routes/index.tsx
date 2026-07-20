@@ -29,7 +29,7 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
     }, []);
 
     return (
-      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
+      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 pointer-events-auto">
         {isUnhealthy && (
           <div className="fixed top-0 w-full z-[100] bg-destructive text-destructive-foreground py-2 px-4 text-center text-xs font-bold animate-in fade-in slide-in-from-top duration-500">
             <AlertCircle className="inline-block mr-2 h-3.5 w-3.5" />
