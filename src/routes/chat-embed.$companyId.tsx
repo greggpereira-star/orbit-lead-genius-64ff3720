@@ -240,7 +240,7 @@ function EmbedChat() {
   );
 }
 
-function RatingBar({ conversation, onRated }: { conversation: ChatConversation; onRated: (c: ChatConversation) => void }) {
+function RatingBar({ conversation, client, onRated }: { conversation: ChatConversation; client?: ReturnType<typeof createChatVisitorClient>; onRated: (c: ChatConversation) => void }) {
   const [rating, setRating] = useState<number | null>(conversation.rating);
   const [hover, setHover] = useState<number | null>(null);
   const [comment, setComment] = useState('');
@@ -251,7 +251,8 @@ function RatingBar({ conversation, onRated }: { conversation: ChatConversation; 
     if (alreadyRated || submitting) return;
     setSubmitting(true);
     try {
-      await chatService.rateConversation(conversation.id, value, comment.trim() || undefined);
+      await chatService.rateConversation(conversation.id, value, comment.trim() || undefined, client);
+
       onRated({ ...conversation, rating: value, rating_comment: comment.trim() || null, rated_at: new Date().toISOString() });
     } finally {
       setSubmitting(false);
