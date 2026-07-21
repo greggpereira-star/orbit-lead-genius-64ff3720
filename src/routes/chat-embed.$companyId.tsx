@@ -2,8 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
 import { supabase } from '@/lib/supabase';
+import { createChatVisitorClient } from '@/lib/supabase-visitor';
 import { cn } from '@/lib/utils';
 import { Send } from 'lucide-react';
+
 
 export const Route = createFileRoute('/chat-embed/$companyId')({
   component: EmbedChat,
