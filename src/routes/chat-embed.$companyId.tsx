@@ -221,7 +221,8 @@ function EmbedChat() {
         ))}
       </div>
       {conversation?.status === 'closed' ? (
-        <RatingBar conversation={conversation} onRated={(c) => setConversation(c)} />
+        <RatingBar conversation={conversation} client={visitorClient} onRated={(c) => setConversation(c)} />
+
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); send(); }} className="border-t p-2 flex gap-2 bg-card">
           <input
