@@ -1,5 +1,14 @@
 import { supabase } from '@/lib/supabase';
+import { createSessionVisitorClient } from '@/lib/supabase-visitor';
 import { logger } from '@/core/observability/logger';
+
+// RLS scopes anon reads/writes on form_partial_submissions to rows where
+// session_id matches the x-session-id header. Signed-in members bypass this
+// via the authenticated policy. Use the session-scoped client for anon.
+function clientFor(sessionId: string) {
+  return typeof window !== 'undefined' ? createSessionVisitorClient(sessionId) : (supabase as any);
+}
+
 
 export interface PartialSubmission {
   id?: string;
