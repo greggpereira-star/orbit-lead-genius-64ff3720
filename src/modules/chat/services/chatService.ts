@@ -184,13 +184,14 @@ export const chatService = {
     await supabase.from(CONV).update({ status: 'closed' } as never).eq('id' as never, conversationId as never);
   },
 
-  async rateConversation(conversationId: string, rating: number, comment?: string): Promise<void> {
-    const { error } = await supabase
+  async rateConversation(conversationId: string, rating: number, comment?: string, client?: Client): Promise<void> {
+    const { error } = await pick(client)
       .from(CONV)
       .update({ rating, rating_comment: comment ?? null, rated_at: new Date().toISOString() } as never)
       .eq('id' as never, conversationId as never);
     if (error) throw error;
   },
+
 
   async transferConversation(input: {
     conversationId: string;
