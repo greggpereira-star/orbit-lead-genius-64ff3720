@@ -7,6 +7,10 @@ import { attachAppSupabaseAuth } from "@/lib/function-auth-attacher";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
+  const req = getRequest();
+  if (new URL(req.url).pathname.startsWith("/lovable/")) {
+    return next();
+  }
   try {
     return await next();
   } catch (error) {
