@@ -81,17 +81,22 @@ function EmbedChat() {
 
   useEffect(() => {
     if (!conversation) return;
-    chatService.listMessages(conversation.id).then(setMessages);
-    const offMsg = chatService.subscribeToMessages(conversation.id, (m) => {
-      setMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
-    });
-    const offConv = chatService.subscribeToConversations(conversation.company_id, async () => {
-      const list = await chatService.listConversations(conversation.company_id);
-      const current = list.find((c) => c.id === conversation.id);
-      if (current) setConversation(current);
-    });
-    return () => { offMsg(); offConv(); };
-  }, [conversation]);
+    let cancelled = false;
+    const refresh = async () => {
+      const [msgs, conv] = await Promise.all([
+        chatService.listMessages(conversation.id, visitorClient),
+        visitorClient.from('chat_conversations').select('*').eq('id', conversation.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      setMessages(msgs);
+      if (conv.data) setConversation(conv.data as unknown as ChatConversation);
+    };
+    refresh();
+    // Realtime broadcasts are header-scoped for anon; poll every 3s to stay in sync.
+    const iv = window.setInterval(refresh, 3000);
+    return () => { cancelled = true; window.clearInterval(iv); };
+  }, [conversation?.id, visitorClient]);
+
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
