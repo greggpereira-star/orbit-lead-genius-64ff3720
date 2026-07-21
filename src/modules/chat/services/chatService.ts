@@ -93,8 +93,10 @@ export const chatService = {
     pageUrl?: string;
     referrer?: string;
     tracking?: Record<string, string | null>;
+    client?: Client;
   }): Promise<ChatConversation> {
-    const { data: existing } = await supabase
+    const c = pick(input.client);
+    const { data: existing } = await c
       .from(CONV)
       .select('*')
       .eq('company_id' as never, input.companyId as never)
@@ -106,7 +108,7 @@ export const chatService = {
 
     if (existing) return existing as unknown as ChatConversation;
 
-    const { data, error } = await supabase
+    const { data, error } = await c
       .from(CONV)
       .insert({
         company_id: input.companyId,
@@ -122,6 +124,7 @@ export const chatService = {
     if (error) throw error;
     return data as unknown as ChatConversation;
   },
+
 
 
   async findOpenByVisitor(companyId: string, visitorId: string): Promise<ChatConversation | null> {
