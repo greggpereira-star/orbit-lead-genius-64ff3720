@@ -58,29 +58,25 @@ function EmbedChat() {
   useEffect(() => {
     if (started || !companyId) return;
     let cancelled = false;
-    (async () => {
-      const existing = await chatService.findOpenByVisitor(companyId, visitorId);
+    const check = async () => {
+      const existing = await chatService.findOpenByVisitor(companyId, visitorId, visitorClient);
       if (!cancelled && existing) {
         setConversation(existing);
         setVisitorName(existing.visitor_name ?? '');
         setStarted(true);
+        return true;
       }
-    })();
-    const channel = supabase
-      .channel(`visitor_conv_${visitorId}`)
-      .on(
-        'postgres_changes' as never,
-        { event: 'INSERT', schema: 'public', table: 'chat_conversations', filter: `visitor_id=eq.${visitorId}` } as never,
-        (payload: { new: ChatConversation }) => {
-          if (payload.new.company_id !== companyId) return;
-          setConversation(payload.new);
-          setVisitorName(payload.new.visitor_name ?? '');
-          setStarted(true);
-        },
-      )
-      .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [companyId, visitorId, started]);
+      return false;
+    };
+    check();
+    // Poll for agent-initiated conversations (anon realtime is header-scoped)
+    const iv = window.setInterval(async () => {
+      const found = await check();
+      if (found) window.clearInterval(iv);
+    }, 4000);
+    return () => { cancelled = true; window.clearInterval(iv); };
+  }, [companyId, visitorId, visitorClient, started]);
+
 
 
   useEffect(() => {
