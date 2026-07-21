@@ -1,5 +1,14 @@
 import { supabase } from '@/lib/supabase';
+import { createSessionVisitorClient } from '@/lib/supabase-visitor';
 import { logger } from '@/core/observability/logger';
+
+// RLS scopes anon reads/writes on form_partial_submissions to rows where
+// session_id matches the x-session-id header. Signed-in members bypass this
+// via the authenticated policy. Use the session-scoped client for anon.
+function clientFor(sessionId: string) {
+  return typeof window !== 'undefined' ? createSessionVisitorClient(sessionId) : (supabase as any);
+}
+
 
 export interface PartialSubmission {
   id?: string;
@@ -34,8 +43,9 @@ export const partialSubmissionService = {
         updated_at: new Date().toISOString()
       }));
 
+      const c = clientFor(data.session_id);
       // Save to Supabase (Upsert based on session_id + form_id)
-      const { data: saved, error } = await supabase
+      const { data: saved, error } = await c
         .from('form_partial_submissions')
         .upsert({
           company_id: data.company_id,
@@ -57,10 +67,8 @@ export const partialSubmissionService = {
         .single();
 
       if (error) {
-        // If upsert fails because we don't have a unique constraint on session_id,form_id yet
-        // we'll just insert or find first.
         logger.warn('PartialSubmission: Upsert might have failed, trying standard insert', { error });
-        const { data: inserted, error: insError } = await supabase
+        const { data: inserted } = await c
           .from('form_partial_submissions')
           .insert({
              ...data,
@@ -68,11 +76,12 @@ export const partialSubmissionService = {
           })
           .select()
           .single();
-        
+
         return inserted?.id || null;
       }
 
       return saved?.id || null;
+
     } catch (err) {
       logger.error('Failed to save partial submission', { err });
       return null;
@@ -88,7 +97,7 @@ export const partialSubmissionService = {
     }
 
     // Fallback to Supabase
-    const { data, error } = await supabase
+    const { data, error } = await clientFor(sessionId)
       .from('form_partial_submissions')
       .select('*')
       .eq('form_id', formId)
@@ -107,10 +116,11 @@ export const partialSubmissionService = {
     const localKey = this.getLocalStorageKey(formId, sessionId);
     localStorage.removeItem(localKey);
 
-    await supabase
+    await clientFor(sessionId)
       .from('form_partial_submissions')
       .update({ status: 'completed' })
       .eq('form_id', formId)
       .eq('session_id', sessionId);
   }
 };
+

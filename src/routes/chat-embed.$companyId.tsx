@@ -2,8 +2,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { chatService, type ChatConversation, type ChatMessage } from '@/modules/chat/services/chatService';
 import { supabase } from '@/lib/supabase';
+import { createChatVisitorClient } from '@/lib/supabase-visitor';
 import { cn } from '@/lib/utils';
 import { Send } from 'lucide-react';
+
 
 export const Route = createFileRoute('/chat-embed/$companyId')({
   component: EmbedChat,
@@ -23,7 +25,9 @@ function getVisitorId(companyId: string): string {
 function EmbedChat() {
   const { companyId } = Route.useParams();
   const visitorId = useMemo(() => getVisitorId(companyId), [companyId]);
+  const visitorClient = useMemo(() => createChatVisitorClient(visitorId), [visitorId]);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [started, setStarted] = useState(false);
@@ -54,44 +58,45 @@ function EmbedChat() {
   useEffect(() => {
     if (started || !companyId) return;
     let cancelled = false;
-    (async () => {
-      const existing = await chatService.findOpenByVisitor(companyId, visitorId);
+    const check = async () => {
+      const existing = await chatService.findOpenByVisitor(companyId, visitorId, visitorClient);
       if (!cancelled && existing) {
         setConversation(existing);
         setVisitorName(existing.visitor_name ?? '');
         setStarted(true);
+        return true;
       }
-    })();
-    const channel = supabase
-      .channel(`visitor_conv_${visitorId}`)
-      .on(
-        'postgres_changes' as never,
-        { event: 'INSERT', schema: 'public', table: 'chat_conversations', filter: `visitor_id=eq.${visitorId}` } as never,
-        (payload: { new: ChatConversation }) => {
-          if (payload.new.company_id !== companyId) return;
-          setConversation(payload.new);
-          setVisitorName(payload.new.visitor_name ?? '');
-          setStarted(true);
-        },
-      )
-      .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [companyId, visitorId, started]);
+      return false;
+    };
+    check();
+    // Poll for agent-initiated conversations (anon realtime is header-scoped)
+    const iv = window.setInterval(async () => {
+      const found = await check();
+      if (found) window.clearInterval(iv);
+    }, 4000);
+    return () => { cancelled = true; window.clearInterval(iv); };
+  }, [companyId, visitorId, visitorClient, started]);
+
 
 
   useEffect(() => {
     if (!conversation) return;
-    chatService.listMessages(conversation.id).then(setMessages);
-    const offMsg = chatService.subscribeToMessages(conversation.id, (m) => {
-      setMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
-    });
-    const offConv = chatService.subscribeToConversations(conversation.company_id, async () => {
-      const list = await chatService.listConversations(conversation.company_id);
-      const current = list.find((c) => c.id === conversation.id);
-      if (current) setConversation(current);
-    });
-    return () => { offMsg(); offConv(); };
-  }, [conversation]);
+    let cancelled = false;
+    const refresh = async () => {
+      const [msgs, conv] = await Promise.all([
+        chatService.listMessages(conversation.id, visitorClient),
+        visitorClient.from('chat_conversations').select('*').eq('id', conversation.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      setMessages(msgs);
+      if (conv.data) setConversation(conv.data as unknown as ChatConversation);
+    };
+    refresh();
+    // Realtime broadcasts are header-scoped for anon; poll every 3s to stay in sync.
+    const iv = window.setInterval(refresh, 3000);
+    return () => { cancelled = true; window.clearInterval(iv); };
+  }, [conversation?.id, visitorClient]);
+
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -135,6 +140,7 @@ function EmbedChat() {
       pageUrl: parentUrl,
       referrer: parentReferrer,
       tracking,
+      client: visitorClient,
     });
     setConversation(conv);
     setStarted(true);
@@ -149,8 +155,10 @@ function EmbedChat() {
       conversationId: conversation.id,
       companyId,
       content,
+      client: visitorClient,
     });
   }
+
 
   if (domainAllowed === false) {
     return (
@@ -213,7 +221,8 @@ function EmbedChat() {
         ))}
       </div>
       {conversation?.status === 'closed' ? (
-        <RatingBar conversation={conversation} onRated={(c) => setConversation(c)} />
+        <RatingBar conversation={conversation} client={visitorClient} onRated={(c) => setConversation(c)} />
+
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); send(); }} className="border-t p-2 flex gap-2 bg-card">
           <input
@@ -231,7 +240,7 @@ function EmbedChat() {
   );
 }
 
-function RatingBar({ conversation, onRated }: { conversation: ChatConversation; onRated: (c: ChatConversation) => void }) {
+function RatingBar({ conversation, client, onRated }: { conversation: ChatConversation; client?: ReturnType<typeof createChatVisitorClient>; onRated: (c: ChatConversation) => void }) {
   const [rating, setRating] = useState<number | null>(conversation.rating);
   const [hover, setHover] = useState<number | null>(null);
   const [comment, setComment] = useState('');
@@ -242,7 +251,8 @@ function RatingBar({ conversation, onRated }: { conversation: ChatConversation; 
     if (alreadyRated || submitting) return;
     setSubmitting(true);
     try {
-      await chatService.rateConversation(conversation.id, value, comment.trim() || undefined);
+      await chatService.rateConversation(conversation.id, value, comment.trim() || undefined, client);
+
       onRated({ ...conversation, rating: value, rating_comment: comment.trim() || null, rated_at: new Date().toISOString() });
     } finally {
       setSubmitting(false);

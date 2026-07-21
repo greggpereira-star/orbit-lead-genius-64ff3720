@@ -1,4 +1,9 @@
 import { supabase } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+type Client = SupabaseClient<any, any, any>;
+const pick = (c?: Client): Client => (c ?? (supabase as unknown as Client));
+
 
 export interface ChatConversation {
   id: string;
@@ -47,8 +52,8 @@ export const chatService = {
     return (data ?? []) as unknown as ChatConversation[];
   },
 
-  async listMessages(conversationId: string): Promise<ChatMessage[]> {
-    const { data, error } = await supabase
+  async listMessages(conversationId: string, client?: Client): Promise<ChatMessage[]> {
+    const { data, error } = await pick(client)
       .from(MSG)
       .select('*')
       .eq('conversation_id' as never, conversationId as never)
@@ -56,6 +61,7 @@ export const chatService = {
     if (error) throw error;
     return (data ?? []) as unknown as ChatMessage[];
   },
+
 
   async sendAgentMessage(input: { conversationId: string; companyId: string; senderId: string; content: string }): Promise<void> {
     const { error } = await supabase.from(MSG).insert({
@@ -68,8 +74,8 @@ export const chatService = {
     if (error) throw error;
   },
 
-  async sendVisitorMessage(input: { conversationId: string; companyId: string; content: string }): Promise<void> {
-    const { error } = await supabase.from(MSG).insert({
+  async sendVisitorMessage(input: { conversationId: string; companyId: string; content: string; client?: Client }): Promise<void> {
+    const { error } = await pick(input.client).from(MSG).insert({
       conversation_id: input.conversationId,
       company_id: input.companyId,
       sender_type: 'visitor',
@@ -77,6 +83,7 @@ export const chatService = {
     } as never);
     if (error) throw error;
   },
+
 
   async getOrCreateConversation(input: {
     companyId: string;
@@ -86,8 +93,10 @@ export const chatService = {
     pageUrl?: string;
     referrer?: string;
     tracking?: Record<string, string | null>;
+    client?: Client;
   }): Promise<ChatConversation> {
-    const { data: existing } = await supabase
+    const c = pick(input.client);
+    const { data: existing } = await c
       .from(CONV)
       .select('*')
       .eq('company_id' as never, input.companyId as never)
@@ -99,7 +108,7 @@ export const chatService = {
 
     if (existing) return existing as unknown as ChatConversation;
 
-    const { data, error } = await supabase
+    const { data, error } = await c
       .from(CONV)
       .insert({
         company_id: input.companyId,
@@ -117,8 +126,9 @@ export const chatService = {
   },
 
 
-  async findOpenByVisitor(companyId: string, visitorId: string): Promise<ChatConversation | null> {
-    const { data } = await supabase
+
+  async findOpenByVisitor(companyId: string, visitorId: string, client?: Client): Promise<ChatConversation | null> {
+    const { data } = await pick(client)
       .from(CONV)
       .select('*')
       .eq('company_id' as never, companyId as never)
@@ -129,6 +139,7 @@ export const chatService = {
       .maybeSingle();
     return (data as unknown as ChatConversation) ?? null;
   },
+
 
   async startAgentConversation(input: {
     companyId: string;
@@ -174,13 +185,14 @@ export const chatService = {
     await supabase.from(CONV).update({ status: 'closed' } as never).eq('id' as never, conversationId as never);
   },
 
-  async rateConversation(conversationId: string, rating: number, comment?: string): Promise<void> {
-    const { error } = await supabase
+  async rateConversation(conversationId: string, rating: number, comment?: string, client?: Client): Promise<void> {
+    const { error } = await pick(client)
       .from(CONV)
       .update({ rating, rating_comment: comment ?? null, rated_at: new Date().toISOString() } as never)
       .eq('id' as never, conversationId as never);
     if (error) throw error;
   },
+
 
   async transferConversation(input: {
     conversationId: string;
