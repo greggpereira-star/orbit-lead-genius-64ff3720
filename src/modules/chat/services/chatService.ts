@@ -127,8 +127,8 @@ export const chatService = {
 
 
 
-  async findOpenByVisitor(companyId: string, visitorId: string): Promise<ChatConversation | null> {
-    const { data } = await supabase
+  async findOpenByVisitor(companyId: string, visitorId: string, client?: Client): Promise<ChatConversation | null> {
+    const { data } = await pick(client)
       .from(CONV)
       .select('*')
       .eq('company_id' as never, companyId as never)
@@ -139,6 +139,7 @@ export const chatService = {
       .maybeSingle();
     return (data as unknown as ChatConversation) ?? null;
   },
+
 
   async startAgentConversation(input: {
     companyId: string;
