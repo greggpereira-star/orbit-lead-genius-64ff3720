@@ -55,6 +55,7 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$id.publish'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
@@ -293,6 +294,12 @@ const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
   path: '/tv',
   getParentRoute: () => AppAnalyticsRoute,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
   id: '/api/public/cron/meta-retry',
   path: '/api/public/cron/meta-retry',
@@ -369,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -419,6 +427,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -473,6 +482,7 @@ export interface FileRoutesById {
   '/_app/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -526,6 +536,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
     | '/api/public/cron/meta-retry'
+    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -576,6 +587,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
     | '/api/public/cron/meta-retry'
+    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -629,6 +641,7 @@ export interface FileRouteTypes {
     | '/_app/quizzes/$id/preview'
     | '/_app/quizzes/$id/publish'
     | '/api/public/cron/meta-retry'
+    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -648,6 +661,7 @@ export interface RootRouteChildren {
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -974,6 +988,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsTvRouteImport
       parentRoute: typeof AppAnalyticsRoute
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/meta-retry': {
       id: '/api/public/cron/meta-retry'
       path: '/api/public/cron/meta-retry'
@@ -1155,17 +1176,8 @@ const rootRouteChildren: RootRouteChildren = {
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
