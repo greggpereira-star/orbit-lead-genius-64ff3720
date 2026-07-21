@@ -97,7 +97,7 @@ export const partialSubmissionService = {
     }
 
     // Fallback to Supabase
-    const { data, error } = await supabase
+    const { data, error } = await clientFor(sessionId)
       .from('form_partial_submissions')
       .select('*')
       .eq('form_id', formId)
@@ -116,10 +116,11 @@ export const partialSubmissionService = {
     const localKey = this.getLocalStorageKey(formId, sessionId);
     localStorage.removeItem(localKey);
 
-    await supabase
+    await clientFor(sessionId)
       .from('form_partial_submissions')
       .update({ status: 'completed' })
       .eq('form_id', formId)
       .eq('session_id', sessionId);
   }
 };
+
