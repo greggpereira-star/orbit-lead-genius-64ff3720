@@ -1,4 +1,9 @@
 import { supabase } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+type Client = SupabaseClient<any, any, any>;
+const pick = (c?: Client): Client => (c ?? (supabase as unknown as Client));
+
 
 export interface ChatConversation {
   id: string;
