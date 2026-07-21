@@ -25,7 +25,9 @@ function getVisitorId(companyId: string): string {
 function EmbedChat() {
   const { companyId } = Route.useParams();
   const visitorId = useMemo(() => getVisitorId(companyId), [companyId]);
+  const visitorClient = useMemo(() => createChatVisitorClient(visitorId), [visitorId]);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [started, setStarted] = useState(false);
