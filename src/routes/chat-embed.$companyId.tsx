@@ -140,6 +140,7 @@ function EmbedChat() {
       pageUrl: parentUrl,
       referrer: parentReferrer,
       tracking,
+      client: visitorClient,
     });
     setConversation(conv);
     setStarted(true);
@@ -154,8 +155,10 @@ function EmbedChat() {
       conversationId: conversation.id,
       companyId,
       content,
+      client: visitorClient,
     });
   }
+
 
   if (domainAllowed === false) {
     return (
