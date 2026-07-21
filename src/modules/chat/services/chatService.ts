@@ -74,8 +74,8 @@ export const chatService = {
     if (error) throw error;
   },
 
-  async sendVisitorMessage(input: { conversationId: string; companyId: string; content: string }): Promise<void> {
-    const { error } = await supabase.from(MSG).insert({
+  async sendVisitorMessage(input: { conversationId: string; companyId: string; content: string; client?: Client }): Promise<void> {
+    const { error } = await pick(input.client).from(MSG).insert({
       conversation_id: input.conversationId,
       company_id: input.companyId,
       sender_type: 'visitor',
@@ -83,6 +83,7 @@ export const chatService = {
     } as never);
     if (error) throw error;
   },
+
 
   async getOrCreateConversation(input: {
     companyId: string;
