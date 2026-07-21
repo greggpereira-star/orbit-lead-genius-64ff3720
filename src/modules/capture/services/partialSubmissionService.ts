@@ -43,8 +43,9 @@ export const partialSubmissionService = {
         updated_at: new Date().toISOString()
       }));
 
+      const c = clientFor(data.session_id);
       // Save to Supabase (Upsert based on session_id + form_id)
-      const { data: saved, error } = await supabase
+      const { data: saved, error } = await c
         .from('form_partial_submissions')
         .upsert({
           company_id: data.company_id,
@@ -66,10 +67,8 @@ export const partialSubmissionService = {
         .single();
 
       if (error) {
-        // If upsert fails because we don't have a unique constraint on session_id,form_id yet
-        // we'll just insert or find first.
         logger.warn('PartialSubmission: Upsert might have failed, trying standard insert', { error });
-        const { data: inserted, error: insError } = await supabase
+        const { data: inserted } = await c
           .from('form_partial_submissions')
           .insert({
              ...data,
@@ -77,11 +76,12 @@ export const partialSubmissionService = {
           })
           .select()
           .single();
-        
+
         return inserted?.id || null;
       }
 
       return saved?.id || null;
+
     } catch (err) {
       logger.error('Failed to save partial submission', { err });
       return null;
