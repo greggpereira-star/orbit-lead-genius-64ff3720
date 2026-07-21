@@ -52,8 +52,8 @@ export const chatService = {
     return (data ?? []) as unknown as ChatConversation[];
   },
 
-  async listMessages(conversationId: string): Promise<ChatMessage[]> {
-    const { data, error } = await supabase
+  async listMessages(conversationId: string, client?: Client): Promise<ChatMessage[]> {
+    const { data, error } = await pick(client)
       .from(MSG)
       .select('*')
       .eq('conversation_id' as never, conversationId as never)
@@ -61,6 +61,7 @@ export const chatService = {
     if (error) throw error;
     return (data ?? []) as unknown as ChatMessage[];
   },
+
 
   async sendAgentMessage(input: { conversationId: string; companyId: string; senderId: string; content: string }): Promise<void> {
     const { error } = await supabase.from(MSG).insert({
