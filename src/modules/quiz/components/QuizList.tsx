@@ -8,6 +8,7 @@ import { quizService } from '../services/quizService';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import type { QuizFunnel } from '../types';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils';
 
 interface Props {
   onCreate: () => void;
@@ -32,8 +33,9 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
       setItems(list);
       setStats(listStats);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = getErrorMessage(e);
       toast.error('Erro ao carregar quizzes: ' + msg);
+      console.error('QuizList: refresh failed', e);
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,7 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
       toast.success('Quiz excluído');
       void refresh();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = getErrorMessage(e);
       toast.error('Erro ao excluir: ' + msg);
     }
   };
@@ -61,7 +63,7 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
       toast.success('Quiz duplicado');
       void refresh();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = getErrorMessage(e);
       toast.error('Erro ao duplicar: ' + msg);
     } finally {
       setDuplicatingId(null);
