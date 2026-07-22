@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { QuizFunnel, QuizTemplate, QuizSchema } from '../types';
+import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules } from '../types';
 import { DEFAULT_DESIGN } from '../design-presets';
+import { DEFAULT_ACCESS_RULES } from '../types';
 
 function slugify(input: string): string {
   return input
@@ -144,6 +145,32 @@ export const quizService = {
     const { data, error } = await supabase.from('quiz_funnels').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     return (data as unknown as QuizFunnel) ?? null;
+  },
+
+  async getAccessRules(quizId: string): Promise<AccessRules> {
+    const { data, error } = await supabase
+      .from('quiz_funnels')
+      .select('settings')
+      .eq('id', quizId)
+      .maybeSingle();
+    if (error) throw error;
+    const settings = (data?.settings ?? {}) as { accessRules?: Partial<AccessRules> };
+    return { ...DEFAULT_ACCESS_RULES, ...(settings.accessRules ?? {}) };
+  },
+
+  async saveAccessRules(quizId: string, rules: AccessRules): Promise<void> {
+    const { data, error: fetchError } = await supabase
+      .from('quiz_funnels')
+      .select('settings')
+      .eq('id', quizId)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    const settings = (data?.settings ?? {}) as Record<string, unknown>;
+    const { error } = await supabase
+      .from('quiz_funnels')
+      .update({ settings: { ...settings, accessRules: rules } as never, updated_at: new Date().toISOString() })
+      .eq('id', quizId);
+    if (error) throw error;
   },
 
   async getLatestSchema(quizId: string): Promise<QuizSchema> {

@@ -129,3 +129,23 @@ export interface DesignPreset {
   description: string;
   design: QuizDesign;
 }
+
+// ============ Access rules (Fase 2) ============
+
+export interface AccessRules {
+  enabled: boolean;
+  utmSource?: string;
+  utmCampaign?: string;
+  devices?: Array<'mobile' | 'desktop'>;
+  countries?: string[]; // ISO 3166-1 alpha-2 codes, uppercase
+  fallbackUrl: string;
+}
+
+export const DEFAULT_ACCESS_RULES: AccessRules = {
+  enabled: false,
+  utmSource: '',
+  utmCampaign: '',
+  devices: [],
+  countries: [],
+  fallbackUrl: '',
+};

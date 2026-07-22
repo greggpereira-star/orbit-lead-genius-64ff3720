@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService } from '../services/quizService';
-import type { QuizBlock, QuizSchema } from '../types';
+import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import {
   createInitialState,
   evaluateResponse,
@@ -13,6 +13,79 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
+
+type AccessState = 'checking' | 'allowed' | 'blocked';
+
+function useAccessGate(rules: AccessRules | undefined, tracking: Record<string, string> | undefined, skip: boolean): AccessState {
+  const [state, setState] = useState<AccessState>('checking');
+
+  useEffect(() => {
+    if (skip || !rules || !rules.enabled) {
+      setState('allowed');
+      return;
+    }
+
+    let cancelled = false;
+
+    const fail = () => {
+      if (!cancelled) setState('blocked');
+    };
+
+    const utmOk =
+      (!rules.utmSource || (tracking?.utm_source ?? '').toLowerCase() === rules.utmSource.toLowerCase()) &&
+      (!rules.utmCampaign || (tracking?.utm_campaign ?? '').toLowerCase() === rules.utmCampaign.toLowerCase());
+
+    if (!utmOk) {
+      fail();
+      return;
+    }
+
+    if (rules.devices && rules.devices.length > 0) {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const deviceType = isMobile ? 'mobile' : 'desktop';
+      if (!rules.devices.includes(deviceType)) {
+        fail();
+        return;
+      }
+    }
+
+    if (rules.countries && rules.countries.length > 0) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      fetch('https://ipapi.co/json/', { signal: controller.signal })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { country_code?: string } | null) => {
+          clearTimeout(timeout);
+          if (cancelled) return;
+          const code = data?.country_code?.toUpperCase();
+          if (code && rules.countries!.includes(code)) {
+            setState('allowed');
+          } else if (!code) {
+            // Falha ao detectar país: não bloqueia (fail-open) para evitar travar visitantes legítimos
+            setState('allowed');
+          } else {
+            setState('blocked');
+          }
+        })
+        .catch(() => {
+          clearTimeout(timeout);
+          if (!cancelled) setState('allowed');
+        });
+      return () => {
+        cancelled = true;
+        clearTimeout(timeout);
+        controller.abort();
+      };
+    }
+
+    setState('allowed');
+    return () => {
+      cancelled = true;
+    };
+  }, [rules, tracking, skip]);
+
+  return state;
+}
 
 const playerQuery = (slug: string, preview: boolean) =>
   queryOptions({
@@ -32,6 +105,14 @@ export function QuizPlayer({
   tracking?: Record<string, string>;
 }) {
   const { data } = useSuspenseQuery(playerQuery(slug, preview));
+  const accessRules = (data?.quiz.settings as { accessRules?: AccessRules } | undefined)?.accessRules;
+  const accessState = useAccessGate(accessRules, tracking, preview || !data);
+
+  useEffect(() => {
+    if (accessState === 'blocked' && accessRules?.fallbackUrl) {
+      window.location.href = accessRules.fallbackUrl;
+    }
+  }, [accessState, accessRules?.fallbackUrl]);
 
   if (!data) {
     return (
@@ -42,6 +123,10 @@ export function QuizPlayer({
         </div>
       </div>
     );
+  }
+
+  if (accessState === 'checking' || accessState === 'blocked') {
+    return <div className="min-h-screen bg-black" />;
   }
 
   return (

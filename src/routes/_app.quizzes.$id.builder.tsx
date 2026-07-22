@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save, Eye, Loader2, Smartphone, Tablet, Monitor, Palette, Plus, GripVertical, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Loader2, Smartphone, Tablet, Monitor, Palette, Plus, GripVertical, Trash2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { quizService } from '@/modules/quiz/services/quizService';
 import { QuizPreview } from '@/modules/quiz/components/QuizPreview';
 import { QuizInspector } from '@/modules/quiz/components/QuizInspector';
+import { AccessRulesDialog } from '@/modules/quiz/components/AccessRulesDialog';
 import { BLOCK_LIBRARY } from '@/modules/quiz/blocks-library';
 import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
 import type { QuizBlock, QuizFunnel, QuizSchema } from '@/modules/quiz/types';
@@ -27,6 +28,7 @@ function QuizBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [accessRulesOpen, setAccessRulesOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -129,6 +131,9 @@ function QuizBuilderPage() {
           <Button size="sm" variant={device === 'desktop' ? 'secondary' : 'ghost'} onClick={() => setDevice('desktop')}><Monitor className="h-4 w-4" /></Button>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setAccessRulesOpen(true)} className="gap-2">
+            <ShieldCheck className="h-4 w-4" /> Regras de acesso
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/preview', params: { id } })} className="gap-2">
             <Eye className="h-4 w-4" /> Preview
           </Button>
@@ -221,6 +226,8 @@ function QuizBuilderPage() {
           onChangeDesign={(patch) => updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))}
         />
       </div>
+
+      <AccessRulesDialog quizId={id} open={accessRulesOpen} onOpenChange={setAccessRulesOpen} />
     </div>
   );
 }
