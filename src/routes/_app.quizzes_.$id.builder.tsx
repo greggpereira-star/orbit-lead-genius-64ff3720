@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
@@ -47,6 +48,15 @@ function QuizBuilderPage() {
   const [dirty, setDirty] = useState(false);
   const [accessRulesOpen, setAccessRulesOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'blocks' | 'inspector' | null>(null);
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -98,15 +108,20 @@ function QuizBuilderPage() {
     if (target === activeBlockId) setActiveBlockId(null);
   };
 
-  const moveBlock = (blockId: string, dir: -1 | 1) => {
+  const reorderBlocks = (sourceIndex: number, destinationIndex: number) => {
+    if (sourceIndex === destinationIndex) return;
     updateSchema((prev) => {
-      const idx = prev.blocks.findIndex((b) => b.id === blockId);
-      const swap = idx + dir;
-      if (idx < 0 || swap < 0 || swap >= prev.blocks.length) return prev;
-      const next = [...prev.blocks];
-      [next[idx], next[swap]] = [next[swap], next[idx]];
+      const next = Array.from(prev.blocks);
+      const [removed] = next.splice(sourceIndex, 1);
+      next.splice(destinationIndex, 0, removed);
       return { ...prev, blocks: next };
     });
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source } = result;
+    if (!destination) return;
+    reorderBlocks(source.index, destination.index);
   };
 
   const handleSave = async () => {
@@ -158,36 +173,50 @@ function QuizBuilderPage() {
             <Palette className="h-3 w-3" /> Design
           </button>
         </div>
-        <div className="space-y-1">
-          {schema.blocks.map((b, i) => (
-            <div
-              key={b.id}
-              onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
-              className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
-                activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
-              }`}
-            >
-              <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
-                <div className="text-[10px] text-muted-foreground">{b.type}</div>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="blocks">
+            {(provided) => (
+              <div className="space-y-1" ref={provided.innerRef} {...provided.droppableProps}>
+                {schema.blocks.map((b, i) => (
+                  <Draggable key={b.id} draggableId={b.id} index={i}>
+                    {(dragProvided, dragSnapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
+                        className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
+                          dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
+                          activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
+                        }`}
+                      >
+                        <div {...dragProvided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
+                          <div className="text-[10px] text-muted-foreground">{b.type}</div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+                {schema.blocks.length === 0 && (
+                  <div className="text-center py-6 text-xs text-muted-foreground">
+                    <Plus className="h-4 w-4 mx-auto mb-1 opacity-50" />
+                    Adicione blocos acima
+                  </div>
+                )}
               </div>
-              <div className="opacity-0 group-hover:opacity-100 flex gap-0.5">
-                <button onClick={(e) => { e.stopPropagation(); moveBlock(b.id, -1); }} className="text-muted-foreground hover:text-foreground text-xs px-1">↑</button>
-                <button onClick={(e) => { e.stopPropagation(); moveBlock(b.id, 1); }} className="text-muted-foreground hover:text-foreground text-xs px-1">↓</button>
-                <button onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }} className="text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          ))}
-          {schema.blocks.length === 0 && (
-            <div className="text-center py-6 text-xs text-muted-foreground">
-              <Plus className="h-4 w-4 mx-auto mb-1 opacity-50" />
-              Adicione blocos acima
-            </div>
-          )}
-        </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
     </>
   );
@@ -278,7 +307,7 @@ function QuizBuilderPage() {
       </div>
 
       {/* Mobile/tablet drawers */}
-      <Sheet open={mobilePanel === 'blocks'} onOpenChange={(open) => !open && setMobilePanel(null)}>
+      <Sheet open={!isDesktop && mobilePanel === 'blocks'} onOpenChange={(open) => !open && setMobilePanel(null)}>
         <SheetContent side="left" className="w-[88vw] max-w-sm p-0 overflow-y-auto lg:hidden">
           <SheetHeader className="sr-only">
             <SheetTitle>Blocos do quiz</SheetTitle>
@@ -287,7 +316,7 @@ function QuizBuilderPage() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={mobilePanel === 'inspector'} onOpenChange={(open) => !open && setMobilePanel(null)}>
+      <Sheet open={!isDesktop && mobilePanel === 'inspector'} onOpenChange={(open) => !open && setMobilePanel(null)}>
         <SheetContent side="right" className="w-[88vw] max-w-sm p-0 overflow-y-auto lg:hidden">
           <SheetHeader className="sr-only">
             <SheetTitle>{activeBlock ? 'Editar bloco' : 'Design do quiz'}</SheetTitle>
