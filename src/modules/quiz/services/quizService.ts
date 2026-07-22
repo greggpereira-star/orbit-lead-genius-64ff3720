@@ -15,6 +15,19 @@ function slugify(input: string): string {
     .slice(0, 60) || 'quiz';
 }
 
+function parseUserAgent(ua: string): { device: string; browser: string } {
+  const isTablet = /iPad|Tablet/i.test(ua);
+  const isMobile = !isTablet && /Mobi|Android|iPhone|iPod/i.test(ua);
+  const device = isTablet ? 'Tablet' : isMobile ? 'Mobile' : 'Desktop';
+  let browser = 'Outro';
+  if (/Edg\//i.test(ua)) browser = 'Edge';
+  else if (/OPR\/|Opera/i.test(ua)) browser = 'Opera';
+  else if (/Chrome\//i.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/Safari\//i.test(ua)) browser = 'Safari';
+  return { device, browser };
+}
+
 async function findUniqueSlug(companyId: string, baseSlug: string, excludeId?: string): Promise<string> {
   let finalSlug = baseSlug;
   for (let i = 2; i < 20; i++) {
@@ -521,6 +534,9 @@ export const quizService = {
     dropOffByBlock: { blockId: string; label: string; views: number; dropRate: number }[];
     leadsCaptured: number;
     utmBreakdown: { campaign: string; source: string; submissions: number; completions: number }[];
+    audienceByDevice: { device: string; count: number }[];
+    audienceByBrowser: { browser: string; count: number }[];
+    geoBreakdown: { country: string; count: number }[];
   }> {
     const since = new Date(Date.now() - days * 86400000).toISOString();
 
@@ -611,6 +627,30 @@ export const quizService = {
     }
     const utmBreakdown = Array.from(utmMap.values()).sort((a, b) => b.submissions - a.submissions);
 
+    const deviceMap = new Map<string, number>();
+    const browserMap = new Map<string, number>();
+    const geoMap = new Map<string, number>();
+    for (const s of subsData) {
+      const t = s.tracking ?? {};
+      if (t.user_agent) {
+        const { device, browser } = parseUserAgent(t.user_agent);
+        deviceMap.set(device, (deviceMap.get(device) ?? 0) + 1);
+        browserMap.set(browser, (browserMap.get(browser) ?? 0) + 1);
+      }
+      if (t.geo_country) {
+        geoMap.set(t.geo_country, (geoMap.get(t.geo_country) ?? 0) + 1);
+      }
+    }
+    const audienceByDevice = Array.from(deviceMap.entries())
+      .map(([device, count]) => ({ device, count }))
+      .sort((a, b) => b.count - a.count);
+    const audienceByBrowser = Array.from(browserMap.entries())
+      .map(([browser, count]) => ({ browser, count }))
+      .sort((a, b) => b.count - a.count);
+    const geoBreakdown = Array.from(geoMap.entries())
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count);
+
     return {
       starts,
       completions,
@@ -622,6 +662,9 @@ export const quizService = {
       dropOffByBlock,
       leadsCaptured,
       utmBreakdown,
+      audienceByDevice,
+      audienceByBrowser,
+      geoBreakdown,
     };
   },
 

@@ -170,6 +170,18 @@ function PlayerRunner({
   const block = blocks[state.currentIndex];
   const isLast = state.currentIndex >= blocks.length - 1;
 
+  const geoRef = useRef<{ country?: string; city?: string }>({});
+
+  useEffect(() => {
+    if (preview) return;
+    fetch('https://ipapi.co/json/')
+      .then((r) => r.json())
+      .then((data: { country_name?: string; city?: string }) => {
+        geoRef.current = { country: data.country_name, city: data.city };
+      })
+      .catch(() => {});
+  }, [preview]);
+
   const variantAssignments = useRef<Map<string, string>>(new Map());
   const variantId = useMemo(() => {
     if (!block?.abTest?.enabled || block.abTest.variants.length === 0) return 'control';
@@ -262,6 +274,12 @@ function PlayerRunner({
       const email = extract(finalState.responses, blocks, 'email');
       const phone = extract(finalState.responses, blocks, 'phone');
       const name = extract(finalState.responses, blocks, 'short-text');
+      const enrichedTracking: Record<string, string> = {
+        ...tracking,
+        user_agent: navigator.userAgent,
+      };
+      if (geoRef.current.country) enrichedTracking.geo_country = geoRef.current.country;
+      if (geoRef.current.city) enrichedTracking.geo_city = geoRef.current.city;
       const id = await quizService.submitPublic({
         quizId,
         companyId,
@@ -272,7 +290,7 @@ function PlayerRunner({
         email,
         phone,
         name,
-        tracking,
+        tracking: enrichedTracking,
       });
       setSubmissionId(id);
       await quizService
