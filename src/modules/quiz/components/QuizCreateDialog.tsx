@@ -52,8 +52,14 @@ export function QuizCreateDialog({ open, onOpenChange, mode }: Props) {
       onOpenChange(false);
       navigate({ to: '/quizzes/$id/builder', params: { id: quiz.id } });
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e !== null && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : String(e);
       toast.error('Erro ao criar: ' + msg);
+      console.error('QuizCreateDialog: create failed', e);
     } finally {
       setSaving(false);
     }

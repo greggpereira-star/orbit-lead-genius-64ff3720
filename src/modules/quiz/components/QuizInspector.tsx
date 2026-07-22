@@ -1,9 +1,10 @@
-import type { QuizBlock, QuizDesign } from '../types';
+import type { QuizBlock, QuizDesign, BlockVariant } from '../types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, GripVertical } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Trash2, Plus, GripVertical, FlaskConical } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -246,6 +247,102 @@ function BlockInspector({
             }
           >
             <Plus className="h-3.5 w-3.5" /> Adicionar opção
+          </Button>
+        </div>
+      )}
+
+      {block.type !== 'result' && (
+        <AbTestSection quizId={quizId} block={block} onChange={onChange} />
+      )}
+    </div>
+  );
+}
+
+function AbTestSection({
+  quizId,
+  block,
+  onChange,
+}: {
+  quizId: string;
+  block: QuizBlock;
+  onChange: (p: Partial<QuizBlock>) => void;
+}) {
+  const abTest = block.abTest ?? { enabled: false, variants: [] };
+
+  const updateAbTest = (patch: Partial<NonNullable<QuizBlock['abTest']>>) => {
+    onChange({ abTest: { ...abTest, ...patch } });
+  };
+
+  const updateVariant = (id: string, patch: Partial<BlockVariant>) => {
+    updateAbTest({
+      variants: abTest.variants.map((v) => (v.id === id ? { ...v, ...patch } : v)),
+    });
+  };
+
+  const addVariant = () => {
+    updateAbTest({
+      variants: [...abTest.variants, { id: crypto.randomUUID(), title: block.title ?? '' }],
+    });
+  };
+
+  const removeVariant = (id: string) => {
+    updateAbTest({ variants: abTest.variants.filter((v) => v.id !== id) });
+  };
+
+  return (
+    <div className="space-y-3 border-t pt-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <FlaskConical className="h-3.5 w-3.5 text-primary" />
+          <Label className="text-xs font-semibold">Teste A/B</Label>
+        </div>
+        <Switch
+          checked={abTest.enabled}
+          onCheckedChange={(checked) => updateAbTest({ enabled: checked })}
+        />
+      </div>
+
+      {abTest.enabled && (
+        <div className="space-y-3">
+          <p className="text-[11px] text-muted-foreground">
+            A versão "Original" (título/subtítulo/CTA/imagem atuais do bloco) é a primeira variação.
+            Adicione alternativas abaixo — visitantes verão uma delas aleatoriamente.
+          </p>
+          {abTest.variants.map((variant, i) => (
+            <div key={variant.id} className="rounded-lg border p-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground">Variação {i + 1}</span>
+                <Button size="sm" variant="ghost" onClick={() => removeVariant(variant.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <Input
+                placeholder="Título"
+                value={variant.title ?? ''}
+                onChange={(e) => updateVariant(variant.id, { title: e.target.value })}
+              />
+              <Textarea
+                placeholder="Subtítulo"
+                rows={2}
+                value={variant.subtitle ?? ''}
+                onChange={(e) => updateVariant(variant.id, { subtitle: e.target.value })}
+              />
+              <Input
+                placeholder="Texto do botão"
+                value={variant.ctaLabel ?? ''}
+                onChange={(e) => updateVariant(variant.id, { ctaLabel: e.target.value })}
+              />
+              <MediaUploader
+                quizId={quizId}
+                accept="image"
+                value={variant.imageUrl}
+                onChange={(url) => updateVariant(variant.id, { imageUrl: url })}
+                compact
+              />
+            </div>
+          ))}
+          <Button size="sm" variant="outline" className="w-full gap-2" onClick={addVariant}>
+            <Plus className="h-3.5 w-3.5" /> Adicionar variação
           </Button>
         </div>
       )}

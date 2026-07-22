@@ -7,12 +7,12 @@ import { quizService } from '@/modules/quiz/services/quizService';
 import type { QuizFunnel } from '@/modules/quiz/types';
 import { toast } from 'sonner';
 
-export const Route = createFileRoute('/_app/quizzes/$id/publish')({
+export const Route = createFileRoute('/_app/quizzes_/$id/publish')({
   component: QuizPublishPage,
 });
 
 function QuizPublishPage() {
-  const { id } = useParams({ from: '/_app/quizzes/$id/publish' });
+  const { id } = useParams({ from: '/_app/quizzes_/$id/publish' });
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);

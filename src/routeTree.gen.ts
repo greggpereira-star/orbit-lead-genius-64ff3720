@@ -9,67 +9,70 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as OauthCallbackRouteImport } from './routes/oauth-callback'
-import { Route as MetaOauthCallbackRouteImport } from './routes/meta-oauth-callback'
-import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
-import { Route as AuthRouteImport } from './routes/_auth'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as QSlugRouteImport } from './routes/q.$slug'
-import { Route as FSlugRouteImport } from './routes/f.$slug'
-import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
-import { Route as ChatEmbedCompanyIdRouteImport } from './routes/chat-embed.$companyId'
-import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
-import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
-import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
-import { Route as AuthLoginRouteImport } from './routes/_auth.login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/_auth.forgot-password'
-import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
-import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppQuizzesRouteImport } from './routes/_app.quizzes'
-import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
-import { Route as AppObservabilityRouteImport } from './routes/_app.observability'
-import { Route as AppLeadsRouteImport } from './routes/_app.leads'
-import { Route as AppInboxRouteImport } from './routes/_app.inbox'
-import { Route as AppFormsRouteImport } from './routes/_app.forms'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppChatReportsRouteImport } from './routes/_app.chat-reports'
-import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
+import { Route as MetaOauthCallbackRouteImport } from './routes/meta-oauth-callback'
+import { Route as OauthCallbackRouteImport } from './routes/oauth-callback'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
-import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
-import { Route as IntegrationsMetaCallbackRouteImport } from './routes/integrations.meta.callback'
-import { Route as FunctionsV1OauthCallbackRouteImport } from './routes/functions.v1.oauth-callback'
-import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
-import { Route as ApiPublicWhatsappCapiRetryRouteImport } from './routes/api/public/whatsapp-capi-retry'
-import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
-import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.widgets'
-import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
-import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
-import { Route as AppSettingsQuickRepliesRouteImport } from './routes/_app.settings.quick-replies'
-import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
-import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
-import { Route as AppSettingsInstallRouteImport } from './routes/_app.settings.install'
-import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
-import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
-import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
-import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
-import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
+import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
+import { Route as AppChatReportsRouteImport } from './routes/_app.chat-reports'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppFormsRouteImport } from './routes/_app.forms'
+import { Route as AppInboxRouteImport } from './routes/_app.inbox'
+import { Route as AppLeadsRouteImport } from './routes/_app.leads'
+import { Route as AppObservabilityRouteImport } from './routes/_app.observability'
+import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
+import { Route as AppQuizzesRouteImport } from './routes/_app.quizzes'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
+import { Route as AuthForgotPasswordRouteImport } from './routes/_auth.forgot-password'
+import { Route as AuthLoginRouteImport } from './routes/_auth.login'
+import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
+import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
+import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
+import { Route as ChatEmbedCompanyIdRouteImport } from './routes/chat-embed.$companyId'
+import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
+import { Route as FSlugRouteImport } from './routes/f.$slug'
+import { Route as QSlugRouteImport } from './routes/q.$slug'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
+import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
+import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
+import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
+import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
+import { Route as AppSettingsInstallRouteImport } from './routes/_app.settings.install'
+import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
+import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.settings.notifications'
+import { Route as AppSettingsQuickRepliesRouteImport } from './routes/_app.settings.quick-replies'
+import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
+import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
+import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.widgets'
+import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
+import { Route as ApiPublicWhatsappCapiRetryRouteImport } from './routes/api/public/whatsapp-capi-retry'
+import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
+import { Route as FunctionsV1OauthCallbackRouteImport } from './routes/functions.v1.oauth-callback'
+import { Route as IntegrationsMetaCallbackRouteImport } from './routes/integrations.meta.callback'
+import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes_.$id.builder'
+import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
+import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
+import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
-import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes.$id.publish'
-import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes.$id.preview'
-import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes.$id.performance'
-import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes.$id.builder'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
-const OauthCallbackRoute = OauthCallbackRouteImport.update({
-  id: '/oauth-callback',
-  path: '/oauth-callback',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MetaOauthCallbackRoute = MetaOauthCallbackRouteImport.update({
-  id: '/meta-oauth-callback',
-  path: '/meta-oauth-callback',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
@@ -77,112 +80,19 @@ const DiagnosticsRoute = DiagnosticsRouteImport.update({
   path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/_auth',
+const MetaOauthCallbackRoute = MetaOauthCallbackRouteImport.update({
+  id: '/meta-oauth-callback',
+  path: '/meta-oauth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const OauthCallbackRoute = OauthCallbackRouteImport.update({
+  id: '/oauth-callback',
+  path: '/oauth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QSlugRoute = QSlugRouteImport.update({
-  id: '/q/$slug',
-  path: '/q/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FSlugRoute = FSlugRouteImport.update({
-  id: '/f/$slug',
-  path: '/f/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
-  id: '/embed-form/$id',
-  path: '/embed-form/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChatEmbedCompanyIdRoute = ChatEmbedCompanyIdRouteImport.update({
-  id: '/chat-embed/$companyId',
-  path: '/chat-embed/$companyId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AppWhatsappRoute = AppWhatsappRouteImport.update({
-  id: '/whatsapp',
-  path: '/whatsapp',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppQuizzesRoute = AppQuizzesRouteImport.update({
-  id: '/quizzes',
-  path: '/quizzes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPipelineRoute = AppPipelineRouteImport.update({
-  id: '/pipeline',
-  path: '/pipeline',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppObservabilityRoute = AppObservabilityRouteImport.update({
-  id: '/observability',
-  path: '/observability',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLeadsRoute = AppLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppInboxRoute = AppInboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFormsRoute = AppFormsRouteImport.update({
-  id: '/forms',
-  path: '/forms',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppChatReportsRoute = AppChatReportsRouteImport.update({
-  id: '/chat-reports',
-  path: '/chat-reports',
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAutomationsRoute = AppAutomationsRouteImport.update({
@@ -190,62 +100,144 @@ const AppAutomationsRoute = AppAutomationsRouteImport.update({
   path: '/automations',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const AppChatReportsRoute = AppChatReportsRouteImport.update({
+  id: '/chat-reports',
+  path: '/chat-reports',
   getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFormsRoute = AppFormsRouteImport.update({
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLeadsRoute = AppLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppObservabilityRoute = AppObservabilityRouteImport.update({
+  id: '/observability',
+  path: '/observability',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPipelineRoute = AppPipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuizzesRoute = AppQuizzesRouteImport.update({
+  id: '/quizzes',
+  path: '/quizzes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWhatsappRoute = AppWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AppRoute,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthRegisterRoute = AuthRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => AuthRoute,
+} as any)
+const ChatEmbedCompanyIdRoute = ChatEmbedCompanyIdRouteImport.update({
+  id: '/chat-embed/$companyId',
+  path: '/chat-embed/$companyId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
+  id: '/embed-form/$id',
+  path: '/embed-form/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QSlugRoute = QSlugRouteImport.update({
+  id: '/q/$slug',
+  path: '/q/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
+  id: '/tv',
+  path: '/tv',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppIntegrationsMetaRoute = AppIntegrationsMetaRouteImport.update({
+  id: '/integrations/meta',
+  path: '/integrations/meta',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppLeadsRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const IntegrationsMetaCallbackRoute =
-  IntegrationsMetaCallbackRouteImport.update({
-    id: '/integrations/meta/callback',
-    path: '/integrations/meta/callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const FunctionsV1OauthCallbackRoute =
-  FunctionsV1OauthCallbackRouteImport.update({
-    id: '/functions/v1/oauth-callback',
-    path: '/functions/v1/oauth-callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicWhatsappClickRoute = ApiPublicWhatsappClickRouteImport.update({
-  id: '/api/public/whatsapp-click',
-  path: '/api/public/whatsapp-click',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicWhatsappCapiRetryRoute =
-  ApiPublicWhatsappCapiRetryRouteImport.update({
-    id: '/api/public/whatsapp-capi-retry',
-    path: '/api/public/whatsapp-capi-retry',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicMetaWebhookRoute = ApiPublicMetaWebhookRouteImport.update({
-  id: '/api/public/meta-webhook',
-  path: '/api/public/meta-webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppSettingsWidgetsRoute = AppSettingsWidgetsRouteImport.update({
-  id: '/widgets',
-  path: '/widgets',
+const AppSettingsAutomationsRoute = AppSettingsAutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
+const AppSettingsChatRoute = AppSettingsChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsRoutingRoute = AppSettingsRoutingRouteImport.update({
-  id: '/routing',
-  path: '/routing',
+const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsQuickRepliesRoute = AppSettingsQuickRepliesRouteImport.update({
-  id: '/quick-replies',
-  path: '/quick-replies',
+const AppSettingsInstallRoute = AppSettingsInstallRouteImport.update({
+  id: '/install',
+  path: '/install',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsNotificationsRoute =
@@ -254,45 +246,78 @@ const AppSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AppSettingsRoute,
   } as any)
-const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
-  id: '/integrations',
-  path: '/integrations',
+const AppSettingsQuickRepliesRoute = AppSettingsQuickRepliesRouteImport.update({
+  id: '/quick-replies',
+  path: '/quick-replies',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsInstallRoute = AppSettingsInstallRouteImport.update({
-  id: '/install',
-  path: '/install',
+const AppSettingsRoutingRoute = AppSettingsRoutingRouteImport.update({
+  id: '/routing',
+  path: '/routing',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
-  id: '/company',
-  path: '/company',
+const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsChatRoute = AppSettingsChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
+const AppSettingsWidgetsRoute = AppSettingsWidgetsRouteImport.update({
+  id: '/widgets',
+  path: '/widgets',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsAutomationsRoute = AppSettingsAutomationsRouteImport.update({
-  id: '/automations',
-  path: '/automations',
-  getParentRoute: () => AppSettingsRoute,
+const ApiPublicMetaWebhookRoute = ApiPublicMetaWebhookRouteImport.update({
+  id: '/api/public/meta-webhook',
+  path: '/api/public/meta-webhook',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppLeadsRoute,
+const ApiPublicWhatsappCapiRetryRoute =
+  ApiPublicWhatsappCapiRetryRouteImport.update({
+    id: '/api/public/whatsapp-capi-retry',
+    path: '/api/public/whatsapp-capi-retry',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWhatsappClickRoute = ApiPublicWhatsappClickRouteImport.update({
+  id: '/api/public/whatsapp-click',
+  path: '/api/public/whatsapp-click',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppIntegrationsMetaRoute = AppIntegrationsMetaRouteImport.update({
-  id: '/integrations/meta',
-  path: '/integrations/meta',
+const FunctionsV1OauthCallbackRoute =
+  FunctionsV1OauthCallbackRouteImport.update({
+    id: '/functions/v1/oauth-callback',
+    path: '/functions/v1/oauth-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const IntegrationsMetaCallbackRoute =
+  IntegrationsMetaCallbackRouteImport.update({
+    id: '/integrations/meta/callback',
+    path: '/integrations/meta/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
+  id: '/quizzes_/$id/builder',
+  path: '/quizzes/$id/builder',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAnalyticsTvRoute = AppAnalyticsTvRouteImport.update({
-  id: '/tv',
-  path: '/tv',
-  getParentRoute: () => AppAnalyticsRoute,
+const AppQuizzesIdPerformanceRoute = AppQuizzesIdPerformanceRouteImport.update({
+  id: '/quizzes_/$id/performance',
+  path: '/quizzes/$id/performance',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuizzesIdPreviewRoute = AppQuizzesIdPreviewRouteImport.update({
+  id: '/quizzes_/$id/preview',
+  path: '/quizzes/$id/preview',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
+  id: '/quizzes_/$id/publish',
+  path: '/quizzes/$id/publish',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
+  id: '/api/public/cron/meta-retry',
+  path: '/api/public/cron/meta-retry',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
@@ -300,31 +325,6 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
-  id: '/api/public/cron/meta-retry',
-  path: '/api/public/cron/meta-retry',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
-  id: '/$id/publish',
-  path: '/$id/publish',
-  getParentRoute: () => AppQuizzesRoute,
-} as any)
-const AppQuizzesIdPreviewRoute = AppQuizzesIdPreviewRouteImport.update({
-  id: '/$id/preview',
-  path: '/$id/preview',
-  getParentRoute: () => AppQuizzesRoute,
-} as any)
-const AppQuizzesIdPerformanceRoute = AppQuizzesIdPerformanceRouteImport.update({
-  id: '/$id/performance',
-  path: '/$id/performance',
-  getParentRoute: () => AppQuizzesRoute,
-} as any)
-const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
-  id: '/$id/builder',
-  path: '/$id/builder',
-  getParentRoute: () => AppQuizzesRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -340,7 +340,7 @@ export interface FileRoutesByFullPath {
   '/leads': typeof AppLeadsRouteWithChildren
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
-  '/quizzes': typeof AppQuizzesRouteWithChildren
+  '/quizzes': typeof AppQuizzesRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
@@ -392,7 +392,7 @@ export interface FileRoutesByTo {
   '/leads': typeof AppLeadsRouteWithChildren
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
-  '/quizzes': typeof AppQuizzesRouteWithChildren
+  '/quizzes': typeof AppQuizzesRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -446,7 +446,7 @@ export interface FileRoutesById {
   '/_app/leads': typeof AppLeadsRouteWithChildren
   '/_app/observability': typeof AppObservabilityRoute
   '/_app/pipeline': typeof AppPipelineRoute
-  '/_app/quizzes': typeof AppQuizzesRouteWithChildren
+  '/_app/quizzes': typeof AppQuizzesRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/whatsapp': typeof AppWhatsappRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -477,10 +477,10 @@ export interface FileRoutesById {
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
-  '/_app/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
-  '/_app/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
-  '/_app/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
-  '/_app/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/_app/quizzes_/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
+  '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
+  '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -636,10 +636,10 @@ export interface FileRouteTypes {
     | '/functions/v1/oauth-callback'
     | '/integrations/meta/callback'
     | '/_app/settings/'
-    | '/_app/quizzes/$id/builder'
-    | '/_app/quizzes/$id/performance'
-    | '/_app/quizzes/$id/preview'
-    | '/_app/quizzes/$id/publish'
+    | '/_app/quizzes_/$id/builder'
+    | '/_app/quizzes_/$id/performance'
+    | '/_app/quizzes_/$id/preview'
+    | '/_app/quizzes_/$id/publish'
     | '/api/public/cron/meta-retry'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -666,32 +666,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/oauth-callback': {
-      id: '/oauth-callback'
-      path: '/oauth-callback'
-      fullPath: '/oauth-callback'
-      preLoaderRoute: typeof OauthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/meta-oauth-callback': {
-      id: '/meta-oauth-callback'
-      path: '/meta-oauth-callback'
-      fullPath: '/meta-oauth-callback'
-      preLoaderRoute: typeof MetaOauthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/diagnostics': {
-      id: '/diagnostics'
-      path: '/diagnostics'
-      fullPath: '/diagnostics'
-      preLoaderRoute: typeof DiagnosticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_auth': {
-      id: '/_auth'
-      path: ''
+    '/': {
+      id: '/'
+      path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthRouteImport
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -701,144 +680,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_auth': {
+      id: '/_auth'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/q/$slug': {
-      id: '/q/$slug'
-      path: '/q/$slug'
-      fullPath: '/q/$slug'
-      preLoaderRoute: typeof QSlugRouteImport
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/f/$slug': {
-      id: '/f/$slug'
-      path: '/f/$slug'
-      fullPath: '/f/$slug'
-      preLoaderRoute: typeof FSlugRouteImport
+    '/meta-oauth-callback': {
+      id: '/meta-oauth-callback'
+      path: '/meta-oauth-callback'
+      fullPath: '/meta-oauth-callback'
+      preLoaderRoute: typeof MetaOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/embed-form/$id': {
-      id: '/embed-form/$id'
-      path: '/embed-form/$id'
-      fullPath: '/embed-form/$id'
-      preLoaderRoute: typeof EmbedFormIdRouteImport
+    '/oauth-callback': {
+      id: '/oauth-callback'
+      path: '/oauth-callback'
+      fullPath: '/oauth-callback'
+      preLoaderRoute: typeof OauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/chat-embed/$companyId': {
-      id: '/chat-embed/$companyId'
-      path: '/chat-embed/$companyId'
-      fullPath: '/chat-embed/$companyId'
-      preLoaderRoute: typeof ChatEmbedCompanyIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_auth/verify-email': {
-      id: '/_auth/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof AuthVerifyEmailRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/reset-password': {
-      id: '/_auth/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/register': {
-      id: '/_auth/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof AuthRegisterRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/login': {
-      id: '/_auth/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/forgot-password': {
-      id: '/_auth/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_app/whatsapp': {
-      id: '/_app/whatsapp'
-      path: '/whatsapp'
-      fullPath: '/whatsapp'
-      preLoaderRoute: typeof AppWhatsappRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/quizzes': {
-      id: '/_app/quizzes'
-      path: '/quizzes'
-      fullPath: '/quizzes'
-      preLoaderRoute: typeof AppQuizzesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/pipeline': {
-      id: '/_app/pipeline'
-      path: '/pipeline'
-      fullPath: '/pipeline'
-      preLoaderRoute: typeof AppPipelineRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/observability': {
-      id: '/_app/observability'
-      path: '/observability'
-      fullPath: '/observability'
-      preLoaderRoute: typeof AppObservabilityRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/leads': {
-      id: '/_app/leads'
-      path: '/leads'
-      fullPath: '/leads'
-      preLoaderRoute: typeof AppLeadsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/inbox': {
-      id: '/_app/inbox'
-      path: '/inbox'
-      fullPath: '/inbox'
-      preLoaderRoute: typeof AppInboxRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/forms': {
-      id: '/_app/forms'
-      path: '/forms'
-      fullPath: '/forms'
-      preLoaderRoute: typeof AppFormsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/chat-reports': {
-      id: '/_app/chat-reports'
-      path: '/chat-reports'
-      fullPath: '/chat-reports'
-      preLoaderRoute: typeof AppChatReportsRouteImport
+    '/_app/analytics': {
+      id: '/_app/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/automations': {
@@ -848,116 +722,165 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAutomationsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/analytics': {
-      id: '/_app/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AppAnalyticsRouteImport
+    '/_app/chat-reports': {
+      id: '/_app/chat-reports'
+      path: '/chat-reports'
+      fullPath: '/chat-reports'
+      preLoaderRoute: typeof AppChatReportsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/forms': {
+      id: '/_app/forms'
+      path: '/forms'
+      fullPath: '/forms'
+      preLoaderRoute: typeof AppFormsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inbox': {
+      id: '/_app/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/leads': {
+      id: '/_app/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof AppLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/observability': {
+      id: '/_app/observability'
+      path: '/observability'
+      fullPath: '/observability'
+      preLoaderRoute: typeof AppObservabilityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pipeline': {
+      id: '/_app/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof AppPipelineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quizzes': {
+      id: '/_app/quizzes'
+      path: '/quizzes'
+      fullPath: '/quizzes'
+      preLoaderRoute: typeof AppQuizzesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/whatsapp': {
+      id: '/_app/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/whatsapp'
+      preLoaderRoute: typeof AppWhatsappRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_auth/forgot-password': {
+      id: '/_auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/login': {
+      id: '/_auth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/register': {
+      id: '/_auth/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/reset-password': {
+      id: '/_auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/verify-email': {
+      id: '/_auth/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/chat-embed/$companyId': {
+      id: '/chat-embed/$companyId'
+      path: '/chat-embed/$companyId'
+      fullPath: '/chat-embed/$companyId'
+      preLoaderRoute: typeof ChatEmbedCompanyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed-form/$id': {
+      id: '/embed-form/$id'
+      path: '/embed-form/$id'
+      fullPath: '/embed-form/$id'
+      preLoaderRoute: typeof EmbedFormIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/q/$slug': {
+      id: '/q/$slug'
+      path: '/q/$slug'
+      fullPath: '/q/$slug'
+      preLoaderRoute: typeof QSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/analytics/tv': {
+      id: '/_app/analytics/tv'
+      path: '/tv'
+      fullPath: '/analytics/tv'
+      preLoaderRoute: typeof AppAnalyticsTvRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/integrations/meta': {
+      id: '/_app/integrations/meta'
+      path: '/integrations/meta'
+      fullPath: '/integrations/meta'
+      preLoaderRoute: typeof AppIntegrationsMetaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/leads/$id': {
+      id: '/_app/leads/$id'
+      path: '/$id'
+      fullPath: '/leads/$id'
+      preLoaderRoute: typeof AppLeadsIdRouteImport
+      parentRoute: typeof AppLeadsRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof AppSettingsIndexRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/integrations/meta/callback': {
-      id: '/integrations/meta/callback'
-      path: '/integrations/meta/callback'
-      fullPath: '/integrations/meta/callback'
-      preLoaderRoute: typeof IntegrationsMetaCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/functions/v1/oauth-callback': {
-      id: '/functions/v1/oauth-callback'
-      path: '/functions/v1/oauth-callback'
-      fullPath: '/functions/v1/oauth-callback'
-      preLoaderRoute: typeof FunctionsV1OauthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/whatsapp-click': {
-      id: '/api/public/whatsapp-click'
-      path: '/api/public/whatsapp-click'
-      fullPath: '/api/public/whatsapp-click'
-      preLoaderRoute: typeof ApiPublicWhatsappClickRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/whatsapp-capi-retry': {
-      id: '/api/public/whatsapp-capi-retry'
-      path: '/api/public/whatsapp-capi-retry'
-      fullPath: '/api/public/whatsapp-capi-retry'
-      preLoaderRoute: typeof ApiPublicWhatsappCapiRetryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/meta-webhook': {
-      id: '/api/public/meta-webhook'
-      path: '/api/public/meta-webhook'
-      fullPath: '/api/public/meta-webhook'
-      preLoaderRoute: typeof ApiPublicMetaWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/settings/widgets': {
-      id: '/_app/settings/widgets'
-      path: '/widgets'
-      fullPath: '/settings/widgets'
-      preLoaderRoute: typeof AppSettingsWidgetsRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/security': {
-      id: '/_app/settings/security'
-      path: '/security'
-      fullPath: '/settings/security'
-      preLoaderRoute: typeof AppSettingsSecurityRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/routing': {
-      id: '/_app/settings/routing'
-      path: '/routing'
-      fullPath: '/settings/routing'
-      preLoaderRoute: typeof AppSettingsRoutingRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/quick-replies': {
-      id: '/_app/settings/quick-replies'
-      path: '/quick-replies'
-      fullPath: '/settings/quick-replies'
-      preLoaderRoute: typeof AppSettingsQuickRepliesRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/notifications': {
-      id: '/_app/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/integrations': {
-      id: '/_app/settings/integrations'
-      path: '/integrations'
-      fullPath: '/settings/integrations'
-      preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/install': {
-      id: '/_app/settings/install'
-      path: '/install'
-      fullPath: '/settings/install'
-      preLoaderRoute: typeof AppSettingsInstallRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/company': {
-      id: '/_app/settings/company'
-      path: '/company'
-      fullPath: '/settings/company'
-      preLoaderRoute: typeof AppSettingsCompanyRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/chat': {
-      id: '/_app/settings/chat'
-      path: '/chat'
-      fullPath: '/settings/chat'
-      preLoaderRoute: typeof AppSettingsChatRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/automations': {
@@ -967,33 +890,131 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsAutomationsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
-    '/_app/leads/$id': {
-      id: '/_app/leads/$id'
-      path: '/$id'
-      fullPath: '/leads/$id'
-      preLoaderRoute: typeof AppLeadsIdRouteImport
-      parentRoute: typeof AppLeadsRoute
+    '/_app/settings/chat': {
+      id: '/_app/settings/chat'
+      path: '/chat'
+      fullPath: '/settings/chat'
+      preLoaderRoute: typeof AppSettingsChatRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
-    '/_app/integrations/meta': {
-      id: '/_app/integrations/meta'
-      path: '/integrations/meta'
-      fullPath: '/integrations/meta'
-      preLoaderRoute: typeof AppIntegrationsMetaRouteImport
+    '/_app/settings/company': {
+      id: '/_app/settings/company'
+      path: '/company'
+      fullPath: '/settings/company'
+      preLoaderRoute: typeof AppSettingsCompanyRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/install': {
+      id: '/_app/settings/install'
+      path: '/install'
+      fullPath: '/settings/install'
+      preLoaderRoute: typeof AppSettingsInstallRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/integrations': {
+      id: '/_app/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/notifications': {
+      id: '/_app/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/quick-replies': {
+      id: '/_app/settings/quick-replies'
+      path: '/quick-replies'
+      fullPath: '/settings/quick-replies'
+      preLoaderRoute: typeof AppSettingsQuickRepliesRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/routing': {
+      id: '/_app/settings/routing'
+      path: '/routing'
+      fullPath: '/settings/routing'
+      preLoaderRoute: typeof AppSettingsRoutingRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/security': {
+      id: '/_app/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof AppSettingsSecurityRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/widgets': {
+      id: '/_app/settings/widgets'
+      path: '/widgets'
+      fullPath: '/settings/widgets'
+      preLoaderRoute: typeof AppSettingsWidgetsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/api/public/meta-webhook': {
+      id: '/api/public/meta-webhook'
+      path: '/api/public/meta-webhook'
+      fullPath: '/api/public/meta-webhook'
+      preLoaderRoute: typeof ApiPublicMetaWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/whatsapp-capi-retry': {
+      id: '/api/public/whatsapp-capi-retry'
+      path: '/api/public/whatsapp-capi-retry'
+      fullPath: '/api/public/whatsapp-capi-retry'
+      preLoaderRoute: typeof ApiPublicWhatsappCapiRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/whatsapp-click': {
+      id: '/api/public/whatsapp-click'
+      path: '/api/public/whatsapp-click'
+      fullPath: '/api/public/whatsapp-click'
+      preLoaderRoute: typeof ApiPublicWhatsappClickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/functions/v1/oauth-callback': {
+      id: '/functions/v1/oauth-callback'
+      path: '/functions/v1/oauth-callback'
+      fullPath: '/functions/v1/oauth-callback'
+      preLoaderRoute: typeof FunctionsV1OauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations/meta/callback': {
+      id: '/integrations/meta/callback'
+      path: '/integrations/meta/callback'
+      fullPath: '/integrations/meta/callback'
+      preLoaderRoute: typeof IntegrationsMetaCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/quizzes_/$id/builder': {
+      id: '/_app/quizzes_/$id/builder'
+      path: '/quizzes/$id/builder'
+      fullPath: '/quizzes/$id/builder'
+      preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/analytics/tv': {
-      id: '/_app/analytics/tv'
-      path: '/tv'
-      fullPath: '/analytics/tv'
-      preLoaderRoute: typeof AppAnalyticsTvRouteImport
-      parentRoute: typeof AppAnalyticsRoute
+    '/_app/quizzes_/$id/performance': {
+      id: '/_app/quizzes_/$id/performance'
+      path: '/quizzes/$id/performance'
+      fullPath: '/quizzes/$id/performance'
+      preLoaderRoute: typeof AppQuizzesIdPerformanceRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_app/quizzes_/$id/preview': {
+      id: '/_app/quizzes_/$id/preview'
+      path: '/quizzes/$id/preview'
+      fullPath: '/quizzes/$id/preview'
+      preLoaderRoute: typeof AppQuizzesIdPreviewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quizzes_/$id/publish': {
+      id: '/_app/quizzes_/$id/publish'
+      path: '/quizzes/$id/publish'
+      fullPath: '/quizzes/$id/publish'
+      preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
+      parentRoute: typeof AppRoute
     }
     '/api/public/cron/meta-retry': {
       id: '/api/public/cron/meta-retry'
@@ -1002,33 +1023,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronMetaRetryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/quizzes/$id/publish': {
-      id: '/_app/quizzes/$id/publish'
-      path: '/$id/publish'
-      fullPath: '/quizzes/$id/publish'
-      preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
-      parentRoute: typeof AppQuizzesRoute
-    }
-    '/_app/quizzes/$id/preview': {
-      id: '/_app/quizzes/$id/preview'
-      path: '/$id/preview'
-      fullPath: '/quizzes/$id/preview'
-      preLoaderRoute: typeof AppQuizzesIdPreviewRouteImport
-      parentRoute: typeof AppQuizzesRoute
-    }
-    '/_app/quizzes/$id/performance': {
-      id: '/_app/quizzes/$id/performance'
-      path: '/$id/performance'
-      fullPath: '/quizzes/$id/performance'
-      preLoaderRoute: typeof AppQuizzesIdPerformanceRouteImport
-      parentRoute: typeof AppQuizzesRoute
-    }
-    '/_app/quizzes/$id/builder': {
-      id: '/_app/quizzes/$id/builder'
-      path: '/$id/builder'
-      fullPath: '/quizzes/$id/builder'
-      preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
-      parentRoute: typeof AppQuizzesRoute
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -1055,24 +1055,6 @@ const AppLeadsRouteChildren: AppLeadsRouteChildren = {
 
 const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
   AppLeadsRouteChildren,
-)
-
-interface AppQuizzesRouteChildren {
-  AppQuizzesIdBuilderRoute: typeof AppQuizzesIdBuilderRoute
-  AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
-  AppQuizzesIdPreviewRoute: typeof AppQuizzesIdPreviewRoute
-  AppQuizzesIdPublishRoute: typeof AppQuizzesIdPublishRoute
-}
-
-const AppQuizzesRouteChildren: AppQuizzesRouteChildren = {
-  AppQuizzesIdBuilderRoute: AppQuizzesIdBuilderRoute,
-  AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,
-  AppQuizzesIdPreviewRoute: AppQuizzesIdPreviewRoute,
-  AppQuizzesIdPublishRoute: AppQuizzesIdPublishRoute,
-}
-
-const AppQuizzesRouteWithChildren = AppQuizzesRoute._addFileChildren(
-  AppQuizzesRouteChildren,
 )
 
 interface AppSettingsRouteChildren {
@@ -1117,10 +1099,14 @@ interface AppRouteChildren {
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
   AppObservabilityRoute: typeof AppObservabilityRoute
   AppPipelineRoute: typeof AppPipelineRoute
-  AppQuizzesRoute: typeof AppQuizzesRouteWithChildren
+  AppQuizzesRoute: typeof AppQuizzesRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRoute
+  AppQuizzesIdBuilderRoute: typeof AppQuizzesIdBuilderRoute
+  AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
+  AppQuizzesIdPreviewRoute: typeof AppQuizzesIdPreviewRoute
+  AppQuizzesIdPublishRoute: typeof AppQuizzesIdPublishRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1133,10 +1119,14 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeadsRoute: AppLeadsRouteWithChildren,
   AppObservabilityRoute: AppObservabilityRoute,
   AppPipelineRoute: AppPipelineRoute,
-  AppQuizzesRoute: AppQuizzesRouteWithChildren,
+  AppQuizzesRoute: AppQuizzesRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppWhatsappRoute: AppWhatsappRoute,
   AppIntegrationsMetaRoute: AppIntegrationsMetaRoute,
+  AppQuizzesIdBuilderRoute: AppQuizzesIdBuilderRoute,
+  AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,
+  AppQuizzesIdPreviewRoute: AppQuizzesIdPreviewRoute,
+  AppQuizzesIdPublishRoute: AppQuizzesIdPublishRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -1181,3 +1171,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

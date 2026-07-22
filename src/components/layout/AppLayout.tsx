@@ -28,6 +28,12 @@ export function AppLayout() {
      }
    }, [needsLogin, needsVerify, router, traceId]);
 
+  useEffect(() => {
+    if (state === 'READY' && company) {
+      tracker.init(company.id);
+    }
+  }, [state, company?.id]);
+
    if (needsLogin || needsVerify) {
      return (
        <div className="flex h-screen items-center justify-center bg-background">
@@ -35,12 +41,6 @@ export function AppLayout() {
        </div>
      );
    }
-
-  useEffect(() => {
-    if (state === 'READY' && company) {
-      tracker.init(company.id);
-    }
-  }, [state, company?.id]);
 
    const isLoadingState = [
       'IDLE',

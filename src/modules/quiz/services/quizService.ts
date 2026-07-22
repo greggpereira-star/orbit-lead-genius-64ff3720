@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { QuizFunnel, QuizTemplate, QuizSchema } from '../types';
+import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules } from '../types';
 import { DEFAULT_DESIGN } from '../design-presets';
+import { DEFAULT_ACCESS_RULES } from '../types';
 
 function slugify(input: string): string {
   return input
@@ -89,10 +90,87 @@ export const quizService = {
     if (error) throw error;
   },
 
+  async duplicate(params: { quizId: string; companyId: string; userId: string }): Promise<QuizFunnel> {
+    const { data: source, error: sourceError } = await supabase
+      .from('quiz_funnels')
+      .select('*')
+      .eq('id', params.quizId)
+      .single();
+    if (sourceError) throw sourceError;
+    const original = source as unknown as QuizFunnel;
+    const schema = await this.getLatestSchema(params.quizId);
+
+    const baseSlug = slugify(`${original.name} copia`);
+    let finalSlug = baseSlug;
+    for (let i = 2; i < 20; i++) {
+      const { data: exists } = await supabase
+        .from('quiz_funnels')
+        .select('id')
+        .eq('company_id', params.companyId)
+        .eq('slug', finalSlug)
+        .maybeSingle();
+      if (!exists) break;
+      finalSlug = `${baseSlug}-${i}`;
+    }
+
+    const { data, error } = await supabase
+      .from('quiz_funnels')
+      .insert({
+        company_id: params.companyId,
+        created_by: params.userId,
+        name: `${original.name} (cópia)`,
+        slug: finalSlug,
+        niche: original.niche ?? null,
+        status: 'draft',
+        design: (schema.design ?? {}) as never,
+        settings: {} as never,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+
+    const newQuiz = data as unknown as QuizFunnel;
+    await supabase.from('quiz_versions').insert({
+      quiz_id: newQuiz.id,
+      company_id: params.companyId,
+      version: 1,
+      schema: schema as never,
+      created_by: params.userId,
+    });
+
+    return newQuiz;
+  },
+
   async getById(id: string): Promise<QuizFunnel | null> {
     const { data, error } = await supabase.from('quiz_funnels').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     return (data as unknown as QuizFunnel) ?? null;
+  },
+
+  async getAccessRules(quizId: string): Promise<AccessRules> {
+    const { data, error } = await supabase
+      .from('quiz_funnels')
+      .select('settings')
+      .eq('id', quizId)
+      .maybeSingle();
+    if (error) throw error;
+    const settings = (data?.settings ?? {}) as { accessRules?: Partial<AccessRules> };
+    return { ...DEFAULT_ACCESS_RULES, ...(settings.accessRules ?? {}) };
+  },
+
+  async saveAccessRules(quizId: string, rules: AccessRules): Promise<void> {
+    const { data, error: fetchError } = await supabase
+      .from('quiz_funnels')
+      .select('settings')
+      .eq('id', quizId)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    const settings = (data?.settings ?? {}) as Record<string, unknown>;
+    const { error } = await supabase
+      .from('quiz_funnels')
+      .update({ settings: { ...settings, accessRules: rules } as never, updated_at: new Date().toISOString() })
+      .eq('id', quizId);
+    if (error) throw error;
   },
 
   async getLatestSchema(quizId: string): Promise<QuizSchema> {
@@ -140,6 +218,40 @@ export const quizService = {
       .from('quiz_funnels')
       .update({ design: params.schema.design as never, updated_at: new Date().toISOString() })
       .eq('id', params.quizId);
+  },
+
+  async promoteVariant(params: {
+    quizId: string;
+    companyId: string;
+    userId: string;
+    blockId: string;
+    variantId: string;
+  }): Promise<void> {
+    const schema = await this.getLatestSchema(params.quizId);
+    const block = schema.blocks.find((b) => b.id === params.blockId);
+    if (!block || !block.abTest) throw new Error('Bloco ou teste A/B não encontrado');
+    const variant = block.abTest.variants.find((v) => v.id === params.variantId);
+    if (!variant) throw new Error('Variação não encontrada');
+
+    const updatedBlocks = schema.blocks.map((b) =>
+      b.id === params.blockId
+        ? {
+            ...b,
+            title: variant.title ?? b.title,
+            subtitle: variant.subtitle ?? b.subtitle,
+            ctaLabel: variant.ctaLabel ?? b.ctaLabel,
+            imageUrl: variant.imageUrl ?? b.imageUrl,
+            abTest: { enabled: false, variants: [] },
+          }
+        : b
+    );
+
+    await this.saveSchema({
+      quizId: params.quizId,
+      companyId: params.companyId,
+      userId: params.userId,
+      schema: { ...schema, blocks: updatedBlocks },
+    });
   },
 
   // ============ PUBLIC PLAYER (anon) ============
@@ -223,7 +335,9 @@ export const quizService = {
     email?: string;
     phone?: string;
     name?: string;
+    tracking?: Record<string, string>;
   }): Promise<string | null> {
+    const tracking = params.tracking ?? {};
     const answers = {
       ...params.responses,
       _contact: {
@@ -241,6 +355,7 @@ export const quizService = {
       temperature: params.temperature,
       status: 'completed',
       completed_at: new Date().toISOString(),
+      tracking,
     } as never;
     const { data, error } = await supabase
       .from('quiz_submissions')
@@ -253,9 +368,11 @@ export const quizService = {
     // Auto-create lead + trigger CV.CRM sync when contact info was captured
     if (params.email || params.phone) {
       try {
-        const { data: lead } = await supabase
+        const leadId = crypto.randomUUID();
+        const { error: leadError } = await supabase
           .from('leads')
           .insert({
+            id: leadId,
             company_id: params.companyId,
             name: params.name ?? null,
             email: params.email ?? null,
@@ -264,17 +381,19 @@ export const quizService = {
             score: params.score,
             temperature: params.temperature,
             tags: params.tags,
+            utm_source: tracking.utm_source ?? null,
+            utm_medium: tracking.utm_medium ?? null,
+            utm_campaign: tracking.utm_campaign ?? null,
+            utm_content: tracking.utm_content ?? null,
+            utm_term: tracking.utm_term ?? null,
             metadata: {
               quiz_id: params.quizId,
               submission_id: submissionId,
               responses: params.responses,
             },
-          } as never)
-          .select('id')
-          .maybeSingle();
+          } as never);
 
-        const leadId = (lead as { id?: string } | null)?.id;
-        if (leadId) {
+        if (!leadError) {
           // Auto-assign to sales rep via routing engine
           try {
             const { leadRoutingEngine } = await import('@/modules/intelligence/services/leadRoutingEngine');
@@ -321,7 +440,7 @@ export const quizService = {
       submission_id: params.submissionId ?? null,
       event_type: params.eventType,
       block_id: params.blockId ?? null,
-      metadata: params.metadata ?? {},
+      payload: params.metadata ?? {},
     } as never);
   },
 
@@ -334,12 +453,13 @@ export const quizService = {
     avgScore: number;
     temperature: { hot: number; warm: number; cold: number };
     dailySeries: { date: string; starts: number; completions: number }[];
-    dropOffByBlock: { blockId: string; views: number }[];
+    dropOffByBlock: { blockId: string; label: string; views: number; dropRate: number }[];
     leadsCaptured: number;
+    utmBreakdown: { campaign: string; source: string; submissions: number; completions: number }[];
   }> {
     const since = new Date(Date.now() - days * 86400000).toISOString();
 
-    const [{ data: events }, { data: subs }] = await Promise.all([
+    const [{ data: events }, { data: subs }, schema] = await Promise.all([
       supabase
         .from('quiz_events')
         .select('event_type, block_id, created_at')
@@ -347,9 +467,10 @@ export const quizService = {
         .gte('created_at', since),
       supabase
         .from('quiz_submissions')
-        .select('id, score, temperature, answers, status, created_at')
+        .select('id, score, temperature, answers, status, created_at, tracking')
         .eq('quiz_id', quizId)
         .gte('created_at', since),
+      this.getLatestSchema(quizId),
     ]);
 
     const evs = (events ?? []) as Array<{ event_type: string; block_id: string | null; created_at: string }>;
@@ -359,6 +480,7 @@ export const quizService = {
       answers: Record<string, unknown> | null;
       status: string | null;
       created_at: string;
+      tracking: Record<string, string> | null;
     }>;
 
     const starts = evs.filter((e) => e.event_type === 'start').length;
@@ -398,9 +520,31 @@ export const quizService = {
       if (e.event_type !== 'block_view' || !e.block_id) continue;
       blockViews.set(e.block_id, (blockViews.get(e.block_id) ?? 0) + 1);
     }
-    const dropOffByBlock = Array.from(blockViews.entries())
-      .map(([blockId, views]) => ({ blockId, views }))
-      .sort((a, b) => b.views - a.views);
+    let previousViews = starts;
+    const dropOffByBlock = schema.blocks.map((block) => {
+      const views = blockViews.get(block.id) ?? 0;
+      const dropRate = previousViews > 0 ? Math.max(0, ((previousViews - views) / previousViews) * 100) : 0;
+      previousViews = views;
+      return {
+        blockId: block.id,
+        label: block.title || block.resultTitle || block.type,
+        views,
+        dropRate,
+      };
+    });
+
+    const utmMap = new Map<string, { campaign: string; source: string; submissions: number; completions: number }>();
+    for (const s of subsData) {
+      const t = s.tracking ?? {};
+      const campaign = t.utm_campaign || '';
+      const source = t.utm_source || 'Direto';
+      const key = `${campaign}::${source}`;
+      const entry = utmMap.get(key) ?? { campaign: campaign || 'Sem campanha', source, submissions: 0, completions: 0 };
+      entry.submissions++;
+      if (s.status === 'completed') entry.completions++;
+      utmMap.set(key, entry);
+    }
+    const utmBreakdown = Array.from(utmMap.values()).sort((a, b) => b.submissions - a.submissions);
 
     return {
       starts,
@@ -412,6 +556,7 @@ export const quizService = {
       dailySeries,
       dropOffByBlock,
       leadsCaptured,
+      utmBreakdown,
     };
   },
 
@@ -453,5 +598,87 @@ export const quizService = {
         created_at: r.created_at,
       };
     });
+  },
+
+  async getListStats(companyId: string): Promise<Record<string, { total: number; completed: number; leadsCaptured: number }>> {
+    const { data, error } = await supabase
+      .from('quiz_submissions')
+      .select('quiz_id, status, answers')
+      .eq('company_id', companyId);
+    if (error) throw error;
+    const rows = (data ?? []) as unknown as Array<{
+      quiz_id: string;
+      status: string | null;
+      answers: Record<string, unknown> | null;
+    }>;
+    const stats: Record<string, { total: number; completed: number; leadsCaptured: number }> = {};
+    for (const r of rows) {
+      const entry = stats[r.quiz_id] ?? { total: 0, completed: 0, leadsCaptured: 0 };
+      entry.total++;
+      if (r.status === 'completed') entry.completed++;
+      const c = (r.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
+      if (c.email || c.phone) entry.leadsCaptured++;
+      stats[r.quiz_id] = entry;
+    }
+    return stats;
+  },
+
+  async getAbTestStats(quizId: string, days = 30): Promise<Array<{
+    blockId: string;
+    blockLabel: string;
+    variants: Array<{ id: string; label: string; views: number; advances: number; conversionRate: number }>;
+  }>> {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const [schema, { data: events, error }] = await Promise.all([
+      this.getLatestSchema(quizId),
+      supabase
+        .from('quiz_events')
+        .select('event_type, block_id, payload, created_at')
+        .eq('quiz_id', quizId)
+        .in('event_type', ['block_view', 'block_advance'])
+        .gte('created_at', since),
+    ]);
+    if (error) throw error;
+    const evs = (events ?? []) as Array<{
+      event_type: string;
+      block_id: string | null;
+      payload: Record<string, unknown> | null;
+    }>;
+
+    const results: Array<{
+      blockId: string;
+      blockLabel: string;
+      variants: Array<{ id: string; label: string; views: number; advances: number; conversionRate: number }>;
+    }> = [];
+
+    for (const block of schema.blocks) {
+      if (!block.abTest?.enabled || block.abTest.variants.length === 0) continue;
+      const allVariants = [
+        { id: 'control', title: block.title },
+        ...block.abTest.variants.map((v) => ({ id: v.id, title: v.title })),
+      ];
+      const variantStats = allVariants.map((v) => {
+        const views = evs.filter(
+          (e) => e.block_id === block.id && e.event_type === 'block_view' && (e.payload?.variant_id ?? 'control') === v.id
+        ).length;
+        const advances = evs.filter(
+          (e) => e.block_id === block.id && e.event_type === 'block_advance' && (e.payload?.variant_id ?? 'control') === v.id
+        ).length;
+        return {
+          id: v.id,
+          label: v.id === 'control' ? 'Original' : v.title || 'Variação',
+          views,
+          advances,
+          conversionRate: views > 0 ? (advances / views) * 100 : 0,
+        };
+      });
+      results.push({
+        blockId: block.id,
+        blockLabel: block.title || block.resultTitle || block.type,
+        variants: variantStats,
+      });
+    }
+
+    return results;
   },
 };

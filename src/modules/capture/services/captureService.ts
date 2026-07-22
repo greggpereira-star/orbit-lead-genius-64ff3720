@@ -39,27 +39,25 @@ export const captureService = {
       }
 
       // 2. Insert Lead
-      const { data: lead, error: leadError } = await supabase
-        .from('leads')
-        .insert({
-          company_id: companyId,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          utm_source: data.utm_source || trackingData.utm_source,
-          utm_medium: data.utm_medium || trackingData.utm_medium,
-          utm_campaign: data.utm_campaign || trackingData.utm_campaign,
-          gclid: data.gclid || trackingData.gclid,
-          fbclid: data.fbclid || trackingData.fbclid,
-          metadata: { ...data.metadata, ...trackingData.metadata, tags },
-          referrer: trackingData.referrer,
-          landing_page: trackingData.landing_page,
-          status: 'new',
-          score,
-          temperature
-        })
-        .select()
-        .single();
+      const lead = {
+        id: crypto.randomUUID(),
+        company_id: companyId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        utm_source: data.utm_source || trackingData.utm_source,
+        utm_medium: data.utm_medium || trackingData.utm_medium,
+        utm_campaign: data.utm_campaign || trackingData.utm_campaign,
+        gclid: data.gclid || trackingData.gclid,
+        fbclid: data.fbclid || trackingData.fbclid,
+        metadata: { ...data.metadata, ...trackingData.metadata, tags },
+        referrer: trackingData.referrer,
+        landing_page: trackingData.landing_page,
+        status: 'new',
+        score,
+        temperature
+      };
+      const { error: leadError } = await supabase.from('leads').insert(lead);
 
       if (leadError) throw leadError;
 
@@ -71,9 +69,11 @@ export const captureService = {
       }
 
       // 4. Save Final Submission record
-      const { data: submission, error: subError } = await supabase
+      const submissionId = crypto.randomUUID();
+      const { error: subError } = await supabase
         .from('form_submissions')
         .insert({
+          id: submissionId,
           company_id: companyId,
           form_id: data.metadata?.form_id,
           lead_id: lead.id,
@@ -82,16 +82,15 @@ export const captureService = {
           temperature,
           tags,
           tracking: trackingData
-        })
-        .select()
-        .single();
+        });
+      if (subError) logger.error('CaptureService: form_submissions insert failed', { error: subError.message });
 
       // 5. Create lead event
       await supabase.from('lead_events').insert({
         lead_id: lead.id,
         event_type: 'capture',
         description: `Lead captured with score ${score} (${temperature})`,
-        metadata: { submission_id: submission?.id }
+        metadata: { submission_id: submissionId }
       });
 
       // 6. Async actions
@@ -105,10 +104,10 @@ export const captureService = {
       // Automations
       automationService.processTrigger(companyId, {
         type: 'lead_created',
-        data: { ...lead, submission_id: submission?.id }
+        data: { ...lead, submission_id: submissionId }
       }).catch(console.error);
 
-      return { success: true, leadId: lead.id, submissionId: submission?.id };
+      return { success: true, leadId: lead.id, submissionId };
     } catch (err: any) {
       logger.error('CaptureService: submitLead failed', { error: err.message, companyId });
       return { success: false, error: err.message };

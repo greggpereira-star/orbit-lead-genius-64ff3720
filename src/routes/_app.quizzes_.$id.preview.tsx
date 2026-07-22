@@ -7,7 +7,7 @@ import { ArrowLeft, Monitor, Tablet, Smartphone, ExternalLink, RefreshCw } from 
 import { quizService } from '@/modules/quiz/services/quizService';
 import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/_app/quizzes/$id/preview')({
+export const Route = createFileRoute('/_app/quizzes_/$id/preview')({
   component: QuizPreviewPage,
 });
 
@@ -20,7 +20,7 @@ const DEVICE_SIZES: Record<Device, { w: number; h: number; label: string; icon: 
 };
 
 function QuizPreviewPage() {
-  const { id } = useParams({ from: '/_app/quizzes/$id/preview' });
+  const { id } = useParams({ from: '/_app/quizzes_/$id/preview' });
   const [device, setDevice] = useState<Device>('desktop');
   const [nonce, setNonce] = useState(0);
 
