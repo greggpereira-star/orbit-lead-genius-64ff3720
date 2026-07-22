@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   SlidersHorizontal,
   Settings,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -272,6 +273,9 @@ function QuizBuilderPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-2 px-2 sm:px-3">
             <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Configurações</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/leads', params: { id } })} className="gap-2 px-2 sm:px-3">
+            <Users className="h-4 w-4" /> <span className="hidden sm:inline">Leads</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAccessRulesOpen(true)} className="gap-2 px-2 sm:px-3">
             <ShieldCheck className="h-4 w-4" /> <span className="hidden sm:inline">Regras de acesso</span>

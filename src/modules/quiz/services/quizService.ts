@@ -434,6 +434,7 @@ export const quizService = {
           .insert({
             id: leadId,
             company_id: params.companyId,
+            quiz_id: params.quizId,
             name: params.name ?? null,
             email: params.email ?? null,
             phone: params.phone ?? null,
@@ -454,6 +455,10 @@ export const quizService = {
           } as never);
 
         if (!leadError) {
+          if (submissionId) {
+            await supabase.from('quiz_submissions').update({ lead_id: leadId } as never).eq('id', submissionId);
+          }
+
           // Auto-assign to sales rep via routing engine
           try {
             const { leadRoutingEngine } = await import('@/modules/intelligence/services/leadRoutingEngine');

@@ -56,6 +56,7 @@ import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/
 import { Route as FunctionsV1OauthCallbackRouteImport } from './routes/functions.v1.oauth-callback'
 import { Route as IntegrationsMetaCallbackRouteImport } from './routes/integrations.meta.callback'
 import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes_.$id.builder'
+import { Route as AppQuizzesIdLeadsRouteImport } from './routes/_app.quizzes_.$id.leads'
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
@@ -299,6 +300,11 @@ const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
   path: '/quizzes/$id/builder',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuizzesIdLeadsRoute = AppQuizzesIdLeadsRouteImport.update({
+  id: '/quizzes_/$id/leads',
+  path: '/quizzes/$id/leads',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppQuizzesIdPerformanceRoute = AppQuizzesIdPerformanceRouteImport.update({
   id: '/quizzes_/$id/performance',
   path: '/quizzes/$id/performance',
@@ -372,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/quizzes/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
@@ -423,6 +430,7 @@ export interface FileRoutesByTo {
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings': typeof AppSettingsIndexRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/quizzes/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
@@ -478,6 +486,7 @@ export interface FileRoutesById {
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/quizzes_/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/_app/quizzes_/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
@@ -532,6 +541,7 @@ export interface FileRouteTypes {
     | '/integrations/meta/callback'
     | '/settings/'
     | '/quizzes/$id/builder'
+    | '/quizzes/$id/leads'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/integrations/meta/callback'
     | '/settings'
     | '/quizzes/$id/builder'
+    | '/quizzes/$id/leads'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
@@ -637,6 +648,7 @@ export interface FileRouteTypes {
     | '/integrations/meta/callback'
     | '/_app/settings/'
     | '/_app/quizzes_/$id/builder'
+    | '/_app/quizzes_/$id/leads'
     | '/_app/quizzes_/$id/performance'
     | '/_app/quizzes_/$id/preview'
     | '/_app/quizzes_/$id/publish'
@@ -995,6 +1007,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/quizzes_/$id/leads': {
+      id: '/_app/quizzes_/$id/leads'
+      path: '/quizzes/$id/leads'
+      fullPath: '/quizzes/$id/leads'
+      preLoaderRoute: typeof AppQuizzesIdLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/quizzes_/$id/performance': {
       id: '/_app/quizzes_/$id/performance'
       path: '/quizzes/$id/performance'
@@ -1104,6 +1123,7 @@ interface AppRouteChildren {
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRoute
   AppQuizzesIdBuilderRoute: typeof AppQuizzesIdBuilderRoute
+  AppQuizzesIdLeadsRoute: typeof AppQuizzesIdLeadsRoute
   AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
   AppQuizzesIdPreviewRoute: typeof AppQuizzesIdPreviewRoute
   AppQuizzesIdPublishRoute: typeof AppQuizzesIdPublishRoute
@@ -1124,6 +1144,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWhatsappRoute: AppWhatsappRoute,
   AppIntegrationsMetaRoute: AppIntegrationsMetaRoute,
   AppQuizzesIdBuilderRoute: AppQuizzesIdBuilderRoute,
+  AppQuizzesIdLeadsRoute: AppQuizzesIdLeadsRoute,
   AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,
   AppQuizzesIdPreviewRoute: AppQuizzesIdPreviewRoute,
   AppQuizzesIdPublishRoute: AppQuizzesIdPublishRoute,
