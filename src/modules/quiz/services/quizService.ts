@@ -220,6 +220,40 @@ export const quizService = {
       .eq('id', params.quizId);
   },
 
+  async promoteVariant(params: {
+    quizId: string;
+    companyId: string;
+    userId: string;
+    blockId: string;
+    variantId: string;
+  }): Promise<void> {
+    const schema = await this.getLatestSchema(params.quizId);
+    const block = schema.blocks.find((b) => b.id === params.blockId);
+    if (!block || !block.abTest) throw new Error('Bloco ou teste A/B não encontrado');
+    const variant = block.abTest.variants.find((v) => v.id === params.variantId);
+    if (!variant) throw new Error('Variação não encontrada');
+
+    const updatedBlocks = schema.blocks.map((b) =>
+      b.id === params.blockId
+        ? {
+            ...b,
+            title: variant.title ?? b.title,
+            subtitle: variant.subtitle ?? b.subtitle,
+            ctaLabel: variant.ctaLabel ?? b.ctaLabel,
+            imageUrl: variant.imageUrl ?? b.imageUrl,
+            abTest: { enabled: false, variants: [] },
+          }
+        : b
+    );
+
+    await this.saveSchema({
+      quizId: params.quizId,
+      companyId: params.companyId,
+      userId: params.userId,
+      schema: { ...schema, blocks: updatedBlocks },
+    });
+  },
+
   // ============ PUBLIC PLAYER (anon) ============
   async getPublishedBySlug(slug: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
     const { data: quiz, error } = await supabase
@@ -406,7 +440,7 @@ export const quizService = {
       submission_id: params.submissionId ?? null,
       event_type: params.eventType,
       block_id: params.blockId ?? null,
-      metadata: params.metadata ?? {},
+      payload: params.metadata ?? {},
     } as never);
   },
 
@@ -587,5 +621,64 @@ export const quizService = {
       stats[r.quiz_id] = entry;
     }
     return stats;
+  },
+
+  async getAbTestStats(quizId: string, days = 30): Promise<Array<{
+    blockId: string;
+    blockLabel: string;
+    variants: Array<{ id: string; label: string; views: number; advances: number; conversionRate: number }>;
+  }>> {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const [schema, { data: events, error }] = await Promise.all([
+      this.getLatestSchema(quizId),
+      supabase
+        .from('quiz_events')
+        .select('event_type, block_id, payload, created_at')
+        .eq('quiz_id', quizId)
+        .in('event_type', ['block_view', 'block_advance'])
+        .gte('created_at', since),
+    ]);
+    if (error) throw error;
+    const evs = (events ?? []) as Array<{
+      event_type: string;
+      block_id: string | null;
+      payload: Record<string, unknown> | null;
+    }>;
+
+    const results: Array<{
+      blockId: string;
+      blockLabel: string;
+      variants: Array<{ id: string; label: string; views: number; advances: number; conversionRate: number }>;
+    }> = [];
+
+    for (const block of schema.blocks) {
+      if (!block.abTest?.enabled || block.abTest.variants.length === 0) continue;
+      const allVariants = [
+        { id: 'control', title: block.title },
+        ...block.abTest.variants.map((v) => ({ id: v.id, title: v.title })),
+      ];
+      const variantStats = allVariants.map((v) => {
+        const views = evs.filter(
+          (e) => e.block_id === block.id && e.event_type === 'block_view' && (e.payload?.variant_id ?? 'control') === v.id
+        ).length;
+        const advances = evs.filter(
+          (e) => e.block_id === block.id && e.event_type === 'block_advance' && (e.payload?.variant_id ?? 'control') === v.id
+        ).length;
+        return {
+          id: v.id,
+          label: v.id === 'control' ? 'Original' : v.title || 'Variação',
+          views,
+          advances,
+          conversionRate: views > 0 ? (advances / views) * 100 : 0,
+        };
+      });
+      results.push({
+        blockId: block.id,
+        blockLabel: block.title || block.resultTitle || block.type,
+        variants: variantStats,
+      });
+    }
+
+    return results;
   },
 };

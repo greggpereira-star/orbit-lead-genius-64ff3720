@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, TrendingUp, Users, Target, Flame, Download } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Target, Flame, Download, FlaskConical, Trophy, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { quizService } from '@/modules/quiz/services/quizService';
+import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
   ResponsiveContainer,
   LineChart,
@@ -20,25 +22,37 @@ export const Route = createFileRoute('/_app/quizzes/$id/performance')({
   component: QuizPerformancePage,
 });
 
+const AB_MIN_VIEWS = 30;
+const AB_MIN_LEAD_POINTS = 10;
+
 type Metrics = Awaited<ReturnType<typeof quizService.getMetrics>>;
 type Submission = Awaited<ReturnType<typeof quizService.listSubmissions>>[number];
+type AbTestStats = Awaited<ReturnType<typeof quizService.getAbTestStats>>;
 
 function QuizPerformancePage() {
   const { id } = useParams({ from: '/_app/quizzes/$id/performance' });
+  const { company, user } = useAuth();
   const [days, setDays] = useState(30);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [subs, setSubs] = useState<Submission[]>([]);
+  const [abTests, setAbTests] = useState<AbTestStats>([]);
   const [loading, setLoading] = useState(true);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+
+  const refreshAbTests = () => {
+    quizService.getAbTestStats(id, days).then(setAbTests).catch(() => {});
+  };
 
   useEffect(() => {
     let cancelled = false;
     const fetchData = (showLoading: boolean) => {
       if (showLoading) setLoading(true);
-      Promise.all([quizService.getMetrics(id, days), quizService.listSubmissions(id, 100)])
-        .then(([m, s]) => {
+      Promise.all([quizService.getMetrics(id, days), quizService.listSubmissions(id, 100), quizService.getAbTestStats(id, days)])
+        .then(([m, s, ab]) => {
           if (cancelled) return;
           setMetrics(m);
           setSubs(s);
+          setAbTests(ab);
         })
         .finally(() => {
           if (!cancelled && showLoading) setLoading(false);
@@ -51,6 +65,20 @@ function QuizPerformancePage() {
       window.clearInterval(interval);
     };
   }, [id, days]);
+
+  const handlePromote = async (blockId: string, variantId: string) => {
+    if (!company?.id || !user?.id) return;
+    setPromotingId(`${blockId}:${variantId}`);
+    try {
+      await quizService.promoteVariant({ quizId: id, companyId: company.id, userId: user.id, blockId, variantId });
+      toast.success('Variação promovida como versão principal do bloco');
+      refreshAbTests();
+    } catch (e: unknown) {
+      toast.error('Erro ao promover: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setPromotingId(null);
+    }
+  };
 
   const exportCsv = () => {
     const rows = [
@@ -219,6 +247,70 @@ function QuizPerformancePage() {
               </div>
             )}
           </Card>
+
+          {abTests.length > 0 && (
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-primary" /> Testes A/B
+              </h3>
+              <div className="space-y-6">
+                {abTests.map((test) => {
+                  const sorted = [...test.variants].sort((a, b) => b.conversionRate - a.conversionRate);
+                  const leader = sorted[0];
+                  const runnerUp = sorted[1];
+                  const hasWinner =
+                    leader &&
+                    leader.views >= AB_MIN_VIEWS &&
+                    (!runnerUp || runnerUp.views >= AB_MIN_VIEWS) &&
+                    (!runnerUp || leader.conversionRate - runnerUp.conversionRate >= AB_MIN_LEAD_POINTS);
+
+                  return (
+                    <div key={test.blockId}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium truncate">{test.blockLabel}</span>
+                        {hasWinner && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                            <Trophy className="h-3.5 w-3.5" /> Vencedor sugerido: {leader.label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {test.variants.map((v) => {
+                          const isLeader = hasWinner && v.id === leader.id;
+                          const key = `${test.blockId}:${v.id}`;
+                          return (
+                            <div
+                              key={v.id}
+                              className={`rounded-lg border p-3 text-xs space-y-1.5 ${isLeader ? 'border-emerald-500/50 bg-emerald-500/5' : ''}`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold truncate">{v.label}</span>
+                                <span className="text-muted-foreground">{v.views} views</span>
+                              </div>
+                              <div className="text-muted-foreground">
+                                Avanço: <span className="font-semibold text-foreground">{v.conversionRate.toFixed(1)}%</span> ({v.advances})
+                              </div>
+                              {isLeader && v.id !== 'control' && (
+                                <Button
+                                  size="sm"
+                                  className="w-full gap-1.5 mt-1"
+                                  disabled={promotingId === key}
+                                  onClick={() => handlePromote(test.blockId, v.id)}
+                                >
+                                  {promotingId === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trophy className="h-3 w-3" />}
+                                  Promover
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">

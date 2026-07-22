@@ -101,6 +101,19 @@ export interface QuizBlock {
   // Logic (Phase 4)
   logicRules?: BlockLogicRule[];
   scoreWeight?: number; // multiplier for rating/choice blocks
+  // A/B test (Fase 3)
+  abTest?: {
+    enabled: boolean;
+    variants: BlockVariant[];
+  };
+}
+
+export interface BlockVariant {
+  id: string;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  imageUrl?: string;
 }
 
 export interface QuizDesign {

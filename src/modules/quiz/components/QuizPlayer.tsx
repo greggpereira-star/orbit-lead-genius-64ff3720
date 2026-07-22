@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService } from '../services/quizService';
@@ -170,6 +170,30 @@ function PlayerRunner({
   const block = blocks[state.currentIndex];
   const isLast = state.currentIndex >= blocks.length - 1;
 
+  const variantAssignments = useRef<Map<string, string>>(new Map());
+  const variantId = useMemo(() => {
+    if (!block?.abTest?.enabled || block.abTest.variants.length === 0) return 'control';
+    const existing = variantAssignments.current.get(block.id);
+    if (existing) return existing;
+    const options = ['control', ...block.abTest.variants.map((v) => v.id)];
+    const picked = options[Math.floor(Math.random() * options.length)];
+    variantAssignments.current.set(block.id, picked);
+    return picked;
+  }, [block?.id]);
+
+  const effectiveBlock = useMemo(() => {
+    if (!block || variantId === 'control') return block;
+    const variant = block.abTest?.variants.find((v) => v.id === variantId);
+    if (!variant) return block;
+    return {
+      ...block,
+      title: variant.title ?? block.title,
+      subtitle: variant.subtitle ?? block.subtitle,
+      ctaLabel: variant.ctaLabel ?? block.ctaLabel,
+      imageUrl: variant.imageUrl ?? block.imageUrl,
+    };
+  }, [block, variantId]);
+
   useEffect(() => {
     if (preview) return;
     quizService.trackEvent({ quizId, companyId, eventType: 'start' }).catch(() => {});
@@ -179,16 +203,35 @@ function PlayerRunner({
     if (preview) return;
     if (block) {
       quizService
-        .trackEvent({ quizId, companyId, submissionId, eventType: 'block_view', blockId: block.id })
+        .trackEvent({
+          quizId,
+          companyId,
+          submissionId,
+          eventType: 'block_view',
+          blockId: block.id,
+          metadata: { variant_id: variantId },
+        })
         .catch(() => {});
     }
-  }, [block?.id, quizId, companyId, submissionId, preview]);
+  }, [block?.id, quizId, companyId, submissionId, preview, variantId]);
 
   if (!block) {
     return <EmptyState message="Quiz sem blocos" />;
   }
 
   const advance = async (response: unknown) => {
+    if (!preview && block.abTest?.enabled) {
+      quizService
+        .trackEvent({
+          quizId,
+          companyId,
+          submissionId,
+          eventType: 'block_advance',
+          blockId: block.id,
+          metadata: { variant_id: variantId },
+        })
+        .catch(() => {});
+    }
     const { scoreDelta, tags, jumpToBlockId } = evaluateResponse(block, response);
     const nextResponses = { ...state.responses, [block.id]: response };
     const nextState: QuizRunState = {
@@ -262,7 +305,7 @@ function PlayerRunner({
           {done ? (
             <ResultView schema={schema} state={state} />
           ) : (
-            <BlockView block={block} design={design} onSubmit={advance} saving={saving} />
+            <BlockView block={effectiveBlock} design={design} onSubmit={advance} saving={saving} />
           )}
         </div>
       </div>
