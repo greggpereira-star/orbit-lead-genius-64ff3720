@@ -88,7 +88,7 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
         <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
           Capte, qualifique e converta leads com uma experiência premium — mídia rica, lógica condicional e resultados personalizados.
         </p>
-        <div className="flex gap-3 justify-center">
+        <div className="flex flex-col min-[420px]:flex-row gap-3 justify-center">
           <Button onClick={onCreate} className="gap-2 shadow-lg shadow-primary/20">
             <Plus className="h-4 w-4" /> Criar Quiz
           </Button>
@@ -101,15 +101,15 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((q) => (
-        <Card key={q.id} className="p-5 hover:shadow-lg transition-shadow">
-          <div className="flex items-start justify-between mb-3">
+        <Card key={q.id} className="p-4 sm:p-5 flex flex-col hover:shadow-lg hover:border-primary/30 transition-all">
+          <div className="flex items-start justify-between gap-2 mb-3">
             <div className="min-w-0">
               <h3 className="font-bold truncate">{q.name}</h3>
               <p className="text-xs text-muted-foreground truncate">/{q.slug}</p>
             </div>
-            <Badge variant={q.status === 'published' ? 'default' : 'secondary'}>
+            <Badge variant={q.status === 'published' ? 'default' : 'secondary'} className="shrink-0">
               {q.status === 'published' ? 'Publicado' : q.status === 'draft' ? 'Rascunho' : 'Arquivado'}
             </Badge>
           </div>
@@ -119,18 +119,18 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
             const completionPct = s && s.total > 0 ? `${((s.completed / s.total) * 100).toFixed(0)}%` : '—';
             const conversionPct = s && s.total > 0 ? `${((s.leadsCaptured / s.total) * 100).toFixed(0)}%` : '—';
             return (
-              <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4">
-                <div><div className="font-bold text-lg">{s?.leadsCaptured ?? '—'}</div><div className="text-muted-foreground">Leads</div></div>
-                <div><div className="font-bold text-lg">{completionPct}</div><div className="text-muted-foreground">Conclusão</div></div>
-                <div><div className="font-bold text-lg">{conversionPct}</div><div className="text-muted-foreground">Conversão</div></div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4 rounded-lg bg-muted/40 py-3">
+                <div><div className="font-bold text-base sm:text-lg">{s?.leadsCaptured ?? '—'}</div><div className="text-muted-foreground">Leads</div></div>
+                <div><div className="font-bold text-base sm:text-lg">{completionPct}</div><div className="text-muted-foreground">Conclusão</div></div>
+                <div><div className="font-bold text-base sm:text-lg">{conversionPct}</div><div className="text-muted-foreground">Conversão</div></div>
               </div>
             );
           })()}
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-auto pt-1">
             <Button asChild size="sm" className="flex-1">
               <Link to="/quizzes/$id/builder" params={{ id: q.id }}>Abrir</Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="shrink-0" title="Visualizar">
               <Link to="/quizzes/$id/preview" params={{ id: q.id }}>
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>
@@ -138,6 +138,8 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
             <Button
               size="sm"
               variant="outline"
+              className="shrink-0"
+              title="Duplicar"
               onClick={() => handleDuplicate(q.id)}
               disabled={duplicatingId === q.id}
             >
@@ -147,7 +149,7 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
                 <Copy className="h-3.5 w-3.5" />
               )}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => handleDelete(q.id)}>
+            <Button size="sm" variant="outline" className="shrink-0" title="Excluir" onClick={() => handleDelete(q.id)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>

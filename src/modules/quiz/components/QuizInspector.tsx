@@ -17,11 +17,12 @@ interface Props {
   onChangeBlock: (patch: Partial<QuizBlock>) => void;
   onDeleteBlock: () => void;
   onChangeDesign: (patch: Partial<QuizDesign>) => void;
+  className?: string;
 }
 
-export function QuizInspector({ quizId, block, design, onChangeBlock, onDeleteBlock, onChangeDesign }: Props) {
+export function QuizInspector({ quizId, block, design, onChangeBlock, onDeleteBlock, onChangeDesign, className }: Props) {
   return (
-    <div className="w-80 border-l bg-card overflow-y-auto">
+    <div className={className ?? 'w-80 border-l bg-card overflow-y-auto'}>
       {block ? (
         <BlockInspector quizId={quizId} block={block} onChange={onChangeBlock} onDelete={onDeleteBlock} />
       ) : (
