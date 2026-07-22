@@ -31,13 +31,25 @@ function QuizPerformancePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([quizService.getMetrics(id, days), quizService.listSubmissions(id, 100)])
-      .then(([m, s]) => {
-        setMetrics(m);
-        setSubs(s);
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    const fetchData = (showLoading: boolean) => {
+      if (showLoading) setLoading(true);
+      Promise.all([quizService.getMetrics(id, days), quizService.listSubmissions(id, 100)])
+        .then(([m, s]) => {
+          if (cancelled) return;
+          setMetrics(m);
+          setSubs(s);
+        })
+        .finally(() => {
+          if (!cancelled && showLoading) setLoading(false);
+        });
+    };
+    fetchData(true);
+    const interval = window.setInterval(() => fetchData(false), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [id, days]);
 
   const exportCsv = () => {
@@ -147,7 +159,7 @@ function QuizPerformancePage() {
             </Card>
 
             <Card className="p-6">
-              <h3 className="font-semibold mb-4">Views por bloco (funil)</h3>
+              <h3 className="font-semibold mb-4">Funil por etapa</h3>
               {metrics.dropOffByBlock.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sem eventos de bloco ainda.</p>
               ) : (
@@ -158,9 +170,14 @@ function QuizPerformancePage() {
                       : 0;
                     return (
                       <div key={b.blockId} className="text-xs">
-                        <div className="flex justify-between mb-1">
-                          <span className="font-mono text-muted-foreground">#{i + 1} {b.blockId.slice(0, 8)}</span>
-                          <span className="font-semibold">{b.views}</span>
+                        <div className="flex justify-between mb-1 gap-2">
+                          <span className="text-muted-foreground truncate">#{i + 1} {b.label}</span>
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            <span className="font-semibold">{b.views}</span>
+                            {i > 0 && b.dropRate > 0 && (
+                              <span className="text-red-600">-{b.dropRate.toFixed(0)}%</span>
+                            )}
+                          </span>
                         </div>
                         <div className="h-2 rounded bg-muted overflow-hidden">
                           <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
@@ -172,6 +189,36 @@ function QuizPerformancePage() {
               )}
             </Card>
           </div>
+
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Origem das respostas (UTM)</h3>
+            {metrics.utmBreakdown.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sem dados de UTM ainda.</p>
+            ) : (
+              <div className="overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground border-b">
+                    <tr>
+                      <th className="text-left py-2 px-2">Campanha</th>
+                      <th className="text-left py-2 px-2">Origem</th>
+                      <th className="text-left py-2 px-2">Submissões</th>
+                      <th className="text-left py-2 px-2">Conclusões</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.utmBreakdown.map((u) => (
+                      <tr key={`${u.campaign}::${u.source}`} className="border-b last:border-0 hover:bg-muted/40">
+                        <td className="py-2 px-2">{u.campaign}</td>
+                        <td className="py-2 px-2">{u.source}</td>
+                        <td className="py-2 px-2 font-semibold">{u.submissions}</td>
+                        <td className="py-2 px-2">{u.completions}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">

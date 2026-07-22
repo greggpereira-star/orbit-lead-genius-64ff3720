@@ -22,7 +22,15 @@ const playerQuery = (slug: string, preview: boolean) =>
     staleTime: preview ? 0 : 60_000,
   });
 
-export function QuizPlayer({ slug, preview = false }: { slug: string; preview?: boolean }) {
+export function QuizPlayer({
+  slug,
+  preview = false,
+  tracking,
+}: {
+  slug: string;
+  preview?: boolean;
+  tracking?: Record<string, string>;
+}) {
   const { data } = useSuspenseQuery(playerQuery(slug, preview));
 
   if (!data) {
@@ -43,7 +51,13 @@ export function QuizPlayer({ slug, preview = false }: { slug: string; preview?: 
           Preview (rascunho)
         </div>
       )}
-      <PlayerRunner quizId={data.quiz.id} companyId={data.quiz.company_id} schema={data.schema} preview={preview} />
+      <PlayerRunner
+        quizId={data.quiz.id}
+        companyId={data.quiz.company_id}
+        schema={data.schema}
+        preview={preview}
+        tracking={tracking}
+      />
     </>
   );
 }
@@ -53,11 +67,13 @@ function PlayerRunner({
   companyId,
   schema,
   preview = false,
+  tracking,
 }: {
   quizId: string;
   companyId: string;
   schema: QuizSchema;
   preview?: boolean;
+  tracking?: Record<string, string>;
 }) {
   const [state, setState] = useState<QuizRunState>(createInitialState);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -128,6 +144,7 @@ function PlayerRunner({
         email,
         phone,
         name,
+        tracking,
       });
       setSubmissionId(id);
       await quizService

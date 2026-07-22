@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Plus, Trash2, ExternalLink, Loader2 } from 'lucide-react';
+import { Sparkles, Plus, Trash2, ExternalLink, Loader2, Copy } from 'lucide-react';
 import { quizService } from '../services/quizService';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import type { QuizFunnel } from '../types';
@@ -15,15 +15,22 @@ interface Props {
 }
 
 export function QuizList({ onCreate, onUseTemplate }: Props) {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const [items, setItems] = useState<QuizFunnel[]>([]);
+  const [stats, setStats] = useState<Record<string, { total: number; completed: number; leadsCaptured: number }>>({});
   const [loading, setLoading] = useState(true);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const refresh = async () => {
     if (!company?.id) return;
     setLoading(true);
     try {
-      setItems(await quizService.list(company.id));
+      const [list, listStats] = await Promise.all([
+        quizService.list(company.id),
+        quizService.getListStats(company.id),
+      ]);
+      setItems(list);
+      setStats(listStats);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error('Erro ao carregar quizzes: ' + msg);
@@ -43,6 +50,21 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error('Erro ao excluir: ' + msg);
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    if (!company?.id || !user?.id) return;
+    setDuplicatingId(id);
+    try {
+      await quizService.duplicate({ quizId: id, companyId: company.id, userId: user.id });
+      toast.success('Quiz duplicado');
+      void refresh();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error('Erro ao duplicar: ' + msg);
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -90,11 +112,18 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
             </Badge>
           </div>
           {q.niche && <p className="text-xs text-muted-foreground mb-4">Nicho: {q.niche}</p>}
-          <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4">
-            <div><div className="font-bold text-lg">0</div><div className="text-muted-foreground">Leads</div></div>
-            <div><div className="font-bold text-lg">—</div><div className="text-muted-foreground">Conclusão</div></div>
-            <div><div className="font-bold text-lg">—</div><div className="text-muted-foreground">Conversão</div></div>
-          </div>
+          {(() => {
+            const s = stats[q.id];
+            const completionPct = s && s.total > 0 ? `${((s.completed / s.total) * 100).toFixed(0)}%` : '—';
+            const conversionPct = s && s.total > 0 ? `${((s.leadsCaptured / s.total) * 100).toFixed(0)}%` : '—';
+            return (
+              <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4">
+                <div><div className="font-bold text-lg">{s?.leadsCaptured ?? '—'}</div><div className="text-muted-foreground">Leads</div></div>
+                <div><div className="font-bold text-lg">{completionPct}</div><div className="text-muted-foreground">Conclusão</div></div>
+                <div><div className="font-bold text-lg">{conversionPct}</div><div className="text-muted-foreground">Conversão</div></div>
+              </div>
+            );
+          })()}
           <div className="flex gap-2">
             <Button asChild size="sm" className="flex-1">
               <Link to="/quizzes/$id/builder" params={{ id: q.id }}>Abrir</Link>
@@ -103,6 +132,18 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
               <Link to="/quizzes/$id/preview" params={{ id: q.id }}>
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleDuplicate(q.id)}
+              disabled={duplicatingId === q.id}
+            >
+              {duplicatingId === q.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
             </Button>
             <Button size="sm" variant="outline" onClick={() => handleDelete(q.id)}>
               <Trash2 className="h-3.5 w-3.5" />
