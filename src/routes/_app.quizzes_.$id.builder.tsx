@@ -20,6 +20,7 @@ import {
   SlidersHorizontal,
   Settings,
   Users,
+  Workflow,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -273,6 +274,9 @@ function QuizBuilderPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-2 px-2 sm:px-3">
             <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Configurações</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/flow', params: { id } })} className="gap-2 px-2 sm:px-3">
+            <Workflow className="h-4 w-4" /> <span className="hidden sm:inline">Fluxo</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/leads', params: { id } })} className="gap-2 px-2 sm:px-3">
             <Users className="h-4 w-4" /> <span className="hidden sm:inline">Leads</span>
