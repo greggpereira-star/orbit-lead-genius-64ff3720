@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   LayoutGrid,
   SlidersHorizontal,
+  Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -25,6 +26,7 @@ import { quizService } from '@/modules/quiz/services/quizService';
 import { QuizPreview } from '@/modules/quiz/components/QuizPreview';
 import { QuizInspector } from '@/modules/quiz/components/QuizInspector';
 import { AccessRulesDialog } from '@/modules/quiz/components/AccessRulesDialog';
+import { QuizSettingsDialog } from '@/modules/quiz/components/QuizSettingsDialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { BLOCK_LIBRARY } from '@/modules/quiz/blocks-library';
 import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
@@ -47,6 +49,7 @@ function QuizBuilderPage() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [accessRulesOpen, setAccessRulesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'blocks' | 'inspector' | null>(null);
   const [isDesktop, setIsDesktop] = useState(true);
 
@@ -222,7 +225,7 @@ function QuizBuilderPage() {
   );
 
   return createPortal(
-    <div className="fixed inset-0 flex flex-col bg-background z-[60]">
+    <div className="fixed inset-0 flex flex-col bg-background z-40">
       {/* Topbar */}
       <header className="h-14 border-b flex items-center justify-between gap-2 px-2 sm:px-4 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
@@ -266,6 +269,9 @@ function QuizBuilderPage() {
             aria-label="Editar / Design"
           >
             <SlidersHorizontal className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-2 px-2 sm:px-3">
+            <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Configurações</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAccessRulesOpen(true)} className="gap-2 px-2 sm:px-3">
             <ShieldCheck className="h-4 w-4" /> <span className="hidden sm:inline">Regras de acesso</span>
@@ -334,6 +340,16 @@ function QuizBuilderPage() {
       </Sheet>
 
       <AccessRulesDialog quizId={id} open={accessRulesOpen} onOpenChange={setAccessRulesOpen} />
+
+      {company?.id && (
+        <QuizSettingsDialog
+          quizId={id}
+          companyId={company.id}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          onSaved={setQuiz}
+        />
+      )}
     </div>,
     document.body
   );

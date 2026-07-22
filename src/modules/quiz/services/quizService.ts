@@ -15,6 +15,22 @@ function slugify(input: string): string {
     .slice(0, 60) || 'quiz';
 }
 
+async function findUniqueSlug(companyId: string, baseSlug: string, excludeId?: string): Promise<string> {
+  let finalSlug = baseSlug;
+  for (let i = 2; i < 20; i++) {
+    let query = supabase
+      .from('quiz_funnels')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('slug', finalSlug);
+    if (excludeId) query = query.neq('id', excludeId);
+    const { data: exists } = await query.maybeSingle();
+    if (!exists) break;
+    finalSlug = `${baseSlug}-${i}`;
+  }
+  return finalSlug;
+}
+
 export const quizService = {
   async list(companyId: string): Promise<QuizFunnel[]> {
     const { data, error } = await supabase
@@ -88,6 +104,50 @@ export const quizService = {
   async remove(id: string): Promise<void> {
     const { error } = await supabase.from('quiz_funnels').delete().eq('id', id);
     if (error) throw error;
+  },
+
+  async updateSettings(params: {
+    quizId: string;
+    companyId: string;
+    name?: string;
+    slug?: string;
+    customDomain?: string;
+  }): Promise<QuizFunnel> {
+    const patch: Record<string, unknown> = {};
+
+    if (params.name !== undefined) {
+      const trimmed = params.name.trim();
+      if (!trimmed) throw new Error('Nome do quiz não pode ficar vazio');
+      patch.name = trimmed;
+    }
+
+    if (params.slug !== undefined) {
+      const desired = slugify(params.slug);
+      patch.slug = await findUniqueSlug(params.companyId, desired, params.quizId);
+    }
+
+    if (params.customDomain !== undefined) {
+      const { data: current, error: fetchError } = await supabase
+        .from('quiz_funnels')
+        .select('settings')
+        .eq('id', params.quizId)
+        .single();
+      if (fetchError) throw fetchError;
+      const settings = { ...((current?.settings as Record<string, unknown>) ?? {}) };
+      const trimmedDomain = params.customDomain.trim();
+      if (trimmedDomain) settings.custom_domain = trimmedDomain;
+      else delete settings.custom_domain;
+      patch.settings = settings as never;
+    }
+
+    const { data, error } = await supabase
+      .from('quiz_funnels')
+      .update(patch as never)
+      .eq('id', params.quizId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data as unknown as QuizFunnel;
   },
 
   async duplicate(params: { quizId: string; companyId: string; userId: string }): Promise<QuizFunnel> {
