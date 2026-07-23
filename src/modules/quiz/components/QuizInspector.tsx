@@ -9,6 +9,8 @@ import { DESIGN_PRESETS } from '../design-presets';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MediaUploader } from './MediaUploader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sparkles, Palette, SlidersHorizontal } from 'lucide-react';
 
 interface Props {
   quizId: string;
@@ -351,6 +353,22 @@ function AbTestSection({
   );
 }
 
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <Field label={label}>
+      <div className="flex gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 w-12 rounded border cursor-pointer"
+        />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} />
+      </div>
+    </Field>
+  );
+}
+
 function DesignInspector({ design, onChange }: { design: QuizDesign; onChange: (p: Partial<QuizDesign>) => void }) {
   return (
     <div className="p-4 space-y-4">
@@ -359,80 +377,73 @@ function DesignInspector({ design, onChange }: { design: QuizDesign; onChange: (
         <p className="text-xs text-muted-foreground">Selecione um bloco para editar seu conteúdo, ou personalize o visual global aqui.</p>
       </div>
 
-      <div>
-        <Label className="text-xs mb-2 block">Presets</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {DESIGN_PRESETS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => onChange(p.design)}
-              className={`text-left p-2 rounded-lg border-2 transition-all ${
-                design.presetId === p.id ? 'border-primary' : 'border-transparent hover:border-border'
-              }`}
-            >
-              <div className="flex gap-1 mb-1.5">
-                <div className="h-3 w-3 rounded" style={{ background: p.design.background }} />
-                <div className="h-3 w-3 rounded" style={{ background: p.design.primary }} />
-                <div className="h-3 w-3 rounded" style={{ background: p.design.surface }} />
-              </div>
-              <div className="text-xs font-semibold">{p.name}</div>
-              <div className="text-[10px] text-muted-foreground line-clamp-1">{p.description}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <Tabs defaultValue="presets">
+        <TabsList className="w-full">
+          <TabsTrigger value="presets" className="gap-1.5 flex-1"><Sparkles className="h-3.5 w-3.5" />Presets</TabsTrigger>
+          <TabsTrigger value="cores" className="gap-1.5 flex-1"><Palette className="h-3.5 w-3.5" />Cores</TabsTrigger>
+          <TabsTrigger value="estilo" className="gap-1.5 flex-1"><SlidersHorizontal className="h-3.5 w-3.5" />Estilo</TabsTrigger>
+        </TabsList>
 
-      <Field label="Cor primária">
-        <div className="flex gap-2">
-          <input
-            type="color"
-            value={design.primary}
-            onChange={(e) => onChange({ primary: e.target.value })}
-            className="h-9 w-12 rounded border cursor-pointer"
-          />
-          <Input value={design.primary} onChange={(e) => onChange({ primary: e.target.value })} />
-        </div>
-      </Field>
+        <TabsContent value="presets" className="pt-3">
+          <div className="grid grid-cols-2 gap-2">
+            {DESIGN_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => onChange(p.design)}
+                className={`text-left p-2 rounded-lg border-2 transition-all ${
+                  design.presetId === p.id ? 'border-primary' : 'border-transparent hover:border-border'
+                }`}
+              >
+                <div className="flex gap-1 mb-1.5">
+                  <div className="h-3 w-3 rounded" style={{ background: p.design.background }} />
+                  <div className="h-3 w-3 rounded" style={{ background: p.design.primary }} />
+                  <div className="h-3 w-3 rounded" style={{ background: p.design.surface }} />
+                </div>
+                <div className="text-xs font-semibold">{p.name}</div>
+                <div className="text-[10px] text-muted-foreground line-clamp-1">{p.description}</div>
+              </button>
+            ))}
+          </div>
+        </TabsContent>
 
-      <Field label="Fundo">
-        <div className="flex gap-2">
-          <input
-            type="color"
-            value={design.background}
-            onChange={(e) => onChange({ background: e.target.value })}
-            className="h-9 w-12 rounded border cursor-pointer"
-          />
-          <Input value={design.background} onChange={(e) => onChange({ background: e.target.value })} />
-        </div>
-      </Field>
+        <TabsContent value="cores" className="pt-3 space-y-4">
+          <ColorField label="Cor primária" value={design.primary} onChange={(v) => onChange({ primary: v })} />
+          <ColorField label="Fundo" value={design.background} onChange={(v) => onChange({ background: v })} />
+          <ColorField label="Superfície (cards, opções)" value={design.surface} onChange={(v) => onChange({ surface: v })} />
+          <ColorField label="Texto" value={design.text} onChange={(v) => onChange({ text: v })} />
+          <ColorField label="Texto secundário" value={design.muted} onChange={(v) => onChange({ muted: v })} />
+        </TabsContent>
 
-      <Field label={`Arredondamento: ${design.radius}px`}>
-        <Slider min={0} max={32} step={2} value={[design.radius]} onValueChange={([v]) => onChange({ radius: v })} />
-      </Field>
+        <TabsContent value="estilo" className="pt-3 space-y-4">
+          <Field label={`Arredondamento: ${design.radius}px`}>
+            <Slider min={0} max={32} step={2} value={[design.radius]} onValueChange={([v]) => onChange({ radius: v })} />
+          </Field>
 
-      <Field label="Estilo de botão">
-        <Select value={design.buttonStyle} onValueChange={(v) => onChange({ buttonStyle: v as QuizDesign['buttonStyle'] })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="solid">Sólido</SelectItem>
-            <SelectItem value="gradient">Gradiente</SelectItem>
-            <SelectItem value="outline">Contorno</SelectItem>
-            <SelectItem value="ghost">Fantasma</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+          <Field label="Estilo de botão">
+            <Select value={design.buttonStyle} onValueChange={(v) => onChange({ buttonStyle: v as QuizDesign['buttonStyle'] })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="solid">Sólido</SelectItem>
+                <SelectItem value="gradient">Gradiente</SelectItem>
+                <SelectItem value="outline">Contorno</SelectItem>
+                <SelectItem value="ghost">Fantasma</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
 
-      <Field label="Barra de progresso">
-        <Select value={design.progressStyle} onValueChange={(v) => onChange({ progressStyle: v as QuizDesign['progressStyle'] })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="bar">Barra</SelectItem>
-            <SelectItem value="dots">Pontos</SelectItem>
-            <SelectItem value="steps">Etapas</SelectItem>
-            <SelectItem value="none">Nenhuma</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+          <Field label="Barra de progresso">
+            <Select value={design.progressStyle} onValueChange={(v) => onChange({ progressStyle: v as QuizDesign['progressStyle'] })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">Barra</SelectItem>
+                <SelectItem value="dots">Pontos</SelectItem>
+                <SelectItem value="steps">Etapas</SelectItem>
+                <SelectItem value="none">Nenhuma</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
