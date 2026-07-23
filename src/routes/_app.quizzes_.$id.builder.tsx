@@ -269,41 +269,57 @@ function QuizBuilderPage() {
         </div>
         <Droppable droppableId="blocks">
           {(provided) => (
-            <div className="space-y-1" ref={provided.innerRef} {...provided.droppableProps}>
-              {schema.blocks.map((b, i) => (
-                <Draggable key={b.id} draggableId={b.id} index={i}>
-                  {(dragProvided, dragSnapshot) => (
-                    <div
-                      ref={dragProvided.innerRef}
-                      {...dragProvided.draggableProps}
-                      onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
-                      className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
-                        dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
-                        activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
-                      }`}
-                    >
-                      <div {...dragProvided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
-                        <div className="text-[10px] text-muted-foreground">{b.type}</div>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+            <div className="space-y-1.5" ref={provided.innerRef} {...provided.droppableProps}>
+              {schema.blocks.map((b, i) => {
+                const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+                return (
+                  <Draggable key={b.id} draggableId={b.id} index={i}>
+                    {(dragProvided, dragSnapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
+                        className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
+                          dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
+                          activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
+                        }`}
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
+                        <div
+                          {...dragProvided.dragHandleProps}
+                          className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
+                        >
+                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          {def ? (
+                            <def.icon className="h-3.5 w-3.5 text-primary" />
+                          ) : (
+                            <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">{i + 1} · {def?.label ?? b.type}</div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
+                          className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                          aria-label="Excluir bloco"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
               {provided.placeholder}
               {schema.blocks.length === 0 && (
-                <div className="text-center py-6 text-xs text-muted-foreground">
-                  <Plus className="h-4 w-4 mx-auto mb-1 opacity-50" />
-                  Adicione blocos acima
+                <div className="text-center py-8 px-3 text-xs text-muted-foreground border border-dashed rounded-xl">
+                  <LayoutGrid className="h-5 w-5 mx-auto mb-1.5 opacity-40" />
+                  Nenhuma etapa ainda.
+                  <br />
+                  Adicione um bloco acima para começar.
                 </div>
               )}
             </div>
