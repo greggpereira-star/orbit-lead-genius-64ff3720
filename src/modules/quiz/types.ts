@@ -148,6 +148,11 @@ export interface QuizBlock {
   chartType?: 'bar' | 'line';
   chartData?: ChartPoint[];
   customHtml?: string;
+  // Tela de resultado
+  ctaUrl?: string; // link do botão final — sem isso, o botão de resultado não navega
+  resultBadgeHot?: string;
+  resultBadgeWarm?: string;
+  resultBadgeCold?: string;
 }
 
 export interface FaqItem {

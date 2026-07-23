@@ -118,6 +118,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f6e4698d-713c-484f-86cd-d7617a252508/id-preview-5ad65da5--d6850840-86f1-4af9-84f6-1f9679aa532b.lovable.app-1778272059766.png" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        // Fontes de título usadas pelos temas do Alt Quiz (design-presets.ts) — carregadas
+        // globalmente pra já estarem disponíveis tanto no link público do quiz quanto no
+        // preview dentro do Builder, sem precisar de lógica por rota.
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@500;600;700&family=Fredoka:wght@500;600;700&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,

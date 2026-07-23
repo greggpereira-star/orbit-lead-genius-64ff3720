@@ -4,6 +4,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { quizService } from '../services/quizService';
 import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import { getSteps } from '../lib/steps';
+import { getContrastText } from '../lib/color';
 import {
   createInitialState,
   evaluateResponse,
@@ -373,7 +374,10 @@ function PlayerRunner({
   };
 
   return (
-    <div className="min-h-screen w-full flex justify-center" style={{ background: design.background, color: design.text }}>
+    <div
+      className="min-h-screen w-full flex justify-center"
+      style={{ background: design.background, color: design.text, fontFamily: design.fontBody }}
+    >
       <div className="w-full flex flex-col" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
         {!done && <UrgencyBar quizId={quizId} settings={urgencyBar} design={design} />}
         <div className="flex-1 flex flex-col" style={{ padding: '24px 16px' }}>
@@ -575,11 +579,20 @@ function extract(responses: Record<string, unknown>, blocks: QuizBlock[], type: 
 
 function ProgressBar({ value, design }: { value: number; design: QuizSchema['design'] }) {
   if (design.progressStyle === 'none') return null;
+  const pct = Math.min(100, Math.round(value * 100));
   return (
-    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: design.surface }}>
+    <div
+      className="h-1.5 rounded-full overflow-hidden"
+      style={{ background: design.surface }}
+      role="progressbar"
+      aria-label="Progresso do quiz"
+      aria-valuenow={pct}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
       <div
         className="h-full transition-all duration-500"
-        style={{ width: `${Math.min(100, value * 100)}%`, background: design.primary }}
+        style={{ width: `${pct}%`, background: design.primary }}
       />
     </div>
   );
@@ -606,7 +619,7 @@ function PrimaryBtn({
   const style: React.CSSProperties = { borderRadius: design.radius };
   if (design.buttonStyle === 'gradient') {
     style.background = `linear-gradient(135deg, ${design.primary}, ${design.primary}cc)`;
-    style.color = '#fff';
+    style.color = getContrastText(design.primary);
   } else if (design.buttonStyle === 'outline') {
     style.border = `2px solid ${design.primary}`;
     style.color = design.primary;
@@ -614,14 +627,14 @@ function PrimaryBtn({
     style.color = design.primary;
   } else {
     style.background = design.primary;
-    style.color = '#fff';
+    style.color = getContrastText(design.primary);
   }
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full sm:w-auto px-8 py-3.5 font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50"
-      style={style}
+      className="w-full sm:w-auto px-8 py-3.5 font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{ ...style, outlineColor: design.primary }}
     >
       {children}
     </button>
@@ -705,7 +718,11 @@ function BlockView({
 
   const heading = (
     <div className="space-y-3 mb-6">
-      {block.title && <h2 className="text-2xl sm:text-3xl font-bold leading-tight">{block.title}</h2>}
+      {block.title && (
+        <h2 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ fontFamily: design.fontHeading }}>
+          {block.title}
+        </h2>
+      )}
       {block.subtitle && (
         <p className="text-base opacity-80" style={{ color: design.muted }}>
           {block.subtitle}
@@ -718,8 +735,14 @@ function BlockView({
     case 'intro':
       return (
         <div className="text-center py-8 space-y-6">
-          {block.imageUrl && <img src={block.imageUrl} alt="" className="mx-auto max-h-52 rounded-xl" />}
-          <h1 className="text-4xl font-bold">{block.title}</h1>
+          {block.imageUrl && (
+            <img
+              src={block.imageUrl}
+              alt={block.title || 'Imagem de destaque'}
+              className="mx-auto w-full max-h-72 object-cover rounded-xl"
+            />
+          )}
+          <h1 className="text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>{block.title}</h1>
           {block.subtitle && (
             <p className="text-lg max-w-md mx-auto" style={{ color: design.muted }}>
               {block.subtitle}
@@ -745,6 +768,7 @@ function BlockView({
                     setValue(o.id);
                     if (terminal) onSubmit(o.id);
                   }}
+                  aria-pressed={active}
                   className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
                   style={{
                     borderRadius: design.radius,
@@ -775,6 +799,7 @@ function BlockView({
                   onClick={() =>
                     setMulti((m) => (m.includes(o.id) ? m.filter((x) => x !== o.id) : [...m, o.id]))
                   }
+                  aria-pressed={active}
                   className="w-full text-left px-5 py-4 border-2 transition-all"
                   style={{
                     borderRadius: design.radius,
@@ -808,12 +833,13 @@ function BlockView({
                 <button
                   key={n}
                   onClick={() => setValue(n)}
+                  aria-pressed={active}
                   className="h-12 w-12 flex items-center justify-center text-lg font-bold border-2 transition-all"
                   style={{
                     borderRadius: design.radius,
                     borderColor: active ? design.primary : design.surface,
                     background: active ? design.primary : design.surface,
-                    color: active ? '#fff' : design.text,
+                    color: active ? getContrastText(design.primary) : design.text,
                   }}
                 >
                   {n}
@@ -834,17 +860,20 @@ function BlockView({
       return (
         <div>
           {heading}
+          <label htmlFor={`field-${block.id}`} className="sr-only">{block.title || 'Campo de texto'}</label>
           <input
+            id={`field-${block.id}`}
             type={block.type === 'email' ? 'email' : block.type === 'phone' ? 'tel' : 'text'}
             placeholder={block.placeholder}
             value={String(value ?? '')}
             onChange={(e) => setValue(e.target.value)}
-            className="w-full px-4 py-3.5 outline-none mb-6 text-base"
+            className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 mb-6 text-base"
             style={{
               borderRadius: design.radius,
               background: design.surface,
               color: design.text,
               border: `1px solid ${design.surface}`,
+              outlineColor: design.primary,
             }}
           />
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
@@ -857,16 +886,19 @@ function BlockView({
       return (
         <div>
           {heading}
+          <label htmlFor={`field-${block.id}`} className="sr-only">{block.title || 'Resposta em texto'}</label>
           <textarea
+            id={`field-${block.id}`}
             rows={5}
             placeholder={block.placeholder}
             value={String(value ?? '')}
             onChange={(e) => setValue(e.target.value)}
-            className="w-full px-4 py-3.5 outline-none resize-none mb-6 text-base"
+            className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 resize-none mb-6 text-base"
             style={{
               borderRadius: design.radius,
               background: design.surface,
               color: design.text,
+              outlineColor: design.primary,
             }}
           />
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
@@ -920,7 +952,7 @@ function BlockView({
           {block.mediaUrl && (
             <img
               src={block.mediaUrl}
-              alt=""
+              alt={block.title || 'Imagem'}
               className="w-full object-cover mb-6"
               style={{ borderRadius: design.radius }}
             />
@@ -960,7 +992,7 @@ function BlockView({
               {block.testimonialAvatar && (
                 <img
                   src={block.testimonialAvatar}
-                  alt=""
+                  alt={block.testimonialAuthor || 'Depoimento'}
                   className="h-10 w-10 rounded-full object-cover"
                 />
               )}
@@ -1129,33 +1161,45 @@ function BlockView({
           {heading}
           <div className="space-y-3 mb-6">
             {ff.name && (
-              <input
-                placeholder="Nome"
-                value={formValue.name}
-                onChange={(e) => setFormValue((f) => ({ ...f, name: e.target.value }))}
-                className="w-full px-4 py-3.5 outline-none text-base"
-                style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
-              />
+              <>
+                <label htmlFor={`field-${block.id}-name`} className="sr-only">Nome</label>
+                <input
+                  id={`field-${block.id}-name`}
+                  placeholder="Nome"
+                  value={formValue.name}
+                  onChange={(e) => setFormValue((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
+                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+                />
+              </>
             )}
             {ff.email && (
-              <input
-                type="email"
-                placeholder="E-mail"
-                value={formValue.email}
-                onChange={(e) => setFormValue((f) => ({ ...f, email: e.target.value }))}
-                className="w-full px-4 py-3.5 outline-none text-base"
-                style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
-              />
+              <>
+                <label htmlFor={`field-${block.id}-email`} className="sr-only">E-mail</label>
+                <input
+                  id={`field-${block.id}-email`}
+                  type="email"
+                  placeholder="E-mail"
+                  value={formValue.email}
+                  onChange={(e) => setFormValue((f) => ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
+                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+                />
+              </>
             )}
             {ff.phone && (
-              <input
-                type="tel"
-                placeholder="Telefone"
-                value={formValue.phone}
-                onChange={(e) => setFormValue((f) => ({ ...f, phone: e.target.value }))}
-                className="w-full px-4 py-3.5 outline-none text-base"
-                style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
-              />
+              <>
+                <label htmlFor={`field-${block.id}-phone`} className="sr-only">Telefone</label>
+                <input
+                  id={`field-${block.id}-phone`}
+                  type="tel"
+                  placeholder="Telefone"
+                  value={formValue.phone}
+                  onChange={(e) => setFormValue((f) => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
+                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+                />
+              </>
             )}
           </div>
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(formValue)} disabled={!canSubmit || !stepValid || saving}>
@@ -1171,13 +1215,15 @@ function BlockView({
         <div>
           {heading}
           <div className="relative mb-6">
+            <label htmlFor={`field-${block.id}`} className="sr-only">{block.title || (block.type === 'weight' ? 'Peso' : 'Altura')}</label>
             <input
+              id={`field-${block.id}`}
               type="number"
               placeholder={block.placeholder}
               value={String(value ?? '')}
               onChange={(e) => setValue(e.target.value)}
-              className="w-full px-4 py-3.5 outline-none text-base"
-              style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
+              className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
+              style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-60">
               {block.type === 'weight' ? 'kg' : 'cm'}
@@ -1192,9 +1238,9 @@ function BlockView({
     case 'pricing':
       return (
         <div className="text-center space-y-5">
-          {block.title && <h2 className="text-xl font-semibold">{block.title}</h2>}
+          {block.title && <h2 className="text-xl font-semibold" style={{ fontFamily: design.fontHeading }}>{block.title}</h2>}
           <div className="flex items-end justify-center gap-2">
-            <span className="text-4xl font-bold" style={{ color: design.primary }}>{block.pricingPrice ?? 'R$ 0'}</span>
+            <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice ?? 'R$ 0'}</span>
             <span className="text-base opacity-70">{block.pricingPeriod}</span>
           </div>
           {block.pricingOriginalPrice && (
@@ -1272,7 +1318,7 @@ function BlockView({
               <img
                 key={i}
                 src={url}
-                alt=""
+                alt={block.title ? `${block.title} — imagem ${i + 1}` : `Imagem ${i + 1}`}
                 className="h-56 w-72 shrink-0 object-cover"
                 style={{ borderRadius: design.radius }}
               />
@@ -1359,25 +1405,41 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
   const temperature = classifyTemperature(state.score, max);
   const pct = max > 0 ? Math.round((state.score / max) * 100) : 0;
 
+  // O visitante nunca deveria ler que o sistema o classificou como "frio" — a badge é sempre
+  // uma mensagem positiva por padrão; quem quiser diferenciar por faixa pode personalizar cada
+  // uma no Inspector (ex: reforçar urgência pro lead "quente"), mas o padrão nunca envergonha.
+  const defaultBadge = '✨ Resultado pronto';
+  const badgeText =
+    temperature === 'hot'
+      ? resultBlock?.resultBadgeHot || defaultBadge
+      : temperature === 'warm'
+        ? resultBlock?.resultBadgeWarm || defaultBadge
+        : resultBlock?.resultBadgeCold || defaultBadge;
+
   return (
     <div className="text-center py-8 space-y-5">
       <div
         className="inline-block px-3 py-1 text-xs font-semibold rounded-full"
-        style={{ background: design.primary, color: '#fff' }}
+        style={{ background: design.primary, color: getContrastText(design.primary) }}
       >
-        {temperature === 'hot' ? '🔥 Lead quente' : temperature === 'warm' ? '⚡ Lead morno' : '❄️ Lead frio'}
+        {badgeText}
       </div>
-      <h2 className="text-3xl sm:text-4xl font-bold">
+      <h2 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>
         {resultBlock?.resultTitle ?? 'Seu resultado está pronto'}
       </h2>
       <p className="text-base max-w-md mx-auto" style={{ color: design.muted }}>
         {resultBlock?.resultBody ?? 'Obrigado por completar o quiz.'}
       </p>
-      <div className="text-5xl font-bold pt-4" style={{ color: design.primary }}>
+      <div className="text-5xl font-bold pt-4" style={{ color: design.primary, fontFamily: design.fontHeading }}>
         {pct}%
       </div>
       {resultBlock?.ctaLabel && (
-        <PrimaryBtn design={design}>{resultBlock.ctaLabel}</PrimaryBtn>
+        <PrimaryBtn
+          design={design}
+          onClick={resultBlock.ctaUrl ? () => { window.location.href = resultBlock.ctaUrl!; } : undefined}
+        >
+          {resultBlock.ctaLabel}
+        </PrimaryBtn>
       )}
     </div>
   );

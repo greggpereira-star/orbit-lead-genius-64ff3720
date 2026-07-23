@@ -3,6 +3,7 @@ import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
+import { getContrastText } from '../lib/color';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 
@@ -51,7 +52,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
     <div className="w-full h-full flex items-center justify-center overflow-auto p-6" style={{ background: '#0a0a0a' }}>
       <div
         className="rounded-2xl overflow-hidden shadow-2xl transition-all flex justify-center"
-        style={{ ...cssVars, width: viewportWidth, minHeight: 640, background: design.background, color: design.text }}
+        style={{ ...cssVars, width: viewportWidth, minHeight: 640, background: design.background, color: design.text, fontFamily: design.fontBody }}
       >
         <div className="w-full transition-all" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
           <div className="p-6 border-b" style={{ borderColor: design.surface }}>
@@ -173,7 +174,7 @@ function Btn({ design, children }: { design: QuizDesign; children: React.ReactNo
   const style: React.CSSProperties = { borderRadius: design.radius };
   if (design.buttonStyle === 'gradient') {
     style.background = `linear-gradient(135deg, ${design.primary}, ${design.primary}cc)`;
-    style.color = '#fff';
+    style.color = getContrastText(design.primary);
   } else if (design.buttonStyle === 'outline') {
     style.border = `2px solid ${design.primary}`;
     style.color = design.primary;
@@ -181,7 +182,7 @@ function Btn({ design, children }: { design: QuizDesign; children: React.ReactNo
     style.color = design.primary;
   } else {
     style.background = design.primary;
-    style.color = '#fff';
+    style.color = getContrastText(design.primary);
   }
   return <button className={base} style={style}>{children}</button>;
 }
@@ -192,7 +193,7 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
 
   const heading = (
     <div className="space-y-2">
-      <h2 className="text-2xl font-bold leading-tight" style={{ color: design.text }}>{title}</h2>
+      <h2 className="text-2xl font-bold leading-tight" style={{ color: design.text, fontFamily: design.fontHeading }}>{title}</h2>
       {sub && <p className="text-sm" style={{ color: design.muted }}>{sub}</p>}
     </div>
   );
@@ -203,8 +204,14 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
     case 'intro':
       return (
         <div className="text-center space-y-6 py-8">
-          {block.imageUrl && <img src={block.imageUrl} alt="" className="mx-auto max-h-40 rounded-xl" />}
-          <h1 className="text-4xl font-bold" style={{ color: design.text }}>{title}</h1>
+          {block.imageUrl && (
+            <img
+              src={block.imageUrl}
+              alt={block.title || 'Imagem de destaque'}
+              className="mx-auto w-full max-h-72 object-cover rounded-xl"
+            />
+          )}
+          <h1 className="text-4xl font-bold" style={{ color: design.text, fontFamily: design.fontHeading }}>{title}</h1>
           {sub && <p className="text-base max-w-md mx-auto" style={{ color: design.muted }}>{sub}</p>}
           <Btn design={design}>{block.ctaLabel || 'Começar'}</Btn>
         </div>
@@ -290,10 +297,13 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
     case 'result':
       return (
         <div className="space-y-4 text-center py-6">
-          <div className="inline-block px-3 py-1 text-xs font-semibold rounded-full" style={{ background: design.primary, color: '#fff' }}>
-            Resultado
+          <div
+            className="inline-block px-3 py-1 text-xs font-semibold rounded-full"
+            style={{ background: design.primary, color: getContrastText(design.primary) }}
+          >
+            ✨ Resultado pronto
           </div>
-          <h2 className="text-3xl font-bold" style={{ color: design.text }}>{block.resultTitle || title}</h2>
+          <h2 className="text-3xl font-bold" style={{ color: design.text, fontFamily: design.fontHeading }}>{block.resultTitle || title}</h2>
           <p className="text-sm max-w-md mx-auto" style={{ color: design.muted }}>{block.resultBody || sub || 'Personalize este resultado no inspetor.'}</p>
           <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
         </div>
@@ -333,7 +343,7 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
         <div className="space-y-3">
           {(title || sub) && heading}
           {block.mediaUrl && (
-            <img src={block.mediaUrl} alt="" className="w-full object-cover" style={{ borderRadius: design.radius }} />
+            <img src={block.mediaUrl} alt={block.title || 'Imagem'} className="w-full object-cover" style={{ borderRadius: design.radius }} />
           )}
         </div>
       );
@@ -350,7 +360,7 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
           <p className="text-lg italic leading-relaxed" style={{ color: design.text }}>{title}</p>
           <div className="flex items-center gap-3">
             {block.testimonialAvatar && (
-              <img src={block.testimonialAvatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+              <img src={block.testimonialAvatar} alt={block.testimonialAuthor || 'Depoimento'} className="h-10 w-10 rounded-full object-cover" />
             )}
             <div>
               <div className="text-sm font-semibold" style={{ color: design.text }}>{block.testimonialAuthor}</div>
@@ -488,9 +498,9 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
     case 'pricing':
       return (
         <div className="p-6 rounded-xl space-y-4 text-center" style={{ background: design.surface }}>
-          <div className="text-sm font-semibold" style={{ color: design.text }}>{title}</div>
+          <div className="text-sm font-semibold" style={{ color: design.text, fontFamily: design.fontHeading }}>{title}</div>
           <div className="flex items-end justify-center gap-1.5">
-            <span className="text-3xl font-bold" style={{ color: design.primary }}>{block.pricingPrice ?? 'R$ 0'}</span>
+            <span className="text-3xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice ?? 'R$ 0'}</span>
             <span className="text-sm" style={{ color: design.muted }}>{block.pricingPeriod}</span>
           </div>
           {block.pricingOriginalPrice && (
@@ -551,7 +561,7 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
               <img
                 key={i}
                 src={url}
-                alt=""
+                alt={block.title ? `${block.title} — imagem ${i + 1}` : `Imagem ${i + 1}`}
                 className="h-32 w-44 shrink-0 object-cover"
                 style={{ borderRadius: design.radius }}
               />

@@ -113,6 +113,39 @@ function BlockInspector({
           </Field>
         )}
 
+        {block.type === 'result' && (
+          <>
+            <Field label="Link do botão (URL)">
+              <Input
+                value={block.ctaUrl ?? ''}
+                onChange={(e) => onChange({ ctaUrl: e.target.value })}
+                placeholder="https://exemplo.com/obrigado"
+              />
+            </Field>
+            <Field label="Etiqueta para lead quente (opcional)">
+              <Input
+                value={block.resultBadgeHot ?? ''}
+                onChange={(e) => onChange({ resultBadgeHot: e.target.value })}
+                placeholder="✨ Resultado pronto"
+              />
+            </Field>
+            <Field label="Etiqueta para lead morno (opcional)">
+              <Input
+                value={block.resultBadgeWarm ?? ''}
+                onChange={(e) => onChange({ resultBadgeWarm: e.target.value })}
+                placeholder="✨ Resultado pronto"
+              />
+            </Field>
+            <Field label="Etiqueta para lead frio (opcional)">
+              <Input
+                value={block.resultBadgeCold ?? ''}
+                onChange={(e) => onChange({ resultBadgeCold: e.target.value })}
+                placeholder="✨ Resultado pronto"
+              />
+            </Field>
+          </>
+        )}
+
         {block.type === 'rating' && (
           <Field label={`Escala máxima: ${block.maxRating ?? 5}`}>
             <Slider
