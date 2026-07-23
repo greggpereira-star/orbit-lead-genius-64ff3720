@@ -1,9 +1,10 @@
-import type { BlockOption, QuizBlock, QuizSchema } from './types';
+import type { BlockOption, QuizBlock, QuizSchema, QuizStep } from './types';
+import { findStepIndexForBlock } from './lib/steps';
 
 export type QuizResponses = Record<string, unknown>;
 
 export interface QuizRunState {
-  currentIndex: number;
+  currentStepIndex: number;
   responses: QuizResponses;
   score: number;
   tags: string[];
@@ -11,7 +12,7 @@ export interface QuizRunState {
 }
 
 export function createInitialState(): QuizRunState {
-  return { currentIndex: 0, responses: {}, score: 0, tags: [], history: [] };
+  return { currentStepIndex: 0, responses: {}, score: 0, tags: [], history: [] };
 }
 
 function optionsFor(block: QuizBlock): BlockOption[] {
@@ -84,23 +85,18 @@ export function evaluateLogic(block: QuizBlock, responses: QuizResponses): strin
 }
 
 /**
- * Compute the next block index given the current state + optional forced jump.
+ * Compute the next STEP index given a forced jump block id (já agregado pelo
+ * caller a partir de evaluateResponse/evaluateLogic de TODOS os blocos da
+ * etapa atual — o último jump não-vazio encontrado, na ordem dos blocos).
+ * Jump targets são block ids; resolvemos em qual etapa aquele bloco vive,
+ * já que a navegação agora acontece por etapa (que pode agrupar vários blocos).
  */
-export function nextIndex(schema: QuizSchema, state: QuizRunState, forcedJumpBlockId?: string): number {
-  const blocks = schema.blocks;
+export function nextStepIndex(steps: QuizStep[], state: QuizRunState, forcedJumpBlockId?: string): number {
   if (forcedJumpBlockId) {
-    const idx = blocks.findIndex((b) => b.id === forcedJumpBlockId);
+    const idx = findStepIndexForBlock(steps, forcedJumpBlockId);
     if (idx >= 0) return idx;
   }
-  const current = blocks[state.currentIndex];
-  if (current) {
-    const logicJump = evaluateLogic(current, state.responses);
-    if (logicJump) {
-      const idx = blocks.findIndex((b) => b.id === logicJump);
-      if (idx >= 0) return idx;
-    }
-  }
-  return Math.min(state.currentIndex + 1, blocks.length - 1);
+  return Math.min(state.currentStepIndex + 1, steps.length - 1);
 }
 
 export function classifyTemperature(score: number, max: number): 'hot' | 'warm' | 'cold' {

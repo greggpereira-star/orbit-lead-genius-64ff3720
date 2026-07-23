@@ -184,8 +184,14 @@ export interface QuizDesign {
   progressStyle: 'bar' | 'dots' | 'steps' | 'none';
 }
 
+export interface QuizStep {
+  id: string;
+  blockIds: string[]; // um ou mais QuizBlock.id, na ordem de exibição dentro da etapa
+}
+
 export interface QuizSchema {
   blocks: QuizBlock[];
+  steps?: QuizStep[]; // ausente = cada bloco é sua própria etapa (compatibilidade retroativa)
   design: QuizDesign;
   results?: unknown[];
 }

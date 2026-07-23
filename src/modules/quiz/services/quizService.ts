@@ -284,6 +284,7 @@ export const quizService = {
     const raw = (data?.schema ?? {}) as Partial<QuizSchema>;
     return {
       blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
+      steps: Array.isArray(raw.steps) ? raw.steps : undefined,
       design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
       results: raw.results ?? [],
     };
@@ -419,6 +420,7 @@ export const quizService = {
     const raw = ((version?.schema ?? {}) as Partial<QuizSchema>);
     const schema: QuizSchema = {
       blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
+      steps: Array.isArray(raw.steps) ? raw.steps : undefined,
       design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
       results: raw.results ?? [],
     };
@@ -446,6 +448,7 @@ export const quizService = {
     const raw = ((version?.schema ?? {}) as Partial<QuizSchema>);
     const schema: QuizSchema = {
       blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
+      steps: Array.isArray(raw.steps) ? raw.steps : undefined,
       design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
       results: raw.results ?? [],
     };

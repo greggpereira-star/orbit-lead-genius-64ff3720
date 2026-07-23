@@ -23,6 +23,8 @@ import {
   Users,
   Workflow,
   Rocket,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -35,7 +37,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { BLOCK_LIBRARY, BLOCK_CATEGORY_LABELS, type BlockCategory } from '@/modules/quiz/blocks-library';
 import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
-import type { QuizBlock, QuizFunnel, QuizSchema } from '@/modules/quiz/types';
+import { getSteps } from '@/modules/quiz/lib/steps';
+import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from '@/modules/quiz/types';
 
 const CATEGORY_ORDER: BlockCategory[] = [
   'captura', 'conteudo', 'interacao', 'oferta', 'gamificacao', 'midia', 'prova', 'resultado', 'livre',
@@ -63,6 +66,7 @@ function QuizBuilderPage() {
   const [isDesktop, setIsDesktop] = useState(true);
   const [autosave, setAutosave] = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 1024px)');
@@ -79,7 +83,7 @@ function QuizBuilderPage() {
         const [q, s] = await Promise.all([quizService.getById(id), quizService.getLatestSchema(id)]);
         if (!mounted) return;
         setQuiz(q);
-        setSchema(s);
+        setSchema({ ...s, steps: getSteps(s) });
       } catch (e) {
         console.error('Erro ao carregar quiz', e);
         toast.error('Não foi possível carregar este quiz agora. Tente recarregar a página.');
@@ -89,6 +93,8 @@ function QuizBuilderPage() {
     })();
     return () => { mounted = false; };
   }, [id]);
+
+  const steps = useMemo(() => getSteps(schema), [schema]);
 
   const activeBlock = useMemo(
     () => schema.blocks.find((b) => b.id === activeBlockId) ?? null,
@@ -100,10 +106,25 @@ function QuizBuilderPage() {
     setDirty(true);
   };
 
+  // Mantém schema.blocks sempre sincronizado com a ordem "achatada" de schema.steps —
+  // steps é a fonte de verdade de agrupamento/ordem; blocks guarda o conteúdo de cada bloco.
+  const applySteps = (newSteps: QuizStep[]) => {
+    updateSchema((prev) => {
+      const blockMap = new Map(prev.blocks.map((b) => [b.id, b]));
+      const orderedIds = newSteps.flatMap((s) => s.blockIds);
+      const newBlocks = orderedIds.map((bid) => blockMap.get(bid)).filter(Boolean) as QuizBlock[];
+      return { ...prev, blocks: newBlocks, steps: newSteps };
+    });
+  };
+
   const addBlock = (defIndex: number) => {
     const def = BLOCK_LIBRARY[defIndex];
     const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
-    updateSchema((prev) => ({ ...prev, blocks: [...prev.blocks, newBlock] }));
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: [...prev.blocks, newBlock],
+      steps: [...steps, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] }],
+    }));
     setActiveBlockId(newBlock.id);
     setMobilePanel('inspector');
   };
@@ -122,7 +143,14 @@ function QuizBuilderPage() {
     const index = schema.blocks.findIndex((b) => b.id === target);
     const removed = schema.blocks[index];
     if (!removed) return;
-    updateSchema((prev) => ({ ...prev, blocks: prev.blocks.filter((b) => b.id !== target) }));
+    const ownerStepIndex = steps.findIndex((s) => s.blockIds.includes(target));
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: prev.blocks.filter((b) => b.id !== target),
+      steps: steps
+        .map((s) => (s.blockIds.includes(target) ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) } : s))
+        .filter((s) => s.blockIds.length > 0),
+    }));
     if (target === activeBlockId) setActiveBlockId(null);
     toast('Bloco excluído', {
       description: removed.title || removed.resultTitle || removed.type,
@@ -130,9 +158,16 @@ function QuizBuilderPage() {
         label: 'Desfazer',
         onClick: () => {
           updateSchema((prev) => {
-            const next = Array.from(prev.blocks);
-            next.splice(index, 0, removed);
-            return { ...prev, blocks: next };
+            const nextBlocks = Array.from(prev.blocks);
+            nextBlocks.splice(index, 0, removed);
+            const nextSteps = getSteps({ blocks: prev.blocks, steps: prev.steps });
+            const restoredSteps = Array.from(nextSteps);
+            if (ownerStepIndex >= 0 && ownerStepIndex <= restoredSteps.length) {
+              restoredSteps.splice(ownerStepIndex, 0, { id: `step-${removed.id}`, blockIds: [removed.id] });
+            } else {
+              restoredSteps.push({ id: `step-${removed.id}`, blockIds: [removed.id] });
+            }
+            return { ...prev, blocks: nextBlocks, steps: restoredSteps };
           });
           setActiveBlockId(removed.id);
         },
@@ -140,13 +175,12 @@ function QuizBuilderPage() {
     });
   };
 
-  const reorderBlocks = (sourceIndex: number, destinationIndex: number) => {
-    if (sourceIndex === destinationIndex) return;
-    updateSchema((prev) => {
-      const next = Array.from(prev.blocks);
-      const [removed] = next.splice(sourceIndex, 1);
-      next.splice(destinationIndex, 0, removed);
-      return { ...prev, blocks: next };
+  const toggleStepExpanded = (stepId: string) => {
+    setExpandedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepId)) next.delete(stepId);
+      else next.add(stepId);
+      return next;
     });
   };
 
@@ -161,17 +195,69 @@ function QuizBuilderPage() {
       if (defIndex === -1) return;
       const def = BLOCK_LIBRARY[defIndex];
       const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
-      updateSchema((prev) => {
-        const next = Array.from(prev.blocks);
-        next.splice(destination.index, 0, newBlock);
-        return { ...prev, blocks: next };
-      });
+
+      if (destination.droppableId.startsWith('step-')) {
+        // Soltou dentro de uma etapa já expandida — só adiciona o componente a ela,
+        // não cria uma etapa nova (pedido explícito: nova etapa só nasce por ação clara).
+        const targetStepId = destination.droppableId.slice('step-'.length);
+        const nextSteps = steps.map((s) =>
+          s.id === targetStepId
+            ? { ...s, blockIds: [...s.blockIds.slice(0, destination.index), newBlock.id, ...s.blockIds.slice(destination.index)] }
+            : s
+        );
+        updateSchema((prev) => ({ ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps }));
+      } else {
+        // Soltou na lista de etapas (fora de uma expandida) — cria etapa nova.
+        const nextSteps = Array.from(steps);
+        nextSteps.splice(destination.index, 0, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] });
+        updateSchema((prev) => ({ ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps }));
+      }
       setActiveBlockId(newBlock.id);
       setMobilePanel('inspector');
       return;
     }
 
-    reorderBlocks(source.index, destination.index);
+    if (source.droppableId === 'steps') {
+      // Reordena etapas inteiras.
+      if (source.index === destination.index) return;
+      const nextSteps = Array.from(steps);
+      const [moved] = nextSteps.splice(source.index, 1);
+      nextSteps.splice(destination.index, 0, moved);
+      applySteps(nextSteps);
+      return;
+    }
+
+    if (source.droppableId.startsWith('step-')) {
+      const sourceStepId = source.droppableId.slice('step-'.length);
+      const destStepId = destination.droppableId.startsWith('step-') ? destination.droppableId.slice('step-'.length) : null;
+      if (!destStepId) return; // não suportado: soltar um componente já existente fora de qualquer etapa
+
+      if (sourceStepId === destStepId) {
+        if (source.index === destination.index) return;
+        const nextSteps = steps.map((s) => {
+          if (s.id !== sourceStepId) return s;
+          const ids = Array.from(s.blockIds);
+          const [moved] = ids.splice(source.index, 1);
+          ids.splice(destination.index, 0, moved);
+          return { ...s, blockIds: ids };
+        });
+        applySteps(nextSteps);
+        return;
+      }
+
+      // Move o componente de uma etapa pra outra; remove a etapa de origem se ficar vazia.
+      const movedId = draggableId;
+      const withoutMoved = steps
+        .map((s) => (s.id === sourceStepId ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) } : s))
+        .filter((s) => s.id === destStepId || s.blockIds.length > 0);
+      const nextSteps = withoutMoved.map((s) => {
+        if (s.id !== destStepId) return s;
+        const ids = Array.from(s.blockIds);
+        ids.splice(destination.index, 0, movedId);
+        return { ...s, blockIds: ids };
+      });
+      applySteps(nextSteps);
+    }
   };
 
   const handleSave = async (opts?: { silent?: boolean }) => {
@@ -301,7 +387,7 @@ function QuizBuilderPage() {
       </div>
       <div className="p-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-sm">Etapas ({schema.blocks.length})</h3>
+          <h3 className="font-bold text-sm">Etapas ({steps.length})</h3>
           <button
             onClick={() => { setActiveBlockId(null); setMobilePanel(null); }}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -309,59 +395,122 @@ function QuizBuilderPage() {
             <Palette className="h-3 w-3" /> Design
           </button>
         </div>
-        <Droppable droppableId="blocks">
-          {(provided) => (
-            <div className="space-y-1.5" ref={provided.innerRef} {...provided.droppableProps}>
-              {schema.blocks.map((b, i) => {
-                const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+        <Droppable droppableId="steps">
+          {(stepsProvided) => (
+            <div className="space-y-1.5" ref={stepsProvided.innerRef} {...stepsProvided.droppableProps}>
+              {steps.map((step, stepIdx) => {
+                const stepBlocks = step.blockIds.map((bid) => schema.blocks.find((b) => b.id === bid)).filter(Boolean) as QuizBlock[];
+                const firstBlock = stepBlocks[0];
+                const firstDef = firstBlock ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type) : undefined;
+                const expanded = expandedSteps.has(step.id);
                 return (
-                  <Draggable key={b.id} draggableId={b.id} index={i}>
-                    {(dragProvided, dragSnapshot) => (
+                  <Draggable key={step.id} draggableId={`step-drag-${step.id}`} index={stepIdx}>
+                    {(stepDragProvided, stepDragSnapshot) => (
                       <div
-                        ref={dragProvided.innerRef}
-                        {...dragProvided.draggableProps}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') { setActiveBlockId(b.id); setMobilePanel('inspector'); }
-                        }}
-                        className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
-                          dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
-                          activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
+                        ref={stepDragProvided.innerRef}
+                        {...stepDragProvided.draggableProps}
+                        className={`rounded-xl border transition-all ${
+                          stepDragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' : 'border-transparent'
                         }`}
                       >
                         <div
-                          {...dragProvided.dragHandleProps}
-                          className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => toggleStepExpanded(step.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') toggleStepExpanded(step.id); }}
+                          className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
+                            expanded ? 'bg-muted' : 'hover:bg-muted border border-transparent'
+                          }`}
                         >
-                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                          {def ? (
-                            <def.icon className="h-3.5 w-3.5 text-primary" />
+                          <div
+                            {...stepDragProvided.dragHandleProps}
+                            className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            {firstDef ? <firstDef.icon className="h-3.5 w-3.5 text-primary" /> : <LayoutGrid className="h-3.5 w-3.5 text-primary" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold truncate">
+                              Etapa {stepIdx + 1}{firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground truncate">
+                              {stepBlocks.length} {stepBlocks.length === 1 ? 'componente' : 'componentes'}
+                            </div>
+                          </div>
+                          {expanded ? (
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           ) : (
-                            <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
-                          <div className="text-[10px] text-muted-foreground truncate">{i + 1} · {def?.label ?? b.type}</div>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
-                          className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
-                          aria-label="Excluir bloco"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {expanded && (
+                          <Droppable droppableId={`step-${step.id}`}>
+                            {(moduleProvided) => (
+                              <div
+                                className="space-y-1 pl-6 pr-1 pb-1.5 pt-0.5"
+                                ref={moduleProvided.innerRef}
+                                {...moduleProvided.droppableProps}
+                              >
+                                {stepBlocks.map((b, bi) => {
+                                  const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+                                  return (
+                                    <Draggable key={b.id} draggableId={b.id} index={bi}>
+                                      {(dragProvided, dragSnapshot) => (
+                                        <div
+                                          ref={dragProvided.innerRef}
+                                          {...dragProvided.draggableProps}
+                                          role="button"
+                                          tabIndex={0}
+                                          onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') { setActiveBlockId(b.id); setMobilePanel('inspector'); }
+                                          }}
+                                          className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
+                                            dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
+                                            activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-background border border-transparent'
+                                          }`}
+                                        >
+                                          <div
+                                            {...dragProvided.dragHandleProps}
+                                            className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <GripVertical className="h-3 w-3 text-muted-foreground" />
+                                          </div>
+                                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                                            {def ? <def.icon className="h-3 w-3 text-primary" /> : <LayoutGrid className="h-3 w-3 text-primary" />}
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <div className="text-xs font-medium truncate">{b.title || b.resultTitle || def?.label || b.type}</div>
+                                            <div className="text-[10px] text-muted-foreground truncate">{def?.label ?? b.type}</div>
+                                          </div>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
+                                            className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                                            aria-label="Excluir componente"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </Draggable>
+                                  );
+                                })}
+                                {moduleProvided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        )}
                       </div>
                     )}
                   </Draggable>
                 );
               })}
-              {provided.placeholder}
-              {schema.blocks.length === 0 && (
+              {stepsProvided.placeholder}
+              {steps.length === 0 && (
                 <div className="text-center py-8 px-3 text-xs text-muted-foreground border border-dashed rounded-xl">
                   <LayoutGrid className="h-5 w-5 mx-auto mb-1.5 opacity-40" />
                   Nenhuma etapa ainda.

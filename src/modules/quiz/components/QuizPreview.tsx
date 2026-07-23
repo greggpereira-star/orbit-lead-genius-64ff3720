@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
+import { getSteps } from '../lib/steps';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 
@@ -29,6 +30,7 @@ const QUIZ_MAX_WIDTH = 448;
 
 export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'desktop' }: Props) {
   const { design, blocks } = schema;
+  const steps = useMemo(() => getSteps(schema), [schema]);
 
   const viewportWidth = device === 'mobile' ? 390 : device === 'tablet' ? 820 : 1280;
 
@@ -60,7 +62,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
               <div
                 ref={dropProvided.innerRef}
                 {...dropProvided.droppableProps}
-                className={`p-8 space-y-8 min-h-[200px] transition-colors ${dropSnapshot.isDraggingOver ? 'bg-primary/5' : ''}`}
+                className={`p-8 min-h-[200px] transition-colors ${dropSnapshot.isDraggingOver ? 'bg-primary/5' : ''}`}
               >
                 {blocks.length === 0 ? (
                   <div
@@ -73,33 +75,49 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                     </p>
                   </div>
                 ) : (
-                  blocks.map((b, i) => (
-                    <Draggable key={b.id} draggableId={b.id} index={i}>
-                      {(dragProvided, dragSnapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          onClick={() => onSelectBlock?.(b.id)}
-                          className={`group relative cursor-pointer rounded-xl p-4 -m-4 transition-all ${
-                            activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
-                          } ${dragSnapshot.isDragging ? 'shadow-2xl bg-[var(--q-bg)]' : ''}`}
-                          style={{
-                            ...dragProvided.draggableProps.style,
-                            ...(activeBlockId === b.id ? { boxShadow: `0 0 0 2px ${design.primary}` } : {}),
-                          }}
-                        >
-                          <div
-                            {...dragProvided.dragHandleProps}
-                            className="absolute left-1 top-1 z-10 opacity-40 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md select-none"
-                            style={{ background: design.surface }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <GripVertical className="h-4 w-4" style={{ color: design.muted }} />
-                          </div>
-                          <BlockRenderer block={b} design={design} />
+                  steps.map((step, stepIdx) => (
+                    <div key={step.id} className={stepIdx > 0 ? 'mt-8 pt-8 border-t border-dashed' : ''} style={{ borderColor: design.surface }}>
+                      {stepIdx > 0 && (
+                        <div className="text-[10px] font-semibold uppercase tracking-wide mb-4 opacity-50" style={{ color: design.muted }}>
+                          Etapa {stepIdx + 1}
                         </div>
                       )}
-                    </Draggable>
+                      <div className="space-y-3">
+                        {step.blockIds.map((blockId) => {
+                          const b = blocks.find((x) => x.id === blockId);
+                          if (!b) return null;
+                          const i = blocks.findIndex((x) => x.id === blockId);
+                          return (
+                            <Draggable key={b.id} draggableId={b.id} index={i}>
+                              {(dragProvided, dragSnapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  onClick={() => onSelectBlock?.(b.id)}
+                                  className={`group relative cursor-pointer rounded-xl p-4 -m-4 transition-all ${
+                                    activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
+                                  } ${dragSnapshot.isDragging ? 'shadow-2xl bg-[var(--q-bg)]' : ''}`}
+                                  style={{
+                                    ...dragProvided.draggableProps.style,
+                                    ...(activeBlockId === b.id ? { boxShadow: `0 0 0 2px ${design.primary}` } : {}),
+                                  }}
+                                >
+                                  <div
+                                    {...dragProvided.dragHandleProps}
+                                    className="absolute left-1 top-1 z-10 opacity-40 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md select-none"
+                                    style={{ background: design.surface }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <GripVertical className="h-4 w-4" style={{ color: design.muted }} />
+                                  </div>
+                                  <BlockRenderer block={b} design={design} />
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))
                 )}
                 {dropProvided.placeholder}

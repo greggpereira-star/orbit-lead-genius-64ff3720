@@ -3,10 +3,12 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService } from '../services/quizService';
 import type { QuizBlock, QuizSchema, AccessRules } from '../types';
+import { getSteps } from '../lib/steps';
 import {
   createInitialState,
   evaluateResponse,
-  nextIndex,
+  evaluateLogic,
+  nextStepIndex,
   classifyTemperature,
   maxPossibleScore,
   type QuizRunState,
@@ -186,11 +188,17 @@ function PlayerRunner({
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [stepValidity, setStepValidity] = useState<Record<string, boolean>>({});
 
   const design = schema.design;
   const blocks = schema.blocks;
-  const block = blocks[state.currentIndex];
-  const isLast = state.currentIndex >= blocks.length - 1;
+  const steps = useMemo(() => getSteps(schema), [schema]);
+  const currentStep = steps[state.currentStepIndex];
+  const stepBlocks = useMemo(
+    () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
+    [currentStep, blocks]
+  );
+  const isLastStep = state.currentStepIndex >= steps.length - 1;
 
   const urgencyBar: UrgencyBarSettings = useMemo(
     () => ({ ...DEFAULT_URGENCY_BAR, ...(settings?.urgency_bar as Partial<UrgencyBarSettings> | undefined) }),
@@ -202,6 +210,12 @@ function PlayerRunner({
   );
 
   const geoRef = useRef<{ country?: string; city?: string }>({});
+  const draftResponses = useRef<Record<string, unknown>>({});
+
+  useEffect(() => {
+    draftResponses.current = {};
+    setStepValidity({});
+  }, [state.currentStepIndex]);
 
   useEffect(() => {
     if (preview) return;
@@ -214,28 +228,27 @@ function PlayerRunner({
   }, [preview]);
 
   const variantAssignments = useRef<Map<string, string>>(new Map());
-  const variantId = useMemo(() => {
-    if (!block?.abTest?.enabled || block.abTest.variants.length === 0) return 'control';
-    const existing = variantAssignments.current.get(block.id);
-    if (existing) return existing;
-    const options = ['control', ...block.abTest.variants.map((v) => v.id)];
-    const picked = options[Math.floor(Math.random() * options.length)];
-    variantAssignments.current.set(block.id, picked);
-    return picked;
-  }, [block?.id]);
-
-  const effectiveBlock = useMemo(() => {
-    if (!block || variantId === 'control') return block;
-    const variant = block.abTest?.variants.find((v) => v.id === variantId);
-    if (!variant) return block;
-    return {
-      ...block,
-      title: variant.title ?? block.title,
-      subtitle: variant.subtitle ?? block.subtitle,
-      ctaLabel: variant.ctaLabel ?? block.ctaLabel,
-      imageUrl: variant.imageUrl ?? block.imageUrl,
-    };
-  }, [block, variantId]);
+  const effectiveBlocks = useMemo(() => {
+    return stepBlocks.map((b) => {
+      if (!b.abTest?.enabled || b.abTest.variants.length === 0) return b;
+      let variantId = variantAssignments.current.get(b.id);
+      if (!variantId) {
+        const options = ['control', ...b.abTest.variants.map((v) => v.id)];
+        variantId = options[Math.floor(Math.random() * options.length)];
+        variantAssignments.current.set(b.id, variantId);
+      }
+      if (variantId === 'control') return b;
+      const variant = b.abTest.variants.find((v) => v.id === variantId);
+      if (!variant) return b;
+      return {
+        ...b,
+        title: variant.title ?? b.title,
+        subtitle: variant.subtitle ?? b.subtitle,
+        ctaLabel: variant.ctaLabel ?? b.ctaLabel,
+        imageUrl: variant.imageUrl ?? b.imageUrl,
+      };
+    });
+  }, [stepBlocks]);
 
   useEffect(() => {
     if (preview) return;
@@ -244,52 +257,67 @@ function PlayerRunner({
 
   useEffect(() => {
     if (preview) return;
-    if (block) {
+    for (const b of stepBlocks) {
       quizService
         .trackEvent({
           quizId,
           companyId,
           submissionId,
           eventType: 'block_view',
-          blockId: block.id,
-          metadata: { variant_id: variantId },
+          blockId: b.id,
+          metadata: { variant_id: variantAssignments.current.get(b.id) ?? 'control' },
         })
         .catch(() => {});
     }
-  }, [block?.id, quizId, companyId, submissionId, preview, variantId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep?.id, quizId, companyId, submissionId, preview]);
 
-  if (!block) {
+  if (stepBlocks.length === 0) {
     return <EmptyState message="Quiz sem blocos" />;
   }
 
-  const advance = async (response: unknown) => {
-    if (!preview && block.abTest?.enabled) {
-      quizService
-        .trackEvent({
-          quizId,
-          companyId,
-          submissionId,
-          eventType: 'block_advance',
-          blockId: block.id,
-          metadata: { variant_id: variantId },
-        })
-        .catch(() => {});
+  const allStepValid = stepBlocks.every((b) => stepValidity[b.id] !== false);
+
+  const advanceStep = async (finalDraft: Record<string, unknown>) => {
+    let scoreDelta = 0;
+    const tags: string[] = [];
+    let jumpToBlockId: string | undefined;
+    const nextResponses = { ...state.responses };
+    for (const b of stepBlocks) {
+      const response = finalDraft[b.id];
+      nextResponses[b.id] = response;
+      const evaluated = evaluateResponse(b, response);
+      scoreDelta += evaluated.scoreDelta;
+      tags.push(...evaluated.tags);
+      if (evaluated.jumpToBlockId) jumpToBlockId = evaluated.jumpToBlockId;
+      if (!preview && b.abTest?.enabled) {
+        quizService
+          .trackEvent({
+            quizId,
+            companyId,
+            submissionId,
+            eventType: 'block_advance',
+            blockId: b.id,
+            metadata: { variant_id: variantAssignments.current.get(b.id) ?? 'control' },
+          })
+          .catch(() => {});
+      }
+      const logicJump = evaluateLogic(b, nextResponses);
+      if (logicJump) jumpToBlockId = logicJump;
     }
-    const { scoreDelta, tags, jumpToBlockId } = evaluateResponse(block, response);
-    const nextResponses = { ...state.responses, [block.id]: response };
     const nextState: QuizRunState = {
       ...state,
       responses: nextResponses,
       score: state.score + scoreDelta,
       tags: [...state.tags, ...tags],
-      history: [...state.history, block.id],
+      history: [...state.history, ...stepBlocks.map((b) => b.id)],
     };
-    if (isLast) {
+    if (isLastStep) {
       await finish(nextState);
       return;
     }
-    const idx = nextIndex(schema, nextState, jumpToBlockId);
-    setState({ ...nextState, currentIndex: idx });
+    const idx = nextStepIndex(steps, nextState, jumpToBlockId);
+    setState({ ...nextState, currentStepIndex: idx });
   };
 
   const finish = async (finalState: QuizRunState) => {
@@ -350,14 +378,34 @@ function PlayerRunner({
         {!done && <UrgencyBar quizId={quizId} settings={urgencyBar} design={design} />}
         <div className="flex-1 flex flex-col" style={{ padding: '24px 16px' }}>
           <ProgressBar
-            value={done ? 1 : (state.currentIndex + 1) / blocks.length}
+            value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
             design={design}
           />
-          <div className="mt-6 flex-1 flex flex-col">
+          <div className="mt-6 flex-1 flex flex-col gap-6">
             {done ? (
               <ResultView schema={schema} state={state} />
             ) : (
-              <BlockView key={block.id} block={effectiveBlock} design={design} onSubmit={advance} saving={saving} />
+              effectiveBlocks.map((b, i) => {
+                const isTerminal = i === effectiveBlocks.length - 1;
+                return (
+                  <BlockView
+                    key={b.id}
+                    block={b}
+                    design={design}
+                    terminal={isTerminal}
+                    stepValid={allStepValid}
+                    saving={saving}
+                    onValidChange={(valid) => setStepValidity((prev) => (prev[b.id] === valid ? prev : { ...prev, [b.id]: valid }))}
+                    onDraftChange={(value) => {
+                      if (value !== undefined) draftResponses.current[b.id] = value;
+                    }}
+                    onSubmit={(response) => {
+                      draftResponses.current[b.id] = response;
+                      if (isTerminal) void advanceStep({ ...draftResponses.current });
+                    }}
+                  />
+                );
+              })
             )}
           </div>
         </div>
@@ -546,12 +594,15 @@ function PrimaryBtn({
   children,
   onClick,
   disabled,
+  hidden,
 }: {
   design: QuizSchema['design'];
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
+  hidden?: boolean;
 }) {
+  if (hidden) return null;
   const style: React.CSSProperties = { borderRadius: design.radius };
   if (design.buttonStyle === 'gradient') {
     style.background = `linear-gradient(135deg, ${design.primary}, ${design.primary}cc)`;
@@ -580,12 +631,20 @@ function PrimaryBtn({
 function BlockView({
   block,
   design,
+  terminal,
+  stepValid = true,
   onSubmit,
+  onValidChange,
+  onDraftChange,
   saving,
 }: {
   block: QuizBlock;
   design: QuizSchema['design'];
+  terminal: boolean;
+  stepValid?: boolean;
   onSubmit: (response: unknown) => void;
+  onValidChange?: (valid: boolean) => void;
+  onDraftChange?: (value: unknown) => void;
   saving: boolean;
 }) {
   const [value, setValue] = useState<unknown>('');
@@ -618,6 +677,32 @@ function BlockView({
     return true;
   }, [block, value, multi, formValue, revealed]);
 
+  useEffect(() => {
+    onValidChange?.(canSubmit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSubmit]);
+
+  // Mantém o pai a par do valor atual mesmo quando este bloco não é o terminal
+  // da etapa (seu próprio botão fica oculto nesse caso — ver `terminal` abaixo).
+  const draftValue = useMemo(() => {
+    if (block.type === 'multi-choice') return multi;
+    if (block.type === 'form') return formValue;
+    if (block.type === 'reveal') return revealed ? true : undefined;
+    if (
+      block.type === 'single-choice' || block.type === 'rating' || block.type === 'short-text' ||
+      block.type === 'long-text' || block.type === 'email' || block.type === 'phone' ||
+      block.type === 'weight' || block.type === 'height'
+    ) {
+      return value;
+    }
+    return true;
+  }, [block.type, value, multi, formValue, revealed]);
+
+  useEffect(() => {
+    onDraftChange?.(draftValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftValue]);
+
   const heading = (
     <div className="space-y-3 mb-6">
       {block.title && <h2 className="text-2xl sm:text-3xl font-bold leading-tight">{block.title}</h2>}
@@ -640,7 +725,7 @@ function BlockView({
               {block.subtitle}
             </p>
           )}
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Começar'}
           </PrimaryBtn>
         </div>
@@ -651,22 +736,28 @@ function BlockView({
         <div>
           {heading}
           <div className="space-y-2.5">
-            {(block.options ?? []).map((o) => (
-              <button
-                key={o.id}
-                onClick={() => onSubmit(o.id)}
-                className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{
-                  borderRadius: design.radius,
-                  borderColor: design.surface,
-                  background: design.surface,
-                  color: design.text,
-                }}
-              >
-                {o.emoji && <span className="mr-2">{o.emoji}</span>}
-                {o.label}
-              </button>
-            ))}
+            {(block.options ?? []).map((o) => {
+              const active = value === o.id;
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => {
+                    setValue(o.id);
+                    if (terminal) onSubmit(o.id);
+                  }}
+                  className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  style={{
+                    borderRadius: design.radius,
+                    borderColor: active ? design.primary : design.surface,
+                    background: design.surface,
+                    color: design.text,
+                  }}
+                >
+                  {o.emoji && <span className="mr-2">{o.emoji}</span>}
+                  {o.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -698,7 +789,7 @@ function BlockView({
               );
             })}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(multi)} disabled={!canSubmit || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(multi)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -730,7 +821,7 @@ function BlockView({
               );
             })}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(value)} disabled={!canSubmit || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -756,7 +847,7 @@ function BlockView({
               border: `1px solid ${design.surface}`,
             }}
           />
-          <PrimaryBtn design={design} onClick={() => onSubmit(value)} disabled={!canSubmit || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -778,7 +869,7 @@ function BlockView({
               color: design.text,
             }}
           />
-          <PrimaryBtn design={design} onClick={() => onSubmit(value)} disabled={!canSubmit || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -804,7 +895,7 @@ function BlockView({
               <iframe src={src} className="w-full h-full" allowFullScreen title="video" />
             )}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -816,7 +907,7 @@ function BlockView({
         <div>
           {heading}
           {block.mediaUrl && <audio src={block.mediaUrl} controls className="w-full mb-6" />}
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -834,7 +925,7 @@ function BlockView({
               style={{ borderRadius: design.radius }}
             />
           )}
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -851,7 +942,7 @@ function BlockView({
               radius={design.radius}
             />
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -883,7 +974,7 @@ function BlockView({
               </div>
             </div>
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -900,7 +991,7 @@ function BlockView({
               color={design.primary}
             />
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -910,7 +1001,7 @@ function BlockView({
       return (
         <div className="py-6">
           <div className="h-px w-full mb-6" style={{ background: design.surface }} />
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             Continuar
           </PrimaryBtn>
         </div>
@@ -921,7 +1012,7 @@ function BlockView({
       return (
         <div className="text-center py-6 space-y-4">
           {heading}
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -939,7 +1030,7 @@ function BlockView({
             </div>
             {heading}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -953,7 +1044,7 @@ function BlockView({
           <div className="h-2.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
             <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: design.primary }} />
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -972,7 +1063,7 @@ function BlockView({
           <div className="h-3.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
             <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: design.primary }} />
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1007,7 +1098,7 @@ function BlockView({
             </div>
             {heading}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1025,7 +1116,7 @@ function BlockView({
               </details>
             ))}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1067,7 +1158,7 @@ function BlockView({
               />
             )}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(formValue)} disabled={!canSubmit || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(formValue)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Enviar'}
           </PrimaryBtn>
         </div>
@@ -1092,7 +1183,7 @@ function BlockView({
               {block.type === 'weight' ? 'kg' : 'cm'}
             </span>
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(value)} disabled={!canSubmit || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1117,7 +1208,7 @@ function BlockView({
               </div>
             ))}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Quero essa oferta'}
           </PrimaryBtn>
         </div>
@@ -1143,7 +1234,7 @@ function BlockView({
             </button>
           )}
           {revealed && (
-            <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
               {block.ctaLabel || 'Continuar'}
             </PrimaryBtn>
           )}
@@ -1166,7 +1257,7 @@ function BlockView({
               {block.subtitle && <div className="text-sm opacity-70">{block.subtitle}</div>}
             </div>
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1187,7 +1278,7 @@ function BlockView({
               />
             ))}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1215,7 +1306,7 @@ function BlockView({
               ))}
             </div>
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1239,7 +1330,7 @@ function BlockView({
               </div>
             ))}
           </div>
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1250,7 +1341,7 @@ function BlockView({
       return (
         <div>
           <div dangerouslySetInnerHTML={{ __html: block.customHtml ?? '' }} className="mb-6" />
-          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             Continuar
           </PrimaryBtn>
         </div>
