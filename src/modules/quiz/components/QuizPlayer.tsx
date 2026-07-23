@@ -802,7 +802,7 @@ function BlockView({
       return (
         <div>
           {heading}
-          <div className="space-y-2.5">
+          <div className="space-y-2.5" role="radiogroup" aria-label={block.title || 'Opções'}>
             {(block.options ?? []).map((o) => {
               const active = value === o.id;
               return (
@@ -812,7 +812,8 @@ function BlockView({
                     setValue(o.id);
                     if (terminal) onSubmit(o.id);
                   }}
-                  aria-pressed={active}
+                  role="radio"
+                  aria-checked={active}
                   className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99] motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
                   style={{
                     borderRadius: design.radius,
@@ -834,7 +835,7 @@ function BlockView({
       return (
         <div>
           {heading}
-          <div className="space-y-2.5 mb-6">
+          <div className="space-y-2.5 mb-6" role="group" aria-label={block.title || 'Opções'}>
             {(block.options ?? []).map((o) => {
               const active = multi.includes(o.id);
               return (

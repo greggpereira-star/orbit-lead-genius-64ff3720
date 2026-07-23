@@ -550,9 +550,9 @@ function QuizBuilderPage() {
         </div>
 
         <div className="hidden md:flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
-          <Button size="sm" variant={device === 'mobile' ? 'secondary' : 'ghost'} onClick={() => setDevice('mobile')}><Smartphone className="h-4 w-4" /></Button>
-          <Button size="sm" variant={device === 'tablet' ? 'secondary' : 'ghost'} onClick={() => setDevice('tablet')}><Tablet className="h-4 w-4" /></Button>
-          <Button size="sm" variant={device === 'desktop' ? 'secondary' : 'ghost'} onClick={() => setDevice('desktop')}><Monitor className="h-4 w-4" /></Button>
+          <Button size="sm" variant={device === 'mobile' ? 'secondary' : 'ghost'} onClick={() => setDevice('mobile')} aria-label="Visualizar em celular" aria-pressed={device === 'mobile'}><Smartphone className="h-4 w-4" /></Button>
+          <Button size="sm" variant={device === 'tablet' ? 'secondary' : 'ghost'} onClick={() => setDevice('tablet')} aria-label="Visualizar em tablet" aria-pressed={device === 'tablet'}><Tablet className="h-4 w-4" /></Button>
+          <Button size="sm" variant={device === 'desktop' ? 'secondary' : 'ghost'} onClick={() => setDevice('desktop')} aria-label="Visualizar em desktop" aria-pressed={device === 'desktop'}><Monitor className="h-4 w-4" /></Button>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
