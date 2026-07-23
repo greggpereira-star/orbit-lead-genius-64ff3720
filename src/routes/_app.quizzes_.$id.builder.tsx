@@ -30,9 +30,12 @@ import { QuizInspector } from '@/modules/quiz/components/QuizInspector';
 import { AccessRulesDialog } from '@/modules/quiz/components/AccessRulesDialog';
 import { QuizSettingsDialog } from '@/modules/quiz/components/QuizSettingsDialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { BLOCK_LIBRARY } from '@/modules/quiz/blocks-library';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { BLOCK_LIBRARY, BLOCK_CATEGORY_LABELS, type BlockCategory } from '@/modules/quiz/blocks-library';
 import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
 import type { QuizBlock, QuizFunnel, QuizSchema } from '@/modules/quiz/types';
+
+const CATEGORY_ORDER: BlockCategory[] = ['captura', 'conteudo', 'interacao', 'midia', 'prova', 'resultado'];
 
 export const Route = createFileRoute('/_app/quizzes_/$id/builder')({
   component: QuizBuilderPage,
@@ -72,7 +75,8 @@ function QuizBuilderPage() {
         setQuiz(q);
         setSchema(s);
       } catch (e) {
-        toast.error('Erro ao carregar quiz: ' + (e instanceof Error ? e.message : String(e)));
+        console.error('Erro ao carregar quiz', e);
+        toast.error('Não foi possível carregar este quiz agora. Tente recarregar a página.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -109,8 +113,25 @@ function QuizBuilderPage() {
   const deleteBlock = (blockId?: string) => {
     const target = blockId ?? activeBlockId;
     if (!target) return;
+    const index = schema.blocks.findIndex((b) => b.id === target);
+    const removed = schema.blocks[index];
+    if (!removed) return;
     updateSchema((prev) => ({ ...prev, blocks: prev.blocks.filter((b) => b.id !== target) }));
     if (target === activeBlockId) setActiveBlockId(null);
+    toast('Bloco excluído', {
+      description: removed.title || removed.resultTitle || removed.type,
+      action: {
+        label: 'Desfazer',
+        onClick: () => {
+          updateSchema((prev) => {
+            const next = Array.from(prev.blocks);
+            next.splice(index, 0, removed);
+            return { ...prev, blocks: next };
+          });
+          setActiveBlockId(removed.id);
+        },
+      },
+    });
   };
 
   const reorderBlocks = (sourceIndex: number, destinationIndex: number) => {
@@ -155,7 +176,8 @@ function QuizBuilderPage() {
       toast.success('Alterações salvas');
       setDirty(false);
     } catch (e) {
-      toast.error('Erro ao salvar: ' + (e instanceof Error ? e.message : String(e)));
+      console.error('Erro ao salvar quiz', e);
+      toast.error('Não foi possível salvar agora. Verifique sua conexão e tente de novo.');
     } finally {
       setSaving(false);
     }
@@ -169,37 +191,67 @@ function QuizBuilderPage() {
     );
   }
 
+  const groupedBlocks = (() => {
+    let paletteIndex = 0;
+    return CATEGORY_ORDER.map((category) => ({
+      category,
+      items: BLOCK_LIBRARY.map((def, defIndex) => ({ def, defIndex })).filter(
+        ({ def }) => def.category === category
+      ),
+    }))
+      .filter((g) => g.items.length > 0)
+      .map((g) => ({
+        ...g,
+        items: g.items.map((item) => ({ ...item, paletteIndex: paletteIndex++ })),
+      }));
+  })();
+
   const BlocksPalette = (
     <>
       <div className="p-3 border-b">
         <h3 className="font-bold text-sm mb-2">Blocos</h3>
-        <p className="text-[11px] text-muted-foreground mb-2">Arraste até o canvas ou clique para adicionar</p>
+        <p className="text-[11px] text-muted-foreground mb-3">Arraste até o canvas ou clique para adicionar</p>
         <Droppable droppableId="palette" isDropDisabled>
           {(provided) => (
-            <div className="grid grid-cols-2 gap-1.5" ref={provided.innerRef} {...provided.droppableProps}>
-              {BLOCK_LIBRARY.map((def, i) => (
-                <Draggable key={def.type} draggableId={`palette-${def.type}`} index={i}>
-                  {(dragProvided, dragSnapshot) => (
-                    <div
-                      ref={dragProvided.innerRef}
-                      {...dragProvided.draggableProps}
-                      {...dragProvided.dragHandleProps}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => addBlock(i)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') addBlock(i);
-                      }}
-                      className={`text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing select-none ${
-                        dragSnapshot.isDragging ? 'shadow-xl ring-2 ring-primary/40 bg-card' : ''
-                      }`}
-                    >
-                      <def.icon className="h-4 w-4 mb-1 text-primary" />
-                      <div className="text-xs font-semibold leading-tight">{def.label}</div>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
+            <div ref={provided.innerRef} {...provided.droppableProps}>
+              <Accordion type="multiple" defaultValue={CATEGORY_ORDER} className="space-y-1">
+                {groupedBlocks.map(({ category, items }) => (
+                  <AccordionItem key={category} value={category} className="border-b-0">
+                    <AccordionTrigger className="py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:no-underline">
+                      {BLOCK_CATEGORY_LABELS[category]}
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2 pt-0">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {items.map(({ def, defIndex, paletteIndex }) => (
+                          <Draggable key={def.type} draggableId={`palette-${def.type}`} index={paletteIndex}>
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => addBlock(defIndex)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') addBlock(defIndex);
+                                }}
+                                title={def.description}
+                                className={`relative text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing select-none ${
+                                  dragSnapshot.isDragging ? 'shadow-xl ring-2 ring-primary/40 bg-card' : ''
+                                }`}
+                              >
+                                <GripVertical className="absolute right-1 top-1 h-3 w-3 text-muted-foreground opacity-40" />
+                                <def.icon className="h-4 w-4 mb-1 text-primary" />
+                                <div className="text-xs font-semibold leading-tight pr-3">{def.label}</div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
               {provided.placeholder}
             </div>
           )}
@@ -277,9 +329,7 @@ function QuizBuilderPage() {
             <h1 className="font-bold text-sm leading-none truncate max-w-[100px] min-[420px]:max-w-[160px] sm:max-w-[280px]">
               {quiz?.name ?? 'Quiz'}
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-              Builder {dirty && <span className="text-amber-500">• não salvo</span>}
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">Builder</p>
           </div>
         </div>
 
@@ -323,6 +373,16 @@ function QuizBuilderPage() {
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/preview', params: { id } })} className="gap-2 px-2 sm:px-3">
             <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Preview</span>
           </Button>
+          <div
+            className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
+              dirty
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+            <span className="hidden min-[420px]:inline">{dirty ? 'Não salvo' : 'Salvo'}</span>
+          </div>
           <Button size="sm" onClick={handleSave} disabled={saving || !dirty} className="gap-2 px-2 sm:px-3 shadow-lg shadow-primary/20">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span className="hidden sm:inline">Salvar</span>

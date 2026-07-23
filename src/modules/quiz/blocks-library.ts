@@ -4,10 +4,22 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
 } from 'lucide-react';
 
+export type BlockCategory = 'captura' | 'conteudo' | 'interacao' | 'midia' | 'prova' | 'resultado';
+
+export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
+  captura: 'Captura',
+  conteudo: 'Conteúdo',
+  interacao: 'Interação',
+  midia: 'Mídia',
+  prova: 'Prova',
+  resultado: 'Resultado',
+};
+
 interface BlockDef {
   type: BlockType;
   label: string;
   description: string;
+  category: BlockCategory;
   icon: React.ComponentType<{ className?: string }>;
   create: () => Omit<QuizBlock, 'id'>;
 }
@@ -17,6 +29,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'intro',
     label: 'Intro',
     description: 'Tela inicial do quiz',
+    category: 'conteudo',
     icon: Rocket,
     create: () => ({
       type: 'intro',
@@ -29,6 +42,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'single-choice',
     label: 'Escolha única',
     description: '1 resposta entre várias',
+    category: 'interacao',
     icon: ListChecks,
     create: () => ({
       type: 'single-choice',
@@ -44,6 +58,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'multi-choice',
     label: 'Múltipla escolha',
     description: 'Várias respostas',
+    category: 'interacao',
     icon: CheckSquare,
     create: () => ({
       type: 'multi-choice',
@@ -59,6 +74,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'short-text',
     label: 'Texto curto',
     description: 'Campo de resposta simples',
+    category: 'captura',
     icon: Type,
     create: () => ({ type: 'short-text', title: 'Qual seu nome?', placeholder: 'Digite seu nome' }),
   },
@@ -66,6 +82,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'long-text',
     label: 'Texto longo',
     description: 'Resposta em parágrafo',
+    category: 'conteudo',
     icon: AlignLeft,
     create: () => ({ type: 'long-text', title: 'Nos conte mais sobre você', placeholder: 'Escreva aqui...' }),
   },
@@ -73,6 +90,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'email',
     label: 'E-mail',
     description: 'Captura de e-mail',
+    category: 'captura',
     icon: Mail,
     create: () => ({ type: 'email', title: 'Qual seu melhor e-mail?', placeholder: 'voce@empresa.com', required: true }),
   },
@@ -80,6 +98,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'phone',
     label: 'Telefone',
     description: 'Captura de WhatsApp',
+    category: 'captura',
     icon: Phone,
     create: () => ({ type: 'phone', title: 'Qual seu WhatsApp?', placeholder: '(11) 99999-9999', required: true }),
   },
@@ -87,6 +106,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'rating',
     label: 'Avaliação',
     description: 'Escala numérica',
+    category: 'interacao',
     icon: Star,
     create: () => ({ type: 'rating', title: 'De 0 a 10, o quanto você quer isso?', maxRating: 10 }),
   },
@@ -94,6 +114,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'cta',
     label: 'CTA',
     description: 'Botão de ação',
+    category: 'interacao',
     icon: Zap,
     create: () => ({ type: 'cta', title: 'Pronto para o próximo passo?', ctaLabel: 'Falar com especialista' }),
   },
@@ -101,6 +122,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'result',
     label: 'Resultado',
     description: 'Tela final personalizada',
+    category: 'resultado',
     icon: Trophy,
     create: () => ({
       type: 'result',
@@ -113,6 +135,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'video',
     label: 'Vídeo',
     description: 'YouTube, Vimeo ou MP4',
+    category: 'midia',
     icon: Video,
     create: () => ({
       type: 'video',
@@ -125,6 +148,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'audio',
     label: 'Áudio',
     description: 'Player de áudio (MP3)',
+    category: 'midia',
     icon: Music,
     create: () => ({ type: 'audio', title: 'Ouça essa mensagem', mediaUrl: '' }),
   },
@@ -132,6 +156,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'image',
     label: 'Imagem',
     description: 'Imagem destacada',
+    category: 'midia',
     icon: ImageIcon,
     create: () => ({
       type: 'image',
@@ -142,6 +167,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'before-after',
     label: 'Antes/Depois',
     description: 'Comparador com slider',
+    category: 'midia',
     icon: GitCompare,
     create: () => ({
       type: 'before-after',
@@ -154,6 +180,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'testimonial',
     label: 'Depoimento',
     description: 'Prova social',
+    category: 'prova',
     icon: Quote,
     create: () => ({
       type: 'testimonial',
@@ -167,6 +194,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'countdown',
     label: 'Countdown',
     description: 'Timer de urgência',
+    category: 'resultado',
     icon: Timer,
     create: () => ({ type: 'countdown', title: 'Oferta expira em:', countdownMinutes: 15 }),
   },
@@ -174,6 +202,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     type: 'divider',
     label: 'Divisor',
     description: 'Espaço visual',
+    category: 'resultado',
     icon: Minus,
     create: () => ({ type: 'divider' }),
   },
