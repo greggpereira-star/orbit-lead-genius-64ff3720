@@ -15,6 +15,11 @@ import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
 
+// Largura fixa do quiz em qualquer dispositivo (padrão validado por players de quiz-funnel
+// como Funilix/Typeform): em telas largas o conteúdo fica centralizado com espaço nas
+// laterais; em mobile ocupa 100% já que a viewport é menor que o máximo.
+const QUIZ_MAX_WIDTH = 448;
+
 type AccessState = 'checking' | 'allowed' | 'blocked';
 
 function useAccessGate(rules: AccessRules | undefined, tracking: Record<string, string> | undefined, skip: boolean): AccessState {
@@ -315,16 +320,13 @@ function PlayerRunner({
   };
 
   return (
-    <div
-      className="min-h-screen w-full flex items-center justify-center py-8 px-4"
-      style={{ background: design.background, color: design.text }}
-    >
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen w-full flex justify-center" style={{ background: design.background, color: design.text }}>
+      <div className="w-full flex flex-col" style={{ maxWidth: QUIZ_MAX_WIDTH, padding: '24px 16px' }}>
         <ProgressBar
           value={done ? 1 : (state.currentIndex + 1) / blocks.length}
           design={design}
         />
-        <div className="mt-6">
+        <div className="mt-6 flex-1 flex flex-col">
           {done ? (
             <ResultView schema={schema} state={state} />
           ) : (

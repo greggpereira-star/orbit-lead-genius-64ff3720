@@ -22,10 +22,15 @@ interface Props {
   device?: 'mobile' | 'tablet' | 'desktop';
 }
 
+// Largura fixa do quiz em qualquer dispositivo (mesmo padrão de QuizPlayer.tsx) — o
+// conteúdo real sempre renderiza nessa largura, então o preview do Builder simula a
+// viewport de cada dispositivo por fora, mas mantém o quiz nessa largura por dentro.
+const QUIZ_MAX_WIDTH = 448;
+
 export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'desktop' }: Props) {
   const { design, blocks } = schema;
 
-  const width = device === 'mobile' ? 380 : device === 'tablet' ? 720 : 960;
+  const viewportWidth = device === 'mobile' ? 390 : device === 'tablet' ? 820 : 1280;
 
   const cssVars = useMemo(
     () =>
@@ -43,63 +48,65 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
   return (
     <div className="w-full h-full flex items-center justify-center overflow-auto p-6" style={{ background: '#0a0a0a' }}>
       <div
-        className="rounded-2xl overflow-hidden shadow-2xl transition-all"
-        style={{ ...cssVars, width, minHeight: 640, background: design.background, color: design.text }}
+        className="rounded-2xl overflow-hidden shadow-2xl transition-all flex justify-center"
+        style={{ ...cssVars, width: viewportWidth, minHeight: 640, background: design.background, color: design.text }}
       >
-        <div className="p-6 border-b" style={{ borderColor: design.surface }}>
-          <ProgressBar design={design} value={0.15} />
-        </div>
-        <Droppable droppableId="canvas">
-          {(dropProvided, dropSnapshot) => (
-            <div
-              ref={dropProvided.innerRef}
-              {...dropProvided.droppableProps}
-              className={`p-8 space-y-8 min-h-[200px] transition-colors ${dropSnapshot.isDraggingOver ? 'bg-primary/5' : ''}`}
-            >
-              {blocks.length === 0 ? (
-                <div
-                  className={`text-center py-20 rounded-xl border-2 border-dashed transition-colors ${
-                    dropSnapshot.isDraggingOver ? 'border-primary/50 opacity-100' : 'opacity-60 border-transparent'
-                  }`}
-                >
-                  <p className="text-sm" style={{ color: design.muted }}>
-                    Arraste um componente da paleta até aqui, ou clique nele para adicionar →
-                  </p>
-                </div>
-              ) : (
-                blocks.map((b, i) => (
-                  <Draggable key={b.id} draggableId={b.id} index={i}>
-                    {(dragProvided, dragSnapshot) => (
-                      <div
-                        ref={dragProvided.innerRef}
-                        {...dragProvided.draggableProps}
-                        onClick={() => onSelectBlock?.(b.id)}
-                        className={`group relative cursor-pointer rounded-xl p-4 -m-4 transition-all ${
-                          activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
-                        } ${dragSnapshot.isDragging ? 'shadow-2xl bg-[var(--q-bg)]' : ''}`}
-                        style={{
-                          ...dragProvided.draggableProps.style,
-                          ...(activeBlockId === b.id ? { boxShadow: `0 0 0 2px ${design.primary}` } : {}),
-                        }}
-                      >
+        <div className="w-full transition-all" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
+          <div className="p-6 border-b" style={{ borderColor: design.surface }}>
+            <ProgressBar design={design} value={0.15} />
+          </div>
+          <Droppable droppableId="canvas">
+            {(dropProvided, dropSnapshot) => (
+              <div
+                ref={dropProvided.innerRef}
+                {...dropProvided.droppableProps}
+                className={`p-8 space-y-8 min-h-[200px] transition-colors ${dropSnapshot.isDraggingOver ? 'bg-primary/5' : ''}`}
+              >
+                {blocks.length === 0 ? (
+                  <div
+                    className={`text-center py-20 rounded-xl border-2 border-dashed transition-colors ${
+                      dropSnapshot.isDraggingOver ? 'border-primary/50 opacity-100' : 'opacity-60 border-transparent'
+                    }`}
+                  >
+                    <p className="text-sm" style={{ color: design.muted }}>
+                      Arraste um componente da paleta até aqui, ou clique nele para adicionar →
+                    </p>
+                  </div>
+                ) : (
+                  blocks.map((b, i) => (
+                    <Draggable key={b.id} draggableId={b.id} index={i}>
+                      {(dragProvided, dragSnapshot) => (
                         <div
-                          {...dragProvided.dragHandleProps}
-                          className="absolute left-1 top-1 z-10 opacity-40 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md select-none"
-                          style={{ background: design.surface }}
-                          onClick={(e) => e.stopPropagation()}
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          onClick={() => onSelectBlock?.(b.id)}
+                          className={`group relative cursor-pointer rounded-xl p-4 -m-4 transition-all ${
+                            activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
+                          } ${dragSnapshot.isDragging ? 'shadow-2xl bg-[var(--q-bg)]' : ''}`}
+                          style={{
+                            ...dragProvided.draggableProps.style,
+                            ...(activeBlockId === b.id ? { boxShadow: `0 0 0 2px ${design.primary}` } : {}),
+                          }}
                         >
-                          <GripVertical className="h-4 w-4" style={{ color: design.muted }} />
+                          <div
+                            {...dragProvided.dragHandleProps}
+                            className="absolute left-1 top-1 z-10 opacity-40 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md select-none"
+                            style={{ background: design.surface }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <GripVertical className="h-4 w-4" style={{ color: design.muted }} />
+                          </div>
+                          <BlockRenderer block={b} design={design} />
                         </div>
-                        <BlockRenderer block={b} design={design} />
-                      </div>
-                    )}
-                  </Draggable>
-                ))
-              )}
-              {dropProvided.placeholder}
-            </div>
-          )}
-        </Droppable>
+                      )}
+                    </Draggable>
+                  ))
+                )}
+                {dropProvided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </div>
       </div>
     </div>
   );
