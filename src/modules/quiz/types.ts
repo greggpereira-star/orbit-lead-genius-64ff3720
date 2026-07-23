@@ -53,7 +53,24 @@ export type BlockType =
   | 'before-after'
   | 'testimonial'
   | 'countdown'
-  | 'divider';
+  | 'divider'
+  // Fase B (Funilix parity)
+  | 'argument'
+  | 'argument-progress'
+  | 'level'
+  | 'loading'
+  | 'notification'
+  | 'faq'
+  | 'form'
+  | 'weight'
+  | 'height'
+  | 'pricing'
+  | 'reveal'
+  | 'ios-notification'
+  | 'carousel'
+  | 'comparison'
+  | 'chart'
+  | 'custom';
 
 export interface BlockOption {
   id: string;
@@ -106,6 +123,43 @@ export interface QuizBlock {
     enabled: boolean;
     variants: BlockVariant[];
   };
+  // Fase B (Funilix parity)
+  argumentIcon?: string;
+  progressValue?: number; // 0-100, used by argument-progress and level
+  levelLabel?: string;
+  loadingSeconds?: number;
+  loadingSteps?: string[];
+  faqItems?: FaqItem[];
+  formFields?: { name?: boolean; email?: boolean; phone?: boolean };
+  pricingPrice?: string;
+  pricingOriginalPrice?: string;
+  pricingPeriod?: string;
+  pricingFeatures?: string[];
+  revealLabel?: string;
+  revealedTitle?: string;
+  revealedBody?: string;
+  notificationApp?: string;
+  notificationTime?: string;
+  carouselImages?: string[];
+  comparisonLeftLabel?: string;
+  comparisonLeftItems?: string[];
+  comparisonRightLabel?: string;
+  comparisonRightItems?: string[];
+  chartType?: 'bar' | 'line';
+  chartData?: ChartPoint[];
+  customHtml?: string;
+}
+
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface ChartPoint {
+  id: string;
+  label: string;
+  value: number;
 }
 
 export interface BlockVariant {

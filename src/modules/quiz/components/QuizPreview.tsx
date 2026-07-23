@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
@@ -345,7 +345,259 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
       );
     case 'divider':
       return <div className="h-px w-full" style={{ background: design.surface }} />;
+
+    case 'argument':
+      return (
+        <div className="flex gap-4 items-start">
+          <div
+            className="h-11 w-11 shrink-0 rounded-full flex items-center justify-center"
+            style={{ background: design.primary + '22' }}
+          >
+            <Sparkles className="h-5 w-5" style={{ color: design.primary }} />
+          </div>
+          {heading}
+        </div>
+      );
+
+    case 'argument-progress': {
+      const pct = block.progressValue ?? 50;
+      return (
+        <div className="space-y-4">
+          {heading}
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: design.surface }}>
+            <div className="h-full transition-all" style={{ width: `${pct}%`, background: design.primary }} />
+          </div>
+        </div>
+      );
+    }
+
+    case 'level': {
+      const pct = block.progressValue ?? 50;
+      return (
+        <div className="space-y-4">
+          {heading}
+          <div className="flex items-center justify-between text-sm font-semibold" style={{ color: design.text }}>
+            <span>{block.levelLabel ?? ''}</span>
+            <span>{pct}%</span>
+          </div>
+          <div className="h-3 rounded-full overflow-hidden" style={{ background: design.surface }}>
+            <div className="h-full transition-all" style={{ width: `${pct}%`, background: design.primary }} />
+          </div>
+        </div>
+      );
+    }
+
+    case 'loading':
+      return (
+        <div className="space-y-4 text-center py-6">
+          <Hourglass className="h-8 w-8 mx-auto animate-pulse" style={{ color: design.primary }} />
+          {heading}
+          <div className="space-y-2 text-left max-w-xs mx-auto">
+            {(block.loadingSteps ?? []).map((step, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm" style={{ color: design.muted }}>
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: design.primary }} />
+                {step}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'notification':
+      return (
+        <div className="flex gap-3 items-start p-4 rounded-xl" style={{ background: design.surface }}>
+          <div
+            className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center"
+            style={{ background: design.primary + '22' }}
+          >
+            <Bell className="h-4 w-4" style={{ color: design.primary }} />
+          </div>
+          {heading}
+        </div>
+      );
+
+    case 'faq':
+      return (
+        <div className="space-y-4">
+          {heading}
+          <div className="space-y-2">
+            {(block.faqItems ?? []).map((item) => (
+              <div key={item.id} className="p-3 rounded-lg" style={{ background: design.surface }}>
+                <div className="text-sm font-semibold" style={{ color: design.text }}>{item.question}</div>
+                <div className="text-xs mt-1" style={{ color: design.muted }}>{item.answer}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'form': {
+      const ff = block.formFields ?? { name: true, email: true, phone: true };
+      return (
+        <div className="space-y-3">
+          {heading}
+          {ff.name && <FormFieldPreview design={design} label="Nome" />}
+          {ff.email && <FormFieldPreview design={design} label="E-mail" />}
+          {ff.phone && <FormFieldPreview design={design} label="Telefone" />}
+          <Btn design={design}>{block.ctaLabel || 'Enviar'}</Btn>
+        </div>
+      );
+    }
+
+    case 'weight':
+      return (
+        <div className="space-y-3">
+          {heading}
+          <FormFieldPreview design={design} label={block.placeholder || 'Ex: 70'} suffix="kg" />
+        </div>
+      );
+
+    case 'height':
+      return (
+        <div className="space-y-3">
+          {heading}
+          <FormFieldPreview design={design} label={block.placeholder || 'Ex: 170'} suffix="cm" />
+        </div>
+      );
+
+    case 'pricing':
+      return (
+        <div className="p-6 rounded-xl space-y-4 text-center" style={{ background: design.surface }}>
+          <div className="text-sm font-semibold" style={{ color: design.text }}>{title}</div>
+          <div className="flex items-end justify-center gap-1.5">
+            <span className="text-3xl font-bold" style={{ color: design.primary }}>{block.pricingPrice ?? 'R$ 0'}</span>
+            <span className="text-sm" style={{ color: design.muted }}>{block.pricingPeriod}</span>
+          </div>
+          {block.pricingOriginalPrice && (
+            <div className="text-xs line-through" style={{ color: design.muted }}>{block.pricingOriginalPrice}</div>
+          )}
+          <div className="space-y-1.5 text-left max-w-xs mx-auto">
+            {(block.pricingFeatures ?? []).map((f, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs" style={{ color: design.text }}>
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: design.primary }} />
+                {f}
+              </div>
+            ))}
+          </div>
+          <Btn design={design}>{block.ctaLabel || 'Quero essa oferta'}</Btn>
+        </div>
+      );
+
+    case 'reveal':
+      return (
+        <div className="text-center space-y-4 py-4">
+          {heading}
+          <div
+            className="border-2 border-dashed rounded-xl p-8"
+            style={{ borderColor: design.primary, color: design.muted }}
+          >
+            <Gift className="h-6 w-6 mx-auto mb-2" style={{ color: design.primary }} />
+            {block.revealLabel || 'Revelar prêmio'}
+          </div>
+        </div>
+      );
+
+    case 'ios-notification':
+      return (
+        <div className="p-3 rounded-2xl flex gap-3 items-start shadow-lg" style={{ background: design.surface }}>
+          <div
+            className="h-9 w-9 rounded-xl shrink-0 flex items-center justify-center"
+            style={{ background: design.primary }}
+          >
+            <BellRing className="h-4 w-4 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold" style={{ color: design.muted }}>{block.notificationApp ?? 'App'}</span>
+              <span className="text-[10px]" style={{ color: design.muted }}>{block.notificationTime ?? 'agora'}</span>
+            </div>
+            <div className="text-sm font-semibold" style={{ color: design.text }}>{title}</div>
+            {sub && <div className="text-xs" style={{ color: design.muted }}>{sub}</div>}
+          </div>
+        </div>
+      );
+
+    case 'carousel':
+      return (
+        <div className="space-y-3">
+          {heading}
+          <div className="flex gap-2 overflow-x-auto">
+            {(block.carouselImages ?? []).map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt=""
+                className="h-32 w-44 shrink-0 object-cover"
+                style={{ borderRadius: design.radius }}
+              />
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'comparison':
+      return (
+        <div className="space-y-4">
+          {heading}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-lg space-y-1.5" style={{ background: design.surface }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: design.muted }}>{block.comparisonLeftLabel}</div>
+              {(block.comparisonLeftItems ?? []).map((item, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-xs" style={{ color: design.text }}>
+                  <X className="h-3 w-3 shrink-0 text-red-400" /> {item}
+                </div>
+              ))}
+            </div>
+            <div className="p-3 rounded-lg space-y-1.5" style={{ background: design.primary + '15' }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: design.primary }}>{block.comparisonRightLabel}</div>
+              {(block.comparisonRightItems ?? []).map((item, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-xs" style={{ color: design.text }}>
+                  <CheckCircle2 className="h-3 w-3 shrink-0" style={{ color: design.primary }} /> {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'chart': {
+      const points = block.chartData ?? [];
+      const max = Math.max(1, ...points.map((p) => p.value));
+      return (
+        <div className="space-y-4">
+          {heading}
+          <div className="flex items-end gap-4 h-32">
+            {points.map((p) => (
+              <div key={p.id} className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full">
+                <span className="text-xs font-semibold" style={{ color: design.text }}>{p.value}</span>
+                <div
+                  className="w-full rounded-t-md transition-all"
+                  style={{ height: `${(p.value / max) * 100}%`, background: design.primary }}
+                />
+                <span className="text-[10px]" style={{ color: design.muted }}>{p.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case 'custom':
+      return <div dangerouslySetInnerHTML={{ __html: block.customHtml ?? '' }} />;
+
     default:
       return heading;
   }
+}
+
+function FormFieldPreview({ design, label, suffix }: { design: QuizDesign; label: string; suffix?: string }) {
+  return (
+    <div
+      className="w-full px-4 py-3 flex items-center justify-between text-sm"
+      style={{ borderRadius: design.radius, background: design.surface, color: design.muted, border: `1px solid ${design.surface}` }}
+    >
+      {label}
+      {suffix && <span className="text-xs">{suffix}</span>}
+    </div>
+  );
 }

@@ -1,9 +1,10 @@
-import type { QuizBlock, QuizDesign, BlockVariant } from '../types';
+import type { QuizBlock, QuizDesign, BlockVariant, FaqItem, ChartPoint } from '../types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
 import { BLOCK_LIBRARY } from '../blocks-library';
@@ -47,8 +48,15 @@ function BlockInspector({
   onDelete: () => void;
 }) {
   const hasOptions = block.type === 'single-choice' || block.type === 'multi-choice';
-  const hasMedia = ['intro', 'image', 'audio', 'video', 'before-after', 'testimonial'].includes(block.type);
+  const hasMedia = ['intro', 'image', 'audio', 'video', 'before-after', 'testimonial', 'carousel'].includes(block.type);
   const def = BLOCK_LIBRARY.find((d) => d.type === block.type);
+
+  const ctaEligible = [
+    'intro', 'cta', 'result', 'short-text', 'long-text', 'email', 'phone',
+    'argument', 'argument-progress', 'level', 'notification', 'faq', 'form',
+    'weight', 'height', 'pricing', 'reveal', 'ios-notification', 'carousel',
+    'comparison', 'chart',
+  ].includes(block.type);
 
   return (
     <div className="p-4 space-y-5">
@@ -81,7 +89,7 @@ function BlockInspector({
               <Textarea rows={4} value={block.resultBody ?? ''} onChange={(e) => onChange({ resultBody: e.target.value })} />
             </Field>
           </>
-        ) : (
+        ) : block.type === 'custom' ? null : (
           <>
             <Field label="Título">
               <Input value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} />
@@ -92,14 +100,14 @@ function BlockInspector({
           </>
         )}
 
-        {(block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
+        {(block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone' ||
+          block.type === 'weight' || block.type === 'height') && (
           <Field label="Placeholder">
             <Input value={block.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} />
           </Field>
         )}
 
-        {(block.type === 'intro' || block.type === 'cta' || block.type === 'result' ||
-          block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
+        {ctaEligible && (
           <Field label="Texto do botão">
             <Input value={block.ctaLabel ?? ''} onChange={(e) => onChange({ ctaLabel: e.target.value })} />
           </Field>
@@ -151,6 +159,151 @@ function BlockInspector({
               <Input value={block.countdownEndsAt ?? ''} onChange={(e) => onChange({ countdownEndsAt: e.target.value })} placeholder="2026-12-31T23:59:00Z" />
             </Field>
           </>
+        )}
+
+        {(block.type === 'argument-progress' || block.type === 'level') && (
+          <Field label={`Progresso: ${block.progressValue ?? 50}%`}>
+            <Slider min={0} max={100} step={5} value={[block.progressValue ?? 50]} onValueChange={([v]) => onChange({ progressValue: v })} />
+          </Field>
+        )}
+
+        {block.type === 'level' && (
+          <Field label="Rótulo do nível">
+            <Input value={block.levelLabel ?? ''} onChange={(e) => onChange({ levelLabel: e.target.value })} placeholder="Ex: Intermediário" />
+          </Field>
+        )}
+
+        {block.type === 'loading' && (
+          <>
+            <Field label={`Duração: ${block.loadingSeconds ?? 3}s`}>
+              <Slider min={1} max={10} step={1} value={[block.loadingSeconds ?? 3]} onValueChange={([v]) => onChange({ loadingSeconds: v })} />
+            </Field>
+            <Field label="Etapas exibidas">
+              <StringListEditor
+                items={block.loadingSteps ?? []}
+                onChange={(items) => onChange({ loadingSteps: items })}
+                placeholder="Ex: Processando dados"
+                addLabel="Adicionar etapa"
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'faq' && (
+          <Field label="Perguntas">
+            <FaqEditor items={block.faqItems ?? []} onChange={(items) => onChange({ faqItems: items })} />
+          </Field>
+        )}
+
+        {block.type === 'form' && (
+          <Field label="Campos exibidos">
+            <div className="space-y-2">
+              {([
+                ['name', 'Nome'],
+                ['email', 'E-mail'],
+                ['phone', 'Telefone'],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={block.formFields?.[key] ?? true}
+                    onCheckedChange={(checked) =>
+                      onChange({ formFields: { ...(block.formFields ?? { name: true, email: true, phone: true }), [key]: Boolean(checked) } })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </Field>
+        )}
+
+        {block.type === 'pricing' && (
+          <>
+            <Field label="Preço">
+              <Input value={block.pricingPrice ?? ''} onChange={(e) => onChange({ pricingPrice: e.target.value })} placeholder="R$ 97" />
+            </Field>
+            <Field label="Preço original (riscado)">
+              <Input value={block.pricingOriginalPrice ?? ''} onChange={(e) => onChange({ pricingOriginalPrice: e.target.value })} placeholder="R$ 197" />
+            </Field>
+            <Field label="Período">
+              <Input value={block.pricingPeriod ?? ''} onChange={(e) => onChange({ pricingPeriod: e.target.value })} placeholder="/mês" />
+            </Field>
+            <Field label="Benefícios">
+              <StringListEditor
+                items={block.pricingFeatures ?? []}
+                onChange={(items) => onChange({ pricingFeatures: items })}
+                placeholder="Ex: Suporte prioritário"
+                addLabel="Adicionar benefício"
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'reveal' && (
+          <>
+            <Field label="Texto do botão de revelar">
+              <Input value={block.revealLabel ?? ''} onChange={(e) => onChange({ revealLabel: e.target.value })} />
+            </Field>
+            <Field label="Título revelado">
+              <Input value={block.revealedTitle ?? ''} onChange={(e) => onChange({ revealedTitle: e.target.value })} />
+            </Field>
+            <Field label="Texto revelado">
+              <Textarea rows={2} value={block.revealedBody ?? ''} onChange={(e) => onChange({ revealedBody: e.target.value })} />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'ios-notification' && (
+          <>
+            <Field label="Nome do app">
+              <Input value={block.notificationApp ?? ''} onChange={(e) => onChange({ notificationApp: e.target.value })} />
+            </Field>
+            <Field label="Horário exibido">
+              <Input value={block.notificationTime ?? ''} onChange={(e) => onChange({ notificationTime: e.target.value })} placeholder="agora" />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'comparison' && (
+          <>
+            <Field label="Rótulo (esquerda)">
+              <Input value={block.comparisonLeftLabel ?? ''} onChange={(e) => onChange({ comparisonLeftLabel: e.target.value })} />
+            </Field>
+            <Field label="Itens (esquerda)">
+              <StringListEditor
+                items={block.comparisonLeftItems ?? []}
+                onChange={(items) => onChange({ comparisonLeftItems: items })}
+                addLabel="Adicionar item"
+              />
+            </Field>
+            <Field label="Rótulo (direita)">
+              <Input value={block.comparisonRightLabel ?? ''} onChange={(e) => onChange({ comparisonRightLabel: e.target.value })} />
+            </Field>
+            <Field label="Itens (direita)">
+              <StringListEditor
+                items={block.comparisonRightItems ?? []}
+                onChange={(items) => onChange({ comparisonRightItems: items })}
+                addLabel="Adicionar item"
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'chart' && (
+          <Field label="Dados do gráfico">
+            <ChartDataEditor items={block.chartData ?? []} onChange={(items) => onChange({ chartData: items })} />
+          </Field>
+        )}
+
+        {block.type === 'custom' && (
+          <Field label="HTML customizado">
+            <Textarea
+              rows={10}
+              className="font-mono text-xs"
+              value={block.customHtml ?? ''}
+              onChange={(e) => onChange({ customHtml: e.target.value })}
+            />
+          </Field>
         )}
       </Section>
 
@@ -228,6 +381,15 @@ function BlockInspector({
                 value={block.testimonialAvatar}
                 onChange={(url) => onChange({ testimonialAvatar: url })}
                 compact
+              />
+            </Field>
+          )}
+          {block.type === 'carousel' && (
+            <Field label="Imagens">
+              <CarouselEditor
+                quizId={quizId}
+                images={block.carouselImages ?? []}
+                onChange={(images) => onChange({ carouselImages: images })}
               />
             </Field>
           )}
@@ -502,6 +664,167 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function StringListEditor({
+  items,
+  onChange,
+  placeholder,
+  addLabel,
+}: {
+  items: string[];
+  onChange: (items: string[]) => void;
+  placeholder?: string;
+  addLabel: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-1">
+          <Input
+            value={item}
+            placeholder={placeholder}
+            onChange={(e) => {
+              const next = [...items];
+              next[i] = e.target.value;
+              onChange(next);
+            }}
+          />
+          <Button size="sm" variant="ghost" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+      <Button size="sm" variant="outline" className="w-full gap-2" onClick={() => onChange([...items, ''])}>
+        <Plus className="h-3.5 w-3.5" /> {addLabel}
+      </Button>
+    </div>
+  );
+}
+
+function FaqEditor({ items, onChange }: { items: FaqItem[]; onChange: (items: FaqItem[]) => void }) {
+  return (
+    <div className="space-y-2">
+      {items.map((item, i) => (
+        <div key={item.id} className="rounded-lg border p-2.5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground">Pergunta {i + 1}</span>
+            <Button size="sm" variant="ghost" onClick={() => onChange(items.filter((x) => x.id !== item.id))}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+          <Input
+            placeholder="Pergunta"
+            value={item.question}
+            onChange={(e) => {
+              const next = [...items];
+              next[i] = { ...item, question: e.target.value };
+              onChange(next);
+            }}
+          />
+          <Textarea
+            placeholder="Resposta"
+            rows={2}
+            value={item.answer}
+            onChange={(e) => {
+              const next = [...items];
+              next[i] = { ...item, answer: e.target.value };
+              onChange(next);
+            }}
+          />
+        </div>
+      ))}
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full gap-2"
+        onClick={() => onChange([...items, { id: crypto.randomUUID(), question: '', answer: '' }])}
+      >
+        <Plus className="h-3.5 w-3.5" /> Adicionar pergunta
+      </Button>
+    </div>
+  );
+}
+
+function ChartDataEditor({ items, onChange }: { items: ChartPoint[]; onChange: (items: ChartPoint[]) => void }) {
+  return (
+    <div className="space-y-2">
+      {items.map((item, i) => (
+        <div key={item.id} className="flex gap-1">
+          <Input
+            placeholder="Rótulo"
+            value={item.label}
+            onChange={(e) => {
+              const next = [...items];
+              next[i] = { ...item, label: e.target.value };
+              onChange(next);
+            }}
+            className="flex-1"
+          />
+          <Input
+            type="number"
+            placeholder="Valor"
+            value={item.value}
+            onChange={(e) => {
+              const next = [...items];
+              next[i] = { ...item, value: Number(e.target.value) };
+              onChange(next);
+            }}
+            className="w-20"
+          />
+          <Button size="sm" variant="ghost" onClick={() => onChange(items.filter((x) => x.id !== item.id))}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full gap-2"
+        onClick={() => onChange([...items, { id: crypto.randomUUID(), label: '', value: 0 }])}
+      >
+        <Plus className="h-3.5 w-3.5" /> Adicionar ponto
+      </Button>
+    </div>
+  );
+}
+
+function CarouselEditor({
+  quizId,
+  images,
+  onChange,
+}: {
+  quizId: string;
+  images: string[];
+  onChange: (images: string[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {images.map((url, i) => (
+        <div key={i} className="flex gap-1 items-start">
+          <div className="flex-1">
+            <MediaUploader
+              quizId={quizId}
+              accept="image"
+              value={url}
+              onChange={(u) => {
+                const next = [...images];
+                next[i] = u ?? '';
+                onChange(next);
+              }}
+              compact
+            />
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => onChange(images.filter((_, idx) => idx !== i))}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+      <Button size="sm" variant="outline" className="w-full gap-2" onClick={() => onChange([...images, ''])}>
+        <Plus className="h-3.5 w-3.5" /> Adicionar imagem
+      </Button>
     </div>
   );
 }

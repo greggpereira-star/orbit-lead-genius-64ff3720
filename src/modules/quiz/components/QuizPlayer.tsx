@@ -13,6 +13,7 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
+import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
 
 type AccessState = 'checking' | 'allowed' | 'blocked';
 
@@ -271,9 +272,13 @@ function PlayerRunner({
       }
       const max = maxPossibleScore(schema);
       const temperature = classifyTemperature(finalState.score, max);
-      const email = extract(finalState.responses, blocks, 'email');
-      const phone = extract(finalState.responses, blocks, 'phone');
-      const name = extract(finalState.responses, blocks, 'short-text');
+      const formBlock = blocks.find((b) => b.type === 'form');
+      const formResponse = formBlock
+        ? (finalState.responses[formBlock.id] as { name?: string; email?: string; phone?: string } | undefined)
+        : undefined;
+      const email = extract(finalState.responses, blocks, 'email') ?? formResponse?.email;
+      const phone = extract(finalState.responses, blocks, 'phone') ?? formResponse?.phone;
+      const name = extract(finalState.responses, blocks, 'short-text') ?? formResponse?.name;
       const enrichedTracking: Record<string, string> = {
         ...tracking,
         user_agent: navigator.userAgent,
@@ -323,7 +328,7 @@ function PlayerRunner({
           {done ? (
             <ResultView schema={schema} state={state} />
           ) : (
-            <BlockView block={effectiveBlock} design={design} onSubmit={advance} saving={saving} />
+            <BlockView key={block.id} block={effectiveBlock} design={design} onSubmit={advance} saving={saving} />
           )}
         </div>
       </div>
@@ -403,16 +408,33 @@ function BlockView({
 }) {
   const [value, setValue] = useState<unknown>('');
   const [multi, setMulti] = useState<string[]>([]);
+  const [formValue, setFormValue] = useState({ name: '', email: '', phone: '' });
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (block.type !== 'loading') return;
+    const timer = setTimeout(() => onSubmit(true), (block.loadingSeconds ?? 3) * 1000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [block.id]);
 
   const canSubmit = useMemo(() => {
     if (block.type === 'multi-choice') return multi.length > 0 || !block.required;
     if (block.type === 'single-choice') return typeof value === 'string' && value.length > 0;
     if (block.type === 'rating') return typeof value === 'number';
-    if (block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') {
+    if (
+      block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' ||
+      block.type === 'phone' || block.type === 'weight' || block.type === 'height'
+    ) {
       return !block.required || (typeof value === 'string' && value.trim().length > 0);
     }
+    if (block.type === 'form') {
+      const ff = block.formFields ?? { name: true, email: true, phone: true };
+      return !ff.email || formValue.email.trim().length > 0;
+    }
+    if (block.type === 'reveal') return revealed;
     return true;
-  }, [block, value, multi]);
+  }, [block, value, multi, formValue, revealed]);
 
   const heading = (
     <div className="space-y-3 mb-6">
@@ -719,6 +741,335 @@ function BlockView({
           {heading}
           <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'argument':
+      return (
+        <div className="space-y-6">
+          <div className="flex gap-4 items-start">
+            <div
+              className="h-12 w-12 shrink-0 rounded-full flex items-center justify-center"
+              style={{ background: design.primary + '22' }}
+            >
+              <Sparkles className="h-5 w-5" style={{ color: design.primary }} />
+            </div>
+            {heading}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'argument-progress': {
+      const pct = block.progressValue ?? 50;
+      return (
+        <div>
+          {heading}
+          <div className="h-2.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
+            <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: design.primary }} />
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+    }
+
+    case 'level': {
+      const pct = block.progressValue ?? 50;
+      return (
+        <div>
+          {heading}
+          <div className="flex items-center justify-between text-sm font-semibold mb-2">
+            <span>{block.levelLabel ?? ''}</span>
+            <span>{pct}%</span>
+          </div>
+          <div className="h-3.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
+            <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: design.primary }} />
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+    }
+
+    case 'loading':
+      return (
+        <div className="text-center py-10 space-y-6">
+          <Hourglass className="h-10 w-10 mx-auto animate-spin" style={{ color: design.primary }} />
+          {heading}
+          <div className="space-y-2 text-left max-w-xs mx-auto">
+            {(block.loadingSteps ?? []).map((step, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm opacity-80">
+                <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: design.primary }} />
+                {step}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case 'notification':
+      return (
+        <div className="space-y-6">
+          <div className="flex gap-3 items-start p-5 rounded-xl" style={{ background: design.surface }}>
+            <div
+              className="h-10 w-10 shrink-0 rounded-full flex items-center justify-center"
+              style={{ background: design.primary + '22' }}
+            >
+              <Bell className="h-4 w-4" style={{ color: design.primary }} />
+            </div>
+            {heading}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'faq':
+      return (
+        <div>
+          {heading}
+          <div className="space-y-2 mb-6">
+            {(block.faqItems ?? []).map((item) => (
+              <details key={item.id} className="p-4 rounded-lg" style={{ background: design.surface }}>
+                <summary className="text-sm font-semibold cursor-pointer">{item.question}</summary>
+                <p className="text-sm mt-2 opacity-80">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'form': {
+      const ff = block.formFields ?? { name: true, email: true, phone: true };
+      return (
+        <div>
+          {heading}
+          <div className="space-y-3 mb-6">
+            {ff.name && (
+              <input
+                placeholder="Nome"
+                value={formValue.name}
+                onChange={(e) => setFormValue((f) => ({ ...f, name: e.target.value }))}
+                className="w-full px-4 py-3.5 outline-none text-base"
+                style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
+              />
+            )}
+            {ff.email && (
+              <input
+                type="email"
+                placeholder="E-mail"
+                value={formValue.email}
+                onChange={(e) => setFormValue((f) => ({ ...f, email: e.target.value }))}
+                className="w-full px-4 py-3.5 outline-none text-base"
+                style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
+              />
+            )}
+            {ff.phone && (
+              <input
+                type="tel"
+                placeholder="Telefone"
+                value={formValue.phone}
+                onChange={(e) => setFormValue((f) => ({ ...f, phone: e.target.value }))}
+                className="w-full px-4 py-3.5 outline-none text-base"
+                style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
+              />
+            )}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(formValue)} disabled={!canSubmit || saving}>
+            {block.ctaLabel || 'Enviar'}
+          </PrimaryBtn>
+        </div>
+      );
+    }
+
+    case 'weight':
+    case 'height':
+      return (
+        <div>
+          {heading}
+          <div className="relative mb-6">
+            <input
+              type="number"
+              placeholder={block.placeholder}
+              value={String(value ?? '')}
+              onChange={(e) => setValue(e.target.value)}
+              className="w-full px-4 py-3.5 outline-none text-base"
+              style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}` }}
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-60">
+              {block.type === 'weight' ? 'kg' : 'cm'}
+            </span>
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(value)} disabled={!canSubmit || saving}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'pricing':
+      return (
+        <div className="text-center space-y-5">
+          {block.title && <h2 className="text-xl font-semibold">{block.title}</h2>}
+          <div className="flex items-end justify-center gap-2">
+            <span className="text-4xl font-bold" style={{ color: design.primary }}>{block.pricingPrice ?? 'R$ 0'}</span>
+            <span className="text-base opacity-70">{block.pricingPeriod}</span>
+          </div>
+          {block.pricingOriginalPrice && (
+            <div className="text-sm line-through opacity-50">{block.pricingOriginalPrice}</div>
+          )}
+          <div className="space-y-2 text-left max-w-xs mx-auto">
+            {(block.pricingFeatures ?? []).map((f, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: design.primary }} />
+                {f}
+              </div>
+            ))}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Quero essa oferta'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'reveal':
+      return (
+        <div className="text-center space-y-6">
+          {heading}
+          {revealed ? (
+            <div className="p-6 rounded-xl space-y-2" style={{ background: design.surface }}>
+              <div className="text-xl font-bold">{block.revealedTitle}</div>
+              <p className="text-sm opacity-80">{block.revealedBody}</p>
+            </div>
+          ) : (
+            <button
+              onClick={() => setRevealed(true)}
+              className="w-full border-2 border-dashed rounded-xl p-10 transition-all hover:scale-[1.01]"
+              style={{ borderColor: design.primary, borderRadius: design.radius }}
+            >
+              <Gift className="h-7 w-7 mx-auto mb-2" style={{ color: design.primary }} />
+              {block.revealLabel || 'Revelar prêmio'}
+            </button>
+          )}
+          {revealed && (
+            <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+              {block.ctaLabel || 'Continuar'}
+            </PrimaryBtn>
+          )}
+        </div>
+      );
+
+    case 'ios-notification':
+      return (
+        <div className="space-y-6">
+          <div className="p-4 rounded-2xl flex gap-3 items-start shadow-lg" style={{ background: design.surface }}>
+            <div className="h-10 w-10 rounded-xl shrink-0 flex items-center justify-center" style={{ background: design.primary }}>
+              <BellRing className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold opacity-60">{block.notificationApp ?? 'App'}</span>
+                <span className="text-[11px] opacity-50">{block.notificationTime ?? 'agora'}</span>
+              </div>
+              <div className="text-base font-semibold">{block.title}</div>
+              {block.subtitle && <div className="text-sm opacity-70">{block.subtitle}</div>}
+            </div>
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'carousel':
+      return (
+        <div>
+          {heading}
+          <div className="flex gap-3 overflow-x-auto mb-6 -mx-1 px-1">
+            {(block.carouselImages ?? []).map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt=""
+                className="h-56 w-72 shrink-0 object-cover"
+                style={{ borderRadius: design.radius }}
+              />
+            ))}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'comparison':
+      return (
+        <div>
+          {heading}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="p-4 rounded-lg space-y-2" style={{ background: design.surface }}>
+              <div className="text-xs font-semibold uppercase tracking-wide opacity-60">{block.comparisonLeftLabel}</div>
+              {(block.comparisonLeftItems ?? []).map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <X className="h-4 w-4 shrink-0 text-red-400" /> {item}
+                </div>
+              ))}
+            </div>
+            <div className="p-4 rounded-lg space-y-2" style={{ background: design.primary + '15' }}>
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: design.primary }}>{block.comparisonRightLabel}</div>
+              {(block.comparisonRightItems ?? []).map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: design.primary }} /> {item}
+                </div>
+              ))}
+            </div>
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'chart': {
+      const points = block.chartData ?? [];
+      const max = Math.max(1, ...points.map((p) => p.value));
+      return (
+        <div>
+          {heading}
+          <div className="flex items-end gap-6 h-44 mb-6">
+            {points.map((p) => (
+              <div key={p.id} className="flex-1 flex flex-col items-center justify-end gap-2 h-full">
+                <span className="text-sm font-semibold">{p.value}</span>
+                <div
+                  className="w-full rounded-t-md transition-all duration-700"
+                  style={{ height: `${(p.value / max) * 100}%`, background: design.primary }}
+                />
+                <span className="text-xs opacity-60">{p.label}</span>
+              </div>
+            ))}
+          </div>
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+    }
+
+    case 'custom':
+      return (
+        <div>
+          <div dangerouslySetInnerHTML={{ __html: block.customHtml ?? '' }} className="mb-6" />
+          <PrimaryBtn design={design} onClick={() => onSubmit(true)}>
+            Continuar
           </PrimaryBtn>
         </div>
       );

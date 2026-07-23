@@ -35,7 +35,9 @@ import { BLOCK_LIBRARY, BLOCK_CATEGORY_LABELS, type BlockCategory } from '@/modu
 import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
 import type { QuizBlock, QuizFunnel, QuizSchema } from '@/modules/quiz/types';
 
-const CATEGORY_ORDER: BlockCategory[] = ['captura', 'conteudo', 'interacao', 'midia', 'prova', 'resultado'];
+const CATEGORY_ORDER: BlockCategory[] = [
+  'captura', 'conteudo', 'interacao', 'oferta', 'gamificacao', 'midia', 'prova', 'resultado', 'livre',
+];
 
 export const Route = createFileRoute('/_app/quizzes_/$id/builder')({
   component: QuizBuilderPage,

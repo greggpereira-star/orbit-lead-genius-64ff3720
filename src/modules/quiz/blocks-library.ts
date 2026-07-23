@@ -2,9 +2,20 @@ import type { BlockType, QuizBlock } from '@/modules/quiz/types';
 import {
   Rocket, ListChecks, CheckSquare, Type, AlignLeft, Mail, Phone, Star, Zap, Trophy,
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
+  MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
+  Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
 } from 'lucide-react';
 
-export type BlockCategory = 'captura' | 'conteudo' | 'interacao' | 'midia' | 'prova' | 'resultado';
+export type BlockCategory =
+  | 'captura'
+  | 'conteudo'
+  | 'interacao'
+  | 'midia'
+  | 'prova'
+  | 'resultado'
+  | 'oferta'
+  | 'gamificacao'
+  | 'livre';
 
 export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
   captura: 'Captura',
@@ -13,6 +24,9 @@ export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
   midia: 'Mídia',
   prova: 'Prova',
   resultado: 'Resultado',
+  oferta: 'Oferta',
+  gamificacao: 'Gamificação',
+  livre: 'Livre',
 };
 
 interface BlockDef {
@@ -205,5 +219,224 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     category: 'resultado',
     icon: Minus,
     create: () => ({ type: 'divider' }),
+  },
+  // ============ Fase B (Funilix parity) ============
+  {
+    type: 'argument',
+    label: 'Argumento',
+    description: 'Texto persuasivo com ícone',
+    category: 'conteudo',
+    icon: MessageSquareText,
+    create: () => ({
+      type: 'argument',
+      title: 'Você não está sozinho nessa',
+      subtitle: 'Milhares de pessoas já passaram pelo mesmo desafio e encontraram uma solução.',
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'argument-progress',
+    label: 'Argumento c/ progresso',
+    description: 'Texto + barra animada',
+    category: 'conteudo',
+    icon: TrendingUp,
+    create: () => ({
+      type: 'argument-progress',
+      title: 'Estamos quase lá',
+      subtitle: 'Só mais algumas perguntas para personalizar seu resultado.',
+      progressValue: 70,
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'level',
+    label: 'Nível',
+    description: 'Medidor / gauge',
+    category: 'conteudo',
+    icon: Gauge,
+    create: () => ({
+      type: 'level',
+      title: 'Seu nível atual',
+      levelLabel: 'Intermediário',
+      progressValue: 60,
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'loading',
+    label: 'Carregamento',
+    description: 'Tela de análise com auto-avanço',
+    category: 'conteudo',
+    icon: Hourglass,
+    create: () => ({
+      type: 'loading',
+      title: 'Analisando suas respostas...',
+      loadingSeconds: 3,
+      loadingSteps: ['Coletando dados', 'Processando perfil', 'Montando resultado'],
+    }),
+  },
+  {
+    type: 'notification',
+    label: 'Notificação',
+    description: 'Alerta em destaque',
+    category: 'conteudo',
+    icon: Bell,
+    create: () => ({
+      type: 'notification',
+      title: 'Vagas limitadas hoje',
+      subtitle: 'Restam poucas vagas para esta condição especial.',
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'faq',
+    label: 'FAQ',
+    description: 'Perguntas frequentes',
+    category: 'conteudo',
+    icon: HelpCircle,
+    create: () => ({
+      type: 'faq',
+      title: 'Perguntas frequentes',
+      faqItems: [
+        { id: crypto.randomUUID(), question: 'Quanto tempo leva?', answer: 'Menos de 2 minutos.' },
+        { id: crypto.randomUUID(), question: 'Tem custo?', answer: 'Não, é totalmente gratuito.' },
+      ],
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'form',
+    label: 'Formulário',
+    description: 'Nome, e-mail e telefone juntos',
+    category: 'captura',
+    icon: ClipboardList,
+    create: () => ({
+      type: 'form',
+      title: 'Quase lá! Onde enviamos seu resultado?',
+      formFields: { name: true, email: true, phone: true },
+      ctaLabel: 'Enviar',
+    }),
+  },
+  {
+    type: 'weight',
+    label: 'Peso',
+    description: 'Campo numérico (kg)',
+    category: 'captura',
+    icon: Scale,
+    create: () => ({ type: 'weight', title: 'Qual seu peso atual?', placeholder: 'Ex: 70', ctaLabel: 'Continuar' }),
+  },
+  {
+    type: 'height',
+    label: 'Altura',
+    description: 'Campo numérico (cm)',
+    category: 'captura',
+    icon: Ruler,
+    create: () => ({ type: 'height', title: 'Qual sua altura?', placeholder: 'Ex: 170', ctaLabel: 'Continuar' }),
+  },
+  {
+    type: 'pricing',
+    label: 'Card de preço',
+    description: 'Oferta com preço e benefícios',
+    category: 'oferta',
+    icon: Tag,
+    create: () => ({
+      type: 'pricing',
+      title: 'Plano recomendado para você',
+      pricingPrice: 'R$ 97',
+      pricingOriginalPrice: 'R$ 197',
+      pricingPeriod: '/mês',
+      pricingFeatures: ['Acesso completo', 'Suporte prioritário', 'Garantia de 7 dias'],
+      ctaLabel: 'Quero essa oferta',
+    }),
+  },
+  {
+    type: 'reveal',
+    label: 'Modal gamificado',
+    description: 'Toque para revelar um prêmio',
+    category: 'gamificacao',
+    icon: Gift,
+    create: () => ({
+      type: 'reveal',
+      title: 'Você desbloqueou um bônus!',
+      revealLabel: 'Revelar prêmio',
+      revealedTitle: '🎉 15% de desconto',
+      revealedBody: 'Use esse desconto ao finalizar sua compra hoje.',
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'ios-notification',
+    label: 'Notificações iOS',
+    description: 'Prova social simulando notificação',
+    category: 'gamificacao',
+    icon: BellRing,
+    create: () => ({
+      type: 'ios-notification',
+      notificationApp: 'Alt Quiz',
+      notificationTime: 'agora',
+      title: 'Ana acabou de garantir sua vaga',
+      subtitle: 'Restam poucas unidades disponíveis.',
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'carousel',
+    label: 'Carrossel',
+    description: 'Galeria de imagens',
+    category: 'midia',
+    icon: GalleryHorizontal,
+    create: () => ({
+      type: 'carousel',
+      title: 'Veja alguns resultados',
+      carouselImages: [
+        'https://images.unsplash.com/photo-1522204523234-8729aa6e3d5f?w=800',
+        'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=800',
+      ],
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'comparison',
+    label: 'Comparação',
+    description: 'Antes x depois, nós x eles',
+    category: 'prova',
+    icon: Columns3,
+    create: () => ({
+      type: 'comparison',
+      title: 'Por que escolher a gente',
+      comparisonLeftLabel: 'Sem nós',
+      comparisonLeftItems: ['Resultados lentos', 'Sem suporte', 'Preço alto'],
+      comparisonRightLabel: 'Com a gente',
+      comparisonRightItems: ['Resultados rápidos', 'Suporte 24/7', 'Preço justo'],
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'chart',
+    label: 'Gráfico',
+    description: 'Gráfico de barras simples',
+    category: 'prova',
+    icon: BarChart3,
+    create: () => ({
+      type: 'chart',
+      title: 'Resultados comprovados',
+      chartType: 'bar',
+      chartData: [
+        { id: crypto.randomUUID(), label: 'Antes', value: 30 },
+        { id: crypto.randomUUID(), label: 'Depois', value: 85 },
+      ],
+      ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'custom',
+    label: 'Bloco customizável',
+    description: 'HTML livre',
+    category: 'livre',
+    icon: Code2,
+    create: () => ({
+      type: 'custom',
+      customHtml: '<div style="text-align:center;padding:24px"><h2>Conteúdo customizado</h2></div>',
+    }),
   },
 ];
