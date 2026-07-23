@@ -216,3 +216,50 @@ export const DEFAULT_ACCESS_RULES: AccessRules = {
   countries: [],
   fallbackUrl: '',
 };
+
+// ============ Engajamento: prova social flutuante + barra de urgência ============
+
+export type SocialProofIcon = 'check' | 'gift' | 'users' | 'star' | 'fire' | 'bell';
+
+export interface SocialProofMessage {
+  id: string;
+  icon: SocialProofIcon;
+  title: string;
+  body?: string;
+}
+
+export type SocialProofPosition = 'bottom-left' | 'bottom-right' | 'bottom-center' | 'top-center';
+
+export interface SocialProofSettings {
+  enabled: boolean;
+  position: SocialProofPosition;
+  messages: SocialProofMessage[];
+  startDelaySeconds: number;
+  displaySeconds: number;
+  intervalSeconds: number;
+}
+
+export const DEFAULT_SOCIAL_PROOF: SocialProofSettings = {
+  enabled: false,
+  position: 'bottom-left',
+  messages: [],
+  startDelaySeconds: 4,
+  displaySeconds: 6,
+  intervalSeconds: 14,
+};
+
+export type UrgencyBarExpireBehavior = 'restart' | 'freeze' | 'hide';
+
+export interface UrgencyBarSettings {
+  enabled: boolean;
+  label: string;
+  minutes: number;
+  onExpire: UrgencyBarExpireBehavior;
+}
+
+export const DEFAULT_URGENCY_BAR: UrgencyBarSettings = {
+  enabled: false,
+  label: 'Oferta especial expira em:',
+  minutes: 15,
+  onExpire: 'restart',
+};

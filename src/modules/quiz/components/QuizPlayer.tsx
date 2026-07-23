@@ -13,7 +13,18 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
-import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
+import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame } from 'lucide-react';
+import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
+import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
+
+const SOCIAL_PROOF_ICON_MAP: Record<SocialProofIcon, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  check: CheckCircle2,
+  gift: Gift,
+  users: Users,
+  star: Star,
+  fire: Flame,
+  bell: Bell,
+};
 
 // Largura fixa do quiz em qualquer dispositivo (padrão validado por players de quiz-funnel
 // como Funilix/Typeform): em telas largas o conteúdo fica centralizado com espaço nas
@@ -138,7 +149,7 @@ export function QuizPlayer({
   return (
     <>
       {preview && (
-        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-full bg-yellow-500 text-black text-xs font-semibold shadow">
+        <div className="fixed top-2 right-2 z-50 px-3 py-1 rounded-full bg-yellow-500 text-black text-xs font-semibold shadow">
           Preview (rascunho)
         </div>
       )}
@@ -146,6 +157,7 @@ export function QuizPlayer({
         quizId={data.quiz.id}
         companyId={data.quiz.company_id}
         schema={data.schema}
+        settings={data.quiz.settings as Record<string, unknown>}
         preview={preview}
         tracking={tracking}
       />
@@ -157,12 +169,14 @@ function PlayerRunner({
   quizId,
   companyId,
   schema,
+  settings,
   preview = false,
   tracking,
 }: {
   quizId: string;
   companyId: string;
   schema: QuizSchema;
+  settings?: Record<string, unknown>;
   preview?: boolean;
   tracking?: Record<string, string>;
 }) {
@@ -175,6 +189,15 @@ function PlayerRunner({
   const blocks = schema.blocks;
   const block = blocks[state.currentIndex];
   const isLast = state.currentIndex >= blocks.length - 1;
+
+  const urgencyBar: UrgencyBarSettings = useMemo(
+    () => ({ ...DEFAULT_URGENCY_BAR, ...(settings?.urgency_bar as Partial<UrgencyBarSettings> | undefined) }),
+    [settings]
+  );
+  const socialProof: SocialProofSettings = useMemo(
+    () => ({ ...DEFAULT_SOCIAL_PROOF, ...(settings?.social_proof as Partial<SocialProofSettings> | undefined) }),
+    [settings]
+  );
 
   const geoRef = useRef<{ country?: string; city?: string }>({});
 
@@ -321,17 +344,172 @@ function PlayerRunner({
 
   return (
     <div className="min-h-screen w-full flex justify-center" style={{ background: design.background, color: design.text }}>
-      <div className="w-full flex flex-col" style={{ maxWidth: QUIZ_MAX_WIDTH, padding: '24px 16px' }}>
-        <ProgressBar
-          value={done ? 1 : (state.currentIndex + 1) / blocks.length}
-          design={design}
-        />
-        <div className="mt-6 flex-1 flex flex-col">
-          {done ? (
-            <ResultView schema={schema} state={state} />
-          ) : (
-            <BlockView key={block.id} block={effectiveBlock} design={design} onSubmit={advance} saving={saving} />
-          )}
+      <div className="w-full flex flex-col" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
+        {!done && <UrgencyBar quizId={quizId} settings={urgencyBar} design={design} />}
+        <div className="flex-1 flex flex-col" style={{ padding: '24px 16px' }}>
+          <ProgressBar
+            value={done ? 1 : (state.currentIndex + 1) / blocks.length}
+            design={design}
+          />
+          <div className="mt-6 flex-1 flex flex-col">
+            {done ? (
+              <ResultView schema={schema} state={state} />
+            ) : (
+              <BlockView key={block.id} block={effectiveBlock} design={design} onSubmit={advance} saving={saving} />
+            )}
+          </div>
+        </div>
+      </div>
+      {!done && <SocialProofToasts settings={socialProof} design={design} />}
+    </div>
+  );
+}
+
+function UrgencyBar({
+  quizId,
+  settings,
+  design,
+}: {
+  quizId: string;
+  settings: UrgencyBarSettings;
+  design: QuizSchema['design'];
+}) {
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    if (!settings.enabled) return;
+    setHidden(false);
+    const storageKey = `alt_quiz_urgency_${quizId}`;
+    const durationMs = Math.max(1, settings.minutes) * 60 * 1000;
+
+    let endsAt: number;
+    try {
+      const stored = Number(sessionStorage.getItem(storageKey));
+      const startedAt = stored > 0 ? stored : Date.now();
+      if (!(stored > 0)) sessionStorage.setItem(storageKey, String(startedAt));
+      endsAt = startedAt + durationMs;
+    } catch {
+      endsAt = Date.now() + durationMs;
+    }
+
+    const tick = () => {
+      const remaining = endsAt - Date.now();
+      if (remaining <= 0) {
+        if (settings.onExpire === 'restart') {
+          const now = Date.now();
+          try {
+            sessionStorage.setItem(storageKey, String(now));
+          } catch {
+            /* sessionStorage indisponível (modo privado) — cronômetro continua só em memória */
+          }
+          endsAt = now + durationMs;
+          setRemainingMs(durationMs);
+        } else if (settings.onExpire === 'freeze') {
+          setRemainingMs(0);
+        } else {
+          setHidden(true);
+        }
+      } else {
+        setRemainingMs(remaining);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [settings.enabled, settings.minutes, settings.onExpire, quizId]);
+
+  if (!settings.enabled || hidden || remainingMs === null) return null;
+
+  const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const clock =
+    h > 0
+      ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+  return (
+    <div
+      className="sticky top-0 z-20 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-center"
+      style={{ background: design.primary, color: '#fff' }}
+    >
+      <Hourglass className="h-4 w-4 shrink-0" />
+      <span className="truncate">{settings.label}</span>
+      <span className="tabular-nums font-mono shrink-0">{clock}</span>
+    </div>
+  );
+}
+
+function SocialProofToasts({
+  settings,
+  design,
+}: {
+  settings: SocialProofSettings;
+  design: QuizSchema['design'];
+}) {
+  const [visible, setVisible] = useState<{ msg: SocialProofMessage; key: number } | null>(null);
+
+  useEffect(() => {
+    if (!settings.enabled || settings.messages.length === 0) return;
+    let index = 0;
+    let key = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const showNext = () => {
+      const msg = settings.messages[index % settings.messages.length];
+      index += 1;
+      key += 1;
+      setVisible({ msg, key });
+      timers.push(
+        setTimeout(() => {
+          setVisible(null);
+          timers.push(setTimeout(showNext, Math.max(1, settings.intervalSeconds) * 1000));
+        }, Math.max(1, settings.displaySeconds) * 1000)
+      );
+    };
+
+    timers.push(setTimeout(showNext, Math.max(0, settings.startDelaySeconds) * 1000));
+    return () => {
+      timers.forEach(clearTimeout);
+      setVisible(null);
+    };
+  }, [settings.enabled, settings.messages, settings.startDelaySeconds, settings.displaySeconds, settings.intervalSeconds]);
+
+  if (!settings.enabled || !visible) return null;
+
+  const IconComp = SOCIAL_PROOF_ICON_MAP[visible.msg.icon] ?? CheckCircle2;
+  const justify =
+    settings.position === 'bottom-left' ? 'justify-start' : settings.position === 'bottom-right' ? 'justify-end' : 'justify-center';
+  const verticalClass = settings.position === 'top-center' ? 'top-4' : 'bottom-4';
+
+  return (
+    <div className={`fixed inset-x-0 ${verticalClass} z-40 flex justify-center px-4 pointer-events-none`}>
+      <div className={`w-full flex ${justify}`} style={{ maxWidth: QUIZ_MAX_WIDTH }}>
+        <div
+          key={visible.key}
+          className="pointer-events-auto flex items-start gap-3 rounded-xl shadow-xl p-3.5 max-w-[300px] animate-in slide-in-from-bottom-4 fade-in duration-300"
+          style={{ background: design.surface, color: design.text, border: `1px solid ${design.primary}22` }}
+        >
+          <div
+            className="h-8 w-8 rounded-full shrink-0 flex items-center justify-center"
+            style={{ background: design.primary + '22' }}
+          >
+            <IconComp className="h-4 w-4" style={{ color: design.primary }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold leading-snug">{visible.msg.title}</div>
+            {visible.msg.body && <div className="text-xs opacity-70 mt-0.5">{visible.msg.body}</div>}
+          </div>
+          <button
+            onClick={() => setVisible(null)}
+            className="shrink-0 opacity-50 hover:opacity-100 transition-opacity"
+            aria-label="Fechar"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>

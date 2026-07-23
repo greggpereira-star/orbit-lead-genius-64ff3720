@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules } from '../types';
+import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules, SocialProofSettings, UrgencyBarSettings } from '../types';
 import { DEFAULT_DESIGN } from '../design-presets';
 import { DEFAULT_ACCESS_RULES } from '../types';
 
@@ -130,6 +130,8 @@ export const quizService = {
     seoTitle?: string;
     seoDescription?: string;
     seoOgImage?: string;
+    socialProof?: SocialProofSettings;
+    urgencyBar?: UrgencyBarSettings;
   }): Promise<QuizFunnel> {
     const patch: Record<string, unknown> = {};
 
@@ -152,7 +154,10 @@ export const quizService = {
       ['seoDescription', 'seo_description'],
       ['seoOgImage', 'seo_og_image'],
     ];
-    const touchedSettings = settingsFields.some(([key]) => params[key] !== undefined);
+    const touchedSettings =
+      settingsFields.some(([key]) => params[key] !== undefined) ||
+      params.socialProof !== undefined ||
+      params.urgencyBar !== undefined;
     if (touchedSettings) {
       const { data: current, error: fetchError } = await supabase
         .from('quiz_funnels')
@@ -168,6 +173,8 @@ export const quizService = {
         if (trimmed) settings[settingsKey] = trimmed;
         else delete settings[settingsKey];
       }
+      if (params.socialProof !== undefined) settings.social_proof = params.socialProof as never;
+      if (params.urgencyBar !== undefined) settings.urgency_bar = params.urgencyBar as never;
       patch.settings = settings as never;
     }
 
