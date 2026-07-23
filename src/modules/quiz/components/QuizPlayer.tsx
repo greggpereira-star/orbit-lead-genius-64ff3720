@@ -544,7 +544,7 @@ function SocialProofToasts({
       <div className={`w-full flex ${justify}`} style={{ maxWidth: QUIZ_MAX_WIDTH }}>
         <div
           key={visible.key}
-          className="pointer-events-auto flex items-start gap-3 rounded-xl shadow-xl p-3.5 max-w-[300px] animate-in slide-in-from-bottom-4 fade-in duration-300"
+          className="pointer-events-auto flex items-start gap-3 rounded-xl shadow-xl p-3.5 max-w-[300px] animate-in slide-in-from-bottom-4 fade-in duration-300 motion-reduce:slide-in-from-bottom-0"
           style={{ background: design.surface, color: design.text, border: `1px solid ${design.primary}22` }}
         >
           <div
@@ -591,7 +591,7 @@ function ProgressBar({ value, design }: { value: number; design: QuizSchema['des
       aria-valuemax={100}
     >
       <div
-        className="h-full transition-all duration-500"
+        className="h-full transition-all duration-500 motion-reduce:transition-none"
         style={{ width: `${pct}%`, background: design.primary }}
       />
     </div>
@@ -769,7 +769,7 @@ function BlockView({
                     if (terminal) onSubmit(o.id);
                   }}
                   aria-pressed={active}
-                  className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99] motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
                   style={{
                     borderRadius: design.radius,
                     borderColor: active ? design.primary : design.surface,
@@ -1074,7 +1074,7 @@ function BlockView({
         <div>
           {heading}
           <div className="h-2.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
-            <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: design.primary }} />
+            <div className="h-full transition-all duration-700 motion-reduce:transition-none" style={{ width: `${pct}%`, background: design.primary }} />
           </div>
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
@@ -1093,7 +1093,7 @@ function BlockView({
             <span>{pct}%</span>
           </div>
           <div className="h-3.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
-            <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: design.primary }} />
+            <div className="h-full transition-all duration-700 motion-reduce:transition-none" style={{ width: `${pct}%`, background: design.primary }} />
           </div>
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
@@ -1272,7 +1272,7 @@ function BlockView({
           ) : (
             <button
               onClick={() => setRevealed(true)}
-              className="w-full border-2 border-dashed rounded-xl p-10 transition-all hover:scale-[1.01]"
+              className="w-full border-2 border-dashed rounded-xl p-10 transition-all hover:scale-[1.01] motion-reduce:hover:scale-100"
               style={{ borderColor: design.primary, borderRadius: design.radius }}
             >
               <Gift className="h-7 w-7 mx-auto mb-2" style={{ color: design.primary }} />
@@ -1369,7 +1369,7 @@ function BlockView({
               <div key={p.id} className="flex-1 flex flex-col items-center justify-end gap-2 h-full">
                 <span className="text-sm font-semibold">{p.value}</span>
                 <div
-                  className="w-full rounded-t-md transition-all duration-700"
+                  className="w-full rounded-t-md transition-all duration-700 motion-reduce:transition-none"
                   style={{ height: `${(p.value / max) * 100}%`, background: design.primary }}
                 />
                 <span className="text-xs opacity-60">{p.label}</span>
