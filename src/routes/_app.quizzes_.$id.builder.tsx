@@ -180,18 +180,23 @@ function QuizBuilderPage() {
               {BLOCK_LIBRARY.map((def, i) => (
                 <Draggable key={def.type} draggableId={`palette-${def.type}`} index={i}>
                   {(dragProvided, dragSnapshot) => (
-                    <button
+                    <div
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       {...dragProvided.dragHandleProps}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => addBlock(i)}
-                      className={`text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') addBlock(i);
+                      }}
+                      className={`text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing select-none ${
                         dragSnapshot.isDragging ? 'shadow-xl ring-2 ring-primary/40 bg-card' : ''
                       }`}
                     >
                       <def.icon className="h-4 w-4 mb-1 text-primary" />
                       <div className="text-xs font-semibold leading-tight">{def.label}</div>
-                    </button>
+                    </div>
                   )}
                 </Draggable>
               ))}

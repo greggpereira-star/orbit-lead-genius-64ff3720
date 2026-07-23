@@ -84,7 +84,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                       >
                         <div
                           {...dragProvided.dragHandleProps}
-                          className="absolute -left-2 top-1/2 -translate-y-1/2 -translate-x-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md"
+                          className="absolute left-1 top-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md select-none"
                           style={{ background: design.surface }}
                           onClick={(e) => e.stopPropagation()}
                         >
