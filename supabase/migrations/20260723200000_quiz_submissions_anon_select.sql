@@ -1,0 +1,14 @@
+-- Corrige submissão pública de quiz quebrada: o cliente Supabase faz
+-- `.insert(payload).select('id')`, que o PostgREST traduz em
+-- `INSERT ... RETURNING id`. A cláusula RETURNING exige privilégio
+-- SELECT na tabela mesmo quando o INSERT já é permitido — sem essa
+-- concessão, TODA submissão pública falhava com
+-- "permission denied for table quiz_submissions" (42501), mesmo
+-- quando a linha era inserida com sucesso.
+--
+-- Seguro: não existe nenhuma política de RLS de SELECT para `anon` em
+-- quiz_submissions (só a policy de INSERT), então essa concessão não
+-- expõe nenhuma linha existente — RLS continua bloqueando leitura
+-- arbitrária pelo visitante anônimo; só destrava o RETURNING da
+-- própria linha que ele acabou de inserir.
+GRANT SELECT ON public.quiz_submissions TO anon;
