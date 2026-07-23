@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { Droppable, Draggable } from '@hello-pangea/dnd';
+import { GripVertical } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
@@ -47,30 +49,57 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
         <div className="p-6 border-b" style={{ borderColor: design.surface }}>
           <ProgressBar design={design} value={0.15} />
         </div>
-        <div className="p-8 space-y-8">
-          {blocks.length === 0 ? (
-            <div className="text-center py-20 opacity-60">
-              <p className="text-sm" style={{ color: design.muted }}>
-                Adicione blocos ao seu quiz na barra lateral esquerda →
-              </p>
+        <Droppable droppableId="canvas">
+          {(dropProvided, dropSnapshot) => (
+            <div
+              ref={dropProvided.innerRef}
+              {...dropProvided.droppableProps}
+              className={`p-8 space-y-8 min-h-[200px] transition-colors ${dropSnapshot.isDraggingOver ? 'bg-primary/5' : ''}`}
+            >
+              {blocks.length === 0 ? (
+                <div
+                  className={`text-center py-20 rounded-xl border-2 border-dashed transition-colors ${
+                    dropSnapshot.isDraggingOver ? 'border-primary/50 opacity-100' : 'opacity-60 border-transparent'
+                  }`}
+                >
+                  <p className="text-sm" style={{ color: design.muted }}>
+                    Arraste um componente da paleta até aqui, ou clique nele para adicionar →
+                  </p>
+                </div>
+              ) : (
+                blocks.map((b, i) => (
+                  <Draggable key={b.id} draggableId={b.id} index={i}>
+                    {(dragProvided, dragSnapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        onClick={() => onSelectBlock?.(b.id)}
+                        className={`group relative cursor-pointer rounded-xl p-4 -m-4 transition-all ${
+                          activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
+                        } ${dragSnapshot.isDragging ? 'shadow-2xl bg-[var(--q-bg)]' : ''}`}
+                        style={{
+                          ...dragProvided.draggableProps.style,
+                          ...(activeBlockId === b.id ? { boxShadow: `0 0 0 2px ${design.primary}` } : {}),
+                        }}
+                      >
+                        <div
+                          {...dragProvided.dragHandleProps}
+                          className="absolute -left-2 top-1/2 -translate-y-1/2 -translate-x-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md"
+                          style={{ background: design.surface }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical className="h-4 w-4" style={{ color: design.muted }} />
+                        </div>
+                        <BlockRenderer block={b} design={design} />
+                      </div>
+                    )}
+                  </Draggable>
+                ))
+              )}
+              {dropProvided.placeholder}
             </div>
-          ) : (
-            blocks.map((b) => (
-              <div
-                key={b.id}
-                onClick={() => onSelectBlock?.(b.id)}
-                className={`cursor-pointer rounded-xl p-4 -m-4 transition-all ${
-                  activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
-                }`}
-                style={{
-                  ...(activeBlockId === b.id ? { boxShadow: `0 0 0 2px ${design.primary}` } : {}),
-                }}
-              >
-                <BlockRenderer block={b} design={design} />
-              </div>
-            ))
           )}
-        </div>
+        </Droppable>
       </div>
     </div>
   );

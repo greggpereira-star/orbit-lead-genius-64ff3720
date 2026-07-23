@@ -124,8 +124,26 @@ function QuizBuilderPage() {
   };
 
   const handleDragEnd = (result: DropResult) => {
-    const { destination, source } = result;
+    const { destination, source, draggableId } = result;
     if (!destination) return;
+    if (destination.droppableId === 'palette') return;
+
+    if (source.droppableId === 'palette') {
+      const type = draggableId.replace('palette-', '');
+      const defIndex = BLOCK_LIBRARY.findIndex((d) => d.type === type);
+      if (defIndex === -1) return;
+      const def = BLOCK_LIBRARY[defIndex];
+      const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
+      updateSchema((prev) => {
+        const next = Array.from(prev.blocks);
+        next.splice(destination.index, 0, newBlock);
+        return { ...prev, blocks: next };
+      });
+      setActiveBlockId(newBlock.id);
+      setMobilePanel('inspector');
+      return;
+    }
+
     reorderBlocks(source.index, destination.index);
   };
 
@@ -155,22 +173,36 @@ function QuizBuilderPage() {
     <>
       <div className="p-3 border-b">
         <h3 className="font-bold text-sm mb-2">Blocos</h3>
-        <div className="grid grid-cols-2 gap-1.5">
-          {BLOCK_LIBRARY.map((def, i) => (
-            <button
-              key={def.type}
-              onClick={() => addBlock(i)}
-              className="text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all"
-            >
-              <def.icon className="h-4 w-4 mb-1 text-primary" />
-              <div className="text-xs font-semibold leading-tight">{def.label}</div>
-            </button>
-          ))}
-        </div>
+        <p className="text-[11px] text-muted-foreground mb-2">Arraste até o canvas ou clique para adicionar</p>
+        <Droppable droppableId="palette" isDropDisabled>
+          {(provided) => (
+            <div className="grid grid-cols-2 gap-1.5" ref={provided.innerRef} {...provided.droppableProps}>
+              {BLOCK_LIBRARY.map((def, i) => (
+                <Draggable key={def.type} draggableId={`palette-${def.type}`} index={i}>
+                  {(dragProvided, dragSnapshot) => (
+                    <button
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      {...dragProvided.dragHandleProps}
+                      onClick={() => addBlock(i)}
+                      className={`text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing ${
+                        dragSnapshot.isDragging ? 'shadow-xl ring-2 ring-primary/40 bg-card' : ''
+                      }`}
+                    >
+                      <def.icon className="h-4 w-4 mb-1 text-primary" />
+                      <div className="text-xs font-semibold leading-tight">{def.label}</div>
+                    </button>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </div>
       <div className="p-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-sm">Fluxo ({schema.blocks.length})</h3>
+          <h3 className="font-bold text-sm">Etapas ({schema.blocks.length})</h3>
           <button
             onClick={() => { setActiveBlockId(null); setMobilePanel(null); }}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -178,55 +210,54 @@ function QuizBuilderPage() {
             <Palette className="h-3 w-3" /> Design
           </button>
         </div>
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="blocks">
-            {(provided) => (
-              <div className="space-y-1" ref={provided.innerRef} {...provided.droppableProps}>
-                {schema.blocks.map((b, i) => (
-                  <Draggable key={b.id} draggableId={b.id} index={i}>
-                    {(dragProvided, dragSnapshot) => (
-                      <div
-                        ref={dragProvided.innerRef}
-                        {...dragProvided.draggableProps}
-                        onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
-                        className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
-                          dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
-                          activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
-                        }`}
-                      >
-                        <div {...dragProvided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
-                          <div className="text-[10px] text-muted-foreground">{b.type}</div>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+        <Droppable droppableId="blocks">
+          {(provided) => (
+            <div className="space-y-1" ref={provided.innerRef} {...provided.droppableProps}>
+              {schema.blocks.map((b, i) => (
+                <Draggable key={b.id} draggableId={b.id} index={i}>
+                  {(dragProvided, dragSnapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
+                      className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
+                        dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
+                        activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
+                      }`}
+                    >
+                      <div {...dragProvided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-                {schema.blocks.length === 0 && (
-                  <div className="text-center py-6 text-xs text-muted-foreground">
-                    <Plus className="h-4 w-4 mx-auto mb-1 opacity-50" />
-                    Adicione blocos acima
-                  </div>
-                )}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold truncate">{b.title || b.resultTitle || `Bloco ${i + 1}`}</div>
+                        <div className="text-[10px] text-muted-foreground">{b.type}</div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+              {schema.blocks.length === 0 && (
+                <div className="text-center py-6 text-xs text-muted-foreground">
+                  <Plus className="h-4 w-4 mx-auto mb-1 opacity-50" />
+                  Adicione blocos acima
+                </div>
+              )}
+            </div>
+          )}
+        </Droppable>
       </div>
     </>
   );
 
   return createPortal(
+    <DragDropContext onDragEnd={handleDragEnd}>
     <div className="fixed inset-0 flex flex-col bg-background z-40">
       {/* Topbar */}
       <header className="h-14 border-b flex items-center justify-between gap-2 px-2 sm:px-4 shrink-0">
@@ -297,7 +328,7 @@ function QuizBuilderPage() {
       {/* 3-column layout on desktop, single column + drawers on mobile/tablet */}
       <div className="flex-1 flex overflow-hidden">
         <aside className="hidden lg:block w-72 border-r bg-card overflow-y-auto">
-          {BlocksPalette}
+          {isDesktop && BlocksPalette}
         </aside>
 
         <main className="flex-1 overflow-hidden">
@@ -358,7 +389,8 @@ function QuizBuilderPage() {
           onSaved={setQuiz}
         />
       )}
-    </div>,
+    </div>
+    </DragDropContext>,
     document.body
   );
 }
