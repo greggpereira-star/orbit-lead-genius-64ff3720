@@ -25,6 +25,7 @@ import {
   Rocket,
   ChevronDown,
   ChevronRight,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -60,6 +61,8 @@ function QuizBuilderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const [accessRulesOpen, setAccessRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'blocks' | 'inspector' | null>(null);
@@ -295,9 +298,15 @@ function QuizBuilderPage() {
       await quizService.saveSchema({ quizId: id, companyId: company.id, userId: user.id, schema });
       if (!opts?.silent) toast.success('Alterações salvas');
       setDirty(false);
+      setSaveError(false);
+      setLastSavedAt(new Date());
     } catch (e) {
       console.error('Erro ao salvar quiz', e);
-      if (!opts?.silent) toast.error('Não foi possível salvar agora. Verifique sua conexão e tente de novo.');
+      // Mesmo num autosave silencioso, uma FALHA nunca pode passar despercebida —
+      // senão o usuário acha que está tudo salvo e perde trabalho. Marca o estado de
+      // erro (o indicador fica vermelho) e avisa uma vez por falha.
+      setSaveError(true);
+      toast.error('Não foi possível salvar. Suas alterações ainda estão só nesta aba — tente salvar de novo.');
     } finally {
       setSaving(false);
     }
@@ -619,16 +628,42 @@ function QuizBuilderPage() {
               Salvamento automático
             </label>
           </div>
-          <div
-            className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
-              dirty
-                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-            }`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-            <span className="hidden min-[420px]:inline">{dirty ? 'Não salvo' : 'Salvo'}</span>
-          </div>
+          {saveError ? (
+            <button
+              onClick={() => handleSave()}
+              className="flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive shrink-0 hover:bg-destructive/20 transition-colors"
+              title="Falha ao salvar — clique para tentar de novo"
+            >
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span className="hidden min-[420px]:inline">Erro — tentar de novo</span>
+            </button>
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
+                saving
+                  ? 'border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                  : dirty
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              }`}
+              aria-live="polite"
+            >
+              {saving ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+              )}
+              <span className="hidden min-[420px]:inline">
+                {saving
+                  ? 'Salvando…'
+                  : dirty
+                    ? 'Não salvo'
+                    : lastSavedAt
+                      ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Salvo'}
+              </span>
+            </div>
+          )}
           <Button size="sm" onClick={() => handleSave()} disabled={saving || !dirty} variant="outline" className="gap-2 px-2 sm:px-3">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span className="hidden sm:inline">Salvar</span>
@@ -658,6 +693,7 @@ function QuizBuilderPage() {
             activeBlockId={activeBlockId}
             onSelectBlock={(blockId) => { setActiveBlockId(blockId); setMobilePanel('inspector'); }}
             device={device}
+            onRequestAddBlock={!isDesktop ? () => setMobilePanel('blocks') : undefined}
           />
         </main>
 

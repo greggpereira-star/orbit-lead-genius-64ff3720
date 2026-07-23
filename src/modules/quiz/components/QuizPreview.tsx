@@ -22,6 +22,10 @@ interface Props {
   activeBlockId?: string | null;
   onSelectBlock?: (id: string) => void;
   device?: 'mobile' | 'tablet' | 'desktop';
+  // Em telas estreitas a paleta fica escondida atrás de um Sheet; quando fornecido,
+  // o estado vazio mostra um botão de "Adicionar bloco" em vez de mandar o usuário
+  // "arrastar da paleta" (que não está visível).
+  onRequestAddBlock?: () => void;
 }
 
 // Largura fixa do quiz em qualquer dispositivo (mesmo padrão de QuizPlayer.tsx) — o
@@ -29,7 +33,7 @@ interface Props {
 // viewport de cada dispositivo por fora, mas mantém o quiz nessa largura por dentro.
 const QUIZ_MAX_WIDTH = 448;
 
-export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'desktop' }: Props) {
+export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'desktop', onRequestAddBlock }: Props) {
   const { design, blocks } = schema;
   const steps = useMemo(() => getSteps(schema), [schema]);
   // hover:bg-white/5 fica invisível em fundos claros (Clean Beauty, Mono, Minimal Light,
@@ -74,9 +78,22 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                       dropSnapshot.isDraggingOver ? 'border-primary/50 opacity-100' : 'opacity-60 border-transparent'
                     }`}
                   >
-                    <p className="text-sm" style={{ color: design.muted }}>
-                      Arraste um componente da paleta até aqui, ou clique nele para adicionar →
+                    <p className="text-sm mb-4" style={{ color: design.muted }}>
+                      Seu quiz ainda não tem nenhum bloco.
                     </p>
+                    {onRequestAddBlock ? (
+                      <button
+                        onClick={onRequestAddBlock}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold"
+                        style={{ background: design.primary, color: getContrastText(design.primary) }}
+                      >
+                        + Adicionar bloco
+                      </button>
+                    ) : (
+                      <p className="text-xs" style={{ color: design.muted }}>
+                        Arraste um componente da paleta à esquerda, ou clique nele para adicionar.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   steps.map((step, stepIdx) => (
