@@ -85,8 +85,8 @@ function ChatReportsPage() {
                     <YAxis className="text-xs" />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="conversations" name="Conversas" stroke="hsl(var(--primary))" strokeWidth={2} />
-                    <Line type="monotone" dataKey="messages" name="Mensagens" stroke="hsl(var(--muted-foreground))" strokeWidth={2} />
+                    <Line type="monotone" dataKey="conversations" name="Conversas" stroke="var(--primary)" strokeWidth={2} />
+                    <Line type="monotone" dataKey="messages" name="Mensagens" stroke="var(--muted-foreground)" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

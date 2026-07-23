@@ -4,6 +4,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  MarkerType,
   type Node,
   type Edge,
   Position,
@@ -18,195 +19,46 @@ import { LayoutGrid, Eye, ArrowDownWideNarrow, X, CheckCircle2 } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { BLOCK_LIBRARY } from '../blocks-library';
 import { getSteps, findStepIndexForBlock } from '../lib/steps';
-import type { QuizBlock, QuizSchema, QuizStep } from '../types';
+import type { QuizBlock, QuizDesign, QuizSchema, QuizStep } from '../types';
+import { BlockRenderer, ProgressBar } from './QuizPreview';
 
-const STEP_WIDTH = 260;
-const STEP_GAP_X = 340;
-const LANE_GAP_Y = 340;
+// Cada nó do fluxograma é uma miniatura AO VIVO da tela real (mesmo BlockRenderer do
+// canvas do Builder), renderizada em largura natural e reduzida via transform: scale —
+// é assim que Funilix e outros page builders premium mostram "o que tem em cada etapa"
+// sem precisar de uma legenda textual separada do conteúdo real.
+const SCREEN_INNER_WIDTH = 390;
+const FRAME_WIDTH = 236;
+const FRAME_HEIGHT = 300;
+const SCREEN_SCALE = FRAME_WIDTH / SCREEN_INNER_WIDTH;
+
+const STEP_WIDTH = FRAME_WIDTH + 24;
+const STEP_GAP_X = STEP_WIDTH + 90;
+const LANE_GAP_Y = FRAME_HEIGHT + 220;
 
 const typeMeta = new Map(BLOCK_LIBRARY.map((def) => [def.type, def]));
 
-// ============ Mini-preview por tipo de bloco (miniatura fiel ao conteúdo real) ============
-
-function MiniPreview({ block }: { block: QuizBlock }) {
-  switch (block.type) {
-    case 'intro':
-      return (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold leading-snug line-clamp-2">{block.title || 'Tela inicial'}</p>
-          {block.ctaLabel && (
-            <span className="inline-block rounded bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
-              {block.ctaLabel}
-            </span>
-          )}
-        </div>
-      );
-    case 'single-choice':
-    case 'multi-choice':
-      return (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold leading-snug line-clamp-2 mb-1">{block.title || 'Pergunta'}</p>
-          {(block.options ?? []).slice(0, 3).map((o) => (
-            <div key={o.id} className="rounded border bg-muted/50 px-1.5 py-1 text-[9.5px] truncate flex items-center gap-1">
-              {o.emoji && <span>{o.emoji}</span>}
-              <span className="truncate">{o.label}</span>
-              {o.jumpToBlockId && <Eye className="h-2.5 w-2.5 ml-auto shrink-0 text-amber-500" />}
-            </div>
-          ))}
-          {(block.options?.length ?? 0) > 3 && (
-            <p className="text-[9px] text-muted-foreground">+{(block.options?.length ?? 0) - 3} opções</p>
-          )}
-        </div>
-      );
-    case 'form':
-      return (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold leading-snug line-clamp-1">{block.title || 'Formulário'}</p>
-          <div className="flex flex-wrap gap-1">
-            {block.formFields?.name !== false && <span className="rounded bg-muted px-1.5 py-0.5 text-[9px]">Nome</span>}
-            {block.formFields?.email !== false && <span className="rounded bg-muted px-1.5 py-0.5 text-[9px]">E-mail</span>}
-            {block.formFields?.phone !== false && <span className="rounded bg-muted px-1.5 py-0.5 text-[9px]">Telefone</span>}
-          </div>
-        </div>
-      );
-    case 'pricing':
-      return (
-        <div className="space-y-0.5">
-          <p className="text-[10.5px] font-semibold leading-snug line-clamp-1">{block.title || 'Oferta'}</p>
-          <p className="text-sm font-bold text-primary leading-none">{block.pricingPrice || 'R$ 0'}</p>
-          {block.pricingOriginalPrice && (
-            <p className="text-[9px] text-muted-foreground line-through">{block.pricingOriginalPrice}</p>
-          )}
-        </div>
-      );
-    case 'testimonial':
-      return (
-        <div className="space-y-1">
-          <p className="text-[10px] italic leading-snug line-clamp-2">“{block.title || 'Depoimento'}”</p>
-          {block.testimonialAuthor && <p className="text-[9px] font-semibold text-muted-foreground">— {block.testimonialAuthor}</p>}
-        </div>
-      );
-    case 'result':
-      return (
-        <div className="space-y-1">
-          <span className="inline-block rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold text-primary">Resultado</span>
-          <p className="text-[11px] font-semibold leading-snug line-clamp-2">{block.resultTitle || 'Seu resultado'}</p>
-        </div>
-      );
-    case 'weight':
-    case 'height':
-      return (
-        <div className="flex items-center justify-between rounded border bg-muted/50 px-2 py-1.5">
-          <span className="text-[10.5px] font-medium truncate">{block.title || (block.type === 'weight' ? 'Peso' : 'Altura')}</span>
-          <span className="text-[9px] text-muted-foreground shrink-0">{block.type === 'weight' ? 'kg' : 'cm'}</span>
-        </div>
-      );
-    case 'short-text':
-    case 'long-text':
-    case 'email':
-    case 'phone':
-      return (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold leading-snug line-clamp-2">{block.title || 'Campo de resposta'}</p>
-          <div className="h-4 rounded border bg-muted/40" />
-        </div>
-      );
-    case 'countdown':
-      return (
-        <div className="flex items-center gap-1.5">
-          <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-500 tabular-nums">00:{String(block.countdownMinutes ?? 15).padStart(2, '0')}</span>
-          <p className="text-[10.5px] font-medium leading-snug line-clamp-1">{block.title || 'Contagem regressiva'}</p>
-        </div>
-      );
-    case 'faq':
-      return (
-        <div className="space-y-1">
-          {(block.faqItems ?? []).slice(0, 2).map((f) => (
-            <p key={f.id} className="text-[9.5px] truncate">
-              <span className="font-semibold">?</span> {f.question}
-            </p>
-          ))}
-          {(block.faqItems?.length ?? 0) === 0 && <p className="text-[10px] text-muted-foreground">Perguntas frequentes</p>}
-        </div>
-      );
-    case 'argument':
-    case 'argument-progress':
-    case 'level':
-      return (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold leading-snug line-clamp-2">{block.title || 'Argumento'}</p>
-          {typeof block.progressValue === 'number' && (
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${block.progressValue}%` }} />
-            </div>
-          )}
-        </div>
-      );
-    case 'notification':
-    case 'ios-notification':
-      return (
-        <div className="rounded border bg-muted/50 px-2 py-1.5">
-          <p className="text-[9px] font-semibold text-muted-foreground">{block.notificationApp || 'Notificação'}</p>
-          <p className="text-[10px] truncate">{block.title || 'Alerta'}</p>
-        </div>
-      );
-    case 'image':
-    case 'before-after':
-      return (
-        <div className="flex items-center gap-1.5">
-          <div className="h-8 w-10 rounded bg-muted shrink-0" />
-          <p className="text-[10.5px] font-medium leading-snug line-clamp-2">{block.title || 'Imagem'}</p>
-        </div>
-      );
-    case 'video':
-      return (
-        <div className="flex items-center gap-1.5">
-          <div className="h-8 w-10 rounded bg-black/80 shrink-0 flex items-center justify-center text-white text-[9px]">▶</div>
-          <p className="text-[10.5px] font-medium leading-snug line-clamp-2">{block.title || 'Vídeo'}</p>
-        </div>
-      );
-    case 'comparison':
-      return (
-        <div className="grid grid-cols-2 gap-1">
-          <div className="rounded bg-muted/50 px-1 py-1 text-[9px] truncate">{block.comparisonLeftLabel || 'Antes'}</div>
-          <div className="rounded bg-primary/10 px-1 py-1 text-[9px] truncate text-primary">{block.comparisonRightLabel || 'Depois'}</div>
-        </div>
-      );
-    case 'cta':
-      return (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold leading-snug line-clamp-2">{block.title || 'Chamada para ação'}</p>
-          <span className="inline-block rounded bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
-            {block.ctaLabel || 'Continuar'}
-          </span>
-        </div>
-      );
-    case 'divider':
-      return <div className="h-px w-full bg-border" />;
-    default:
-      return <p className="text-[11px] font-medium leading-snug line-clamp-2">{block.title || block.resultTitle || 'Conteúdo'}</p>;
-  }
-}
-
-// ============ Nó de Etapa (agrupa todos os blocos daquela etapa) ============
+// ============ Nó de Etapa: miniatura ao vivo + cabeçalho/rodapé de metadados ============
 
 interface StepNodeData {
   step: QuizStep;
   blocks: QuizBlock[];
   index: number;
+  total: number;
+  design: QuizDesign;
   onSelectStep?: (stepId: string) => void;
   [key: string]: unknown;
 }
 
 function StepNode({ data }: { data: StepNodeData }) {
-  const { step, blocks, index, onSelectStep } = data;
+  const { step, blocks, index, total, design, onSelectStep } = data;
   const dominant = blocks[blocks.length - 1] ?? blocks[0];
   const def = dominant ? typeMeta.get(dominant.type) : undefined;
   const hasConditional = blocks.some((b) => b.showIf?.enabled);
+  const hasBranch = blocks.some((b) => (b.options ?? []).some((o) => o.jumpToBlockId) || (b.logicRules?.length ?? 0) > 0);
 
   return (
     <div
-      className="rounded-xl border bg-card shadow-md overflow-hidden transition-shadow hover:shadow-lg cursor-pointer"
+      className="rounded-2xl border bg-card shadow-md overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
       style={{ width: STEP_WIDTH }}
       onClick={() => onSelectStep?.(step.id)}
     >
@@ -223,40 +75,57 @@ function StepNode({ data }: { data: StepNodeData }) {
           {index + 1}
         </span>
         <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground truncate">
-          Etapa {index + 1}
+          Etapa {index + 1} de {total}
         </span>
-        {hasConditional && (
-          <span
-            className="ml-auto flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-500 shrink-0"
-            title="Contém bloco com exibição condicional"
-          >
-            <Eye className="h-2.5 w-2.5" />
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          {hasBranch && (
+            <span
+              className="flex items-center justify-center h-4 w-4 rounded-full bg-amber-500/15 text-amber-500"
+              title="Tem ramificação (pular para outra etapa)"
+            >
+              <ArrowDownWideNarrow className="h-2.5 w-2.5 rotate-[-90deg]" />
+            </span>
+          )}
+          {hasConditional && (
+            <span
+              className="flex items-center justify-center h-4 w-4 rounded-full bg-amber-500/15 text-amber-500"
+              title="Contém bloco com exibição condicional"
+            >
+              <Eye className="h-2.5 w-2.5" />
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="divide-y">
-        {blocks.map((b) => {
-          const bDef = typeMeta.get(b.type);
-          const Icon = bDef?.icon;
-          return (
-            <div key={b.id} className="px-3 py-2 flex gap-2 items-start">
-              {Icon && (
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted mt-0.5">
-                  <Icon className="h-3 w-3 text-muted-foreground" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <MiniPreview block={b} />
-              </div>
+      <div className="p-3">
+        <div
+          className="relative mx-auto overflow-hidden rounded-lg border"
+          style={{ width: FRAME_WIDTH, height: FRAME_HEIGHT, background: design.background }}
+        >
+          <div style={{ width: SCREEN_INNER_WIDTH, transform: `scale(${SCREEN_SCALE})`, transformOrigin: 'top left' }}>
+            <div className="px-6 pt-6 pb-4">
+              <ProgressBar design={design} value={(index + 1) / Math.max(total, 1)} />
             </div>
-          );
-        })}
+            <div className="px-6 flex flex-col gap-8">
+              {blocks.map((b) => (
+                <div key={b.id} className="pointer-events-none">
+                  <BlockRenderer block={b} design={design} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* esmaece o rodapé pra indicar visualmente que a tela real pode continuar
+              além do recorte da miniatura, sem cortar bruscamente o conteúdo */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-12"
+            style={{ background: `linear-gradient(to top, ${design.background}, transparent)` }}
+          />
+        </div>
       </div>
 
       <div className="px-3 py-1.5 border-t bg-muted/30 flex items-center justify-between">
         <span className="text-[9px] text-muted-foreground truncate">{def?.label ?? dominant?.type}</span>
-        <span className="text-[9px] text-muted-foreground">{blocks.length} {blocks.length === 1 ? 'módulo' : 'módulos'}</span>
+        <span className="text-[9px] text-muted-foreground shrink-0">{blocks.length} {blocks.length === 1 ? 'módulo' : 'módulos'}</span>
       </div>
 
       <Handle type="source" position={Position.Right} className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background" />
@@ -332,6 +201,7 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
   });
 
   const positions = computeLayout(steps, rawEdges);
+  const design = schema.design;
 
   const nodes: Node[] = steps.map((s, i) => {
     const pos = positions.get(s.id) ?? { x: i * STEP_GAP_X, y: 0 };
@@ -340,7 +210,7 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
       id: s.id,
       type: 'step',
       position: { x: pos.x, y: pos.y },
-      data: { step: s, blocks: stepBlocks, index: i, onSelectStep },
+      data: { step: s, blocks: stepBlocks, index: i, total: steps.length, design, onSelectStep },
       draggable: true,
     };
   });
@@ -354,10 +224,16 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
     label: e.label,
     animated: e.branch,
     style: e.branch
-      ? { stroke: 'hsl(38 92% 50%)', strokeWidth: 1.75, strokeDasharray: '5 4' }
-      : { stroke: 'hsl(var(--primary))', strokeWidth: 2 },
+      ? { stroke: 'hsl(38 92% 50%)', strokeWidth: 2 }
+      : { stroke: 'var(--primary)', strokeWidth: 2.5 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: e.branch ? 'hsl(38 92% 50%)' : 'var(--primary)',
+    },
     labelStyle: { fontSize: 10, fill: 'hsl(38 92% 40%)', fontWeight: 700 },
-    labelBgStyle: { fillOpacity: 0.95, fill: 'hsl(var(--card))' },
+    labelBgStyle: { fillOpacity: 0.95, fill: 'var(--card)' },
     labelBgPadding: [5, 3] as [number, number],
     labelBgBorderRadius: 6,
     type: 'smoothstep',
@@ -403,13 +279,13 @@ function FlowCanvas({ schema }: { schema: QuizSchema }) {
         onNodesChange={onNodesChange}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.15}
+        minZoom={0.1}
         maxZoom={1.5}
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="opacity-40" />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable className="!bg-card !border !rounded-lg" nodeColor="hsl(var(--primary) / 0.35)" />
+        <MiniMap pannable zoomable className="!bg-card !border !rounded-lg" nodeColor="var(--primary)" maskColor="rgba(0,0,0,0.06)" />
       </ReactFlow>
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">

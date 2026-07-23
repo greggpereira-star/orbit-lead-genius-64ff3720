@@ -33,7 +33,7 @@ const RANGES = [
 ] as const;
 
 const PIE_COLORS = [
-  'hsl(var(--primary))',
+  'var(--primary)',
   'oklch(0.68 0.19 145)',
   'oklch(0.75 0.15 80)',
   'oklch(0.65 0.23 300)',
@@ -130,21 +130,21 @@ function DashboardPage() {
                 <AreaChart data={data.dailySeries}>
                   <defs>
                     <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gSubs" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="oklch(0.68 0.19 145)" stopOpacity={0.4} />
                       <stop offset="95%" stopColor="oklch(0.68 0.19 145)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip
-                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   />
-                  <Area type="monotone" dataKey="leads" name="Leads" stroke="hsl(var(--primary))" fill="url(#gLeads)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="leads" name="Leads" stroke="var(--primary)" fill="url(#gLeads)" strokeWidth={2} />
                   <Area type="monotone" dataKey="submissions" name="Quiz" stroke="oklch(0.68 0.19 145)" fill="url(#gSubs)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -171,7 +171,7 @@ function DashboardPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </PieChart>

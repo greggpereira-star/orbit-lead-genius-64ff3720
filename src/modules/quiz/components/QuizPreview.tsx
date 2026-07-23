@@ -162,7 +162,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
   );
 }
 
-function ProgressBar({ design, value }: { design: QuizDesign; value: number }) {
+export function ProgressBar({ design, value }: { design: QuizDesign; value: number }) {
   if (design.progressStyle === 'none') return null;
   if (design.progressStyle === 'dots') {
     return (
@@ -218,7 +218,7 @@ function Btn({ design, children }: { design: QuizDesign; children: React.ReactNo
   return <button className={base} style={style}>{children}</button>;
 }
 
-function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign }) {
+export function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign }) {
   const title = block.title || '(sem título)';
   const sub = block.subtitle;
 
