@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules, SocialProofSettings, UrgencyBarSettings } from '../types';
 import { DEFAULT_DESIGN } from '../design-presets';
 import { DEFAULT_ACCESS_RULES } from '../types';
+import { parseSubdomain } from '../lib/tenant';
 
 function slugify(input: string): string {
   return input
@@ -365,13 +366,26 @@ export const quizService = {
   },
 
   // ============ PUBLIC PLAYER (anon) ============
-  async getPublishedBySlug(slug: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
-    const { data: quiz, error } = await supabase
+  async getCompanyIdByHost(host: string): Promise<string | null> {
+    const subdomain = parseSubdomain(host);
+    if (!subdomain) return null;
+    const { data } = await supabase.from('companies').select('id').eq('subdomain', subdomain).maybeSingle();
+    return (data as { id: string } | null)?.id ?? null;
+  },
+
+  async getPublishedBySlug(slug: string, host?: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
+    let companyId: string | null = null;
+    if (host && parseSubdomain(host)) {
+      companyId = await this.getCompanyIdByHost(host);
+      if (!companyId) return null; // subdomínio não corresponde a nenhuma empresa
+    }
+    let quizQuery = supabase
       .from('quiz_funnels')
       .select('*')
       .eq('slug', slug)
-      .eq('status', 'published')
-      .maybeSingle();
+      .eq('status', 'published');
+    if (companyId) quizQuery = quizQuery.eq('company_id', companyId);
+    const { data: quiz, error } = await quizQuery.maybeSingle();
     if (error) throw error;
     if (!quiz) return null;
 
@@ -392,12 +406,15 @@ export const quizService = {
     return { quiz: quiz as unknown as QuizFunnel, schema };
   },
 
-  async getDraftBySlug(slug: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
-    const { data: quiz, error } = await supabase
-      .from('quiz_funnels')
-      .select('*')
-      .eq('slug', slug)
-      .maybeSingle();
+  async getDraftBySlug(slug: string, host?: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
+    let companyId: string | null = null;
+    if (host && parseSubdomain(host)) {
+      companyId = await this.getCompanyIdByHost(host);
+      if (!companyId) return null; // subdomínio não corresponde a nenhuma empresa
+    }
+    let quizQuery = supabase.from('quiz_funnels').select('*').eq('slug', slug);
+    if (companyId) quizQuery = quizQuery.eq('company_id', companyId);
+    const { data: quiz, error } = await quizQuery.maybeSingle();
     if (error) throw error;
     if (!quiz) return null;
     const { data: version } = await supabase

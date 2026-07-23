@@ -343,6 +343,7 @@ export type Database = {
           id: string
           name: string
           slug: string
+          subdomain: string | null
         }
         Insert: {
           chat_allowed_domains?: string[]
@@ -351,6 +352,7 @@ export type Database = {
           id?: string
           name: string
           slug: string
+          subdomain?: string | null
         }
         Update: {
           chat_allowed_domains?: string[]
@@ -359,6 +361,7 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          subdomain?: string | null
         }
         Relationships: []
       }

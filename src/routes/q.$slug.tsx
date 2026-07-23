@@ -1,8 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { createServerFn } from '@tanstack/react-start';
 import { Suspense } from 'react';
 import { z } from 'zod';
 import { QuizPlayer } from '@/modules/quiz/components/QuizPlayer';
 import { quizService } from '@/modules/quiz/services/quizService';
+
+const getRequestHost = createServerFn({ method: 'GET' }).handler(async () => {
+  const { getRequest } = await import('@tanstack/react-start/server');
+  return getRequest()?.headers.get('host') ?? null;
+});
 
 const searchSchema = z.object({
   preview: z.union([z.literal('1'), z.literal('true'), z.literal(1), z.boolean()]).optional(),
@@ -23,7 +29,8 @@ const DEFAULT_DESCRIPTION = 'Responda o quiz e receba seu resultado personalizad
 export const Route = createFileRoute('/q/$slug')({
   validateSearch: (s) => searchSchema.parse(s),
   loader: async ({ params }) => {
-    const data = await quizService.getPublishedBySlug(params.slug).catch(() => null);
+    const host = (await getRequestHost().catch(() => null)) ?? undefined;
+    const data = await quizService.getPublishedBySlug(params.slug, host).catch(() => null);
     const settings = (data?.quiz.settings ?? {}) as Record<string, unknown>;
     return {
       seoTitle: (settings.seo_title as string) || data?.quiz.name || DEFAULT_TITLE,

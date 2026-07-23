@@ -104,13 +104,15 @@ function useAccessGate(rules: AccessRules | undefined, tracking: Record<string, 
   return state;
 }
 
-const playerQuery = (slug: string, preview: boolean) =>
-  queryOptions({
-    queryKey: ['quiz-public', slug, preview ? 'preview' : 'published'],
+const playerQuery = (slug: string, preview: boolean) => {
+  const host = typeof window !== 'undefined' ? window.location.hostname : undefined;
+  return queryOptions({
+    queryKey: ['quiz-public', slug, preview ? 'preview' : 'published', host],
     queryFn: () =>
-      preview ? quizService.getDraftBySlug(slug) : quizService.getPublishedBySlug(slug),
+      preview ? quizService.getDraftBySlug(slug, host) : quizService.getPublishedBySlug(slug, host),
     staleTime: preview ? 0 : 60_000,
   });
+};
 
 export function QuizPlayer({
   slug,

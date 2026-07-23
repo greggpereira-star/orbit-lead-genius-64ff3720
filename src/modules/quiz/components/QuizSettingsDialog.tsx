@@ -21,6 +21,8 @@ import {
   CheckCircle2, Gift, Users, Star, Flame, Bell,
 } from 'lucide-react';
 import { quizService } from '../services/quizService';
+import { companyService } from '@/modules/company/services/companyService';
+import { ROOT_DOMAIN } from '../lib/tenant';
 import type { QuizFunnel, SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
 
@@ -55,6 +57,15 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
   const [seoOgImage, setSeoOgImage] = useState('');
   const [socialProof, setSocialProof] = useState<SocialProofSettings>(DEFAULT_SOCIAL_PROOF);
   const [urgencyBar, setUrgencyBar] = useState<UrgencyBarSettings>(DEFAULT_URGENCY_BAR);
+  const [companySubdomain, setCompanySubdomain] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    companyService
+      .getById(companyId)
+      .then((c) => setCompanySubdomain(c?.subdomain ?? null))
+      .catch(() => setCompanySubdomain(null));
+  }, [open, companyId]);
 
   useEffect(() => {
     if (!open) return;
@@ -156,6 +167,11 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                 <p className="text-xs text-muted-foreground break-all">
                   Prévia da URL: <span className="font-mono">{publicUrl}</span>
                 </p>
+                {companySubdomain && (
+                  <p className="text-xs text-muted-foreground break-all">
+                    Link personalizado: <span className="font-mono">https://{companySubdomain}.{ROOT_DOMAIN}/q/{publicSlug}</span>
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">Se o slug já estiver em uso, um sufixo numérico será adicionado automaticamente.</p>
               </div>
 
