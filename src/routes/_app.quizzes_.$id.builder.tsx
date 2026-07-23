@@ -278,7 +278,12 @@ function QuizBuilderPage() {
                       <div
                         ref={dragProvided.innerRef}
                         {...dragProvided.draggableProps}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { setActiveBlockId(b.id); setMobilePanel('inspector'); }
+                        }}
                         className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
                           dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
                           activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'
