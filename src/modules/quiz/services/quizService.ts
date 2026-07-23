@@ -303,19 +303,31 @@ export const quizService = {
       .maybeSingle();
     const nextVersion = ((latest as { version?: number } | null)?.version ?? 0) + 1;
 
-    const { error } = await supabase.from('quiz_versions').insert({
-      quiz_id: params.quizId,
-      company_id: params.companyId,
-      version: nextVersion,
-      schema: params.schema as never,
-      created_by: params.userId,
-    });
+    const { data: inserted, error } = await supabase
+      .from('quiz_versions')
+      .insert({
+        quiz_id: params.quizId,
+        company_id: params.companyId,
+        version: nextVersion,
+        schema: params.schema as never,
+        created_by: params.userId,
+      })
+      .select('id')
+      .single();
     if (error) throw error;
 
     await supabase
       .from('quiz_funnels')
       .update({ design: params.schema.design as never, updated_at: new Date().toISOString() })
       .eq('id', params.quizId);
+
+    // Se o quiz já está publicado, cada save (incluindo autosave) já vira a versão
+    // ao vivo — evita a experiência confusa de "salvo" mas o link público não mudar.
+    await supabase
+      .from('quiz_funnels')
+      .update({ published_version_id: (inserted as { id: string }).id })
+      .eq('id', params.quizId)
+      .eq('status', 'published');
   },
 
   async promoteVariant(params: {
@@ -420,6 +432,13 @@ export const quizService = {
         published_version_id: (latest as { id?: string } | null)?.id ?? null,
         published_at: new Date().toISOString(),
       })
+      .eq('id', quizId);
+  },
+
+  async unpublish(quizId: string): Promise<void> {
+    await supabase
+      .from('quiz_funnels')
+      .update({ status: 'draft' })
       .eq('id', quizId);
   },
 

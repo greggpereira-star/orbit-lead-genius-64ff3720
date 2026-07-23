@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useParams, useNavigate } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   ArrowLeft,
   Save,
@@ -21,6 +22,7 @@ import {
   Settings,
   Users,
   Workflow,
+  Rocket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -59,6 +61,8 @@ function QuizBuilderPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'blocks' | 'inspector' | null>(null);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [autosave, setAutosave] = useState(true);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 1024px)');
@@ -170,18 +174,54 @@ function QuizBuilderPage() {
     reorderBlocks(source.index, destination.index);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (opts?: { silent?: boolean }) => {
     if (!company?.id || !user?.id) return;
     setSaving(true);
     try {
       await quizService.saveSchema({ quizId: id, companyId: company.id, userId: user.id, schema });
-      toast.success('Alterações salvas');
+      if (!opts?.silent) toast.success('Alterações salvas');
       setDirty(false);
     } catch (e) {
       console.error('Erro ao salvar quiz', e);
-      toast.error('Não foi possível salvar agora. Verifique sua conexão e tente de novo.');
+      if (!opts?.silent) toast.error('Não foi possível salvar agora. Verifique sua conexão e tente de novo.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Salvamento automático: evita que o Preview e o link público fiquem desatualizados
+  // em relação ao que está sendo editado (padrão já validado por concorrentes).
+  useEffect(() => {
+    if (!autosave || !dirty || loading) return;
+    const timer = setTimeout(() => {
+      handleSave({ silent: true });
+    }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schema, dirty, autosave, loading]);
+
+  const handleTogglePublish = async () => {
+    if (!quiz) return;
+    if (quiz.status === 'published' && !window.confirm('Despublicar este quiz? O link público deixará de funcionar imediatamente.')) {
+      return;
+    }
+    setPublishing(true);
+    try {
+      if (dirty) await handleSave({ silent: true });
+      if (quiz.status === 'published') {
+        await quizService.unpublish(id);
+        toast.success('Quiz despublicado — o link público deixou de funcionar.');
+      } else {
+        await quizService.publish(id);
+        toast.success('Quiz publicado! O link público já está no ar.');
+      }
+      const fresh = await quizService.getById(id);
+      setQuiz(fresh);
+    } catch (e) {
+      console.error('Erro ao publicar/despublicar quiz', e);
+      toast.error('Não foi possível atualizar a publicação agora.');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -396,6 +436,12 @@ function QuizBuilderPage() {
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/preview', params: { id } })} className="gap-2 px-2 sm:px-3">
             <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Preview</span>
           </Button>
+          <div className="hidden lg:flex items-center gap-1.5 border rounded-lg px-2 py-1 shrink-0">
+            <Switch id="autosave" checked={autosave} onCheckedChange={setAutosave} className="scale-90" />
+            <label htmlFor="autosave" className="text-xs font-medium text-muted-foreground cursor-pointer whitespace-nowrap">
+              Salvamento automático
+            </label>
+          </div>
           <div
             className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
               dirty
@@ -406,9 +452,19 @@ function QuizBuilderPage() {
             <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
             <span className="hidden min-[420px]:inline">{dirty ? 'Não salvo' : 'Salvo'}</span>
           </div>
-          <Button size="sm" onClick={handleSave} disabled={saving || !dirty} className="gap-2 px-2 sm:px-3 shadow-lg shadow-primary/20">
+          <Button size="sm" onClick={() => handleSave()} disabled={saving || !dirty} variant="outline" className="gap-2 px-2 sm:px-3">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span className="hidden sm:inline">Salvar</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleTogglePublish}
+            disabled={publishing}
+            variant={quiz?.status === 'published' ? 'outline' : 'default'}
+            className={`gap-2 px-2 sm:px-3 ${quiz?.status === 'published' ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400' : 'shadow-lg shadow-primary/20'}`}
+          >
+            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+            <span className="hidden sm:inline">{quiz?.status === 'published' ? 'Publicado' : 'Publicar'}</span>
           </Button>
         </div>
       </header>
