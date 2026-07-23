@@ -23,17 +23,19 @@ import type { QuizBlock, QuizDesign, QuizSchema, QuizStep } from '../types';
 import { BlockRenderer, ProgressBar } from './QuizPreview';
 
 // Cada nó do fluxograma é uma miniatura AO VIVO da tela real (mesmo BlockRenderer do
-// canvas do Builder), renderizada em largura natural e reduzida via transform: scale —
-// é assim que Funilix e outros page builders premium mostram "o que tem em cada etapa"
-// sem precisar de uma legenda textual separada do conteúdo real.
-const SCREEN_INNER_WIDTH = 390;
-const FRAME_WIDTH = 236;
-const FRAME_HEIGHT = 300;
-const SCREEN_SCALE = FRAME_WIDTH / SCREEN_INNER_WIDTH;
-
-const STEP_WIDTH = FRAME_WIDTH + 24;
-const STEP_GAP_X = STEP_WIDTH + 90;
-const LANE_GAP_Y = FRAME_HEIGHT + 220;
+// canvas do Builder) — em tamanho NATURAL, sem transform: scale e sem corte de altura,
+// pra cada card aparecer por inteiro (o zoom do próprio canvas do React Flow é o que dá
+// a visão "reduzida" quando há muitas etapas, exatamente como o Funilix faz — inspecionamos
+// o DOM do builder deles ao vivo: os nós renderizam a ~470px de largura real, sem hack de
+// escala interna, e a cor de marca do quiz (design.primary) tinge a borda do card e os
+// handles de conexão, não a paleta genérica da UI do app).
+const SCREEN_WIDTH = 400;
+const STEP_WIDTH = SCREEN_WIDTH + 32;
+const STEP_GAP_X = STEP_WIDTH + 100;
+// Altura variável (conteúdo real, sem corte) — a raia secundária de ramificação usa um
+// espaçamento generoso fixo pra evitar sobreposição mesmo com etapas mais longas (form,
+// pricing, comparação); não é uma medição exata do conteúdo, mas cobre a grande maioria.
+const LANE_GAP_Y = 820;
 
 const typeMeta = new Map(BLOCK_LIBRARY.map((def) => [def.type, def]));
 
@@ -55,14 +57,17 @@ function StepNode({ data }: { data: StepNodeData }) {
   const def = dominant ? typeMeta.get(dominant.type) : undefined;
   const hasConditional = blocks.some((b) => b.showIf?.enabled);
   const hasBranch = blocks.some((b) => (b.options ?? []).some((o) => o.jumpToBlockId) || (b.logicRules?.length ?? 0) > 0);
+  // handles/borda do card usam a cor de marca do PRÓPRIO quiz (design.primary), não a cor
+  // genérica da UI do app — mesmo tratamento que o Funilix usa nos handles do fluxograma.
+  const themeHandleStyle = { background: design.background, border: `2px solid ${design.primary}` };
 
   return (
     <div
-      className="rounded-2xl border bg-card shadow-md overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
-      style={{ width: STEP_WIDTH }}
+      className="rounded-xl border-2 bg-card shadow-md overflow-visible transition-all hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+      style={{ width: STEP_WIDTH, borderColor: `${design.primary}55`, boxShadow: `0 6px 20px ${design.primary}1a` }}
       onClick={() => onSelectStep?.(step.id)}
     >
-      <Handle type="target" position={Position.Left} className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background" />
+      <Handle type="target" position={Position.Left} className="!w-3 !h-3" style={themeHandleStyle} />
       <Handle
         type="target"
         id="branch-target"
@@ -70,7 +75,7 @@ function StepNode({ data }: { data: StepNodeData }) {
         className="!bg-amber-500 !w-2.5 !h-2.5 !border-2 !border-background"
       />
 
-      <div className="flex items-center gap-1.5 px-3 py-2 border-b bg-gradient-to-r from-primary/5 to-transparent">
+      <div className="flex items-center gap-1.5 px-3 py-2 border-b bg-muted/40 rounded-t-[10px]">
         <span className="flex items-center justify-center h-5 w-5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold shrink-0">
           {index + 1}
         </span>
@@ -97,38 +102,32 @@ function StepNode({ data }: { data: StepNodeData }) {
         </div>
       </div>
 
+      {/* miniatura em tamanho natural — sem transform: scale, sem altura fixa, sem corte:
+          a etapa aparece por inteiro, como no Funilix. */}
       <div className="p-3">
         <div
-          className="relative mx-auto overflow-hidden rounded-lg border"
-          style={{ width: FRAME_WIDTH, height: FRAME_HEIGHT, background: design.background }}
+          className="mx-auto rounded-lg border overflow-hidden"
+          style={{ width: SCREEN_WIDTH, background: design.background, fontFamily: design.fontBody }}
         >
-          <div style={{ width: SCREEN_INNER_WIDTH, transform: `scale(${SCREEN_SCALE})`, transformOrigin: 'top left' }}>
-            <div className="px-6 pt-6 pb-4">
-              <ProgressBar design={design} value={(index + 1) / Math.max(total, 1)} />
-            </div>
-            <div className="px-6 flex flex-col gap-8">
-              {blocks.map((b) => (
-                <div key={b.id} className="pointer-events-none">
-                  <BlockRenderer block={b} design={design} />
-                </div>
-              ))}
-            </div>
+          <div className="px-6 pt-6 pb-4">
+            <ProgressBar design={design} value={(index + 1) / Math.max(total, 1)} />
           </div>
-          {/* esmaece o rodapé pra indicar visualmente que a tela real pode continuar
-              além do recorte da miniatura, sem cortar bruscamente o conteúdo */}
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-12"
-            style={{ background: `linear-gradient(to top, ${design.background}, transparent)` }}
-          />
+          <div className="px-6 pb-8 flex flex-col gap-8">
+            {blocks.map((b) => (
+              <div key={b.id} className="pointer-events-none">
+                <BlockRenderer block={b} design={design} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="px-3 py-1.5 border-t bg-muted/30 flex items-center justify-between">
+      <div className="px-3 py-1.5 border-t bg-muted/30 flex items-center justify-between rounded-b-[10px]">
         <span className="text-[9px] text-muted-foreground truncate">{def?.label ?? dominant?.type}</span>
         <span className="text-[9px] text-muted-foreground shrink-0">{blocks.length} {blocks.length === 1 ? 'módulo' : 'módulos'}</span>
       </div>
 
-      <Handle type="source" position={Position.Right} className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background" />
+      <Handle type="source" position={Position.Right} className="!w-3 !h-3" style={themeHandleStyle} />
       <Handle
         type="source"
         id="branch-source"
