@@ -125,6 +125,11 @@ export const quizService = {
     name?: string;
     slug?: string;
     customDomain?: string;
+    webhookUrl?: string;
+    customHeadScript?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    seoOgImage?: string;
   }): Promise<QuizFunnel> {
     const patch: Record<string, unknown> = {};
 
@@ -139,7 +144,16 @@ export const quizService = {
       patch.slug = await findUniqueSlug(params.companyId, desired, params.quizId);
     }
 
-    if (params.customDomain !== undefined) {
+    const settingsFields: [keyof typeof params, string][] = [
+      ['customDomain', 'custom_domain'],
+      ['webhookUrl', 'webhook_url'],
+      ['customHeadScript', 'custom_head_script'],
+      ['seoTitle', 'seo_title'],
+      ['seoDescription', 'seo_description'],
+      ['seoOgImage', 'seo_og_image'],
+    ];
+    const touchedSettings = settingsFields.some(([key]) => params[key] !== undefined);
+    if (touchedSettings) {
       const { data: current, error: fetchError } = await supabase
         .from('quiz_funnels')
         .select('settings')
@@ -147,9 +161,13 @@ export const quizService = {
         .single();
       if (fetchError) throw fetchError;
       const settings = { ...((current?.settings as Record<string, unknown>) ?? {}) };
-      const trimmedDomain = params.customDomain.trim();
-      if (trimmedDomain) settings.custom_domain = trimmedDomain;
-      else delete settings.custom_domain;
+      for (const [key, settingsKey] of settingsFields) {
+        const value = params[key];
+        if (value === undefined) continue;
+        const trimmed = (value as string).trim();
+        if (trimmed) settings[settingsKey] = trimmed;
+        else delete settings[settingsKey];
+      }
       patch.settings = settings as never;
     }
 
@@ -437,6 +455,37 @@ export const quizService = {
       .maybeSingle();
     if (error) throw error;
     const submissionId = (data as { id?: string } | null)?.id ?? null;
+
+    // Fire-and-forget webhook, se configurado nas configurações do quiz
+    (async () => {
+      try {
+        const { data: quizRow } = await supabase
+          .from('quiz_funnels')
+          .select('settings')
+          .eq('id', params.quizId)
+          .maybeSingle();
+        const webhookUrl = (quizRow?.settings as Record<string, unknown> | undefined)?.webhook_url as string | undefined;
+        if (!webhookUrl) return;
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'quiz.submission.completed',
+            quiz_id: params.quizId,
+            submission_id: submissionId,
+            score: params.score,
+            temperature: params.temperature,
+            tags: params.tags,
+            contact: { email: params.email ?? null, phone: params.phone ?? null, name: params.name ?? null },
+            responses: params.responses,
+            tracking,
+            completed_at: new Date().toISOString(),
+          }),
+        });
+      } catch {
+        // Fire-and-forget: falhas de webhook não devem quebrar a submissão do quiz
+      }
+    })();
 
     // Auto-create lead + trigger CV.CRM sync when contact info was captured
     if (params.email || params.phone) {
