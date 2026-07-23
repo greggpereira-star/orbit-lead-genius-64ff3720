@@ -123,7 +123,11 @@ function QuizBuilderPage() {
     updateSchema((prev) => ({
       ...prev,
       blocks: [...prev.blocks, newBlock],
-      steps: [...steps, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] }],
+      // Usa prev.steps (não a `steps` memoizada do render) — cliques em sucessão rápida
+      // no mesmo lote de eventos compartilham o mesmo closure da `steps` desse render, e
+      // basear-se nela aqui descartaria silenciosamente as etapas de blocos adicionados
+      // entre um render e outro.
+      steps: [...(prev.steps ?? []), { id: `step-${newBlock.id}`, blockIds: [newBlock.id] }],
     }));
     setActiveBlockId(newBlock.id);
     setMobilePanel('inspector');
@@ -147,7 +151,7 @@ function QuizBuilderPage() {
     updateSchema((prev) => ({
       ...prev,
       blocks: prev.blocks.filter((b) => b.id !== target),
-      steps: steps
+      steps: (prev.steps ?? [])
         .map((s) => (s.blockIds.includes(target) ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) } : s))
         .filter((s) => s.blockIds.length > 0),
     }));

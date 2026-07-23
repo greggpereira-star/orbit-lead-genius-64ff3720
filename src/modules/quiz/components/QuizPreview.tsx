@@ -32,6 +32,9 @@ const QUIZ_MAX_WIDTH = 448;
 export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'desktop' }: Props) {
   const { design, blocks } = schema;
   const steps = useMemo(() => getSteps(schema), [schema]);
+  // hover:bg-white/5 fica invisível em fundos claros (Clean Beauty, Mono, Minimal Light,
+  // Candy) — escolhe a tinta de hover pelo mesmo teste de luminância do contraste de botão.
+  const hoverTintClass = getContrastText(design.background) === '#1a1a1a' ? 'hover:bg-black/5' : 'hover:bg-white/5';
 
   const viewportWidth = device === 'mobile' ? 390 : device === 'tablet' ? 820 : 1280;
 
@@ -83,7 +86,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                           Etapa {stepIdx + 1}
                         </div>
                       )}
-                      <div className="space-y-3">
+                      <div className="flex flex-col">
                         {step.blockIds.map((blockId) => {
                           const b = blocks.find((x) => x.id === blockId);
                           if (!b) return null;
@@ -95,8 +98,8 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                                   ref={dragProvided.innerRef}
                                   {...dragProvided.draggableProps}
                                   onClick={() => onSelectBlock?.(b.id)}
-                                  className={`group relative cursor-pointer rounded-xl p-4 -m-4 transition-all ${
-                                    activeBlockId === b.id ? 'ring-2' : 'hover:bg-white/5'
+                                  className={`group relative cursor-pointer rounded-xl p-3 transition-all ${
+                                    activeBlockId === b.id ? '' : hoverTintClass
                                   } ${dragSnapshot.isDragging ? 'shadow-2xl bg-[var(--q-bg)]' : ''}`}
                                   style={{
                                     ...dragProvided.draggableProps.style,
@@ -379,7 +382,11 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
         </div>
       );
     case 'divider':
-      return <div className="h-px w-full" style={{ background: design.surface }} />;
+      return (
+        <div className="py-6">
+          <div className="h-px w-full" style={{ background: design.surface }} />
+        </div>
+      );
 
     case 'argument':
       return (

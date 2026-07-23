@@ -383,6 +383,8 @@ function PlayerRunner({
         <div className="flex-1 flex flex-col" style={{ padding: '24px 16px' }}>
           <ProgressBar
             value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
+            current={done ? steps.length - 1 : state.currentStepIndex}
+            total={steps.length}
             design={design}
           />
           <div className="mt-6 flex-1 flex flex-col gap-6">
@@ -577,18 +579,60 @@ function extract(responses: Record<string, unknown>, blocks: QuizBlock[], type: 
   return typeof v === 'string' && v.length > 0 ? v : undefined;
 }
 
-function ProgressBar({ value, design }: { value: number; design: QuizSchema['design'] }) {
+function ProgressBar({
+  value,
+  design,
+  current = 0,
+  total = 1,
+}: {
+  value: number;
+  design: QuizSchema['design'];
+  current?: number;
+  total?: number;
+}) {
   if (design.progressStyle === 'none') return null;
   const pct = Math.min(100, Math.round(value * 100));
+  const a11yProps = {
+    role: 'progressbar' as const,
+    'aria-label': 'Progresso do quiz',
+    'aria-valuenow': pct,
+    'aria-valuemin': 0,
+    'aria-valuemax': 100,
+  };
+
+  if (design.progressStyle === 'dots') {
+    return (
+      <div className="flex gap-2 justify-center" {...a11yProps}>
+        {Array.from({ length: Math.max(1, total) }).map((_, i) => (
+          <div
+            key={i}
+            className="h-2 w-2 rounded-full transition-colors motion-reduce:transition-none"
+            style={{ background: i <= current ? design.primary : design.surface }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (design.progressStyle === 'steps') {
+    return (
+      <div className="flex gap-1" {...a11yProps}>
+        {Array.from({ length: Math.max(1, total) }).map((_, i) => (
+          <div
+            key={i}
+            className="h-1 flex-1 rounded-full transition-colors motion-reduce:transition-none"
+            style={{ background: i <= current ? design.primary : design.surface }}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className="h-1.5 rounded-full overflow-hidden"
       style={{ background: design.surface }}
-      role="progressbar"
-      aria-label="Progresso do quiz"
-      aria-valuenow={pct}
-      aria-valuemin={0}
-      aria-valuemax={100}
+      {...a11yProps}
     >
       <div
         className="h-full transition-all duration-500 motion-reduce:transition-none"
