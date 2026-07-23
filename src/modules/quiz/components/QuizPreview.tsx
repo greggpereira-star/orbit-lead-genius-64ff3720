@@ -81,11 +81,9 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                 ) : (
                   steps.map((step, stepIdx) => (
                     <div key={step.id} className={stepIdx > 0 ? 'mt-8 pt-8 border-t border-dashed' : ''} style={{ borderColor: design.surface }}>
-                      {stepIdx > 0 && (
-                        <div className="text-[10px] font-semibold uppercase tracking-wide mb-4 opacity-50" style={{ color: design.muted }}>
-                          Etapa {stepIdx + 1}
-                        </div>
-                      )}
+                      <div className="text-[10px] font-semibold uppercase tracking-wide mb-4 opacity-50" style={{ color: design.muted }}>
+                        Etapa {stepIdx + 1}
+                      </div>
                       <div className="flex flex-col">
                         {step.blockIds.map((blockId) => {
                           const b = blocks.find((x) => x.id === blockId);
@@ -315,7 +313,7 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
       const embed = block.mediaUrl ? getVideoEmbed(block.mediaUrl, block.mediaProvider) : null;
       return (
         <div className="space-y-4">
-          {(title || sub) && heading}
+          {(block.title || sub) && heading}
           <div className="relative w-full aspect-video overflow-hidden bg-black" style={{ borderRadius: design.radius }}>
             {embed?.kind === 'iframe' ? (
               <iframe src={embed.src} className="w-full h-full" allowFullScreen title="video" />
@@ -344,7 +342,7 @@ function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign
     case 'image':
       return (
         <div className="space-y-3">
-          {(title || sub) && heading}
+          {(block.title || sub) && heading}
           {block.mediaUrl && (
             <img src={block.mediaUrl} alt={block.title || 'Imagem'} className="w-full object-cover" style={{ borderRadius: design.radius }} />
           )}

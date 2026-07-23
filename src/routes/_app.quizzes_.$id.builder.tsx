@@ -108,12 +108,27 @@ function QuizBuilderPage() {
 
   // Mantém schema.blocks sempre sincronizado com a ordem "achatada" de schema.steps —
   // steps é a fonte de verdade de agrupamento/ordem; blocks guarda o conteúdo de cada bloco.
-  const applySteps = (newSteps: QuizStep[]) => {
+  // IMPORTANTE: nunca descarta um bloco que exista em prev.blocks mas não esteja em
+  // newSteps (isso já causou perda silenciosa do bloco no canvas). Qualquer bloco que
+  // sobrar é reanexado como sua própria etapa no final — o dado nunca some.
+  const applySteps = (buildSteps: (prev: QuizSchema) => QuizStep[]) => {
     updateSchema((prev) => {
+      const rawSteps = buildSteps(prev);
+      const existing = new Set(prev.blocks.map((b) => b.id));
+      // sanea referências pendentes e etapas vazias
+      const cleaned = rawSteps
+        .map((s) => ({ ...s, blockIds: s.blockIds.filter((id) => existing.has(id)) }))
+        .filter((s) => s.blockIds.length > 0);
+      // reanexa qualquer bloco que ficou de fora
+      const covered = new Set(cleaned.flatMap((s) => s.blockIds));
+      const orphanSteps = prev.blocks
+        .filter((b) => !covered.has(b.id))
+        .map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));
+      const finalSteps = [...cleaned, ...orphanSteps];
+      const orderedIds = finalSteps.flatMap((s) => s.blockIds);
       const blockMap = new Map(prev.blocks.map((b) => [b.id, b]));
-      const orderedIds = newSteps.flatMap((s) => s.blockIds);
-      const newBlocks = orderedIds.map((bid) => blockMap.get(bid)).filter(Boolean) as QuizBlock[];
-      return { ...prev, blocks: newBlocks, steps: newSteps };
+      const newBlocks = orderedIds.map((bid) => blockMap.get(bid)!).filter(Boolean);
+      return { ...prev, blocks: newBlocks, steps: finalSteps };
     });
   };
 
@@ -204,17 +219,22 @@ function QuizBuilderPage() {
         // Soltou dentro de uma etapa já expandida — só adiciona o componente a ela,
         // não cria uma etapa nova (pedido explícito: nova etapa só nasce por ação clara).
         const targetStepId = destination.droppableId.slice('step-'.length);
-        const nextSteps = steps.map((s) =>
-          s.id === targetStepId
-            ? { ...s, blockIds: [...s.blockIds.slice(0, destination.index), newBlock.id, ...s.blockIds.slice(destination.index)] }
-            : s
-        );
-        updateSchema((prev) => ({ ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps }));
+        updateSchema((prev) => {
+          const prevSteps = getSteps(prev);
+          const nextSteps = prevSteps.map((s) =>
+            s.id === targetStepId
+              ? { ...s, blockIds: [...s.blockIds.slice(0, destination.index), newBlock.id, ...s.blockIds.slice(destination.index)] }
+              : s
+          );
+          return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
+        });
       } else {
         // Soltou na lista de etapas (fora de uma expandida) — cria etapa nova.
-        const nextSteps = Array.from(steps);
-        nextSteps.splice(destination.index, 0, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] });
-        updateSchema((prev) => ({ ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps }));
+        updateSchema((prev) => {
+          const nextSteps = Array.from(getSteps(prev));
+          nextSteps.splice(destination.index, 0, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] });
+          return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
+        });
       }
       setActiveBlockId(newBlock.id);
       setMobilePanel('inspector');
@@ -224,10 +244,12 @@ function QuizBuilderPage() {
     if (source.droppableId === 'steps') {
       // Reordena etapas inteiras.
       if (source.index === destination.index) return;
-      const nextSteps = Array.from(steps);
-      const [moved] = nextSteps.splice(source.index, 1);
-      nextSteps.splice(destination.index, 0, moved);
-      applySteps(nextSteps);
+      applySteps((prev) => {
+        const nextSteps = Array.from(getSteps(prev));
+        const [moved] = nextSteps.splice(source.index, 1);
+        if (moved) nextSteps.splice(destination.index, 0, moved);
+        return nextSteps;
+      });
       return;
     }
 
@@ -238,29 +260,31 @@ function QuizBuilderPage() {
 
       if (sourceStepId === destStepId) {
         if (source.index === destination.index) return;
-        const nextSteps = steps.map((s) => {
-          if (s.id !== sourceStepId) return s;
-          const ids = Array.from(s.blockIds);
-          const [moved] = ids.splice(source.index, 1);
-          ids.splice(destination.index, 0, moved);
-          return { ...s, blockIds: ids };
-        });
-        applySteps(nextSteps);
+        applySteps((prev) =>
+          getSteps(prev).map((s) => {
+            if (s.id !== sourceStepId) return s;
+            const ids = Array.from(s.blockIds);
+            const [moved] = ids.splice(source.index, 1);
+            if (moved) ids.splice(destination.index, 0, moved);
+            return { ...s, blockIds: ids };
+          })
+        );
         return;
       }
 
       // Move o componente de uma etapa pra outra; remove a etapa de origem se ficar vazia.
       const movedId = draggableId;
-      const withoutMoved = steps
-        .map((s) => (s.id === sourceStepId ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) } : s))
-        .filter((s) => s.id === destStepId || s.blockIds.length > 0);
-      const nextSteps = withoutMoved.map((s) => {
-        if (s.id !== destStepId) return s;
-        const ids = Array.from(s.blockIds);
-        ids.splice(destination.index, 0, movedId);
-        return { ...s, blockIds: ids };
+      applySteps((prev) => {
+        const withoutMoved = getSteps(prev)
+          .map((s) => (s.id === sourceStepId ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) } : s))
+          .filter((s) => s.id === destStepId || s.blockIds.length > 0);
+        return withoutMoved.map((s) => {
+          if (s.id !== destStepId) return s;
+          const ids = Array.from(s.blockIds);
+          ids.splice(destination.index, 0, movedId);
+          return { ...s, blockIds: ids };
+        });
       });
-      applySteps(nextSteps);
     }
   };
 

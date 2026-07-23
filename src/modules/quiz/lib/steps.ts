@@ -10,9 +10,25 @@ import type { QuizBlock, QuizStep } from '../types';
  */
 export function getSteps(schema: { blocks: QuizBlock[]; steps?: QuizStep[] }): QuizStep[] {
   if (schema.steps && schema.steps.length > 0) {
-    const covered = new Set(schema.steps.flatMap((s) => s.blockIds));
-    const missing = schema.blocks.filter((b) => !covered.has(b.id)).map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));
-    return missing.length > 0 ? [...schema.steps, ...missing] : schema.steps;
+    const indexOf = new Map(schema.blocks.map((b, i) => [b.id, i]));
+    // Sanea etapas: remove blockIds que apontam pra blocos que não existem mais
+    // (referência pendente deixaria uma etapa fantasma vazia no canvas/painel), e
+    // descarta etapas que ficaram sem nenhum bloco válido.
+    const cleaned = schema.steps
+      .map((s) => ({ ...s, blockIds: s.blockIds.filter((id) => indexOf.has(id)) }))
+      .filter((s) => s.blockIds.length > 0);
+    // Qualquer bloco ainda não coberto por nenhuma etapa vira sua própria etapa —
+    // nunca some do builder.
+    const covered = new Set(cleaned.flatMap((s) => s.blockIds));
+    const orphans = schema.blocks
+      .filter((b) => !covered.has(b.id))
+      .map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));
+    if (orphans.length === 0) return cleaned;
+    // Reinsere os órfãos na posição que corresponde à ordem em `blocks` (usando o
+    // menor índice de bloco de cada etapa como chave), pra que um bloco que era o
+    // primeiro em `blocks` reapareça como primeira etapa — não jogado no final.
+    const keyOf = (s: QuizStep) => Math.min(...s.blockIds.map((id) => indexOf.get(id) ?? Number.MAX_SAFE_INTEGER));
+    return [...cleaned, ...orphans].sort((a, b) => keyOf(a) - keyOf(b));
   }
   return schema.blocks.map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));
 }
