@@ -37,6 +37,7 @@ import { QuizSettingsDialog } from '@/modules/quiz/components/QuizSettingsDialog
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { BLOCK_LIBRARY, BLOCK_CATEGORY_LABELS, type BlockCategory } from '@/modules/quiz/blocks-library';
+import { STEP_TEMPLATES } from '@/modules/quiz/step-templates';
 import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
 import { getSteps } from '@/modules/quiz/lib/steps';
 import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from '@/modules/quiz/types';
@@ -133,6 +134,21 @@ function QuizBuilderPage() {
       const newBlocks = orderedIds.map((bid) => blockMap.get(bid)!).filter(Boolean);
       return { ...prev, blocks: newBlocks, steps: finalSteps };
     });
+  };
+
+  // Insere uma ETAPA inteira pré-montada (vários blocos agrupados numa tela só).
+  const addStepTemplate = (templateId: string) => {
+    const template = STEP_TEMPLATES.find((t) => t.id === templateId);
+    if (!template) return;
+    const newBlocks: QuizBlock[] = template.create().map((b) => ({ id: crypto.randomUUID(), ...b }));
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: [...prev.blocks, ...newBlocks],
+      steps: [...(prev.steps ?? []), { id: `step-${newBlocks[0].id}`, blockIds: newBlocks.map((b) => b.id) }],
+    }));
+    setActiveBlockId(newBlocks[0].id);
+    setMobilePanel('inspector');
+    toast.success(`Etapa "${template.name}" adicionada`);
   };
 
   const addBlock = (defIndex: number) => {
@@ -373,6 +389,26 @@ function QuizBuilderPage() {
 
   const BlocksPalette = (
     <>
+      <div className="p-3 border-b">
+        <h3 className="font-bold text-sm mb-2">Modelos prontos</h3>
+        <p className="text-[11px] text-muted-foreground mb-3">Insere uma etapa completa, já montada — é só personalizar os textos.</p>
+        <div className="space-y-1.5">
+          {STEP_TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => addStepTemplate(t.id)}
+              className="w-full flex items-start gap-2.5 rounded-lg border p-2 text-left transition-all hover:border-primary hover:bg-primary/5"
+            >
+              <span className="text-base leading-none mt-0.5">{t.emoji}</span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold leading-tight">{t.name}</span>
+                <span className="block text-[10px] text-muted-foreground leading-tight mt-0.5">{t.description}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="p-3 border-b">
         <h3 className="font-bold text-sm mb-2">Blocos</h3>
         <p className="text-[11px] text-muted-foreground mb-3">Arraste até o canvas ou clique para adicionar</p>
@@ -700,6 +736,7 @@ function QuizBuilderPage() {
         <QuizInspector
           quizId={id}
           block={activeBlock}
+          blocks={schema.blocks}
           design={schema.design}
           onChangeBlock={patchBlock}
           onDeleteBlock={() => deleteBlock()}
@@ -726,6 +763,7 @@ function QuizBuilderPage() {
           <QuizInspector
             quizId={id}
             block={activeBlock}
+            blocks={schema.blocks}
             design={schema.design}
             onChangeBlock={patchBlock}
             onDeleteBlock={() => deleteBlock()}

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X } from 'lucide-react';
+import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
@@ -129,6 +129,14 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                                   >
                                     <GripVertical className="h-4 w-4" style={{ color: design.muted }} />
                                   </div>
+                                  {b.showIf?.enabled && (
+                                    <div
+                                      className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-500"
+                                      title="Este bloco só aparece quando a condição configurada for verdadeira"
+                                    >
+                                      <Eye className="h-2.5 w-2.5" /> condicional
+                                    </div>
+                                  )}
                                   <BlockRenderer block={b} design={design} />
                                 </div>
                               )}

@@ -90,6 +90,17 @@ export interface BlockLogicRule {
   jumpToBlockId: string;  // where to go if true
 }
 
+// ============ Exibição condicional (Funilix parity) ============
+// Mostra o bloco somente quando a condição sobre uma resposta anterior é verdadeira.
+export type ShowIfOp = 'eq' | 'neq' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'between';
+export interface BlockShowIf {
+  enabled: boolean;
+  fieldBlockId: string;      // bloco cuja resposta é testada
+  op: ShowIfOp;
+  value: string | number;
+  value2?: string | number;  // usado só quando op === 'between' (faixa)
+}
+
 export interface QuizBlock {
   id: string;
   type: BlockType;
@@ -153,6 +164,8 @@ export interface QuizBlock {
   resultBadgeHot?: string;
   resultBadgeWarm?: string;
   resultBadgeCold?: string;
+  // Exibição condicional — mostra o bloco só quando a condição for verdadeira
+  showIf?: BlockShowIf;
 }
 
 export interface FaqItem {

@@ -1,11 +1,12 @@
-import type { QuizBlock, QuizDesign, BlockVariant, FaqItem, ChartPoint } from '../types';
+import type { QuizBlock, QuizDesign, BlockVariant, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks } from 'lucide-react';
+import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks, Eye, CornerDownRight } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
 import { BLOCK_LIBRARY } from '../blocks-library';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +18,7 @@ import { Sparkles, Palette, SlidersHorizontal } from 'lucide-react';
 interface Props {
   quizId: string;
   block: QuizBlock | null;
+  blocks?: QuizBlock[];
   design: QuizDesign;
   onChangeBlock: (patch: Partial<QuizBlock>) => void;
   onDeleteBlock: () => void;
@@ -24,11 +26,11 @@ interface Props {
   className?: string;
 }
 
-export function QuizInspector({ quizId, block, design, onChangeBlock, onDeleteBlock, onChangeDesign, className }: Props) {
+export function QuizInspector({ quizId, block, blocks, design, onChangeBlock, onDeleteBlock, onChangeDesign, className }: Props) {
   return (
     <div className={className ?? 'w-80 border-l bg-card overflow-y-auto'}>
       {block ? (
-        <BlockInspector quizId={quizId} block={block} onChange={onChangeBlock} onDelete={onDeleteBlock} />
+        <BlockInspector quizId={quizId} block={block} allBlocks={blocks ?? []} onChange={onChangeBlock} onDelete={onDeleteBlock} />
       ) : (
         <DesignInspector design={design} onChange={onChangeDesign} />
       )}
@@ -39,11 +41,13 @@ export function QuizInspector({ quizId, block, design, onChangeBlock, onDeleteBl
 function BlockInspector({
   quizId,
   block,
+  allBlocks,
   onChange,
   onDelete,
 }: {
   quizId: string;
   block: QuizBlock;
+  allBlocks: QuizBlock[];
   onChange: (p: Partial<QuizBlock>) => void;
   onDelete: () => void;
 }) {
@@ -432,25 +436,39 @@ function BlockInspector({
       {hasOptions && (
         <Section title="Opções" icon={ListChecks}>
           {(block.options ?? []).map((opt, i) => (
-            <div key={opt.id} className="flex gap-1">
-              <Input
-                value={opt.label}
-                onChange={(e) => {
-                  const next = [...(block.options ?? [])];
-                  next[i] = { ...opt, label: e.target.value };
-                  onChange({ options: next });
-                }}
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  const next = (block.options ?? []).filter((o) => o.id !== opt.id);
-                  onChange({ options: next });
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+            <div key={opt.id} className="space-y-1">
+              <div className="flex gap-1">
+                <Input
+                  value={opt.label}
+                  onChange={(e) => {
+                    const next = [...(block.options ?? [])];
+                    next[i] = { ...opt, label: e.target.value };
+                    onChange({ options: next });
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    const next = (block.options ?? []).filter((o) => o.id !== opt.id);
+                    onChange({ options: next });
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {block.type === 'single-choice' && (
+                <OptionJumpSelect
+                  allBlocks={allBlocks}
+                  currentBlockId={block.id}
+                  value={opt.jumpToBlockId}
+                  onSelect={(target) => {
+                    const next = [...(block.options ?? [])];
+                    next[i] = { ...opt, jumpToBlockId: target };
+                    onChange({ options: next });
+                  }}
+                />
+              )}
             </div>
           ))}
           <Button
@@ -471,10 +489,225 @@ function BlockInspector({
         </Section>
       )}
 
+      <ShowIfSection block={block} allBlocks={allBlocks} onChange={onChange} />
+
       {block.type !== 'result' && (
         <AbTestSection quizId={quizId} block={block} onChange={onChange} />
       )}
     </div>
+  );
+}
+
+// Tipos de bloco cuja resposta pode alimentar uma condição de exibição.
+const ANSWERABLE_TYPES = new Set([
+  'single-choice',
+  'multi-choice',
+  'rating',
+  'short-text',
+  'long-text',
+  'email',
+  'phone',
+  'weight',
+  'height',
+]);
+
+function stepLabelFor(allBlocks: QuizBlock[], blockIds: string[], index: number): string {
+  const first = allBlocks.find((b) => b.id === blockIds[0]);
+  const def = first ? BLOCK_LIBRARY.find((d) => d.type === first.type) : undefined;
+  const title = first?.title || first?.resultTitle || def?.label || '';
+  return `Etapa ${index + 1}${title ? ` · ${title}` : ''}`;
+}
+
+// Ramificação por opção: "quem responde X pula pra etapa Y".
+function OptionJumpSelect({
+  allBlocks,
+  currentBlockId,
+  value,
+  onSelect,
+}: {
+  allBlocks: QuizBlock[];
+  currentBlockId: string;
+  value?: string;
+  onSelect: (jumpToBlockId: string | undefined) => void;
+}) {
+  const steps = getSteps({ blocks: allBlocks });
+  const currentStepIdx = steps.findIndex((s) => s.blockIds.includes(currentBlockId));
+  const targets = steps.filter((_, i) => i !== currentStepIdx);
+  if (targets.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1.5 pl-1">
+      <CornerDownRight className="h-3 w-3 text-muted-foreground shrink-0" />
+      <Select
+        value={value ?? 'flow'}
+        onValueChange={(v) => onSelect(v === 'flow' ? undefined : v)}
+      >
+        <SelectTrigger className="h-7 text-[11px] text-muted-foreground border-dashed">
+          <SelectValue placeholder="Seguir fluxo normal" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="flow">Seguir fluxo normal</SelectItem>
+          {targets.map((s) => (
+            <SelectItem key={s.id} value={s.blockIds[0]}>
+              Pular para {stepLabelFor(allBlocks, s.blockIds, steps.indexOf(s))}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// Exibição condicional (padrão Funilix): mostra o bloco só quando a condição
+// sobre uma resposta anterior for verdadeira.
+function ShowIfSection({
+  block,
+  allBlocks,
+  onChange,
+}: {
+  block: QuizBlock;
+  allBlocks: QuizBlock[];
+  onChange: (p: Partial<QuizBlock>) => void;
+}) {
+  const showIf: BlockShowIf = block.showIf ?? { enabled: false, fieldBlockId: '', op: 'eq', value: '' };
+  const patch = (p: Partial<BlockShowIf>) => onChange({ showIf: { ...showIf, ...p } });
+
+  const myIndex = allBlocks.findIndex((b) => b.id === block.id);
+  const sources = allBlocks.filter((b, i) => (myIndex < 0 || i < myIndex) && ANSWERABLE_TYPES.has(b.type));
+  const sourceBlock = allBlocks.find((b) => b.id === showIf.fieldBlockId);
+  const sourceOptions = sourceBlock?.options ?? [];
+  const isRange = showIf.op === 'between';
+
+  const OPS: { id: ShowIfOp; label: string }[] = [
+    { id: 'eq', label: '= Igual' },
+    { id: 'neq', label: '≠ Diferente' },
+    { id: 'contains', label: '∋ Contém' },
+    { id: 'gt', label: '> Maior que' },
+    { id: 'gte', label: '≥ Maior ou igual' },
+    { id: 'lt', label: '< Menor que' },
+    { id: 'lte', label: '≤ Menor ou igual' },
+  ];
+
+  const chipClass = (active: boolean) =>
+    `rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors text-left ${
+      active
+        ? 'border-primary bg-primary/10 text-primary'
+        : 'border-input text-muted-foreground hover:border-primary/40 hover:text-foreground'
+    }`;
+
+  return (
+    <Section title="Exibição condicional" icon={Eye}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium">Ativar condição</p>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Mostra este bloco somente quando a condição for verdadeira.
+          </p>
+        </div>
+        <Switch checked={showIf.enabled} onCheckedChange={(v) => patch({ enabled: v })} />
+      </div>
+
+      {showIf.enabled &&
+        (sources.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed p-2.5">
+            Adicione, antes deste bloco, uma pergunta (escolha, avaliação, texto, peso…) para usar a resposta dela como
+            condição.
+          </p>
+        ) : (
+          <>
+            <Field label="Com base na resposta de">
+              <Select
+                value={showIf.fieldBlockId || undefined}
+                onValueChange={(v) => patch({ fieldBlockId: v, value: '', value2: undefined })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha o campo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sources.map((b) => {
+                    const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+                    return (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.title || def?.label || b.type}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Tipo de condição">
+              <div className="grid grid-cols-2 gap-1.5">
+                <button type="button" className={chipClass(!isRange)} onClick={() => isRange && patch({ op: 'eq', value2: undefined })}>
+                  Comparação simples
+                </button>
+                <button type="button" className={chipClass(isRange)} onClick={() => !isRange && patch({ op: 'between' })}>
+                  Faixa (entre)
+                </button>
+              </div>
+            </Field>
+
+            {!isRange && (
+              <Field label="Operador">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {OPS.map((op) => (
+                    <button
+                      key={op.id}
+                      type="button"
+                      className={chipClass(showIf.op === op.id)}
+                      onClick={() => patch({ op: op.id })}
+                    >
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
+
+            {isRange ? (
+              <Field label="Entre os valores">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="De"
+                    value={String(showIf.value ?? '')}
+                    onChange={(e) => patch({ value: e.target.value })}
+                  />
+                  <span className="text-xs text-muted-foreground shrink-0">e</span>
+                  <Input
+                    type="number"
+                    placeholder="Até"
+                    value={String(showIf.value2 ?? '')}
+                    onChange={(e) => patch({ value2: e.target.value })}
+                  />
+                </div>
+              </Field>
+            ) : (
+              <Field label="Comparar com">
+                {sourceOptions.length > 0 && (showIf.op === 'eq' || showIf.op === 'neq' || showIf.op === 'contains') ? (
+                  <Select value={showIf.value ? String(showIf.value) : undefined} onValueChange={(v) => patch({ value: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha a opção…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sourceOptions.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={String(showIf.value ?? '')}
+                    onChange={(e) => patch({ value: e.target.value })}
+                    placeholder="ex.: 70"
+                  />
+                )}
+              </Field>
+            )}
+          </>
+        ))}
+    </Section>
   );
 }
 

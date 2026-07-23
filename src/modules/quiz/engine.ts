@@ -99,6 +99,48 @@ export function nextStepIndex(steps: QuizStep[], state: QuizRunState, forcedJump
   return Math.min(state.currentStepIndex + 1, steps.length - 1);
 }
 
+/**
+ * Exibição condicional: o bloco só é mostrado quando a condição sobre uma
+ * resposta anterior é verdadeira. Sem condição (ou desativada) → sempre visível.
+ * Resposta ainda inexistente → condição não satisfeita (bloco fica oculto),
+ * exceto para 'neq', que é verdadeiro quando a resposta difere do alvo.
+ */
+export function isBlockVisible(block: QuizBlock, responses: QuizResponses): boolean {
+  const cond = block.showIf;
+  if (!cond?.enabled || !cond.fieldBlockId) return true;
+  const raw = responses[cond.fieldBlockId];
+  const asNumber = (v: unknown): number => (Array.isArray(v) ? Number.NaN : Number(v));
+  const eq = Array.isArray(raw)
+    ? (raw as unknown[]).map(String).includes(String(cond.value))
+    : String(raw ?? '') === String(cond.value);
+  switch (cond.op) {
+    case 'eq':
+      return eq;
+    case 'neq':
+      return !eq;
+    case 'contains':
+      return Array.isArray(raw)
+        ? (raw as unknown[]).map(String).includes(String(cond.value))
+        : String(raw ?? '').toLowerCase().includes(String(cond.value).toLowerCase());
+    case 'gt':
+      return asNumber(raw) > Number(cond.value);
+    case 'gte':
+      return asNumber(raw) >= Number(cond.value);
+    case 'lt':
+      return asNumber(raw) < Number(cond.value);
+    case 'lte':
+      return asNumber(raw) <= Number(cond.value);
+    case 'between': {
+      const n = asNumber(raw);
+      const lo = Number(cond.value);
+      const hi = Number(cond.value2 ?? cond.value);
+      return n >= Math.min(lo, hi) && n <= Math.max(lo, hi);
+    }
+    default:
+      return true;
+  }
+}
+
 export function classifyTemperature(score: number, max: number): 'hot' | 'warm' | 'cold' {
   if (max <= 0) return 'cold';
   const pct = score / max;

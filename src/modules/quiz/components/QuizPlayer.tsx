@@ -10,6 +10,7 @@ import {
   evaluateResponse,
   evaluateLogic,
   nextStepIndex,
+  isBlockVisible,
   classifyTemperature,
   maxPossibleScore,
   type QuizRunState,
@@ -199,7 +200,22 @@ function PlayerRunner({
     () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
     [currentStep, blocks]
   );
+  // Exibição condicional: só renderiza (e pontua) blocos cuja condição é verdadeira
+  // frente às respostas já registradas das etapas anteriores.
+  const visibleStepBlocks = useMemo(
+    () => stepBlocks.filter((b) => isBlockVisible(b, state.responses)),
+    [stepBlocks, state.responses]
+  );
   const isLastStep = state.currentStepIndex >= steps.length - 1;
+
+  const stepHasVisibleBlocks = (stepIdx: number, responses: Record<string, unknown>): boolean => {
+    const s = steps[stepIdx];
+    if (!s) return false;
+    return s.blockIds.some((bid) => {
+      const b = blocks.find((x) => x.id === bid);
+      return b ? isBlockVisible(b, responses) : false;
+    });
+  };
 
   const urgencyBar: UrgencyBarSettings = useMemo(
     () => ({ ...DEFAULT_URGENCY_BAR, ...(settings?.urgency_bar as Partial<UrgencyBarSettings> | undefined) }),
@@ -228,9 +244,19 @@ function PlayerRunner({
       .catch(() => {});
   }, [preview]);
 
+  // Etapa cujos blocos estão TODOS ocultos pela condição: pula pra próxima com
+  // conteúdo visível (etapa condicional inteira que não se aplica a este visitante).
+  useEffect(() => {
+    if (done || stepBlocks.length === 0 || visibleStepBlocks.length > 0) return;
+    let idx = state.currentStepIndex + 1;
+    while (idx < steps.length && !stepHasVisibleBlocks(idx, state.responses)) idx += 1;
+    if (idx < steps.length) setState((s) => ({ ...s, currentStepIndex: idx }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.currentStepIndex, done, visibleStepBlocks.length]);
+
   const variantAssignments = useRef<Map<string, string>>(new Map());
   const effectiveBlocks = useMemo(() => {
-    return stepBlocks.map((b) => {
+    return visibleStepBlocks.map((b) => {
       if (!b.abTest?.enabled || b.abTest.variants.length === 0) return b;
       let variantId = variantAssignments.current.get(b.id);
       if (!variantId) {
@@ -249,7 +275,7 @@ function PlayerRunner({
         imageUrl: variant.imageUrl ?? b.imageUrl,
       };
     });
-  }, [stepBlocks]);
+  }, [visibleStepBlocks]);
 
   useEffect(() => {
     if (preview) return;
@@ -277,14 +303,14 @@ function PlayerRunner({
     return <EmptyState message="Quiz sem blocos" />;
   }
 
-  const allStepValid = stepBlocks.every((b) => stepValidity[b.id] !== false);
+  const allStepValid = visibleStepBlocks.every((b) => stepValidity[b.id] !== false);
 
   const advanceStep = async (finalDraft: Record<string, unknown>) => {
     let scoreDelta = 0;
     const tags: string[] = [];
     let jumpToBlockId: string | undefined;
     const nextResponses = { ...state.responses };
-    for (const b of stepBlocks) {
+    for (const b of visibleStepBlocks) {
       const response = finalDraft[b.id];
       nextResponses[b.id] = response;
       const evaluated = evaluateResponse(b, response);
@@ -311,13 +337,19 @@ function PlayerRunner({
       responses: nextResponses,
       score: state.score + scoreDelta,
       tags: [...state.tags, ...tags],
-      history: [...state.history, ...stepBlocks.map((b) => b.id)],
+      history: [...state.history, ...visibleStepBlocks.map((b) => b.id)],
     };
     if (isLastStep) {
       await finish(nextState);
       return;
     }
-    const idx = nextStepIndex(steps, nextState, jumpToBlockId);
+    let idx = nextStepIndex(steps, nextState, jumpToBlockId);
+    // Pula etapas cujos blocos ficaram todos ocultos pela exibição condicional.
+    while (idx < steps.length - 1 && !stepHasVisibleBlocks(idx, nextResponses)) idx += 1;
+    if (!stepHasVisibleBlocks(idx, nextResponses)) {
+      await finish(nextState);
+      return;
+    }
     setState({ ...nextState, currentStepIndex: idx });
   };
 
