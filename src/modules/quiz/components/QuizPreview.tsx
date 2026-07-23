@@ -56,9 +56,14 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
   );
 
   return (
-    <div className="w-full h-full flex items-center justify-center overflow-auto p-6" style={{ background: '#0a0a0a' }}>
+    <div className="w-full h-full flex overflow-auto p-6" style={{ background: '#0a0a0a' }}>
       <div
-        className="rounded-2xl overflow-hidden shadow-2xl transition-all flex justify-center"
+        // m-auto (não items-center/justify-center no pai) centraliza o device-frame
+        // quando ele cabe no painel, mas nunca corta o topo/lado quando ele é maior
+        // que a área visível — um contêiner com overflow-auto + align/justify-center
+        // no pai empurra o início do conteúdo pra fora da rolagem quando o filho
+        // excede o tamanho do pai (bug clássico de centralização + overflow).
+        className="m-auto rounded-2xl overflow-hidden shadow-2xl transition-all flex justify-center shrink-0"
         style={{ ...cssVars, width: viewportWidth, minHeight: 640, background: design.background, color: design.text, fontFamily: design.fontBody }}
       >
         <div className="w-full transition-all" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
