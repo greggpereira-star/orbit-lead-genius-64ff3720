@@ -4,8 +4,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Plus, GripVertical, FlaskConical } from 'lucide-react';
+import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
+import { BLOCK_LIBRARY } from '../blocks-library';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MediaUploader } from './MediaUploader';
@@ -46,96 +47,77 @@ function BlockInspector({
   onDelete: () => void;
 }) {
   const hasOptions = block.type === 'single-choice' || block.type === 'multi-choice';
+  const hasMedia = ['intro', 'image', 'audio', 'video', 'before-after', 'testimonial'].includes(block.type);
+  const def = BLOCK_LIBRARY.find((d) => d.type === block.type);
+
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-bold text-sm">Bloco</h3>
-          <p className="text-xs text-muted-foreground">{block.type}</p>
+    <div className="p-4 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          {def ? <def.icon className="h-4 w-4 text-primary" /> : <LayoutGrid className="h-4 w-4 text-primary" />}
         </div>
-        <Button size="sm" variant="ghost" onClick={onDelete}>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-sm truncate">{def?.label ?? 'Bloco'}</h3>
+          <p className="text-xs text-muted-foreground truncate">{def?.description ?? block.type}</p>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onDelete}
+          aria-label="Excluir bloco"
+          className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
-      {block.type === 'result' ? (
-        <>
-          <Field label="Título do resultado">
-            <Input value={block.resultTitle ?? ''} onChange={(e) => onChange({ resultTitle: e.target.value })} />
+      <Section title="Conteúdo" icon={LayoutGrid} first>
+        {block.type === 'result' ? (
+          <>
+            <Field label="Título do resultado">
+              <Input value={block.resultTitle ?? ''} onChange={(e) => onChange({ resultTitle: e.target.value })} />
+            </Field>
+            <Field label="Descrição do resultado">
+              <Textarea rows={4} value={block.resultBody ?? ''} onChange={(e) => onChange({ resultBody: e.target.value })} />
+            </Field>
+          </>
+        ) : (
+          <>
+            <Field label="Título">
+              <Input value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} />
+            </Field>
+            <Field label="Subtítulo">
+              <Textarea rows={2} value={block.subtitle ?? ''} onChange={(e) => onChange({ subtitle: e.target.value })} />
+            </Field>
+          </>
+        )}
+
+        {(block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
+          <Field label="Placeholder">
+            <Input value={block.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} />
           </Field>
-          <Field label="Descrição do resultado">
-            <Textarea rows={4} value={block.resultBody ?? ''} onChange={(e) => onChange({ resultBody: e.target.value })} />
+        )}
+
+        {(block.type === 'intro' || block.type === 'cta' || block.type === 'result' ||
+          block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
+          <Field label="Texto do botão">
+            <Input value={block.ctaLabel ?? ''} onChange={(e) => onChange({ ctaLabel: e.target.value })} />
           </Field>
-        </>
-      ) : (
-        <>
-          <Field label="Título">
-            <Input value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} />
+        )}
+
+        {block.type === 'rating' && (
+          <Field label={`Escala máxima: ${block.maxRating ?? 5}`}>
+            <Slider
+              min={3}
+              max={10}
+              step={1}
+              value={[block.maxRating ?? 5]}
+              onValueChange={([v]) => onChange({ maxRating: v })}
+            />
           </Field>
-          <Field label="Subtítulo">
-            <Textarea rows={2} value={block.subtitle ?? ''} onChange={(e) => onChange({ subtitle: e.target.value })} />
-          </Field>
-        </>
-      )}
+        )}
 
-      {(block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
-        <Field label="Placeholder">
-          <Input value={block.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} />
-        </Field>
-      )}
-
-      {(block.type === 'intro' || block.type === 'cta' || block.type === 'result' ||
-        block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
-        <Field label="Texto do botão">
-          <Input value={block.ctaLabel ?? ''} onChange={(e) => onChange({ ctaLabel: e.target.value })} />
-        </Field>
-      )}
-
-      {block.type === 'intro' && (
-        <Field label="Imagem de capa">
-          <MediaUploader
-            quizId={quizId}
-            accept="image"
-            value={block.imageUrl}
-            onChange={(url) => onChange({ imageUrl: url })}
-          />
-        </Field>
-      )}
-
-      {block.type === 'rating' && (
-        <Field label={`Escala máxima: ${block.maxRating ?? 5}`}>
-          <Slider
-            min={3}
-            max={10}
-            step={1}
-            value={[block.maxRating ?? 5]}
-            onValueChange={([v]) => onChange({ maxRating: v })}
-          />
-        </Field>
-      )}
-
-      {block.type === 'image' && (
-        <Field label="Imagem">
-          <MediaUploader
-            quizId={quizId}
-            accept="image"
-            value={block.mediaUrl}
-            onChange={(url) => onChange({ mediaUrl: url })}
-          />
-        </Field>
-      )}
-      {block.type === 'audio' && (
-        <Field label="Áudio">
-          <MediaUploader
-            quizId={quizId}
-            accept="audio"
-            value={block.mediaUrl}
-            onChange={(url) => onChange({ mediaUrl: url })}
-          />
-        </Field>
-      )}
-      {block.type === 'video' && (
-        <>
+        {block.type === 'video' && (
           <Field label="Provedor">
             <Select value={block.mediaProvider ?? 'youtube'} onValueChange={(v) => onChange({ mediaProvider: v as QuizBlock['mediaProvider'] })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -147,73 +129,113 @@ function BlockInspector({
               </SelectContent>
             </Select>
           </Field>
-          <Field label={block.mediaProvider === 'file' || block.mediaProvider === 'mp4' ? 'Vídeo' : 'URL do vídeo'}>
-            {block.mediaProvider === 'file' ? (
+        )}
+
+        {block.type === 'testimonial' && (
+          <>
+            <Field label="Autor">
+              <Input value={block.testimonialAuthor ?? ''} onChange={(e) => onChange({ testimonialAuthor: e.target.value })} />
+            </Field>
+            <Field label="Cargo / Empresa">
+              <Input value={block.testimonialRole ?? ''} onChange={(e) => onChange({ testimonialRole: e.target.value })} />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'countdown' && (
+          <>
+            <Field label={`Duração: ${block.countdownMinutes ?? 15} min`}>
+              <Slider min={1} max={120} step={1} value={[block.countdownMinutes ?? 15]} onValueChange={([v]) => onChange({ countdownMinutes: v, countdownEndsAt: undefined })} />
+            </Field>
+            <Field label="Ou data/hora final (ISO)">
+              <Input value={block.countdownEndsAt ?? ''} onChange={(e) => onChange({ countdownEndsAt: e.target.value })} placeholder="2026-12-31T23:59:00Z" />
+            </Field>
+          </>
+        )}
+      </Section>
+
+      {hasMedia && (
+        <Section title="Mídia" icon={ImageIcon}>
+          {block.type === 'intro' && (
+            <Field label="Imagem de capa">
               <MediaUploader
                 quizId={quizId}
-                accept="video"
+                accept="image"
+                value={block.imageUrl}
+                onChange={(url) => onChange({ imageUrl: url })}
+              />
+            </Field>
+          )}
+          {block.type === 'image' && (
+            <Field label="Imagem">
+              <MediaUploader
+                quizId={quizId}
+                accept="image"
                 value={block.mediaUrl}
                 onChange={(url) => onChange({ mediaUrl: url })}
               />
-            ) : (
-              <Input value={block.mediaUrl ?? ''} onChange={(e) => onChange({ mediaUrl: e.target.value })} placeholder="https://..." />
-            )}
-          </Field>
-        </>
-      )}
-      {block.type === 'before-after' && (
-        <>
-          <Field label="Antes">
-            <MediaUploader
-              quizId={quizId}
-              accept="image"
-              value={block.beforeUrl}
-              onChange={(url) => onChange({ beforeUrl: url })}
-            />
-          </Field>
-          <Field label="Depois">
-            <MediaUploader
-              quizId={quizId}
-              accept="image"
-              value={block.afterUrl}
-              onChange={(url) => onChange({ afterUrl: url })}
-            />
-          </Field>
-        </>
-      )}
-      {block.type === 'testimonial' && (
-        <>
-          <Field label="Autor">
-            <Input value={block.testimonialAuthor ?? ''} onChange={(e) => onChange({ testimonialAuthor: e.target.value })} />
-          </Field>
-          <Field label="Cargo / Empresa">
-            <Input value={block.testimonialRole ?? ''} onChange={(e) => onChange({ testimonialRole: e.target.value })} />
-          </Field>
-          <Field label="Avatar">
-            <MediaUploader
-              quizId={quizId}
-              accept="image"
-              value={block.testimonialAvatar}
-              onChange={(url) => onChange({ testimonialAvatar: url })}
-              compact
-            />
-          </Field>
-        </>
-      )}
-      {block.type === 'countdown' && (
-        <>
-          <Field label={`Duração: ${block.countdownMinutes ?? 15} min`}>
-            <Slider min={1} max={120} step={1} value={[block.countdownMinutes ?? 15]} onValueChange={([v]) => onChange({ countdownMinutes: v, countdownEndsAt: undefined })} />
-          </Field>
-          <Field label="Ou data/hora final (ISO)">
-            <Input value={block.countdownEndsAt ?? ''} onChange={(e) => onChange({ countdownEndsAt: e.target.value })} placeholder="2026-12-31T23:59:00Z" />
-          </Field>
-        </>
+            </Field>
+          )}
+          {block.type === 'audio' && (
+            <Field label="Áudio">
+              <MediaUploader
+                quizId={quizId}
+                accept="audio"
+                value={block.mediaUrl}
+                onChange={(url) => onChange({ mediaUrl: url })}
+              />
+            </Field>
+          )}
+          {block.type === 'video' && (
+            <Field label={block.mediaProvider === 'file' || block.mediaProvider === 'mp4' ? 'Vídeo' : 'URL do vídeo'}>
+              {block.mediaProvider === 'file' ? (
+                <MediaUploader
+                  quizId={quizId}
+                  accept="video"
+                  value={block.mediaUrl}
+                  onChange={(url) => onChange({ mediaUrl: url })}
+                />
+              ) : (
+                <Input value={block.mediaUrl ?? ''} onChange={(e) => onChange({ mediaUrl: e.target.value })} placeholder="https://..." />
+              )}
+            </Field>
+          )}
+          {block.type === 'before-after' && (
+            <>
+              <Field label="Antes">
+                <MediaUploader
+                  quizId={quizId}
+                  accept="image"
+                  value={block.beforeUrl}
+                  onChange={(url) => onChange({ beforeUrl: url })}
+                />
+              </Field>
+              <Field label="Depois">
+                <MediaUploader
+                  quizId={quizId}
+                  accept="image"
+                  value={block.afterUrl}
+                  onChange={(url) => onChange({ afterUrl: url })}
+                />
+              </Field>
+            </>
+          )}
+          {block.type === 'testimonial' && (
+            <Field label="Avatar">
+              <MediaUploader
+                quizId={quizId}
+                accept="image"
+                value={block.testimonialAvatar}
+                onChange={(url) => onChange({ testimonialAvatar: url })}
+                compact
+              />
+            </Field>
+          )}
+        </Section>
       )}
 
       {hasOptions && (
-        <div className="space-y-2">
-          <Label className="text-xs">Opções</Label>
+        <Section title="Opções" icon={ListChecks}>
           {(block.options ?? []).map((opt, i) => (
             <div key={opt.id} className="flex gap-1">
               <Input
@@ -251,12 +273,34 @@ function BlockInspector({
           >
             <Plus className="h-3.5 w-3.5" /> Adicionar opção
           </Button>
-        </div>
+        </Section>
       )}
 
       {block.type !== 'result' && (
         <AbTestSection quizId={quizId} block={block} onChange={onChange} />
       )}
+    </div>
+  );
+}
+
+function Section({
+  title,
+  icon: Icon,
+  first,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  first?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`space-y-3 ${first ? '' : 'border-t pt-5'}`}>
+      <div className="flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+      </div>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 }
@@ -293,11 +337,11 @@ function AbTestSection({
   };
 
   return (
-    <div className="space-y-3 border-t pt-4">
+    <div className="space-y-3 border-t pt-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <FlaskConical className="h-3.5 w-3.5 text-primary" />
-          <Label className="text-xs font-semibold">Teste A/B</Label>
+          <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Teste A/B</h4>
         </div>
         <Switch
           checked={abTest.enabled}
@@ -371,10 +415,15 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 
 function DesignInspector({ design, onChange }: { design: QuizDesign; onChange: (p: Partial<QuizDesign>) => void }) {
   return (
-    <div className="p-4 space-y-4">
-      <div>
-        <h3 className="font-bold text-sm">Design</h3>
-        <p className="text-xs text-muted-foreground">Selecione um bloco para editar seu conteúdo, ou personalize o visual global aqui.</p>
+    <div className="p-4 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Palette className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-sm">Design</h3>
+          <p className="text-xs text-muted-foreground">Selecione um bloco ou personalize o visual global</p>
+        </div>
       </div>
 
       <Tabs defaultValue="presets">
@@ -456,6 +505,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-
-// Silence unused import warning
-void GripVertical;
