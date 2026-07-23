@@ -324,11 +324,30 @@ export const quizService = {
 
     // Se o quiz já está publicado, cada save (incluindo autosave) já vira a versão
     // ao vivo — evita a experiência confusa de "salvo" mas o link público não mudar.
-    await supabase
+    const newVersionId = (inserted as { id: string }).id;
+    const { data: republished } = await supabase
       .from('quiz_funnels')
-      .update({ published_version_id: (inserted as { id: string }).id })
+      .update({ published_version_id: newVersionId })
       .eq('id', params.quizId)
-      .eq('status', 'published');
+      .eq('status', 'published')
+      .select('id');
+    if (republished && republished.length > 0) {
+      await this.markVersionPublished(params.quizId, newVersionId);
+    }
+  },
+
+  // RLS de leitura pública (anon) em quiz_versions depende de is_published=true,
+  // independente do published_version_id em quiz_funnels — os dois precisam ficar em sincronia.
+  async markVersionPublished(quizId: string, versionId: string): Promise<void> {
+    await supabase.from('quiz_versions').update({ is_published: false }).eq('quiz_id', quizId).neq('id', versionId);
+    await supabase
+      .from('quiz_versions')
+      .update({ is_published: true, published_at: new Date().toISOString() })
+      .eq('id', versionId);
+  },
+
+  async unpublishAllVersions(quizId: string): Promise<void> {
+    await supabase.from('quiz_versions').update({ is_published: false }).eq('quiz_id', quizId);
   },
 
   async promoteVariant(params: {
@@ -441,15 +460,18 @@ export const quizService = {
       .order('version', { ascending: false })
       .limit(1)
       .maybeSingle();
+    const versionId = (latest as { id?: string } | null)?.id ?? null;
 
     await supabase
       .from('quiz_funnels')
       .update({
         status: 'published',
-        published_version_id: (latest as { id?: string } | null)?.id ?? null,
+        published_version_id: versionId,
         published_at: new Date().toISOString(),
       })
       .eq('id', quizId);
+
+    if (versionId) await this.markVersionPublished(quizId, versionId);
   },
 
   async unpublish(quizId: string): Promise<void> {
@@ -457,6 +479,7 @@ export const quizService = {
       .from('quiz_funnels')
       .update({ status: 'draft' })
       .eq('id', quizId);
+    await this.unpublishAllVersions(quizId);
   },
 
   async submitPublic(params: {
