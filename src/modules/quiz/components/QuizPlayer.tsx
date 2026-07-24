@@ -7,6 +7,7 @@ import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
+import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { resolveScope, interpolateText, type VariableScope } from '../lib/variables';
 import {
   createInitialState,
@@ -876,6 +877,32 @@ const CONTAINER_JUSTIFY_CSS: Record<string, React.CSSProperties['justifyContent'
   start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'space-between',
 };
 
+// Breakpoints do layout responsivo do Container — mesmos limiares usados no resto
+// do app pra distinguir mobile/tablet/desktop (ver device toggle do Builder).
+const MOBILE_MAX = 640;
+const TABLET_MAX = 1024;
+
+function getBreakpoint(width: number): Breakpoint {
+  if (width < MOBILE_MAX) return 'mobile';
+  if (width < TABLET_MAX) return 'tablet';
+  return 'desktop';
+}
+
+// Observa a largura real da janela do visitante pra resolver qual configuração de
+// Container (Mobile/Tablet/Desktop) usar — só existe consumidor no client, então o
+// valor inicial (antes do primeiro layout effect) assume mobile, o breakpoint mais
+// restritivo, pra nunca flashar colunas demais numa tela pequena.
+function useBreakpoint(): Breakpoint {
+  const [bp, setBp] = useState<Breakpoint>(() => (typeof window === 'undefined' ? 'mobile' : getBreakpoint(window.innerWidth)));
+  useEffect(() => {
+    const onResize = () => setBp(getBreakpoint(window.innerWidth));
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return bp;
+}
+
 // Renderiza um bloco Container (Funilix parity): reaproveita o BlockView pra cada
 // filho, sempre em modo "rascunho" (terminal=false — nenhum filho avança a etapa
 // sozinho). Se o Container for o bloco terminal da etapa, um único botão
@@ -909,19 +936,17 @@ function ContainerView({
     .map((id) => allBlocks.find((b) => b.id === id))
     .filter((b): b is QuizBlock => !!b && isBlockVisible(b, responses, scope));
 
-  const isGrid = block.containerLayoutMode === 'grid';
+  const breakpoint = useBreakpoint();
+  const layout = resolveContainerLayout(block, breakpoint);
+  const isGrid = layout.layoutMode === 'grid';
   const layoutStyle: React.CSSProperties = isGrid
-    ? {
-        display: 'grid',
-        gridTemplateColumns: `repeat(${block.containerColumns ?? 2}, minmax(0, 1fr))`,
-        gap: block.containerGap ?? 16,
-      }
+    ? { display: 'grid', gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`, gap: layout.gap }
     : {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: block.containerGap ?? 16,
-        alignItems: CONTAINER_ALIGN_CSS[block.containerAlign ?? 'stretch'],
-        justifyContent: CONTAINER_JUSTIFY_CSS[block.containerJustify ?? 'start'],
+        gap: layout.gap,
+        alignItems: CONTAINER_ALIGN_CSS[layout.align],
+        justifyContent: CONTAINER_JUSTIFY_CSS[layout.justify],
       };
 
   return (

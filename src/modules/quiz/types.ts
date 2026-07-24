@@ -201,8 +201,21 @@ export interface QuizBlock {
   containerGap?: number; // px
   containerAlign?: 'start' | 'center' | 'end' | 'stretch'; // align-items
   containerJustify?: 'start' | 'center' | 'end' | 'stretch'; // justify-content
+  // Layout Responsivo (Funilix parity): as propriedades containerX acima são a base
+  // "Mobile (padrão)" — Tablet/Desktop só precisam declarar o que muda; qualquer
+  // campo ausente herda em cascata (Desktop herda de Tablet, que herda de Mobile).
+  containerTablet?: ContainerBreakpointLayout;
+  containerDesktop?: ContainerBreakpointLayout;
   // Layout — Espaçamento: bloco "vazio" que só ocupa altura vertical.
   spacerHeight?: number; // px
+}
+
+export interface ContainerBreakpointLayout {
+  layoutMode?: 'flex' | 'grid';
+  columns?: number;
+  gap?: number;
+  align?: 'start' | 'center' | 'end' | 'stretch';
+  justify?: 'start' | 'center' | 'end' | 'stretch';
 }
 
 export interface FaqItem {

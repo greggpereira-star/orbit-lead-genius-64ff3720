@@ -6,8 +6,16 @@ import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
+import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
+
+const CONTAINER_ALIGN_CSS: Record<string, React.CSSProperties['alignItems']> = {
+  start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch',
+};
+const CONTAINER_JUSTIFY_CSS: Record<string, React.CSSProperties['justifyContent']> = {
+  start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'space-between',
+};
 
 function getVideoEmbed(url: string, provider?: string): { kind: 'iframe' | 'mp4'; src: string } | null {
   if (!url) return null;
@@ -144,7 +152,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                                       <Eye className="h-2.5 w-2.5" /> condicional
                                     </div>
                                   )}
-                                  <BlockRenderer block={b} design={design} allBlocks={blocks} />
+                                  <BlockRenderer block={b} design={design} allBlocks={blocks} device={device} />
                                 </div>
                               )}
                             </Draggable>
@@ -207,7 +215,17 @@ function Btn({ design, children }: { design: QuizDesign; children: React.ReactNo
   return <button className={`px-6 py-3 font-semibold transition-all text-sm${className ? ` ${className}` : ''}`} style={style}>{children}</button>;
 }
 
-export function BlockRenderer({ block, design, allBlocks }: { block: QuizBlock; design: QuizDesign; allBlocks?: QuizBlock[] }) {
+export function BlockRenderer({
+  block,
+  design,
+  allBlocks,
+  device = 'desktop',
+}: {
+  block: QuizBlock;
+  design: QuizDesign;
+  allBlocks?: QuizBlock[];
+  device?: Breakpoint;
+}) {
   const title = block.title || '(sem título)';
   const sub = block.subtitle;
 
@@ -421,10 +439,17 @@ export function BlockRenderer({ block, design, allBlocks }: { block: QuizBlock; 
       const children = (block.childBlockIds ?? [])
         .map((id) => (allBlocks ?? []).find((b) => b.id === id))
         .filter((b): b is QuizBlock => !!b);
-      const isGrid = block.containerLayoutMode === 'grid';
+      const layout = resolveContainerLayout(block, device);
+      const isGrid = layout.layoutMode === 'grid';
       const layoutStyle: React.CSSProperties = isGrid
-        ? { display: 'grid', gridTemplateColumns: `repeat(${block.containerColumns ?? 2}, minmax(0, 1fr))`, gap: block.containerGap ?? 16 }
-        : { display: 'flex', flexWrap: 'wrap', gap: block.containerGap ?? 16 };
+        ? { display: 'grid', gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`, gap: layout.gap }
+        : {
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: layout.gap,
+            alignItems: CONTAINER_ALIGN_CSS[layout.align],
+            justifyContent: CONTAINER_JUSTIFY_CSS[layout.justify],
+          };
       return (
         <div style={layoutStyle}>
           {children.length === 0 ? (
@@ -434,7 +459,7 @@ export function BlockRenderer({ block, design, allBlocks }: { block: QuizBlock; 
           ) : (
             children.map((child) => (
               <div key={child.id} className={isGrid ? undefined : 'flex-1 min-w-[120px]'}>
-                <BlockRenderer block={child} design={design} allBlocks={allBlocks} />
+                <BlockRenderer block={child} design={design} allBlocks={allBlocks} device={device} />
               </div>
             ))
           )}

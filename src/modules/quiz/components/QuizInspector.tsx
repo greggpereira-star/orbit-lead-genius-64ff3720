@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Palette, SlidersHorizontal } from 'lucide-react';
 import { BUTTON_STYLE_OPTIONS, getButtonStyle } from '../lib/buttonStyles';
 import { applyRichTextMark, type RichTextMark } from '../lib/richtext';
+import { resolveContainerLayout, type Breakpoint, type ResolvedContainerLayout } from '../lib/containerLayout';
 import { Bold, Italic, Underline } from 'lucide-react';
 
 interface Props {
@@ -399,58 +400,7 @@ function BlockInspector({
           </Field>
         )}
 
-        {block.type === 'container' && (
-          <>
-            <Field label="Modo de layout">
-              <div className="grid grid-cols-2 gap-1.5">
-                <button type="button" className={miniChip(block.containerLayoutMode !== 'grid')} onClick={() => onChange({ containerLayoutMode: 'flex' })}>
-                  Flex
-                </button>
-                <button type="button" className={miniChip(block.containerLayoutMode === 'grid')} onClick={() => onChange({ containerLayoutMode: 'grid' })}>
-                  Grid
-                </button>
-              </div>
-            </Field>
-            {block.containerLayoutMode === 'grid' && (
-              <Field label="Colunas">
-                <div className="grid grid-cols-5 gap-1.5">
-                  {[1, 2, 3, 4, 6].map((n) => (
-                    <button key={n} type="button" className={miniChip(block.containerColumns === n)} onClick={() => onChange({ containerColumns: n })}>
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-            )}
-            <Field label="Espaçamento">
-              <div className="grid grid-cols-6 gap-1.5">
-                {[8, 12, 16, 24, 32, 40].map((n) => (
-                  <button key={n} type="button" className={miniChip((block.containerGap ?? 16) === n)} onClick={() => onChange({ containerGap: n })}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </Field>
-            <Field label="Alinhamento (vertical)">
-              <div className="grid grid-cols-4 gap-1.5">
-                {(['start', 'center', 'end', 'stretch'] as const).map((v) => (
-                  <button key={v} type="button" className={miniChip((block.containerAlign ?? 'stretch') === v)} onClick={() => onChange({ containerAlign: v })}>
-                    {ALIGN_LABELS[v]}
-                  </button>
-                ))}
-              </div>
-            </Field>
-            <Field label="Justificação (horizontal)">
-              <div className="grid grid-cols-4 gap-1.5">
-                {(['start', 'center', 'end', 'stretch'] as const).map((v) => (
-                  <button key={v} type="button" className={miniChip((block.containerJustify ?? 'start') === v)} onClick={() => onChange({ containerJustify: v })}>
-                    {ALIGN_LABELS[v]}
-                  </button>
-                ))}
-              </div>
-            </Field>
-          </>
-        )}
+        {block.type === 'container' && <ContainerLayoutFields block={block} onChange={onChange} />}
 
         {block.type === 'reveal' && (
           <>
@@ -881,6 +831,103 @@ function ContainerChildrenSection({
     </Section>
   );
 }
+
+// Layout responsivo do Container (Funilix parity): Mobile é a base ("padrão"),
+// Tablet/Desktop só herdam o que não foi customizado — troca de aba não perde o
+// que já foi editado nas outras. `resolveContainerLayout` calcula os valores
+// efetivos (já com a herança aplicada) pra sempre mostrar chips preenchidos,
+// nunca um estado "vazio" mesmo quando a etapa herda tudo do Mobile.
+function ContainerLayoutFields({ block, onChange }: { block: QuizBlock; onChange: (p: Partial<QuizBlock>) => void }) {
+  const [bp, setBp] = useState<Breakpoint>('mobile');
+  const layout = resolveContainerLayout(block, bp);
+  const hasOverride = bp !== 'mobile' && !!(bp === 'tablet' ? block.containerTablet : block.containerDesktop);
+
+  function set(patch: Partial<ResolvedContainerLayout>) {
+    if (bp === 'mobile') {
+      const map: Record<string, keyof QuizBlock> = {
+        layoutMode: 'containerLayoutMode', columns: 'containerColumns', gap: 'containerGap',
+        align: 'containerAlign', justify: 'containerJustify',
+      };
+      const mapped: Partial<QuizBlock> = {};
+      for (const [k, v] of Object.entries(patch)) mapped[map[k]] = v as never;
+      onChange(mapped);
+      return;
+    }
+    const key = bp === 'tablet' ? 'containerTablet' : 'containerDesktop';
+    onChange({ [key]: { ...(block[key] ?? {}), ...patch } });
+  }
+
+  function resetOverride() {
+    const key = bp === 'tablet' ? 'containerTablet' : 'containerDesktop';
+    onChange({ [key]: undefined });
+  }
+
+  return (
+    <>
+      <Field label="Layout responsivo">
+        <div className="grid grid-cols-3 gap-1.5">
+          {(['mobile', 'tablet', 'desktop'] as const).map((b) => (
+            <button key={b} type="button" className={miniChip(bp === b)} onClick={() => setBp(b)}>
+              {BREAKPOINT_LABELS[b]}
+            </button>
+          ))}
+        </div>
+        {bp !== 'mobile' && (
+          <p className="mt-1.5 text-[11px] text-muted-foreground leading-snug">
+            {hasOverride ? (
+              <>Personalizado pra {BREAKPOINT_LABELS[bp]}. <button type="button" onClick={resetOverride} className="underline hover:text-foreground">Redefinir (herdar)</button></>
+            ) : (
+              <>Herdando de {bp === 'tablet' ? 'Mobile' : 'Tablet'} — mude um valor abaixo pra personalizar só {BREAKPOINT_LABELS[bp]}.</>
+            )}
+          </p>
+        )}
+      </Field>
+
+      <Field label="Modo de layout">
+        <div className="grid grid-cols-2 gap-1.5">
+          <button type="button" className={miniChip(layout.layoutMode !== 'grid')} onClick={() => set({ layoutMode: 'flex' })}>Flex</button>
+          <button type="button" className={miniChip(layout.layoutMode === 'grid')} onClick={() => set({ layoutMode: 'grid' })}>Grid</button>
+        </div>
+      </Field>
+      {layout.layoutMode === 'grid' && (
+        <Field label="Colunas">
+          <div className="grid grid-cols-5 gap-1.5">
+            {[1, 2, 3, 4, 6].map((n) => (
+              <button key={n} type="button" className={miniChip(layout.columns === n)} onClick={() => set({ columns: n })}>{n}</button>
+            ))}
+          </div>
+        </Field>
+      )}
+      <Field label="Espaçamento">
+        <div className="grid grid-cols-6 gap-1.5">
+          {[8, 12, 16, 24, 32, 40].map((n) => (
+            <button key={n} type="button" className={miniChip(layout.gap === n)} onClick={() => set({ gap: n })}>{n}</button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Alinhamento (vertical)">
+        <div className="grid grid-cols-4 gap-1.5">
+          {(['start', 'center', 'end', 'stretch'] as const).map((v) => (
+            <button key={v} type="button" className={miniChip(layout.align === v)} onClick={() => set({ align: v })}>{ALIGN_LABELS[v]}</button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Justificação (horizontal)">
+        <div className="grid grid-cols-4 gap-1.5">
+          {(['start', 'center', 'end', 'stretch'] as const).map((v) => (
+            <button key={v} type="button" className={miniChip(layout.justify === v)} onClick={() => set({ justify: v })}>{ALIGN_LABELS[v]}</button>
+          ))}
+        </div>
+      </Field>
+    </>
+  );
+}
+
+const BREAKPOINT_LABELS: Record<Breakpoint, string> = {
+  mobile: 'Mobile',
+  tablet: 'Tablet',
+  desktop: 'Desktop',
+};
 
 const ALIGN_LABELS: Record<'start' | 'center' | 'end' | 'stretch', string> = {
   start: 'Início',
