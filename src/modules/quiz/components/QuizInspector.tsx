@@ -105,11 +105,58 @@ function BlockInspector({
           </>
         )}
 
-        {(block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone' ||
-          block.type === 'weight' || block.type === 'height') && (
+        {(block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' || block.type === 'phone') && (
           <Field label="Placeholder">
             <Input value={block.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} />
           </Field>
+        )}
+
+        {(block.type === 'weight' || block.type === 'height') && (
+          <>
+            <div className="grid grid-cols-3 gap-2.5">
+              <Field label="Mínimo">
+                <Input
+                  type="number"
+                  value={block.sliderMin ?? (block.type === 'weight' ? 30 : 100)}
+                  onChange={(e) => onChange({ sliderMin: Number(e.target.value) })}
+                />
+              </Field>
+              <Field label="Máximo">
+                <Input
+                  type="number"
+                  value={block.sliderMax ?? (block.type === 'weight' ? 200 : 250)}
+                  onChange={(e) => onChange({ sliderMax: Number(e.target.value) })}
+                />
+              </Field>
+              <Field label="Passo">
+                <Input
+                  type="number"
+                  min={1}
+                  value={block.sliderStep ?? 1}
+                  onChange={(e) => onChange({ sliderStep: Math.max(1, Number(e.target.value)) })}
+                />
+              </Field>
+            </div>
+            <Field label="Valor inicial">
+              <Input
+                type="number"
+                value={block.sliderDefaultValue ?? (block.type === 'weight' ? 70 : 170)}
+                onChange={(e) => onChange({ sliderDefaultValue: Number(e.target.value) })}
+              />
+            </Field>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium">Permitir troca de unidade</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  {block.type === 'weight' ? 'Mostra o alternador kg / lb' : 'Mostra o alternador cm / pol'}
+                </p>
+              </div>
+              <Switch
+                checked={block.allowUnitToggle !== false}
+                onCheckedChange={(v) => onChange({ allowUnitToggle: v })}
+              />
+            </div>
+          </>
         )}
 
         {ANSWERABLE_TYPES.has(block.type) && (

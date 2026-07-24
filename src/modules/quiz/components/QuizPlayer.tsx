@@ -682,6 +682,116 @@ function ProgressBar({
   );
 }
 
+// Régua de arrastar (Funilix parity) pra peso/altura: uma fita com marcações que
+// desliza sob um indicador central fixo. Arrastar move a fita (não um "polegar"),
+// igual a um seletor de valor de balança/altímetro. As marcações finas usam um
+// gradiente CSS repetido (sem 1 elemento por unidade); só as marcações principais
+// (a cada ~10% da faixa) viram elementos de verdade, com o número embaixo.
+const TICK_PX = 10;
+
+function RulerSlider({
+  value,
+  min,
+  max,
+  step,
+  design,
+  ariaLabel,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  design: QuizSchema['design'];
+  ariaLabel: string;
+  onChange: (v: number) => void;
+}) {
+  const dragRef = useRef<{ pointerId: number; startX: number; startValue: number } | null>(null);
+
+  const clampSnap = (v: number) => {
+    const snapped = Math.round(v / step) * step;
+    return Math.min(max, Math.max(min, snapped));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    (e.target as Element).setPointerCapture(e.pointerId);
+    dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startValue: value };
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const delta = drag.startX - e.clientX; // arrastar pra esquerda revela valores maiores
+    const next = clampSnap(drag.startValue + delta / TICK_PX);
+    if (next !== value) onChange(next);
+  };
+  const handlePointerUp = () => {
+    dragRef.current = null;
+  };
+
+  const range = Math.max(1, max - min);
+  const majorStep = Math.max(step, Math.round(range / 12 / step) * step || step);
+  const majorTicks: number[] = [];
+  for (let v = Math.ceil(min / majorStep) * majorStep; v <= max; v += majorStep) majorTicks.push(v);
+
+  return (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onChange(clampSnap(value + step)); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); onChange(clampSnap(value - step)); }
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className="relative h-20 overflow-hidden rounded-2xl cursor-grab active:cursor-grabbing touch-none select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{ background: design.surface, outlineColor: design.primary }}
+    >
+      <div
+        className="absolute top-0 h-full"
+        style={{
+          width: `${(max - min) * TICK_PX}px`,
+          // "left" (não transform: translateX) porque só "left" em % resolve contra a
+          // largura do CONTÊINER pai — porcentagem num transform resolve contra a
+          // largura do PRÓPRIO elemento (aqui, 1700px+), o que jogava a fita inteira
+          // pra fora da área visível (bug real: nenhuma marcação aparecia na tela).
+          left: `calc(50% - ${(value - min) * TICK_PX}px)`,
+        }}
+      >
+        {/* marcações finas: uma tira curta ancorada embaixo, não a altura toda do track —
+            sem background-size/position/repeat aqui, porque pra um
+            repeating-linear-gradient isso recorta só uma fatia minúscula do padrão
+            (bug real já visto: régua sem nenhuma marcação visível). Sem essas props, o
+            próprio gradiente preenche a altura da tira e repete a cada 10px sozinho. */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-4"
+          style={{ backgroundImage: `repeating-linear-gradient(to right, ${design.muted}66 0, ${design.muted}66 1.5px, transparent 1.5px, transparent ${TICK_PX}px)` }}
+        />
+        {majorTicks.map((v) => (
+          <div
+            key={v}
+            className="absolute bottom-0 flex flex-col items-center"
+            style={{ left: `${(v - min) * TICK_PX}px`, transform: 'translateX(-50%)' }}
+          >
+            <span className="text-[10px] font-semibold mb-1 tabular-nums" style={{ color: design.muted }}>{v}</span>
+            <div className="h-6 w-0.5 rounded-full" style={{ background: design.muted }} />
+          </div>
+        ))}
+      </div>
+      {/* indicador central fixo — o valor "selecionado" é sempre o que está sob ele */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-0 h-full w-1 -translate-x-1/2 rounded-full"
+        style={{ background: design.primary }}
+      />
+    </div>
+  );
+}
+
 function EmptyState({ message }: { message: string }) {
   return <div className="p-12 text-center opacity-60">{message}</div>;
 }
@@ -749,14 +859,21 @@ function BlockView({
   // Opções marcadas como "pré-selecionada" no Inspector já chegam marcadas quando a
   // etapa abre — o inicializador do useState só roda uma vez por instância do bloco
   // (cada key={b.id} monta um BlockView novo), então isso não sobrescreve escolhas.
-  const [value, setValue] = useState<unknown>(() =>
-    block.type === 'single-choice' ? (block.options ?? []).find((o) => o.preselected)?.id ?? '' : ''
-  );
+  const [value, setValue] = useState<unknown>(() => {
+    if (block.type === 'single-choice') return (block.options ?? []).find((o) => o.preselected)?.id ?? '';
+    if (block.type === 'weight') return block.sliderDefaultValue ?? 70;
+    if (block.type === 'height') return block.sliderDefaultValue ?? 170;
+    return '';
+  });
   const [multi, setMulti] = useState<string[]>(() =>
     block.type === 'multi-choice' ? (block.options ?? []).filter((o) => o.preselected).map((o) => o.id) : []
   );
   const [formValue, setFormValue] = useState({ name: '', email: '', phone: '' });
   const [revealed, setRevealed] = useState(false);
+  // Régua de peso/altura: guarda a unidade EXIBIDA localmente; o valor sempre fica
+  // salvo internamente na unidade métrica (kg/cm), pra não quebrar o motor de
+  // variáveis/fórmulas caso o visitante alterne a unidade no meio do caminho.
+  const [sliderUnit, setSliderUnit] = useState<'metric' | 'imperial'>('metric');
 
   useEffect(() => {
     if (block.type !== 'loading') return;
@@ -769,9 +886,12 @@ function BlockView({
     if (block.type === 'multi-choice') return multi.length > 0 || !block.required;
     if (block.type === 'single-choice') return typeof value === 'string' && value.length > 0;
     if (block.type === 'rating') return typeof value === 'number';
+    // A régua sempre carrega um valor numérico válido (nunca fica "vazia" como um
+    // campo de texto) — diferente dos campos de texto abaixo, que checam string.
+    if (block.type === 'weight' || block.type === 'height') return typeof value === 'number';
     if (
       block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' ||
-      block.type === 'phone' || block.type === 'weight' || block.type === 'height'
+      block.type === 'phone'
     ) {
       return !block.required || (typeof value === 'string' && value.trim().length > 0);
     }
@@ -1322,30 +1442,72 @@ function BlockView({
     }
 
     case 'weight':
-    case 'height':
+    case 'height': {
+      // Régua de arrastar (Funilix parity): o valor sempre fica salvo em kg/cm —
+      // só a EXIBIÇÃO converte pra lb/pol quando o visitante troca a unidade.
+      const isWeight = block.type === 'weight';
+      const metricMin = block.sliderMin ?? (isWeight ? 30 : 100);
+      const metricMax = block.sliderMax ?? (isWeight ? 200 : 250);
+      const metricStep = block.sliderStep ?? 1;
+      const metricValue = typeof value === 'number' ? value : (isWeight ? 70 : 170);
+      const allowUnitToggle = block.allowUnitToggle !== false;
+
+      const KG_TO_LB = 2.20462;
+      const CM_TO_IN = 0.393701;
+      const toDisplay = (m: number) => (sliderUnit === 'imperial' ? m * (isWeight ? KG_TO_LB : CM_TO_IN) : m);
+      const toMetric = (d: number) => (sliderUnit === 'imperial' ? d / (isWeight ? KG_TO_LB : CM_TO_IN) : d);
+
+      const displayMin = Math.round(toDisplay(metricMin));
+      const displayMax = Math.round(toDisplay(metricMax));
+      const displayValue = Math.round(toDisplay(metricValue));
+      const unitLabel = isWeight ? (sliderUnit === 'imperial' ? 'lb' : 'kg') : (sliderUnit === 'imperial' ? 'pol' : 'cm');
+
       return (
         <div>
           {heading}
-          <div className="relative mb-6">
-            <label htmlFor={`field-${block.id}`} className="sr-only">{block.title || (block.type === 'weight' ? 'Peso' : 'Altura')}</label>
-            <input
-              id={`field-${block.id}`}
-              type="number"
-              placeholder={block.placeholder}
-              value={String(value ?? '')}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
-              style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+          <div className="mb-6">
+            {allowUnitToggle && (
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex rounded-full p-1 gap-0.5" style={{ background: design.surface }}>
+                  {(isWeight ? (['kg', 'lb'] as const) : (['cm', 'pol'] as const)).map((u, i) => {
+                    const active = (i === 0) === (sliderUnit === 'metric');
+                    return (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setSliderUnit(i === 0 ? 'metric' : 'imperial')}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
+                        style={{ background: active ? design.primary : 'transparent', color: active ? getContrastText(design.primary) : design.muted }}
+                      >
+                        {u}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="text-center mb-5">
+              <span className="text-5xl font-bold tabular-nums" style={{ color: design.text, fontFamily: design.fontHeading }}>
+                {displayValue}
+              </span>
+              <span className="text-lg ml-1.5 opacity-60">{unitLabel}</span>
+            </div>
+            <RulerSlider
+              value={displayValue}
+              min={displayMin}
+              max={displayMax}
+              step={1}
+              design={design}
+              ariaLabel={block.title || (isWeight ? 'Peso' : 'Altura')}
+              onChange={(next) => setValue(Math.round(toMetric(next)))}
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-60">
-              {block.type === 'weight' ? 'kg' : 'cm'}
-            </span>
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(metricValue)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
       );
+    }
 
     case 'pricing':
       return (

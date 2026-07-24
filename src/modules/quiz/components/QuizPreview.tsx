@@ -524,20 +524,30 @@ export function BlockRenderer({ block, design }: { block: QuizBlock; design: Qui
     }
 
     case 'weight':
+    case 'height': {
+      // Mockup estático da régua (a versão interativa de arrastar vive só no Player
+      // real — aqui, dentro do canvas com drag-and-drop de blocos, evita disputar o
+      // gesto de arraste com a biblioteca de reordenação).
+      const isWeight = block.type === 'weight';
+      const sliderMin = block.sliderMin ?? (isWeight ? 30 : 100);
+      const sliderMax = block.sliderMax ?? (isWeight ? 200 : 250);
+      const sliderVal = block.sliderDefaultValue ?? (isWeight ? 70 : 170);
+      const unit = isWeight ? 'kg' : 'cm';
       return (
         <div className="space-y-3">
           {heading}
-          <FormFieldPreview design={design} label={block.placeholder || 'Ex: 70'} suffix="kg" />
+          <div className="text-center">
+            <span className="text-4xl font-bold" style={{ color: design.text, fontFamily: design.fontHeading }}>{sliderVal}</span>
+            <span className="text-base ml-1 opacity-60" style={{ color: design.muted }}>{unit}</span>
+          </div>
+          <div className="h-12 rounded-xl flex items-center justify-between px-4 text-xs" style={{ background: design.surface, color: design.muted }}>
+            <span>{sliderMin}</span>
+            <div className="flex-1 mx-3 h-1 rounded-full" style={{ background: design.primary + '33' }} />
+            <span>{sliderMax}</span>
+          </div>
         </div>
       );
-
-    case 'height':
-      return (
-        <div className="space-y-3">
-          {heading}
-          <FormFieldPreview design={design} label={block.placeholder || 'Ex: 170'} suffix="cm" />
-        </div>
-      );
+    }
 
     case 'pricing':
       return (

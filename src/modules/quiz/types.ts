@@ -120,6 +120,13 @@ export interface QuizBlock {
   ctaLabel?: string;
   imageUrl?: string;
   maxRating?: number;
+  // Régua de peso/altura (Funilix parity): substitui o campo numérico simples por
+  // um slider de arrastar, com faixa configurável e troca de unidade (kg/lb, cm/pol).
+  sliderMin?: number;
+  sliderMax?: number;
+  sliderStep?: number;
+  sliderDefaultValue?: number;
+  allowUnitToggle?: boolean; // ausente = true (comportamento padrão)
   resultTitle?: string;
   resultBody?: string;
   // Rich media (Phase 3)
