@@ -392,6 +392,28 @@ function MetaIntegrationsPage() {
     [filteredForms],
   );
 
+  // Um formulário removido some da lista, mas o id continuava preso em
+  // selectedFormIds: a barra de ações seguia dizendo "2 selecionado(s)" com
+  // nenhuma linha marcada, e ainda ofereceria importar/remover algo que não
+  // existe mais. Compara contra todos os ativos (não os filtrados) pra que
+  // buscar ou filtrar não descarte a seleção do usuário.
+  const activeFormIds = useMemo(
+    () =>
+      new Set(
+        (formsQuery.data?.forms ?? [])
+          .filter((f: any) => f.is_active)
+          .map((f: any) => f.form_id as string),
+      ),
+    [formsQuery.data?.forms],
+  );
+
+  useEffect(() => {
+    setSelectedFormIds((prev) => {
+      const next = prev.filter((id) => activeFormIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [activeFormIds]);
+
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto relative z-0 pointer-events-auto">
       <motion.div
