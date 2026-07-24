@@ -6,6 +6,7 @@ import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
+import { parseRichText } from '../lib/richtext';
 import { resolveScope, interpolateText, type VariableScope } from '../lib/variables';
 import {
   createInitialState,
@@ -995,7 +996,7 @@ function BlockView({
                   ) : o.emoji ? (
                     <span className="shrink-0">{o.emoji}</span>
                   ) : null}
-                  <span className="min-w-0 flex-1">{o.label}</span>
+                  <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
                 </button>
               );
             })}
@@ -1030,7 +1031,7 @@ function BlockView({
                   ) : o.emoji ? (
                     <span className="shrink-0">{o.emoji}</span>
                   ) : null}
-                  <span className="min-w-0 flex-1">{o.label}</span>
+                  <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
                 </button>
               );
             })}

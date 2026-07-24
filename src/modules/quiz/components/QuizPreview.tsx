@@ -5,6 +5,7 @@ import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
+import { parseRichText } from '../lib/richtext';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 
@@ -257,7 +258,7 @@ export function BlockRenderer({ block, design }: { block: QuizBlock; design: Qui
                 ) : o.emoji ? (
                   <span className="shrink-0">{o.emoji}</span>
                 ) : null}
-                <span className="min-w-0 flex-1">{o.label}</span>
+                <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
               </button>
             ))}
             {opts.length === 0 && <p className="text-xs opacity-60" style={{ color: design.muted }}>Nenhuma opção — adicione no inspetor.</p>}

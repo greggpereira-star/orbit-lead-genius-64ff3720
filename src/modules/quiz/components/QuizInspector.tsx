@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
 import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { MediaUploader } from './MediaUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Palette, SlidersHorizontal } from 'lucide-react';
 import { BUTTON_STYLE_OPTIONS, getButtonStyle } from '../lib/buttonStyles';
+import { applyRichTextMark, type RichTextMark } from '../lib/richtext';
+import { Bold, Italic, Underline } from 'lucide-react';
 
 interface Props {
   quizId: string;
@@ -638,6 +640,19 @@ function OptionEditor({
   const [actionTab, setActionTab] = useState<'flow' | 'step' | 'url'>(
     option.actionUrl ? 'url' : option.jumpToBlockId ? 'step' : 'flow'
   );
+  const labelInputRef = useRef<HTMLInputElement>(null);
+
+  function applyMark(mark: RichTextMark) {
+    const el = labelInputRef.current;
+    const start = el?.selectionStart ?? option.label.length;
+    const end = el?.selectionEnd ?? option.label.length;
+    const result = applyRichTextMark(option.label, start, end, mark);
+    onUpdate({ label: result.text });
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+  }
 
   return (
     <div className="rounded-lg border">
@@ -651,7 +666,18 @@ function OptionEditor({
             <ImageIcon className="h-3 w-3 text-muted-foreground" />
           )}
         </div>
-        <Input value={option.label} onChange={(e) => onUpdate({ label: e.target.value })} className="h-8" />
+        <Input ref={labelInputRef} value={option.label} onChange={(e) => onUpdate({ label: e.target.value })} className="h-8" />
+        <div className="flex shrink-0 gap-0.5">
+          <button type="button" onClick={() => applyMark('bold')} className="p-1.5 text-muted-foreground hover:text-foreground" aria-label="Negrito" title="Negrito (**texto**)">
+            <Bold className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={() => applyMark('italic')} className="p-1.5 text-muted-foreground hover:text-foreground" aria-label="Itálico" title="Itálico (_texto_)">
+            <Italic className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={() => applyMark('underline')} className="p-1.5 text-muted-foreground hover:text-foreground" aria-label="Sublinhado" title="Sublinhado (__texto__)">
+            <Underline className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
