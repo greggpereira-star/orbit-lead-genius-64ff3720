@@ -1,5 +1,6 @@
 import type { BlockOption, QuizBlock, QuizSchema, QuizStep } from './types';
 import { findStepIndexForBlock } from './lib/steps';
+import { evaluateExpression, type VariableScope } from './lib/variables';
 
 export type QuizResponses = Record<string, unknown>;
 
@@ -105,10 +106,17 @@ export function nextStepIndex(steps: QuizStep[], state: QuizRunState, forcedJump
  * Resposta ainda inexistente → condição não satisfeita (bloco fica oculto),
  * exceto para 'neq', que é verdadeiro quando a resposta difere do alvo.
  */
-export function isBlockVisible(block: QuizBlock, responses: QuizResponses): boolean {
+export function isBlockVisible(block: QuizBlock, responses: QuizResponses, scope: VariableScope = {}): boolean {
   const cond = block.showIf;
-  if (!cond?.enabled || !cond.fieldBlockId) return true;
-  const raw = responses[cond.fieldBlockId];
+  if (!cond?.enabled) return true;
+  if (cond.useFormula) {
+    if (!cond.expression) return true;
+  } else if (!cond.fieldBlockId) {
+    return true;
+  }
+  // Modo fórmula: compara o RESULTADO de uma expressão (cruzando várias variáveis,
+  // ex.: IMC) em vez da resposta crua de um único bloco anterior.
+  const raw: unknown = cond.useFormula ? evaluateExpression(cond.expression!, scope) : responses[cond.fieldBlockId];
   const asNumber = (v: unknown): number => (Array.isArray(v) ? Number.NaN : Number(v));
   const eq = Array.isArray(raw)
     ? (raw as unknown[]).map(String).includes(String(cond.value))

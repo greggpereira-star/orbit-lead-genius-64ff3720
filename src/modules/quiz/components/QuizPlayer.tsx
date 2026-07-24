@@ -5,6 +5,7 @@ import { quizService } from '../services/quizService';
 import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
+import { resolveScope, interpolateText, type VariableScope } from '../lib/variables';
 import {
   createInitialState,
   evaluateResponse,
@@ -200,20 +201,26 @@ function PlayerRunner({
     () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
     [currentStep, blocks]
   );
+  // Escopo do motor de variáveis/fórmulas: {nomeDaVariavel: valor}, recalculado a
+  // cada resposta nova — usado tanto pra exibição condicional em modo fórmula
+  // (ex.: IMC = peso/(altura/100)^2) quanto pra interpolar {{variavel}} nos textos.
+  const scope = useMemo(() => resolveScope(blocks, state.responses), [blocks, state.responses]);
+
   // Exibição condicional: só renderiza (e pontua) blocos cuja condição é verdadeira
   // frente às respostas já registradas das etapas anteriores.
   const visibleStepBlocks = useMemo(
-    () => stepBlocks.filter((b) => isBlockVisible(b, state.responses)),
-    [stepBlocks, state.responses]
+    () => stepBlocks.filter((b) => isBlockVisible(b, state.responses, scope)),
+    [stepBlocks, state.responses, scope]
   );
   const isLastStep = state.currentStepIndex >= steps.length - 1;
 
   const stepHasVisibleBlocks = (stepIdx: number, responses: Record<string, unknown>): boolean => {
     const s = steps[stepIdx];
     if (!s) return false;
+    const localScope = resolveScope(blocks, responses);
     return s.blockIds.some((bid) => {
       const b = blocks.find((x) => x.id === bid);
-      return b ? isBlockVisible(b, responses) : false;
+      return b ? isBlockVisible(b, responses, localScope) : false;
     });
   };
 
@@ -430,6 +437,7 @@ function PlayerRunner({
                     key={b.id}
                     block={b}
                     design={design}
+                    scope={scope}
                     terminal={isTerminal}
                     stepValid={allStepValid}
                     saving={saving}
@@ -720,6 +728,7 @@ function PrimaryBtn({
 function BlockView({
   block,
   design,
+  scope,
   terminal,
   stepValid = true,
   onSubmit,
@@ -729,6 +738,7 @@ function BlockView({
 }: {
   block: QuizBlock;
   design: QuizSchema['design'];
+  scope: VariableScope;
   terminal: boolean;
   stepValid?: boolean;
   onSubmit: (response: unknown) => void;
@@ -792,16 +802,20 @@ function BlockView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftValue]);
 
+  // Interpola {{variavel}} / {{calc(...)}} no título e subtítulo — personalização
+  // dinâmica com base em respostas anteriores (ex.: "Seu IMC é {{calc(peso/(altura/100)^2)}}").
+  const title = interpolateText(block.title, scope);
+  const subtitle = interpolateText(block.subtitle, scope);
   const heading = (
     <div className="space-y-3 mb-6">
-      {block.title && (
+      {title && (
         <h2 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ fontFamily: design.fontHeading }}>
-          {block.title}
+          {title}
         </h2>
       )}
-      {block.subtitle && (
+      {subtitle && (
         <p className="text-base opacity-80" style={{ color: design.muted }}>
-          {block.subtitle}
+          {subtitle}
         </p>
       )}
     </div>
@@ -818,10 +832,10 @@ function BlockView({
               className="mx-auto w-full max-h-72 object-cover rounded-xl"
             />
           )}
-          <h1 className="text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>{block.title}</h1>
-          {block.subtitle && (
+          <h1 className="text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>{title}</h1>
+          {subtitle && (
             <p className="text-lg max-w-md mx-auto" style={{ color: design.muted }}>
-              {block.subtitle}
+              {subtitle}
             </p>
           )}
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
@@ -1064,7 +1078,7 @@ function BlockView({
             className="p-6 space-y-4 mb-6"
             style={{ background: design.surface, borderRadius: design.radius }}
           >
-            <p className="text-xl italic leading-relaxed">{block.title}</p>
+            <p className="text-xl italic leading-relaxed">{title}</p>
             <div className="flex items-center gap-3">
               {block.testimonialAvatar && (
                 <img
@@ -1315,7 +1329,7 @@ function BlockView({
     case 'pricing':
       return (
         <div className="text-center space-y-5">
-          {block.title && <h2 className="text-xl font-semibold" style={{ fontFamily: design.fontHeading }}>{block.title}</h2>}
+          {title && <h2 className="text-xl font-semibold" style={{ fontFamily: design.fontHeading }}>{title}</h2>}
           <div className="flex items-end justify-center gap-2">
             <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice ?? 'R$ 0'}</span>
             <span className="text-base opacity-70">{block.pricingPeriod}</span>
@@ -1376,8 +1390,8 @@ function BlockView({
                 <span className="text-xs font-semibold opacity-60">{block.notificationApp ?? 'App'}</span>
                 <span className="text-[11px] opacity-50">{block.notificationTime ?? 'agora'}</span>
               </div>
-              <div className="text-base font-semibold">{block.title}</div>
-              {block.subtitle && <div className="text-sm opacity-70">{block.subtitle}</div>}
+              <div className="text-base font-semibold">{title}</div>
+              {subtitle && <div className="text-sm opacity-70">{subtitle}</div>}
             </div>
           </div>
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
@@ -1481,6 +1495,11 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
   const max = maxPossibleScore(schema);
   const temperature = classifyTemperature(state.score, max);
   const pct = max > 0 ? Math.round((state.score / max) * 100) : 0;
+  // A tela de resultado é o lugar de maior valor pra personalização dinâmica —
+  // "Baseado no seu peso de {{peso}}kg e IMC {{calc(peso/(altura/100)^2)}}...".
+  const scope = resolveScope(schema.blocks, state.responses);
+  const resultTitle = interpolateText(resultBlock?.resultTitle, scope);
+  const resultBody = interpolateText(resultBlock?.resultBody, scope);
 
   // O visitante nunca deveria ler que o sistema o classificou como "frio" — a badge é sempre
   // uma mensagem positiva por padrão; quem quiser diferenciar por faixa pode personalizar cada
@@ -1502,10 +1521,10 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
         {badgeText}
       </div>
       <h2 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>
-        {resultBlock?.resultTitle ?? 'Seu resultado está pronto'}
+        {resultTitle || 'Seu resultado está pronto'}
       </h2>
       <p className="text-base max-w-md mx-auto" style={{ color: design.muted }}>
-        {resultBlock?.resultBody ?? 'Obrigado por completar o quiz.'}
+        {resultBody || 'Obrigado por completar o quiz.'}
       </p>
       <div className="text-5xl font-bold pt-4" style={{ color: design.primary, fontFamily: design.fontHeading }}>
         {pct}%

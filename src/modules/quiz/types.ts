@@ -99,6 +99,11 @@ export interface BlockShowIf {
   op: ShowIfOp;
   value: string | number;
   value2?: string | number;  // usado só quando op === 'between' (faixa)
+  // Motor de variáveis/fórmulas (Funilix parity): quando true, a condição compara o
+  // RESULTADO de `expression` (ex.: "peso/(altura/100)^2" pra IMC) em vez da resposta
+  // crua de `fieldBlockId` — permite cruzar várias respostas numa única condição.
+  useFormula?: boolean;
+  expression?: string;
 }
 
 export interface QuizBlock {
@@ -166,6 +171,10 @@ export interface QuizBlock {
   resultBadgeCold?: string;
   // Exibição condicional — mostra o bloco só quando a condição for verdadeira
   showIf?: BlockShowIf;
+  // Motor de variáveis (Funilix parity): nome pelo qual a resposta deste bloco fica
+  // disponível em qualquer texto do quiz via {{nome}}, ou em fórmulas via calc(nome).
+  // Ausente = bloco não exporta variável (comportamento de hoje, sem mudança).
+  outputVariable?: string;
 }
 
 export interface FaqItem {

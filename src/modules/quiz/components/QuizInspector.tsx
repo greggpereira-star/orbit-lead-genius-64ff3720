@@ -111,6 +111,21 @@ function BlockInspector({
           </Field>
         )}
 
+        {ANSWERABLE_TYPES.has(block.type) && (
+          <Field label="Variável de saída (opcional)">
+            <Input
+              value={block.outputVariable ?? ''}
+              onChange={(e) => onChange({ outputVariable: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
+              placeholder="ex.: peso"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+              {block.outputVariable
+                ? <>Use <code className="rounded bg-muted px-1 py-0.5">{`{{${block.outputVariable}}}`}</code> em qualquer texto do quiz, ou <code className="rounded bg-muted px-1 py-0.5">{`{{calc(${block.outputVariable}...)}}`}</code> numa fórmula.</>
+                : 'Dá um nome à resposta (só letras, números e _) pra usar em textos personalizados ou fórmulas de outras etapas.'}
+            </p>
+          </Field>
+        )}
+
         {ctaEligible && (
           <Field label="Texto do botão">
             <Input value={block.ctaLabel ?? ''} onChange={(e) => onChange({ ctaLabel: e.target.value })} />
@@ -573,9 +588,11 @@ function ShowIfSection({
 
   const myIndex = allBlocks.findIndex((b) => b.id === block.id);
   const sources = allBlocks.filter((b, i) => (myIndex < 0 || i < myIndex) && ANSWERABLE_TYPES.has(b.type));
+  const variableNames = allBlocks.filter((b) => b.outputVariable).map((b) => b.outputVariable!);
   const sourceBlock = allBlocks.find((b) => b.id === showIf.fieldBlockId);
   const sourceOptions = sourceBlock?.options ?? [];
   const isRange = showIf.op === 'between';
+  const isFormula = !!showIf.useFormula;
 
   const OPS: { id: ShowIfOp; label: string }[] = [
     { id: 'eq', label: '= Igual' },
@@ -607,44 +624,77 @@ function ShowIfSection({
       </div>
 
       {showIf.enabled &&
-        (sources.length === 0 ? (
+        (sources.length === 0 && !isFormula ? (
           <p className="text-[11px] text-muted-foreground rounded-lg border border-dashed p-2.5">
             Adicione, antes deste bloco, uma pergunta (escolha, avaliação, texto, peso…) para usar a resposta dela como
-            condição.
+            condição — ou dê um nome de variável a uma pergunta anterior e use o modo Fórmula.
           </p>
         ) : (
           <>
-            <Field label="Com base na resposta de">
-              <Select
-                value={showIf.fieldBlockId || undefined}
-                onValueChange={(v) => patch({ fieldBlockId: v, value: '', value2: undefined })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha o campo…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sources.map((b) => {
-                    const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
-                    return (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.title || def?.label || b.type}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </Field>
-
             <Field label="Tipo de condição">
-              <div className="grid grid-cols-2 gap-1.5">
-                <button type="button" className={chipClass(!isRange)} onClick={() => isRange && patch({ op: 'eq', value2: undefined })}>
-                  Comparação simples
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  className={chipClass(!isFormula && !isRange)}
+                  onClick={() => patch({ useFormula: false, op: 'eq', value2: undefined })}
+                >
+                  Simples
                 </button>
-                <button type="button" className={chipClass(isRange)} onClick={() => !isRange && patch({ op: 'between' })}>
+                <button
+                  type="button"
+                  className={chipClass(!isFormula && isRange)}
+                  onClick={() => patch({ useFormula: false, op: 'between' })}
+                >
                   Faixa (entre)
+                </button>
+                <button
+                  type="button"
+                  className={chipClass(isFormula)}
+                  onClick={() => patch({ useFormula: true, op: showIf.op === 'between' ? 'gte' : showIf.op })}
+                >
+                  Fórmula
                 </button>
               </div>
             </Field>
+
+            {isFormula ? (
+              <Field label="Fórmula">
+                <Input
+                  value={showIf.expression ?? ''}
+                  onChange={(e) => patch({ expression: e.target.value })}
+                  placeholder="ex.: peso/(altura/100)^2"
+                  className="font-mono text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                  {variableNames.length > 0
+                    ? <>Variáveis disponíveis: {variableNames.map((n) => (
+                        <code key={n} className="rounded bg-muted px-1 py-0.5 mr-1">{n}</code>
+                      ))}</>
+                    : 'Dê um nome de variável a uma pergunta anterior (campo "Variável de saída") pra poder usá-la aqui.'}
+                </p>
+              </Field>
+            ) : (
+              <Field label="Com base na resposta de">
+                <Select
+                  value={showIf.fieldBlockId || undefined}
+                  onValueChange={(v) => patch({ fieldBlockId: v, value: '', value2: undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha o campo…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sources.map((b) => {
+                      const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+                      return (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.title || def?.label || b.type}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
 
             {!isRange && (
               <Field label="Operador">
@@ -683,7 +733,7 @@ function ShowIfSection({
               </Field>
             ) : (
               <Field label="Comparar com">
-                {sourceOptions.length > 0 && (showIf.op === 'eq' || showIf.op === 'neq' || showIf.op === 'contains') ? (
+                {!isFormula && sourceOptions.length > 0 && (showIf.op === 'eq' || showIf.op === 'neq' || showIf.op === 'contains') ? (
                   <Select value={showIf.value ? String(showIf.value) : undefined} onValueChange={(v) => patch({ value: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Escolha a opção…" />
