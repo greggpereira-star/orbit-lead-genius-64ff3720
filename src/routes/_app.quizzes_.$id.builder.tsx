@@ -475,7 +475,12 @@ function QuizBuilderPage() {
                 const stepBlocks = step.blockIds.map((bid) => schema.blocks.find((b) => b.id === bid)).filter(Boolean) as QuizBlock[];
                 const firstBlock = stepBlocks[0];
                 const firstDef = firstBlock ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type) : undefined;
-                const expanded = expandedSteps.has(step.id);
+                // Etapa com um único componente não tem nada de novo pra "revelar" ao
+                // expandir — o cabeçalho e o item interno mostravam exatamente a mesma
+                // coisa duas vezes. Aqui a própria linha da etapa JÁ é o componente: sem
+                // seta, com o botão de excluir direto, e o clique seleciona pro Inspetor.
+                const soloBlock = stepBlocks.length === 1 ? stepBlocks[0] : null;
+                const expanded = !soloBlock && expandedSteps.has(step.id);
                 return (
                   <Draggable key={step.id} draggableId={`step-drag-${step.id}`} index={stepIdx}>
                     {(stepDragProvided, stepDragSnapshot) => (
@@ -489,10 +494,23 @@ function QuizBuilderPage() {
                         <div
                           role="button"
                           tabIndex={0}
-                          onClick={() => toggleStepExpanded(step.id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') toggleStepExpanded(step.id); }}
+                          onClick={() => {
+                            if (soloBlock) { setActiveBlockId(soloBlock.id); setMobilePanel('inspector'); }
+                            else toggleStepExpanded(step.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            if (soloBlock) { setActiveBlockId(soloBlock.id); setMobilePanel('inspector'); }
+                            else toggleStepExpanded(step.id);
+                          }}
                           className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
-                            expanded ? 'bg-muted' : 'hover:bg-muted border border-transparent'
+                            soloBlock
+                              ? activeBlockId === soloBlock.id
+                                ? 'bg-primary/10 border border-primary/30'
+                                : 'hover:bg-muted border border-transparent'
+                              : expanded
+                                ? 'bg-muted'
+                                : 'hover:bg-muted border border-transparent'
                           }`}
                         >
                           <div
@@ -510,10 +528,18 @@ function QuizBuilderPage() {
                               Etapa {stepIdx + 1}{firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}
                             </div>
                             <div className="text-[10px] text-muted-foreground truncate">
-                              {stepBlocks.length} {stepBlocks.length === 1 ? 'componente' : 'componentes'}
+                              {soloBlock ? (firstDef?.label ?? firstBlock?.type) : `${stepBlocks.length} componentes`}
                             </div>
                           </div>
-                          {expanded ? (
+                          {soloBlock ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteBlock(soloBlock.id); }}
+                              className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                              aria-label="Excluir etapa"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          ) : expanded ? (
                             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           ) : (
                             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
