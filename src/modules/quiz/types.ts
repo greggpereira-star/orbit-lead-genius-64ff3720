@@ -67,6 +67,7 @@ export type BlockType =
   | 'pricing'
   | 'reveal'
   | 'ios-notification'
+  | 'audio-call'
   | 'carousel'
   | 'comparison'
   | 'chart'
@@ -166,6 +167,7 @@ export interface QuizBlock {
   revealedBody?: string;
   notificationApp?: string;
   notificationTime?: string;
+  audioCallDuration?: string;
   carouselImages?: string[];
   comparisonLeftLabel?: string;
   comparisonLeftItems?: string[];

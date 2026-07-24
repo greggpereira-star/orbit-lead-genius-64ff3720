@@ -20,7 +20,7 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
-import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame } from 'lucide-react';
+import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
 
@@ -1570,6 +1570,35 @@ function BlockView({
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
+        </div>
+      );
+
+    case 'audio-call':
+      return (
+        <div className="space-y-8 text-center">
+          <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
+            <span className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ background: design.primary }} />
+            <span className="absolute inset-0 rounded-full" style={{ background: `${design.primary}22` }} />
+            {block.imageUrl ? (
+              <img src={block.imageUrl} alt={title} className="relative h-20 w-20 rounded-full object-cover" />
+            ) : (
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full" style={{ background: design.primary }}>
+                <PhoneCall className="h-8 w-8" style={{ color: getContrastText(design.primary) }} />
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-xl font-bold" style={{ fontFamily: design.fontHeading }}>{title}</div>
+            <div className="mt-1 text-sm opacity-60">{subtitle || 'Chamada de voz'} · {block.audioCallDuration ?? '00:00'}</div>
+          </div>
+          <div className="flex items-center justify-center gap-6">
+            <div aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full opacity-40" style={{ background: design.surface }}>
+              <VolumeX className="h-5 w-5" style={{ color: design.text }} />
+            </div>
+            <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+              <span className="inline-flex items-center gap-2"><Mic className="h-4 w-4" />{block.ctaLabel || 'Atender'}</span>
+            </PrimaryBtn>
+          </div>
         </div>
       );
 

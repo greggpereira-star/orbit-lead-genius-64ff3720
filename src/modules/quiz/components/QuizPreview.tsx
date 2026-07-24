@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye } from 'lucide-react';
+import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye, PhoneCall } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
@@ -591,6 +591,26 @@ export function BlockRenderer({ block, design }: { block: QuizBlock; design: Qui
             </div>
             <div className="text-sm font-semibold" style={{ color: design.text }}>{title}</div>
             {sub && <div className="text-xs" style={{ color: design.muted }}>{sub}</div>}
+          </div>
+        </div>
+      );
+
+    case 'audio-call':
+      return (
+        <div className="space-y-4 text-center py-2">
+          <div className="relative mx-auto flex h-16 w-16 items-center justify-center">
+            <span className="absolute inset-0 rounded-full" style={{ background: `${design.primary}22` }} />
+            {block.imageUrl ? (
+              <img src={block.imageUrl} alt={title} className="relative h-14 w-14 rounded-full object-cover" />
+            ) : (
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-full" style={{ background: design.primary }}>
+                <PhoneCall className="h-6 w-6" style={{ color: getContrastText(design.primary) }} />
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-base font-bold" style={{ color: design.text, fontFamily: design.fontHeading }}>{title}</div>
+            <div className="text-xs" style={{ color: design.muted }}>{sub || 'Chamada de voz'} · {block.audioCallDuration ?? '00:00'}</div>
           </div>
         </div>
       );

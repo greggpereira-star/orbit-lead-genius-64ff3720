@@ -4,6 +4,7 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
+  PhoneCall,
 } from 'lucide-react';
 
 export type BlockCategory =
@@ -377,6 +378,20 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       title: 'Ana acabou de garantir sua vaga',
       subtitle: 'Restam poucas unidades disponíveis.',
       ctaLabel: 'Continuar',
+    }),
+  },
+  {
+    type: 'audio-call',
+    label: 'Chamada de áudio',
+    description: 'Simula uma ligação recebida',
+    category: 'gamificacao',
+    icon: PhoneCall,
+    create: () => ({
+      type: 'audio-call',
+      title: 'Dra. Ana Silva',
+      subtitle: 'Chamada de voz',
+      audioCallDuration: '00:12',
+      ctaLabel: 'Atender',
     }),
   },
   {

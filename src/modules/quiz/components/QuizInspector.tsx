@@ -56,13 +56,13 @@ function BlockInspector({
   onDelete: () => void;
 }) {
   const hasOptions = block.type === 'single-choice' || block.type === 'multi-choice';
-  const hasMedia = ['intro', 'image', 'audio', 'video', 'before-after', 'testimonial', 'carousel'].includes(block.type);
+  const hasMedia = ['intro', 'image', 'audio', 'video', 'before-after', 'testimonial', 'carousel', 'audio-call'].includes(block.type);
   const def = BLOCK_LIBRARY.find((d) => d.type === block.type);
 
   const ctaEligible = [
     'intro', 'cta', 'result', 'short-text', 'long-text', 'email', 'phone',
     'argument', 'argument-progress', 'level', 'notification', 'faq', 'form',
-    'weight', 'height', 'pricing', 'reveal', 'ios-notification', 'carousel',
+    'weight', 'height', 'pricing', 'reveal', 'ios-notification', 'audio-call', 'carousel',
     'comparison', 'chart',
   ].includes(block.type);
 
@@ -367,6 +367,12 @@ function BlockInspector({
           </>
         )}
 
+        {block.type === 'audio-call' && (
+          <Field label="Duração exibida">
+            <Input value={block.audioCallDuration ?? ''} onChange={(e) => onChange({ audioCallDuration: e.target.value })} placeholder="00:12" />
+          </Field>
+        )}
+
         {block.type === 'comparison' && (
           <>
             <Field label="Rótulo (esquerda)">
@@ -483,6 +489,17 @@ function BlockInspector({
                 accept="image"
                 value={block.testimonialAvatar}
                 onChange={(url) => onChange({ testimonialAvatar: url })}
+                compact
+              />
+            </Field>
+          )}
+          {block.type === 'audio-call' && (
+            <Field label="Avatar do contato">
+              <MediaUploader
+                quizId={quizId}
+                accept="image"
+                value={block.imageUrl}
+                onChange={(url) => onChange({ imageUrl: url })}
                 compact
               />
             </Field>
