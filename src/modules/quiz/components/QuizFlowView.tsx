@@ -1,12 +1,16 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
   MarkerType,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
   type Node,
   type Edge,
+  type EdgeProps,
   Position,
   Handle,
   useNodesState,
@@ -15,7 +19,7 @@ import {
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { LayoutGrid, Eye, ArrowDownWideNarrow, X, CheckCircle2 } from 'lucide-react';
+import { LayoutGrid, Eye, ArrowDownWideNarrow, X, CheckCircle2, Target, Pencil, Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BLOCK_LIBRARY } from '../blocks-library';
 import { getSteps, findStepIndexForBlock } from '../lib/steps';
@@ -39,32 +43,53 @@ const LANE_GAP_Y = 820;
 
 const typeMeta = new Map(BLOCK_LIBRARY.map((def) => [def.type, def]));
 
+// Ações de edição direto no fluxograma (opcionais — quando ausentes, o card fica
+// só-leitura, ex.: nenhum handler passado). Espelha o padrão de mutação/autosave já
+// usado no Builder (updateSchema + toast de confirmação/desfazer).
+export interface QuizFlowActions {
+  onSelectStep?: (stepId: string) => void;
+  onRenameStep?: (stepId: string, name: string | undefined) => void;
+  onDeleteStep?: (stepId: string) => void;
+  onToggleGoal?: (stepId: string) => void;
+  onInsertStepAfter?: (stepId: string) => void;
+}
+
 // ============ Nó de Etapa: miniatura ao vivo + cabeçalho/rodapé de metadados ============
 
-interface StepNodeData {
+interface StepNodeData extends QuizFlowActions {
   step: QuizStep;
   blocks: QuizBlock[];
   index: number;
   total: number;
   design: QuizDesign;
-  onSelectStep?: (stepId: string) => void;
   [key: string]: unknown;
 }
 
 function StepNode({ data }: { data: StepNodeData }) {
-  const { step, blocks, index, total, design, onSelectStep } = data;
+  const { step, blocks, index, design, onSelectStep, onRenameStep, onDeleteStep, onToggleGoal } = data;
   const dominant = blocks[blocks.length - 1] ?? blocks[0];
   const def = dominant ? typeMeta.get(dominant.type) : undefined;
   const hasConditional = blocks.some((b) => b.showIf?.enabled);
   const hasBranch = blocks.some((b) => (b.options ?? []).some((o) => o.jumpToBlockId) || (b.logicRules?.length ?? 0) > 0);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(step.name ?? '');
   // handles/borda do card usam a cor de marca do PRÓPRIO quiz (design.primary), não a cor
   // genérica da UI do app — mesmo tratamento que o Funilix usa nos handles do fluxograma.
+  // Etapa marcada como meta de conversão ganha um contorno esmeralda em vez da cor de marca.
   const themeHandleStyle = { background: design.background, border: `2px solid ${design.primary}` };
+  const borderColor = step.isGoal ? '#10b98199' : `${design.primary}55`;
+  const boxShadow = step.isGoal ? '0 6px 20px rgba(16,185,129,0.25)' : `0 6px 20px ${design.primary}1a`;
+
+  const commitRename = () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    onRenameStep?.(step.id, trimmed.length > 0 ? trimmed : undefined);
+  };
 
   return (
     <div
       className="rounded-xl border-2 bg-card shadow-md overflow-visible transition-all hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
-      style={{ width: STEP_WIDTH, borderColor: `${design.primary}55`, boxShadow: `0 6px 20px ${design.primary}1a` }}
+      style={{ width: STEP_WIDTH, borderColor, boxShadow }}
       onClick={() => onSelectStep?.(step.id)}
     >
       <Handle type="target" position={Position.Left} className="!w-3 !h-3" style={themeHandleStyle} />
@@ -79,10 +104,31 @@ function StepNode({ data }: { data: StepNodeData }) {
         <span className="flex items-center justify-center h-5 w-5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold shrink-0">
           {index + 1}
         </span>
-        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground truncate">
-          Etapa {index + 1} de {total}
-        </span>
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            placeholder={`Etapa ${index + 1}`}
+            onChange={(e) => setDraft(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') { setDraft(step.name ?? ''); setEditing(false); }
+            }}
+            className="min-w-0 flex-1 rounded border bg-background px-1.5 py-0.5 text-[11px] font-semibold outline-none focus-visible:ring-1 focus-visible:ring-primary"
+          />
+        ) : (
+          <span className="text-[11px] font-bold text-foreground truncate">
+            {step.name || `Etapa ${index + 1}`}
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-1 shrink-0">
+          {step.isGoal && (
+            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
+              Meta
+            </span>
+          )}
           {hasBranch && (
             <span
               className="flex items-center justify-center h-4 w-4 rounded-full bg-amber-500/15 text-amber-500"
@@ -99,6 +145,37 @@ function StepNode({ data }: { data: StepNodeData }) {
               <Eye className="h-2.5 w-2.5" />
             </span>
           )}
+          {(onToggleGoal || onRenameStep || onDeleteStep) && (
+            <div className="flex items-center gap-0.5 border-l pl-1 ml-0.5">
+              {onToggleGoal && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleGoal(step.id); }}
+                  title={step.isGoal ? 'Desmarcar meta de conversão' : 'Marcar etapa como meta de conversão'}
+                  className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${step.isGoal ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                >
+                  <Target className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onRenameStep && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDraft(step.name ?? ''); setEditing(true); }}
+                  title="Renomear etapa"
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onDeleteStep && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteStep(step.id); }}
+                  title="Excluir etapa"
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -110,7 +187,7 @@ function StepNode({ data }: { data: StepNodeData }) {
           style={{ width: SCREEN_WIDTH, background: design.background, fontFamily: design.fontBody }}
         >
           <div className="px-6 pt-6 pb-4">
-            <ProgressBar design={design} value={(index + 1) / Math.max(total, 1)} />
+            <ProgressBar design={design} value={(index + 1) / Math.max(data.total, 1)} />
           </div>
           <div className="px-6 pb-8 flex flex-col gap-8">
             {blocks.map((b) => (
@@ -140,6 +217,39 @@ function StepNode({ data }: { data: StepNodeData }) {
 
 const nodeTypes = { step: StepNode };
 
+// ============ Edge de fluxo principal com botão "+" no meio, pra inserir uma etapa nova
+// direto na conexão — mesmo padrão do "edgeWithButton" que vimos no Funilix. Só as
+// conexões sequenciais ganham o botão (inserir numa ramificação seria ambíguo). ============
+
+interface StepEdgeData {
+  onInsert?: () => void;
+  [key: string]: unknown;
+}
+
+function StepEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, data }: EdgeProps) {
+  const [path, labelX, labelY] = getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  const onInsert = (data as StepEdgeData | undefined)?.onInsert;
+  return (
+    <>
+      <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />
+      {onInsert && (
+        <EdgeLabelRenderer>
+          <button
+            onClick={(e) => { e.stopPropagation(); onInsert(); }}
+            title="Inserir etapa aqui"
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+            className="nodrag nopan pointer-events-auto absolute flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary bg-card text-primary shadow-md transition-transform hover:scale-110 hover:bg-primary hover:text-primary-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
+
+const edgeTypes = { stepEdge: StepEdge };
+
 // ============ Layout: fluxo principal em linha; alvos de ramificação fora de ordem ganham raia própria ============
 
 function computeLayout(steps: QuizStep[], edges: { source: string; target: string; branch: boolean }[]) {
@@ -166,7 +276,7 @@ function computeLayout(steps: QuizStep[], edges: { source: string; target: strin
   return positions;
 }
 
-function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void) {
+function buildGraph(schema: QuizSchema, actions: QuizFlowActions) {
   const steps = getSteps(schema);
   const blocksById = new Map(schema.blocks.map((b) => [b.id, b]));
 
@@ -209,7 +319,7 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
       id: s.id,
       type: 'step',
       position: { x: pos.x, y: pos.y },
-      data: { step: s, blocks: stepBlocks, index: i, total: steps.length, design, onSelectStep },
+      data: { step: s, blocks: stepBlocks, index: i, total: steps.length, design, ...actions },
       draggable: true,
     };
   });
@@ -220,7 +330,8 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
   // arquivo) — bastava marcar animated:true em todas, não só nas de ramificação, pra ganhar
   // o mesmo efeito de "energia fluindo". A sequencial usa a cor de marca do quiz (largo,
   // pontilhado) e a de ramificação um pontilhado mais fino em âmbar — mais um leve brilho
-  // (drop-shadow) nas duas pra um acabamento mais bonito.
+  // (drop-shadow) nas duas pra um acabamento mais bonito. A sequencial também ganha um botão
+  // "+" no meio pra inserir uma etapa nova ali (mesmo padrão do "edgeWithButton" do Funilix).
   const AMBER = '#f59e0b';
   const edges: Edge[] = rawEdges.map((e) => {
     const color = e.branch ? AMBER : design.primary;
@@ -244,7 +355,8 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
       labelBgStyle: { fillOpacity: 0.95, fill: 'var(--card)' },
       labelBgPadding: [5, 3] as [number, number],
       labelBgBorderRadius: 6,
-      type: 'smoothstep',
+      type: e.branch ? 'smoothstep' : 'stepEdge',
+      data: e.branch ? undefined : { onInsert: () => actions.onInsertStepAfter?.(e.source) },
       zIndex: e.branch ? 0 : 1,
     };
   });
@@ -252,16 +364,46 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
   return { nodes, edges };
 }
 
-function FlowCanvas({ schema }: { schema: QuizSchema }) {
+function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlowActions }) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const { nodes: initialNodes, edges } = useMemo(
-    () => buildGraph(schema, (stepId) => setSelectedStepId(stepId)),
-    [schema]
+  const fullActions = useMemo<QuizFlowActions>(
+    () => ({ ...actions, onSelectStep: (stepId) => setSelectedStepId(stepId) }),
+    [actions]
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const { nodes: initialNodes, edges } = useMemo(() => buildGraph(schema, fullActions), [schema, fullActions]);
+  const [nodes, setNodes, onNodesChangeRaw] = useNodesState(initialNodes);
   const { fitView } = useReactFlow();
+  // Só re-posicionar manualmente arrastado é "sagrado" — inserir/excluir uma etapa muda o
+  // índice sequencial de TODAS as etapas depois dela, então preservar a posição de todo mundo
+  // (não só de quem foi arrastado) faria o card novo nascer sobreposto num card antigo, que
+  // ficou "grudado" na coordenada calculada pra um índice que já não é mais o dele.
+  const draggedIds = useRef(new Set<string>());
+
+  const onNodesChange = useCallback(
+    (changes: Parameters<typeof onNodesChangeRaw>[0]) => {
+      for (const change of changes) {
+        if (change.type === 'position' && change.dragging === false) draggedIds.current.add(change.id);
+      }
+      onNodesChangeRaw(changes);
+    },
+    [onNodesChangeRaw]
+  );
+
+  // Sincroniza os nós sempre que o schema muda (ex.: renomear/excluir/inserir etapa): quem já
+  // foi arrastado manualmente mantém a posição; todo o resto sempre segue o layout automático
+  // recalculado, senão ordens antigas ficam ancoradas em coordenadas de um índice que não
+  // existe mais assim que uma etapa é inserida ou removida no meio do fluxo.
+  useEffect(() => {
+    setNodes((prev) => {
+      const posById = new Map(prev.map((n) => [n.id, n.position]));
+      return initialNodes.map((n) =>
+        draggedIds.current.has(n.id) && posById.has(n.id) ? { ...n, position: posById.get(n.id)! } : n
+      );
+    });
+  }, [initialNodes, setNodes]);
 
   const handleReorganize = useCallback(() => {
+    draggedIds.current.clear();
     setNodes(initialNodes);
     window.requestAnimationFrame(() => fitView({ padding: 0.2, duration: 400 }));
   }, [initialNodes, setNodes, fitView]);
@@ -287,6 +429,7 @@ function FlowCanvas({ schema }: { schema: QuizSchema }) {
         edges={edges}
         onNodesChange={onNodesChange}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         minZoom={0.1}
         maxZoom={1.5}
@@ -307,7 +450,7 @@ function FlowCanvas({ schema }: { schema: QuizSchema }) {
       {selectedStep && (
         <div className="absolute top-4 right-4 z-10 w-72 rounded-xl border bg-card shadow-xl">
           <div className="flex items-center justify-between px-3.5 py-2.5 border-b">
-            <p className="text-xs font-bold">Etapa {steps.indexOf(selectedStep) + 1}</p>
+            <p className="text-xs font-bold">{selectedStep.name || `Etapa ${steps.indexOf(selectedStep) + 1}`}</p>
             <button onClick={() => setSelectedStepId(null)} className="text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
@@ -338,10 +481,10 @@ function FlowCanvas({ schema }: { schema: QuizSchema }) {
   );
 }
 
-export function QuizFlowView({ schema }: { schema: QuizSchema }) {
+export function QuizFlowView({ schema, ...actions }: { schema: QuizSchema } & QuizFlowActions) {
   return (
     <ReactFlowProvider>
-      <FlowCanvas schema={schema} />
+      <FlowCanvas schema={schema} actions={actions} />
     </ReactFlowProvider>
   );
 }

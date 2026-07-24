@@ -205,6 +205,8 @@ export interface QuizDesign {
 export interface QuizStep {
   id: string;
   blockIds: string[]; // um ou mais QuizBlock.id, na ordem de exibição dentro da etapa
+  name?: string; // nome customizado (edição via fluxograma); ausente = "Etapa N"
+  isGoal?: boolean; // marcada como meta de conversão (destaque visual no fluxograma)
 }
 
 export interface QuizSchema {
