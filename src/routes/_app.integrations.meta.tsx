@@ -146,6 +146,7 @@ function MetaIntegrationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [previewFormId, setPreviewFormId] = useState<string | null>(null);
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [bulkImportRange, setBulkImportRange] = useState<{ since: string; until: string }>({ since: "", until: "" });
   const [formToDelete, setFormToDelete] = useState<string | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [currentOrigin, setCurrentOrigin] = useState("https://altleadflow.com.br");
@@ -292,6 +293,45 @@ function MetaIntegrationsPage() {
     onSuccess: () => {
       toast.success("Formulários restaurados");
       qc.invalidateQueries({ queryKey: ["meta-forms"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Importa vários formulários de uma vez com a mesma data — hoje o botão
+  // "Importar Dados" só existe por linha; isso conecta a seleção via checkbox
+  // (que antes só alimentava "Remover Selecionados") a uma importação de verdade.
+  // Sequencial (não Promise.all) pra não disparar N chamadas simultâneas contra a
+  // Graph API do Meta de uma vez só.
+  const bulkImportMutation = useMutation({
+    mutationFn: async (input: { formIds: string[]; since: string | null; until: string | null }) => {
+      const results: { formId: string; ok: boolean; error?: string; imported?: number; duplicates?: number; failed?: number }[] = [];
+      for (const formId of input.formIds) {
+        try {
+          const res = await importLeads({
+            data: { formId, since: input.since, until: input.until, limit: 200 },
+          });
+          results.push({ formId, ok: true, imported: res.total_imported, duplicates: res.total_duplicates, failed: res.total_failed });
+        } catch (err) {
+          results.push({ formId, ok: false, error: err instanceof Error ? err.message : String(err) });
+        }
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      const totalImported = results.reduce((sum, r) => sum + (r.imported ?? 0), 0);
+      const totalDuplicates = results.reduce((sum, r) => sum + (r.duplicates ?? 0), 0);
+      const failedForms = results.filter((r) => !r.ok);
+      if (failedForms.length === 0) {
+        toast.success(
+          `Importação concluída para ${results.length} formulário(s): ${totalImported} novo(s), ${totalDuplicates} duplicado(s).`,
+        );
+      } else {
+        toast.warning(
+          `${results.length - failedForms.length}/${results.length} formulário(s) importado(s) (${totalImported} novo(s)). ${failedForms.length} falharam.`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["meta-import-jobs"] });
+      qc.invalidateQueries({ queryKey: ["meta-connection"] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -642,15 +682,52 @@ function MetaIntegrationsPage() {
                             {selectedFormIds.length} selecionado(s)
                           </span>
                         </div>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          className="font-bold h-8"
-                          onClick={() => setIsBulkDeleteOpen(true)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          Remover Selecionados
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="date"
+                            value={bulkImportRange.since}
+                            onChange={(event) => setBulkImportRange((prev) => ({ ...prev, since: event.target.value }))}
+                            className="h-8 text-[11px] px-2 border-primary/10 bg-background"
+                            aria-label="Data inicial da importação em massa"
+                          />
+                          <span className="text-muted-foreground text-xs font-bold">/</span>
+                          <Input
+                            type="date"
+                            value={bulkImportRange.until}
+                            onChange={(event) => setBulkImportRange((prev) => ({ ...prev, until: event.target.value }))}
+                            className="h-8 text-[11px] px-2 border-primary/10 bg-background"
+                            aria-label="Data final da importação em massa"
+                          />
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="font-bold h-8"
+                            disabled={bulkImportMutation.isPending}
+                            onClick={() =>
+                              bulkImportMutation.mutate({
+                                formIds: selectedFormIds,
+                                since: bulkImportRange.since || null,
+                                until: bulkImportRange.until || null,
+                              })
+                            }
+                          >
+                            {bulkImportMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                            ) : (
+                              <DownloadCloud className="h-3.5 w-3.5 mr-2" />
+                            )}
+                            Importar Selecionados
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="font-bold h-8"
+                            onClick={() => setIsBulkDeleteOpen(true)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" />
+                            Remover Selecionados
+                          </Button>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>

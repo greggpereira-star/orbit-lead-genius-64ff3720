@@ -16,11 +16,18 @@ export const Route = createFileRoute('/api/public/cron/meta-retry')({
         }
 
         try {
-          // 1. Buscar jobs falhos nas últimas 24h usando any para ignorar tipos incompletos no schema
+          // Tabela correta é meta_lead_import_jobs (meta_import_jobs nunca existiu —
+          // isso fazia essa query falhar com "relation does not exist" toda vez,
+          // então nenhum job falho jamais foi reprocessado). Também limita por
+          // retry_count pra não tentar pra sempre um job com falha permanente
+          // (token revogado, formulário removido, etc.) — usando any pra ignorar
+          // tipos incompletos no schema.
+          const MAX_RETRY_ATTEMPTS = 5;
           const { data: jobs, error } = await (supabaseAdmin as any)
-            .from('meta_import_jobs')
+            .from('meta_lead_import_jobs')
             .select('*')
             .in('status', ['failed', 'completed_with_errors'])
+            .lt('retry_count', MAX_RETRY_ATTEMPTS)
             .gte('created_at', new Date(Date.now() - 86400000).toISOString())
             .limit(10);
 
@@ -43,6 +50,14 @@ export const Route = createFileRoute('/api/public/cron/meta-retry')({
               results.push({ job_id: job.id, status: 'retried', result: importRes });
             } catch (jobErr: any) {
               results.push({ job_id: job.id, status: 'failed_retry', error: jobErr.message });
+            } finally {
+              // Incrementa sempre (sucesso ou falha) — o job original já foi
+              // atualizado pra 'completed'/'failed' dentro de importMetaFormLeads;
+              // aqui só contabilizamos a tentativa pra não retentar pra sempre.
+              await (supabaseAdmin as any)
+                .from('meta_lead_import_jobs')
+                .update({ retry_count: (job.retry_count ?? 0) + 1 })
+                .eq('id', job.id);
             }
           }
 
