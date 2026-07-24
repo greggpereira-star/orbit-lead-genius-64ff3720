@@ -746,8 +746,15 @@ function BlockView({
   onDraftChange?: (value: unknown) => void;
   saving: boolean;
 }) {
-  const [value, setValue] = useState<unknown>('');
-  const [multi, setMulti] = useState<string[]>([]);
+  // Opções marcadas como "pré-selecionada" no Inspector já chegam marcadas quando a
+  // etapa abre — o inicializador do useState só roda uma vez por instância do bloco
+  // (cada key={b.id} monta um BlockView novo), então isso não sobrescreve escolhas.
+  const [value, setValue] = useState<unknown>(() =>
+    block.type === 'single-choice' ? (block.options ?? []).find((o) => o.preselected)?.id ?? '' : ''
+  );
+  const [multi, setMulti] = useState<string[]>(() =>
+    block.type === 'multi-choice' ? (block.options ?? []).filter((o) => o.preselected).map((o) => o.id) : []
+  );
   const [formValue, setFormValue] = useState({ name: '', email: '', phone: '' });
   const [revealed, setRevealed] = useState(false);
 
@@ -855,12 +862,18 @@ function BlockView({
                 <button
                   key={o.id}
                   onClick={() => {
+                    // Ação por opção (Funilix parity): uma URL externa navega na hora,
+                    // sem passar pelo fluxo normal de avançar etapa.
+                    if (o.actionUrl) {
+                      window.location.href = o.actionUrl;
+                      return;
+                    }
                     setValue(o.id);
                     if (terminal) onSubmit(o.id);
                   }}
                   role="radio"
                   aria-checked={active}
-                  className="w-full text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99] motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
+                  className="w-full flex items-center gap-3 text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99] motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
                   style={{
                     borderRadius: design.radius,
                     borderColor: active ? design.primary : design.surface,
@@ -868,8 +881,12 @@ function BlockView({
                     color: design.text,
                   }}
                 >
-                  {o.emoji && <span className="mr-2">{o.emoji}</span>}
-                  {o.label}
+                  {o.imageUrl ? (
+                    <img src={o.imageUrl} alt="" className="h-10 w-10 rounded-md object-cover shrink-0" />
+                  ) : o.emoji ? (
+                    <span className="shrink-0">{o.emoji}</span>
+                  ) : null}
+                  <span className="min-w-0 flex-1">{o.label}</span>
                 </button>
               );
             })}
@@ -891,7 +908,7 @@ function BlockView({
                     setMulti((m) => (m.includes(o.id) ? m.filter((x) => x !== o.id) : [...m, o.id]))
                   }
                   aria-pressed={active}
-                  className="w-full text-left px-5 py-4 border-2 transition-all"
+                  className="w-full flex items-center gap-3 text-left px-5 py-4 border-2 transition-all"
                   style={{
                     borderRadius: design.radius,
                     borderColor: active ? design.primary : design.surface,
@@ -899,8 +916,12 @@ function BlockView({
                     color: design.text,
                   }}
                 >
-                  {o.emoji && <span className="mr-2">{o.emoji}</span>}
-                  {o.label}
+                  {o.imageUrl ? (
+                    <img src={o.imageUrl} alt="" className="h-10 w-10 rounded-md object-cover shrink-0" />
+                  ) : o.emoji ? (
+                    <span className="shrink-0">{o.emoji}</span>
+                  ) : null}
+                  <span className="min-w-0 flex-1">{o.label}</span>
                 </button>
               );
             })}

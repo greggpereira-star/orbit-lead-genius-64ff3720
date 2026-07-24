@@ -78,7 +78,10 @@ export interface BlockOption {
   value?: string;
   score?: number;
   emoji?: string;
+  imageUrl?: string;      // mídia alternativa ao emoji (uma exclui a outra)
   tag?: string;
+  preselected?: boolean;  // já vem marcada quando a etapa abre
+  actionUrl?: string;     // ao clicar, abre esta URL em vez de avançar o fluxo
   jumpToBlockId?: string; // conditional branching
 }
 

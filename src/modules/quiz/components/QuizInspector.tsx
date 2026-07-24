@@ -1,4 +1,5 @@
-import type { QuizBlock, QuizDesign, BlockVariant, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import { useState } from 'react';
+import type { QuizBlock, QuizDesign, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
 import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks, Eye, CornerDownRight } from 'lucide-react';
+import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks, Eye, CornerDownRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
 import { BLOCK_LIBRARY } from '../blocks-library';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -451,40 +452,23 @@ function BlockInspector({
       {hasOptions && (
         <Section title="Opções" icon={ListChecks}>
           {(block.options ?? []).map((opt, i) => (
-            <div key={opt.id} className="space-y-1">
-              <div className="flex gap-1">
-                <Input
-                  value={opt.label}
-                  onChange={(e) => {
-                    const next = [...(block.options ?? [])];
-                    next[i] = { ...opt, label: e.target.value };
-                    onChange({ options: next });
-                  }}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    const next = (block.options ?? []).filter((o) => o.id !== opt.id);
-                    onChange({ options: next });
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              {block.type === 'single-choice' && (
-                <OptionJumpSelect
-                  allBlocks={allBlocks}
-                  currentBlockId={block.id}
-                  value={opt.jumpToBlockId}
-                  onSelect={(target) => {
-                    const next = [...(block.options ?? [])];
-                    next[i] = { ...opt, jumpToBlockId: target };
-                    onChange({ options: next });
-                  }}
-                />
-              )}
-            </div>
+            <OptionEditor
+              key={opt.id}
+              quizId={quizId}
+              option={opt}
+              blockType={block.type}
+              allBlocks={allBlocks}
+              currentBlockId={block.id}
+              onUpdate={(patch) => {
+                const next = [...(block.options ?? [])];
+                next[i] = { ...opt, ...patch };
+                onChange({ options: next });
+              }}
+              onDelete={() => {
+                const next = (block.options ?? []).filter((o) => o.id !== opt.id);
+                onChange({ options: next });
+              }}
+            />
           ))}
           <Button
             size="sm"
@@ -568,6 +552,192 @@ function OptionJumpSelect({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+function miniChip(active: boolean) {
+  return `rounded-md border px-2 py-1 text-[10.5px] font-medium text-center transition-colors ${
+    active ? 'border-primary bg-primary/10 text-primary' : 'border-input text-muted-foreground hover:border-primary/40 hover:text-foreground'
+  }`;
+}
+
+// Editor de uma opção de escolha (padrão Funilix): cada opção é um mini-bloco com
+// mídia (emoji OU imagem), pré-seleção, pontuação e ação de clique próprias —
+// não só um rótulo de texto. Fica recolhida por padrão pra não pesar a lista
+// quando há muitas opções; expande sob demanda.
+function OptionEditor({
+  quizId,
+  option,
+  blockType,
+  allBlocks,
+  currentBlockId,
+  onUpdate,
+  onDelete,
+}: {
+  quizId: string;
+  option: BlockOption;
+  blockType: QuizBlock['type'];
+  allBlocks: QuizBlock[];
+  currentBlockId: string;
+  onUpdate: (patch: Partial<BlockOption>) => void;
+  onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [mediaTab, setMediaTab] = useState<'none' | 'emoji' | 'image'>(
+    option.imageUrl ? 'image' : option.emoji ? 'emoji' : 'none'
+  );
+  const [actionTab, setActionTab] = useState<'flow' | 'step' | 'url'>(
+    option.actionUrl ? 'url' : option.jumpToBlockId ? 'step' : 'flow'
+  );
+
+  return (
+    <div className="rounded-lg border">
+      <div className="flex items-center gap-1.5 p-1.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted overflow-hidden">
+          {option.imageUrl ? (
+            <img src={option.imageUrl} alt="" className="h-full w-full object-cover" />
+          ) : option.emoji ? (
+            <span className="text-sm">{option.emoji}</span>
+          ) : (
+            <ImageIcon className="h-3 w-3 text-muted-foreground" />
+          )}
+        </div>
+        <Input value={option.label} onChange={(e) => onUpdate({ label: e.target.value })} className="h-8" />
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="shrink-0 text-muted-foreground hover:text-foreground p-1.5"
+          aria-label={expanded ? 'Recolher opção' : 'Mais opções desta alternativa'}
+          title={expanded ? 'Recolher' : 'Mídia, pré-seleção, pontuação, ação ao clicar…'}
+        >
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+        <Button size="sm" variant="ghost" onClick={onDelete} className="h-8 w-8 p-0 shrink-0" aria-label="Excluir opção">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-2.5 p-2.5 pt-0 border-t mt-0">
+          <Field label="Mídia">
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                className={miniChip(mediaTab === 'none')}
+                onClick={() => { setMediaTab('none'); onUpdate({ emoji: undefined, imageUrl: undefined }); }}
+              >
+                Nenhuma
+              </button>
+              <button
+                type="button"
+                className={miniChip(mediaTab === 'emoji')}
+                onClick={() => { setMediaTab('emoji'); onUpdate({ imageUrl: undefined }); }}
+              >
+                Emoji
+              </button>
+              <button
+                type="button"
+                className={miniChip(mediaTab === 'image')}
+                onClick={() => { setMediaTab('image'); onUpdate({ emoji: undefined }); }}
+              >
+                Imagem
+              </button>
+            </div>
+            {mediaTab === 'emoji' && (
+              <Input
+                value={option.emoji ?? ''}
+                onChange={(e) => onUpdate({ emoji: e.target.value })}
+                placeholder="🔥"
+                className="mt-1.5 text-center"
+              />
+            )}
+            {mediaTab === 'image' && (
+              <div className="mt-1.5">
+                <MediaUploader
+                  quizId={quizId}
+                  accept="image"
+                  value={option.imageUrl}
+                  onChange={(url) => onUpdate({ imageUrl: url || undefined })}
+                  compact
+                />
+              </div>
+            )}
+          </Field>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium">Pré-selecionada</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">Já vem marcada quando a etapa abre</p>
+            </div>
+            <Switch checked={!!option.preselected} onCheckedChange={(v) => onUpdate({ preselected: v })} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Pontuação">
+              <Input
+                type="number"
+                value={option.score ?? ''}
+                onChange={(e) => onUpdate({ score: e.target.value === '' ? undefined : Number(e.target.value) })}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Etiqueta (tag)">
+              <Input
+                value={option.tag ?? ''}
+                onChange={(e) => onUpdate({ tag: e.target.value || undefined })}
+                placeholder="ex.: premium"
+              />
+            </Field>
+          </div>
+
+          {blockType === 'single-choice' && (
+            <Field label="Ação ao clicar">
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  className={miniChip(actionTab === 'flow')}
+                  onClick={() => { setActionTab('flow'); onUpdate({ jumpToBlockId: undefined, actionUrl: undefined }); }}
+                >
+                  Seguir fluxo
+                </button>
+                <button
+                  type="button"
+                  className={miniChip(actionTab === 'step')}
+                  onClick={() => { setActionTab('step'); onUpdate({ actionUrl: undefined }); }}
+                >
+                  Etapa específica
+                </button>
+                <button
+                  type="button"
+                  className={miniChip(actionTab === 'url')}
+                  onClick={() => { setActionTab('url'); onUpdate({ jumpToBlockId: undefined }); }}
+                >
+                  URL externa
+                </button>
+              </div>
+              {actionTab === 'step' && (
+                <div className="mt-1.5">
+                  <OptionJumpSelect
+                    allBlocks={allBlocks}
+                    currentBlockId={currentBlockId}
+                    value={option.jumpToBlockId}
+                    onSelect={(target) => onUpdate({ jumpToBlockId: target })}
+                  />
+                </div>
+              )}
+              {actionTab === 'url' && (
+                <Input
+                  className="mt-1.5"
+                  value={option.actionUrl ?? ''}
+                  onChange={(e) => onUpdate({ actionUrl: e.target.value })}
+                  placeholder="https://exemplo.com"
+                />
+              )}
+            </Field>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -256,11 +256,20 @@ export function BlockRenderer({ block, design }: { block: QuizBlock; design: Qui
             {opts.map((o) => (
               <button
                 key={o.id}
-                className="w-full text-left px-4 py-3 border-2 transition-all hover:scale-[1.01]"
-                style={{ borderRadius: design.radius, borderColor: design.surface, color: design.text, background: design.surface }}
+                className="w-full flex items-center gap-2.5 text-left px-4 py-3 border-2 transition-all hover:scale-[1.01]"
+                style={{
+                  borderRadius: design.radius,
+                  borderColor: o.preselected ? design.primary : design.surface,
+                  color: design.text,
+                  background: design.surface,
+                }}
               >
-                {o.emoji && <span className="mr-2">{o.emoji}</span>}
-                {o.label}
+                {o.imageUrl ? (
+                  <img src={o.imageUrl} alt="" className="h-8 w-8 rounded object-cover shrink-0" />
+                ) : o.emoji ? (
+                  <span className="shrink-0">{o.emoji}</span>
+                ) : null}
+                <span className="min-w-0 flex-1">{o.label}</span>
               </button>
             ))}
             {opts.length === 0 && <p className="text-xs opacity-60" style={{ color: design.muted }}>Nenhuma opção — adicione no inspetor.</p>}
