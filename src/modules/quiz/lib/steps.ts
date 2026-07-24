@@ -18,8 +18,11 @@ export function getSteps(schema: { blocks: QuizBlock[]; steps?: QuizStep[] }): Q
       .map((s) => ({ ...s, blockIds: s.blockIds.filter((id) => indexOf.has(id)) }))
       .filter((s) => s.blockIds.length > 0);
     // Qualquer bloco ainda não coberto por nenhuma etapa vira sua própria etapa —
-    // nunca some do builder.
-    const covered = new Set(cleaned.flatMap((s) => s.blockIds));
+    // nunca some do builder. Um bloco "filho" de um Container (childBlockIds)
+    // também conta como coberto: ele nunca entra no blockIds de uma etapa, só na
+    // lista do Container que o contém — sem isso, viraria uma etapa órfã duplicada.
+    const containerChildIds = schema.blocks.flatMap((b) => b.childBlockIds ?? []);
+    const covered = new Set([...cleaned.flatMap((s) => s.blockIds), ...containerChildIds]);
     const orphans = schema.blocks
       .filter((b) => !covered.has(b.id))
       .map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));

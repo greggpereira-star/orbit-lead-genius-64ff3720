@@ -4,7 +4,7 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
-  PhoneCall,
+  PhoneCall, SeparatorHorizontal,
 } from 'lucide-react';
 
 export type BlockCategory =
@@ -16,6 +16,7 @@ export type BlockCategory =
   | 'resultado'
   | 'oferta'
   | 'gamificacao'
+  | 'layout'
   | 'livre';
 
 export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
@@ -27,6 +28,7 @@ export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
   resultado: 'Resultado',
   oferta: 'Oferta',
   gamificacao: 'Gamificação',
+  layout: 'Layout',
   livre: 'Livre',
 };
 
@@ -442,6 +444,29 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       ],
       ctaLabel: 'Continuar',
     }),
+  },
+  {
+    type: 'container',
+    label: 'Container',
+    description: 'Agrupa componentes lado a lado numa etapa',
+    category: 'layout',
+    icon: Columns3,
+    create: () => ({
+      type: 'container',
+      childBlockIds: [],
+      containerLayoutMode: 'flex',
+      containerGap: 16,
+      containerAlign: 'stretch',
+      containerJustify: 'start',
+    }),
+  },
+  {
+    type: 'spacer',
+    label: 'Espaçamento',
+    description: 'Espaço vertical em branco',
+    category: 'layout',
+    icon: SeparatorHorizontal,
+    create: () => ({ type: 'spacer', spacerHeight: 32 }),
   },
   {
     type: 'custom',

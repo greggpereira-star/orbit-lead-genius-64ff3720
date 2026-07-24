@@ -312,14 +312,34 @@ function PlayerRunner({
     return <EmptyState message="Quiz sem blocos" />;
   }
 
-  const allStepValid = visibleStepBlocks.every((b) => stepValidity[b.id] !== false);
+  // Blocos "filhos" de um Container não aparecem em visibleStepBlocks (só o
+  // Container aparece) — "achata" a lista trocando cada Container pelos seus
+  // filhos visíveis, pra validação, pontuação e persistência de resposta
+  // tratarem um bloco dentro de um Container exatamente como um bloco solto.
+  const flatAnswerableBlocks = useMemo(() => {
+    const out: QuizBlock[] = [];
+    for (const b of visibleStepBlocks) {
+      if (b.type === 'container') {
+        out.push(
+          ...(b.childBlockIds ?? [])
+            .map((id) => blocks.find((x) => x.id === id))
+            .filter((child): child is QuizBlock => !!child && isBlockVisible(child, state.responses, scope))
+        );
+      } else {
+        out.push(b);
+      }
+    }
+    return out;
+  }, [visibleStepBlocks, blocks, state.responses, scope]);
+
+  const allStepValid = flatAnswerableBlocks.every((b) => stepValidity[b.id] !== false);
 
   const advanceStep = async (finalDraft: Record<string, unknown>) => {
     let scoreDelta = 0;
     const tags: string[] = [];
     let jumpToBlockId: string | undefined;
     const nextResponses = { ...state.responses };
-    for (const b of visibleStepBlocks) {
+    for (const b of flatAnswerableBlocks) {
       const response = finalDraft[b.id];
       nextResponses[b.id] = response;
       const evaluated = evaluateResponse(b, response);
@@ -346,7 +366,7 @@ function PlayerRunner({
       responses: nextResponses,
       score: state.score + scoreDelta,
       tags: [...state.tags, ...tags],
-      history: [...state.history, ...visibleStepBlocks.map((b) => b.id)],
+      history: [...state.history, ...flatAnswerableBlocks.map((b) => b.id)],
     };
     if (isLastStep) {
       await finish(nextState);
@@ -434,6 +454,30 @@ function PlayerRunner({
             ) : (
               effectiveBlocks.map((b, i) => {
                 const isTerminal = i === effectiveBlocks.length - 1;
+                if (b.type === 'container') {
+                  return (
+                    <ContainerView
+                      key={b.id}
+                      block={b}
+                      allBlocks={blocks}
+                      design={design}
+                      scope={scope}
+                      responses={state.responses}
+                      terminal={isTerminal}
+                      stepValid={allStepValid}
+                      saving={saving}
+                      onValidChange={(childId, valid) =>
+                        setStepValidity((prev) => (prev[childId] === valid ? prev : { ...prev, [childId]: valid }))
+                      }
+                      onDraftChange={(childId, value) => {
+                        if (value !== undefined) draftResponses.current[childId] = value;
+                      }}
+                      onContainerSubmit={() => {
+                        if (isTerminal) void advanceStep({ ...draftResponses.current });
+                      }}
+                    />
+                  );
+                }
                 return (
                   <BlockView
                     key={b.id}
@@ -822,6 +866,90 @@ function PrimaryBtn({
     >
       {children}
     </button>
+  );
+}
+
+const CONTAINER_ALIGN_CSS: Record<string, React.CSSProperties['alignItems']> = {
+  start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch',
+};
+const CONTAINER_JUSTIFY_CSS: Record<string, React.CSSProperties['justifyContent']> = {
+  start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'space-between',
+};
+
+// Renderiza um bloco Container (Funilix parity): reaproveita o BlockView pra cada
+// filho, sempre em modo "rascunho" (terminal=false — nenhum filho avança a etapa
+// sozinho). Se o Container for o bloco terminal da etapa, um único botão
+// "Continuar" compartilhado aparece depois de todos os filhos.
+function ContainerView({
+  block,
+  allBlocks,
+  design,
+  scope,
+  responses,
+  terminal,
+  stepValid,
+  saving,
+  onValidChange,
+  onDraftChange,
+  onContainerSubmit,
+}: {
+  block: QuizBlock;
+  allBlocks: QuizBlock[];
+  design: QuizSchema['design'];
+  scope: VariableScope;
+  responses: Record<string, unknown>;
+  terminal: boolean;
+  stepValid: boolean;
+  saving: boolean;
+  onValidChange: (childId: string, valid: boolean) => void;
+  onDraftChange: (childId: string, value: unknown) => void;
+  onContainerSubmit: () => void;
+}) {
+  const children = (block.childBlockIds ?? [])
+    .map((id) => allBlocks.find((b) => b.id === id))
+    .filter((b): b is QuizBlock => !!b && isBlockVisible(b, responses, scope));
+
+  const isGrid = block.containerLayoutMode === 'grid';
+  const layoutStyle: React.CSSProperties = isGrid
+    ? {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${block.containerColumns ?? 2}, minmax(0, 1fr))`,
+        gap: block.containerGap ?? 16,
+      }
+    : {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: block.containerGap ?? 16,
+        alignItems: CONTAINER_ALIGN_CSS[block.containerAlign ?? 'stretch'],
+        justifyContent: CONTAINER_JUSTIFY_CSS[block.containerJustify ?? 'start'],
+      };
+
+  return (
+    <div className="space-y-6">
+      <div style={layoutStyle}>
+        {children.length === 0 && (
+          <p className="text-sm opacity-50 py-6 text-center w-full">Container vazio</p>
+        )}
+        {children.map((child) => (
+          <div key={child.id} className={isGrid ? undefined : 'flex-1 min-w-[160px]'}>
+            <BlockView
+              block={child}
+              design={design}
+              scope={scope}
+              terminal={false}
+              stepValid={stepValid}
+              saving={saving}
+              onValidChange={(valid) => onValidChange(child.id, valid)}
+              onDraftChange={(value) => onDraftChange(child.id, value)}
+              onSubmit={(value) => onDraftChange(child.id, value)}
+            />
+          </div>
+        ))}
+      </div>
+      <PrimaryBtn design={design} hidden={!terminal} onClick={onContainerSubmit}>
+        {block.ctaLabel || 'Continuar'}
+      </PrimaryBtn>
+    </div>
   );
 }
 
@@ -1255,6 +1383,16 @@ function BlockView({
       return (
         <div className="py-6">
           <div className="h-px w-full mb-6" style={{ background: design.surface }} />
+          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+            Continuar
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'spacer':
+      return (
+        <div>
+          <div style={{ height: block.spacerHeight ?? 32 }} />
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             Continuar
           </PrimaryBtn>

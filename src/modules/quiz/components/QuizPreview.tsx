@@ -144,7 +144,7 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                                       <Eye className="h-2.5 w-2.5" /> condicional
                                     </div>
                                   )}
-                                  <BlockRenderer block={b} design={design} />
+                                  <BlockRenderer block={b} design={design} allBlocks={blocks} />
                                 </div>
                               )}
                             </Draggable>
@@ -207,7 +207,7 @@ function Btn({ design, children }: { design: QuizDesign; children: React.ReactNo
   return <button className={`px-6 py-3 font-semibold transition-all text-sm${className ? ` ${className}` : ''}`} style={style}>{children}</button>;
 }
 
-export function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign }) {
+export function BlockRenderer({ block, design, allBlocks }: { block: QuizBlock; design: QuizDesign; allBlocks?: QuizBlock[] }) {
   const title = block.title || '(sem título)';
   const sub = block.subtitle;
 
@@ -413,6 +413,34 @@ export function BlockRenderer({ block, design }: { block: QuizBlock; design: Qui
           <div className="h-px w-full" style={{ background: design.surface }} />
         </div>
       );
+
+    case 'spacer':
+      return <div style={{ height: block.spacerHeight ?? 32 }} />;
+
+    case 'container': {
+      const children = (block.childBlockIds ?? [])
+        .map((id) => (allBlocks ?? []).find((b) => b.id === id))
+        .filter((b): b is QuizBlock => !!b);
+      const isGrid = block.containerLayoutMode === 'grid';
+      const layoutStyle: React.CSSProperties = isGrid
+        ? { display: 'grid', gridTemplateColumns: `repeat(${block.containerColumns ?? 2}, minmax(0, 1fr))`, gap: block.containerGap ?? 16 }
+        : { display: 'flex', flexWrap: 'wrap', gap: block.containerGap ?? 16 };
+      return (
+        <div style={layoutStyle}>
+          {children.length === 0 ? (
+            <div className="w-full rounded-lg border border-dashed py-6 text-center text-xs" style={{ borderColor: design.muted, color: design.muted }}>
+              Container vazio
+            </div>
+          ) : (
+            children.map((child) => (
+              <div key={child.id} className={isGrid ? undefined : 'flex-1 min-w-[120px]'}>
+                <BlockRenderer block={child} design={design} allBlocks={allBlocks} />
+              </div>
+            ))
+          )}
+        </div>
+      );
+    }
 
     case 'argument':
       return (

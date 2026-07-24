@@ -43,7 +43,7 @@ import { getSteps } from '@/modules/quiz/lib/steps';
 import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from '@/modules/quiz/types';
 
 const CATEGORY_ORDER: BlockCategory[] = [
-  'captura', 'conteudo', 'interacao', 'oferta', 'gamificacao', 'midia', 'prova', 'resultado', 'livre',
+  'captura', 'conteudo', 'interacao', 'oferta', 'gamificacao', 'midia', 'prova', 'resultado', 'layout', 'livre',
 ];
 
 export const Route = createFileRoute('/_app/quizzes_/$id/builder')({
@@ -123,8 +123,11 @@ function QuizBuilderPage() {
       const cleaned = rawSteps
         .map((s) => ({ ...s, blockIds: s.blockIds.filter((id) => existing.has(id)) }))
         .filter((s) => s.blockIds.length > 0);
-      // reanexa qualquer bloco que ficou de fora
-      const covered = new Set(cleaned.flatMap((s) => s.blockIds));
+      // reanexa qualquer bloco que ficou de fora — mas um bloco "filho" de algum
+      // Container (childBlockIds) também conta como coberto: ele nunca aparece no
+      // blockIds de uma etapa, só na lista do Container que o contém.
+      const containerChildIds = prev.blocks.flatMap((b) => b.childBlockIds ?? []);
+      const covered = new Set([...cleaned.flatMap((s) => s.blockIds), ...containerChildIds]);
       const orphanSteps = prev.blocks
         .filter((b) => !covered.has(b.id))
         .map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));
@@ -182,22 +185,32 @@ function QuizBuilderPage() {
     const removed = schema.blocks[index];
     if (!removed) return;
     const ownerStepIndex = steps.findIndex((s) => s.blockIds.includes(target));
+    // Excluir um Container leva seus filhos junto (como excluir uma pasta) — o
+    // Desfazer restaura os dois, já que `removed.childBlockIds` continua intacto.
+    const cascadeIds = removed.type === 'container' ? (removed.childBlockIds ?? []) : [];
+    const removedCascade = cascadeIds
+      .map((id) => schema.blocks.find((b) => b.id === id))
+      .filter((b): b is QuizBlock => !!b);
+    const idsToRemove = new Set([target, ...cascadeIds]);
     updateSchema((prev) => ({
       ...prev,
-      blocks: prev.blocks.filter((b) => b.id !== target),
+      blocks: prev.blocks
+        .filter((b) => !idsToRemove.has(b.id))
+        // se o bloco excluído era filho de outro Container, tira a referência de lá também
+        .map((b) => (b.childBlockIds?.includes(target) ? { ...b, childBlockIds: b.childBlockIds.filter((id) => id !== target) } : b)),
       steps: (prev.steps ?? [])
         .map((s) => (s.blockIds.includes(target) ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) } : s))
         .filter((s) => s.blockIds.length > 0),
     }));
     if (target === activeBlockId) setActiveBlockId(null);
-    toast('Bloco excluído', {
+    toast(cascadeIds.length > 0 ? `Container e ${cascadeIds.length} componente(s) excluídos` : 'Bloco excluído', {
       description: removed.title || removed.resultTitle || removed.type,
       action: {
         label: 'Desfazer',
         onClick: () => {
           updateSchema((prev) => {
             const nextBlocks = Array.from(prev.blocks);
-            nextBlocks.splice(index, 0, removed);
+            nextBlocks.splice(index, 0, removed, ...removedCascade);
             const nextSteps = getSteps({ blocks: prev.blocks, steps: prev.steps });
             const restoredSteps = Array.from(nextSteps);
             if (ownerStepIndex >= 0 && ownerStepIndex <= restoredSteps.length) {
@@ -211,6 +224,65 @@ function QuizBuilderPage() {
         },
       },
     });
+  };
+
+  // Move um bloco existente (de qualquer etapa) pra dentro de um Container — tira
+  // do blockIds da etapa de origem e acrescenta ao childBlockIds do Container.
+  const moveBlockIntoContainer = (blockId: string, containerId: string) => {
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((b) =>
+        b.id === containerId ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), blockId] } : b
+      ),
+      steps: (prev.steps ?? [])
+        .map((s) => (s.blockIds.includes(blockId) ? { ...s, blockIds: s.blockIds.filter((id) => id !== blockId) } : s))
+        .filter((s) => s.blockIds.length > 0),
+    }));
+  };
+
+  // Tira um bloco de dentro de um Container e devolve pra ele sua própria etapa,
+  // logo depois da etapa do Container (sem excluir o bloco).
+  const removeChildFromContainer = (blockId: string, containerId: string) => {
+    const containerStepIndex = steps.findIndex((s) => s.blockIds.includes(containerId));
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((b) =>
+        b.id === containerId ? { ...b, childBlockIds: (b.childBlockIds ?? []).filter((id) => id !== blockId) } : b
+      ),
+      steps: [
+        ...(prev.steps ?? []).slice(0, containerStepIndex + 1),
+        { id: `step-${blockId}`, blockIds: [blockId] },
+        ...(prev.steps ?? []).slice(containerStepIndex + 1),
+      ],
+    }));
+  };
+
+  const reorderContainerChildren = (containerId: string, fromIndex: number, toIndex: number) => {
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((b) => {
+        if (b.id !== containerId) return b;
+        const next = Array.from(b.childBlockIds ?? []);
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        return { ...b, childBlockIds: next };
+      }),
+    }));
+  };
+
+  // Cria um bloco novo já direto como filho de um Container (não vira etapa própria).
+  const addChildToContainer = (containerId: string, defIndex: number) => {
+    const def = BLOCK_LIBRARY[defIndex];
+    const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
+    updateSchema((prev) => ({
+      ...prev,
+      blocks: [
+        ...prev.blocks.map((b) =>
+          b.id === containerId ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), newBlock.id] } : b
+        ),
+        newBlock,
+      ],
+    }));
   };
 
   const toggleStepExpanded = (stepId: string) => {
@@ -763,10 +835,17 @@ function QuizBuilderPage() {
           quizId={id}
           block={activeBlock}
           blocks={schema.blocks}
+          steps={steps}
           design={schema.design}
           onChangeBlock={patchBlock}
           onDeleteBlock={() => deleteBlock()}
           onChangeDesign={(patch) => updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))}
+          onMoveBlockIntoContainer={moveBlockIntoContainer}
+          onRemoveChildFromContainer={removeChildFromContainer}
+          onReorderContainerChildren={reorderContainerChildren}
+          onAddChildToContainer={addChildToContainer}
+          onDeleteChildBlock={deleteBlock}
+          onSelectBlock={(blockId) => setActiveBlockId(blockId)}
           className="hidden lg:block w-80 border-l bg-card overflow-y-auto"
         />
       </div>
@@ -790,10 +869,17 @@ function QuizBuilderPage() {
             quizId={id}
             block={activeBlock}
             blocks={schema.blocks}
+            steps={steps}
             design={schema.design}
             onChangeBlock={patchBlock}
             onDeleteBlock={() => deleteBlock()}
             onChangeDesign={(patch) => updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))}
+            onMoveBlockIntoContainer={moveBlockIntoContainer}
+            onRemoveChildFromContainer={removeChildFromContainer}
+            onReorderContainerChildren={reorderContainerChildren}
+            onAddChildToContainer={addChildToContainer}
+            onDeleteChildBlock={deleteBlock}
+            onSelectBlock={(blockId) => setActiveBlockId(blockId)}
             className="w-full"
           />
         </SheetContent>

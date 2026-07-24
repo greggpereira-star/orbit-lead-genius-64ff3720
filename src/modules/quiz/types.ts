@@ -71,7 +71,10 @@ export type BlockType =
   | 'carousel'
   | 'comparison'
   | 'chart'
-  | 'custom';
+  | 'custom'
+  // Layout (Funilix parity)
+  | 'container'
+  | 'spacer';
 
 export interface BlockOption {
   id: string;
@@ -187,6 +190,19 @@ export interface QuizBlock {
   // disponível em qualquer texto do quiz via {{nome}}, ou em fórmulas via calc(nome).
   // Ausente = bloco não exporta variável (comportamento de hoje, sem mudança).
   outputVariable?: string;
+  // Layout — Container (Funilix parity): agrupa outros blocos lado a lado (ou em
+  // grade) dentro de uma única etapa, em vez de cada um virar sua própria tela.
+  // Os ids em childBlockIds continuam existindo em schema.blocks normalmente, mas
+  // NÃO aparecem em nenhum QuizStep.blockIds — o Container é a única referência a
+  // eles, e é ele quem entra no blockIds da etapa.
+  childBlockIds?: string[];
+  containerLayoutMode?: 'flex' | 'grid';
+  containerColumns?: number; // usado só no modo grid: 1 | 2 | 3 | 4 | 6
+  containerGap?: number; // px
+  containerAlign?: 'start' | 'center' | 'end' | 'stretch'; // align-items
+  containerJustify?: 'start' | 'center' | 'end' | 'stretch'; // justify-content
+  // Layout — Espaçamento: bloco "vazio" que só ocupa altura vertical.
+  spacerHeight?: number; // px
 }
 
 export interface FaqItem {

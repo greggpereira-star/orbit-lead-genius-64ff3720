@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import type { QuizBlock, QuizDesign, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
 import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,18 +23,43 @@ interface Props {
   quizId: string;
   block: QuizBlock | null;
   blocks?: QuizBlock[];
+  steps?: QuizStep[];
   design: QuizDesign;
   onChangeBlock: (patch: Partial<QuizBlock>) => void;
   onDeleteBlock: () => void;
   onChangeDesign: (patch: Partial<QuizDesign>) => void;
+  onMoveBlockIntoContainer?: (blockId: string, containerId: string) => void;
+  onRemoveChildFromContainer?: (blockId: string, containerId: string) => void;
+  onReorderContainerChildren?: (containerId: string, fromIndex: number, toIndex: number) => void;
+  onAddChildToContainer?: (containerId: string, defIndex: number) => void;
+  onDeleteChildBlock?: (blockId: string) => void;
+  onSelectBlock?: (blockId: string) => void;
   className?: string;
 }
 
-export function QuizInspector({ quizId, block, blocks, design, onChangeBlock, onDeleteBlock, onChangeDesign, className }: Props) {
+export function QuizInspector({
+  quizId, block, blocks, steps, design, onChangeBlock, onDeleteBlock, onChangeDesign,
+  onMoveBlockIntoContainer, onRemoveChildFromContainer, onReorderContainerChildren, onAddChildToContainer, onDeleteChildBlock,
+  onSelectBlock,
+  className,
+}: Props) {
   return (
     <div className={className ?? 'w-80 border-l bg-card overflow-y-auto'}>
       {block ? (
-        <BlockInspector quizId={quizId} block={block} allBlocks={blocks ?? []} onChange={onChangeBlock} onDelete={onDeleteBlock} />
+        <BlockInspector
+          quizId={quizId}
+          block={block}
+          allBlocks={blocks ?? []}
+          allSteps={steps ?? []}
+          onChange={onChangeBlock}
+          onDelete={onDeleteBlock}
+          onMoveBlockIntoContainer={onMoveBlockIntoContainer}
+          onRemoveChildFromContainer={onRemoveChildFromContainer}
+          onReorderContainerChildren={onReorderContainerChildren}
+          onAddChildToContainer={onAddChildToContainer}
+          onDeleteChildBlock={onDeleteChildBlock}
+          onSelectBlock={onSelectBlock}
+        />
       ) : (
         <DesignInspector design={design} onChange={onChangeDesign} />
       )}
@@ -46,18 +71,35 @@ function BlockInspector({
   quizId,
   block,
   allBlocks,
+  allSteps,
   onChange,
   onDelete,
+  onMoveBlockIntoContainer,
+  onRemoveChildFromContainer,
+  onReorderContainerChildren,
+  onAddChildToContainer,
+  onDeleteChildBlock,
+  onSelectBlock,
 }: {
   quizId: string;
   block: QuizBlock;
   allBlocks: QuizBlock[];
+  allSteps: QuizStep[];
   onChange: (p: Partial<QuizBlock>) => void;
   onDelete: () => void;
+  onMoveBlockIntoContainer?: (blockId: string, containerId: string) => void;
+  onRemoveChildFromContainer?: (blockId: string, containerId: string) => void;
+  onReorderContainerChildren?: (containerId: string, fromIndex: number, toIndex: number) => void;
+  onAddChildToContainer?: (containerId: string, defIndex: number) => void;
+  onDeleteChildBlock?: (blockId: string) => void;
+  onSelectBlock?: (blockId: string) => void;
 }) {
   const hasOptions = block.type === 'single-choice' || block.type === 'multi-choice';
   const hasMedia = ['intro', 'image', 'audio', 'video', 'before-after', 'testimonial', 'carousel', 'audio-call'].includes(block.type);
   const def = BLOCK_LIBRARY.find((d) => d.type === block.type);
+  // Se este bloco é filho de algum Container, mostra um atalho pra voltar pro pai
+  // — do contrário fica fácil "perder" o bloco depois de entrar pra editá-lo.
+  const parentContainer = allBlocks.find((b) => b.childBlockIds?.includes(block.id));
 
   const ctaEligible = [
     'intro', 'cta', 'result', 'short-text', 'long-text', 'email', 'phone',
@@ -68,6 +110,15 @@ function BlockInspector({
 
   return (
     <div className="p-4 space-y-5">
+      {parentContainer && (
+        <button
+          type="button"
+          onClick={() => onSelectBlock?.(parentContainer.id)}
+          className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary"
+        >
+          <ChevronRight className="h-3 w-3 rotate-180" /> Dentro do Container
+        </button>
+      )}
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
           {def ? <def.icon className="h-4 w-4 text-primary" /> : <LayoutGrid className="h-4 w-4 text-primary" />}
@@ -97,7 +148,7 @@ function BlockInspector({
               <Textarea rows={4} value={block.resultBody ?? ''} onChange={(e) => onChange({ resultBody: e.target.value })} />
             </Field>
           </>
-        ) : block.type === 'custom' ? null : (
+        ) : block.type === 'custom' || block.type === 'container' || block.type === 'spacer' ? null : (
           <>
             <Field label="Título">
               <Input value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} />
@@ -342,6 +393,65 @@ function BlockInspector({
           </>
         )}
 
+        {block.type === 'spacer' && (
+          <Field label={`Altura: ${block.spacerHeight ?? 32}px`}>
+            <Slider min={8} max={160} step={8} value={[block.spacerHeight ?? 32]} onValueChange={([v]) => onChange({ spacerHeight: v })} />
+          </Field>
+        )}
+
+        {block.type === 'container' && (
+          <>
+            <Field label="Modo de layout">
+              <div className="grid grid-cols-2 gap-1.5">
+                <button type="button" className={miniChip(block.containerLayoutMode !== 'grid')} onClick={() => onChange({ containerLayoutMode: 'flex' })}>
+                  Flex
+                </button>
+                <button type="button" className={miniChip(block.containerLayoutMode === 'grid')} onClick={() => onChange({ containerLayoutMode: 'grid' })}>
+                  Grid
+                </button>
+              </div>
+            </Field>
+            {block.containerLayoutMode === 'grid' && (
+              <Field label="Colunas">
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[1, 2, 3, 4, 6].map((n) => (
+                    <button key={n} type="button" className={miniChip(block.containerColumns === n)} onClick={() => onChange({ containerColumns: n })}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
+            <Field label="Espaçamento">
+              <div className="grid grid-cols-6 gap-1.5">
+                {[8, 12, 16, 24, 32, 40].map((n) => (
+                  <button key={n} type="button" className={miniChip((block.containerGap ?? 16) === n)} onClick={() => onChange({ containerGap: n })}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Alinhamento (vertical)">
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['start', 'center', 'end', 'stretch'] as const).map((v) => (
+                  <button key={v} type="button" className={miniChip((block.containerAlign ?? 'stretch') === v)} onClick={() => onChange({ containerAlign: v })}>
+                    {ALIGN_LABELS[v]}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Justificação (horizontal)">
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['start', 'center', 'end', 'stretch'] as const).map((v) => (
+                  <button key={v} type="button" className={miniChip((block.containerJustify ?? 'start') === v)} onClick={() => onChange({ containerJustify: v })}>
+                    {ALIGN_LABELS[v]}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </>
+        )}
+
         {block.type === 'reveal' && (
           <>
             <Field label="Texto do botão de revelar">
@@ -516,6 +626,20 @@ function BlockInspector({
         </Section>
       )}
 
+      {block.type === 'container' && (
+        <ContainerChildrenSection
+          block={block}
+          allBlocks={allBlocks}
+          allSteps={allSteps}
+          onMoveBlockIntoContainer={onMoveBlockIntoContainer}
+          onRemoveChildFromContainer={onRemoveChildFromContainer}
+          onReorderContainerChildren={onReorderContainerChildren}
+          onAddChildToContainer={onAddChildToContainer}
+          onDeleteChildBlock={onDeleteChildBlock}
+          onSelectBlock={onSelectBlock}
+        />
+      )}
+
       {hasOptions && (
         <Section title="Opções" icon={ListChecks}>
           {(block.options ?? []).map((opt, i) => (
@@ -622,6 +746,148 @@ function OptionJumpSelect({
     </div>
   );
 }
+
+// Gestão dos componentes-filhos de um Container (Funilix parity): como o Builder
+// não tem drag-and-drop pra dentro de um bloco aninhado, a composição é feita por
+// aqui — adicionar um componente novo direto dentro, mover um bloco que já existe
+// na mesma etapa pra dentro, reordenar e remover (sem excluir) ou excluir de vez.
+function ContainerChildrenSection({
+  block,
+  allBlocks,
+  allSteps,
+  onMoveBlockIntoContainer,
+  onRemoveChildFromContainer,
+  onReorderContainerChildren,
+  onAddChildToContainer,
+  onDeleteChildBlock,
+  onSelectBlock,
+}: {
+  block: QuizBlock;
+  allBlocks: QuizBlock[];
+  allSteps: QuizStep[];
+  onMoveBlockIntoContainer?: (blockId: string, containerId: string) => void;
+  onRemoveChildFromContainer?: (blockId: string, containerId: string) => void;
+  onReorderContainerChildren?: (containerId: string, fromIndex: number, toIndex: number) => void;
+  onAddChildToContainer?: (containerId: string, defIndex: number) => void;
+  onDeleteChildBlock?: (blockId: string) => void;
+  onSelectBlock?: (blockId: string) => void;
+}) {
+  const childIds = block.childBlockIds ?? [];
+  const children = childIds.map((id) => allBlocks.find((b) => b.id === id)).filter((b): b is QuizBlock => !!b);
+
+  const ownerStep = allSteps.find((s) => s.blockIds.includes(block.id));
+  const siblingOptions = (ownerStep?.blockIds ?? [])
+    .filter((id) => id !== block.id)
+    .map((id) => allBlocks.find((b) => b.id === id))
+    .filter((b): b is QuizBlock => !!b);
+
+  const addableDefs = BLOCK_LIBRARY.filter((d) => d.type !== 'container');
+
+  return (
+    <Section title="Componentes dentro" icon={LayoutGrid}>
+      {children.length === 0 && (
+        <p className="text-xs text-muted-foreground leading-snug">
+          Container vazio. Adicione um componente novo ou mova um que já existe nesta etapa pra dentro dele.
+        </p>
+      )}
+      <div className="space-y-1.5">
+        {children.map((child, i) => {
+          const def = BLOCK_LIBRARY.find((d) => d.type === child.type);
+          return (
+            <div key={child.id} className="flex items-center gap-1.5 rounded-lg border p-1.5">
+              <button
+                type="button"
+                onClick={() => onSelectBlock?.(child.id)}
+                className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-primary"
+                title="Editar este componente"
+              >
+                {def && <def.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                <span className="min-w-0 flex-1 truncate text-xs">
+                  {child.title || child.resultTitle || def?.label || child.type}
+                </span>
+              </button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                disabled={i === 0}
+                aria-label="Mover para cima"
+                onClick={() => onReorderContainerChildren?.(block.id, i, i - 1)}
+              >
+                <ChevronRight className="h-3 w-3 -rotate-90" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                disabled={i === children.length - 1}
+                aria-label="Mover para baixo"
+                onClick={() => onReorderContainerChildren?.(block.id, i, i + 1)}
+              >
+                <ChevronRight className="h-3 w-3 rotate-90" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                aria-label="Tirar do container (vira etapa própria)"
+                title="Tirar do container"
+                onClick={() => onRemoveChildFromContainer?.(child.id, block.id)}
+              >
+                <CornerDownRight className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                aria-label="Excluir componente"
+                onClick={() => onDeleteChildBlock?.(child.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+
+      <Field label="Adicionar componente novo">
+        <Select onValueChange={(v) => onAddChildToContainer?.(block.id, Number(v))}>
+          <SelectTrigger><SelectValue placeholder="Escolher tipo…" /></SelectTrigger>
+          <SelectContent>
+            {addableDefs.map((d) => (
+              <SelectItem key={d.type} value={String(BLOCK_LIBRARY.indexOf(d))}>{d.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+
+      {siblingOptions.length > 0 && (
+        <Field label="Mover bloco existente pra dentro">
+          <Select onValueChange={(v) => onMoveBlockIntoContainer?.(v, block.id)}>
+            <SelectTrigger><SelectValue placeholder="Escolher bloco desta etapa…" /></SelectTrigger>
+            <SelectContent>
+              {siblingOptions.map((b) => {
+                const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+                return (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.title || b.resultTitle || def?.label || b.type}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
+    </Section>
+  );
+}
+
+const ALIGN_LABELS: Record<'start' | 'center' | 'end' | 'stretch', string> = {
+  start: 'Início',
+  center: 'Centro',
+  end: 'Fim',
+  stretch: 'Esticar',
+};
 
 function miniChip(active: boolean) {
   return `rounded-md border px-2 py-1 text-[10.5px] font-medium text-center transition-colors ${
