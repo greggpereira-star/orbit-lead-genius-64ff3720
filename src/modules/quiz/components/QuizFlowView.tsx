@@ -214,30 +214,40 @@ function buildGraph(schema: QuizSchema, onSelectStep?: (stepId: string) => void)
     };
   });
 
-  const edges: Edge[] = rawEdges.map((e) => ({
-    id: `${e.source}->${e.target}::${e.label ?? ''}`,
-    source: e.source,
-    target: e.target,
-    sourceHandle: e.branch ? 'branch-source' : undefined,
-    targetHandle: e.branch ? 'branch-target' : undefined,
-    label: e.label,
-    animated: e.branch,
-    style: e.branch
-      ? { stroke: 'hsl(38 92% 50%)', strokeWidth: 2 }
-      : { stroke: 'var(--primary)', strokeWidth: 2.5 },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 18,
-      height: 18,
-      color: e.branch ? 'hsl(38 92% 50%)' : 'var(--primary)',
-    },
-    labelStyle: { fontSize: 10, fill: 'hsl(38 92% 40%)', fontWeight: 700 },
-    labelBgStyle: { fillOpacity: 0.95, fill: 'var(--card)' },
-    labelBgPadding: [5, 3] as [number, number],
-    labelBgBorderRadius: 6,
-    type: 'smoothstep',
-    zIndex: e.branch ? 0 : 1,
-  }));
+  // Conexões animadas (pontilhado "andando" pela linha): inspecionamos o DOM do fluxograma
+  // do Funilix e confirmamos que TODA conexão usa stroke-dasharray + a animação
+  // @keyframes dashdraw já embutida no CSS padrão do React Flow (importado no topo deste
+  // arquivo) — bastava marcar animated:true em todas, não só nas de ramificação, pra ganhar
+  // o mesmo efeito de "energia fluindo". A sequencial usa a cor de marca do quiz (largo,
+  // pontilhado) e a de ramificação um pontilhado mais fino em âmbar — mais um leve brilho
+  // (drop-shadow) nas duas pra um acabamento mais bonito.
+  const AMBER = '#f59e0b';
+  const edges: Edge[] = rawEdges.map((e) => {
+    const color = e.branch ? AMBER : design.primary;
+    return {
+      id: `${e.source}->${e.target}::${e.label ?? ''}`,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.branch ? 'branch-source' : undefined,
+      targetHandle: e.branch ? 'branch-target' : undefined,
+      label: e.label,
+      animated: true,
+      style: {
+        stroke: color,
+        strokeWidth: e.branch ? 2.5 : 3,
+        strokeDasharray: e.branch ? '2 6' : '8 5',
+        strokeLinecap: 'round' as const,
+        filter: `drop-shadow(0 0 4px ${color}99)`,
+      },
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color },
+      labelStyle: { fontSize: 10, fill: e.branch ? '#b45309' : color, fontWeight: 700 },
+      labelBgStyle: { fillOpacity: 0.95, fill: 'var(--card)' },
+      labelBgPadding: [5, 3] as [number, number],
+      labelBgBorderRadius: 6,
+      type: 'smoothstep',
+      zIndex: e.branch ? 0 : 1,
+    };
+  });
 
   return { nodes, edges };
 }
