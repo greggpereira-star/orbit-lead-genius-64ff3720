@@ -956,7 +956,11 @@ function ContainerView({
           <p className="text-sm opacity-50 py-6 text-center w-full">Container vazio</p>
         )}
         {children.map((child) => (
-          <div key={child.id} className={isGrid ? undefined : 'flex-1 min-w-[160px]'}>
+          <div
+            key={child.id}
+            className={`h-full overflow-hidden flex flex-col justify-center ${isGrid ? '' : 'flex-1 min-w-[160px]'}`}
+            style={{ background: design.surface, borderRadius: design.radius, padding: 20 }}
+          >
             <BlockView
               block={child}
               design={design}

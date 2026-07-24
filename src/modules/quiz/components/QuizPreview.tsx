@@ -458,7 +458,11 @@ export function BlockRenderer({
             </div>
           ) : (
             children.map((child) => (
-              <div key={child.id} className={isGrid ? undefined : 'flex-1 min-w-[120px]'}>
+              <div
+                key={child.id}
+                className={`h-full overflow-hidden flex flex-col justify-center ${isGrid ? '' : 'flex-1 min-w-[120px]'}`}
+                style={{ background: design.surface, borderRadius: design.radius, padding: 16 }}
+              >
                 <BlockRenderer block={child} design={design} allBlocks={allBlocks} device={device} />
               </div>
             ))
