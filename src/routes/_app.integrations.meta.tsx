@@ -481,10 +481,13 @@ function MetaIntegrationsPage() {
                         {p.subscribed ? (
                           <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 font-bold">
                             <Power className="w-3 h-3 mr-1" />
-                            Ativo
+                            Webhook ativo
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="font-bold">Inativo</Badge>
+                          <Badge variant="secondary" className="font-bold">
+                            <PowerOff className="w-3 h-3 mr-1" />
+                            Webhook inativo
+                          </Badge>
                         )}
                         <div className="flex flex-wrap items-center gap-2">
                           <Button
@@ -501,13 +504,22 @@ function MetaIntegrationsPage() {
                             )}
                             Sincronizar formulários
                           </Button>
-                          <Switch
-                            checked={p.subscribed}
-                            onCheckedChange={(checked) =>
-                              subMutation.mutate({ pageId: p.page_id, subscribe: checked })
-                            }
-                            disabled={subMutation.isPending}
-                          />
+                          <div
+                            className="flex h-5 w-9 items-center justify-center"
+                            title={p.subscribed ? "Desativar recebimento automático de leads em tempo real" : "Ativar recebimento automático de leads em tempo real (webhook)"}
+                          >
+                            {subMutation.isPending && subMutation.variables?.pageId === p.page_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            ) : (
+                              <Switch
+                                checked={p.subscribed}
+                                onCheckedChange={(checked) =>
+                                  subMutation.mutate({ pageId: p.page_id, subscribe: checked })
+                                }
+                                disabled={subMutation.isPending}
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
