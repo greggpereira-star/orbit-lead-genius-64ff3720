@@ -5,6 +5,7 @@ import { quizService } from '../services/quizService';
 import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
+import { getButtonStyle } from '../lib/buttonStyles';
 import { resolveScope, interpolateText, type VariableScope } from '../lib/variables';
 import {
   createInitialState,
@@ -810,24 +811,12 @@ function PrimaryBtn({
   hidden?: boolean;
 }) {
   if (hidden) return null;
-  const style: React.CSSProperties = { borderRadius: design.radius };
-  if (design.buttonStyle === 'gradient') {
-    style.background = `linear-gradient(135deg, ${design.primary}, ${design.primary}cc)`;
-    style.color = getContrastText(design.primary);
-  } else if (design.buttonStyle === 'outline') {
-    style.border = `2px solid ${design.primary}`;
-    style.color = design.primary;
-  } else if (design.buttonStyle === 'ghost') {
-    style.color = design.primary;
-  } else {
-    style.background = design.primary;
-    style.color = getContrastText(design.primary);
-  }
+  const { style, className } = getButtonStyle(design);
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full sm:w-auto px-8 py-3.5 font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      className={`w-full sm:w-auto px-8 py-3.5 font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${className ? ` ${className}` : ''}`}
       style={{ ...style, outlineColor: design.primary }}
     >
       {children}

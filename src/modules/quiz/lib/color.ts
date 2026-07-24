@@ -10,6 +10,29 @@ export function getContrastText(hex: string): string {
   return luminance > 0.45 ? '#1a1a1a' : '#ffffff';
 }
 
+/** Clareia `hex` em direção ao branco por `amount` (0-1). Usado pelos estilos de
+ * botão com gradiente/relevo (ex.: topo mais claro de um botão "Cápsula"). */
+export function lighten(hex: string, amount: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const mix = (c: number) => Math.round(c + (255 - c) * amount);
+  return rgbToHex(mix(rgb.r), mix(rgb.g), mix(rgb.b));
+}
+
+/** Escurece `hex` em direção ao preto por `amount` (0-1). Usado pra simular a
+ * "borda inferior" de um botão 3D/relevo sem precisar de uma segunda cor configurável. */
+export function darken(hex: string, amount: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const mix = (c: number) => Math.round(c * (1 - amount));
+  return rgbToHex(mix(rgb.r), mix(rgb.g), mix(rgb.b));
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (c: number) => Math.max(0, Math.min(255, c));
+  return `#${[r, g, b].map((c) => clamp(c).toString(16).padStart(2, '0')).join('')}`;
+}
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const clean = hex.replace('#', '');
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;

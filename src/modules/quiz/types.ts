@@ -217,9 +217,16 @@ export interface QuizDesign {
   radius: number;
   fontHeading: string;
   fontBody: string;
-  buttonStyle: 'solid' | 'outline' | 'ghost' | 'gradient';
+  buttonStyle: ButtonStyle;
   progressStyle: 'bar' | 'dots' | 'steps' | 'none';
 }
+
+// Galeria de estilos de botão (Funilix parity): 4 estilos básicos + variantes com
+// mais "efeito" (brilho, elevação, relevo 3D) — ver getButtonStyle() em lib/buttonStyles.ts.
+export type ButtonStyle =
+  | 'solid' | 'outline' | 'ghost' | 'gradient'
+  | 'neon' | 'glow' | 'lift' | 'shimmer' | 'pulse'
+  | 'soft-shadow' | 'relief' | 'capsule' | 'brutalist' | 'soft-3d' | 'tilt';
 
 export interface QuizStep {
   id: string;

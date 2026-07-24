@@ -142,3 +142,32 @@
     color: var(--color-foreground);
   }
 }
+
+/* ============ Galeria de estilos de botão do Quiz (Funilix parity) ============ */
+/* Ver getButtonStyle() em src/modules/quiz/lib/buttonStyles.ts — os estilos com
+   hover/animação real (não dá pra fazer só com style inline) usam estas classes. */
+
+.quiz-btn-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.quiz-btn-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px -4px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+@keyframes quiz-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -50% 0; }
+}
+.quiz-btn-shimmer {
+  animation: quiz-shimmer 2.2s linear infinite;
+}
+
+@keyframes quiz-pulse {
+  0% { box-shadow: 0 0 0 0 var(--quiz-pulse-color, rgba(0,0,0,.4)); }
+  70% { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.quiz-btn-pulse {
+  animation: quiz-pulse 1.8s ease-out infinite;
+}

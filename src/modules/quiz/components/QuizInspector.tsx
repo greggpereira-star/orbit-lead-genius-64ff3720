@@ -15,6 +15,7 @@ import { Slider } from '@/components/ui/slider';
 import { MediaUploader } from './MediaUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Palette, SlidersHorizontal } from 'lucide-react';
+import { BUTTON_STYLE_OPTIONS, getButtonStyle } from '../lib/buttonStyles';
 
 interface Props {
   quizId: string;
@@ -1164,15 +1165,33 @@ function DesignInspector({ design, onChange }: { design: QuizDesign; onChange: (
           </Field>
 
           <Field label="Estilo de botão">
-            <Select value={design.buttonStyle} onValueChange={(v) => onChange({ buttonStyle: v as QuizDesign['buttonStyle'] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="solid">Sólido</SelectItem>
-                <SelectItem value="gradient">Gradiente</SelectItem>
-                <SelectItem value="outline">Contorno</SelectItem>
-                <SelectItem value="ghost">Fantasma</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-0.5">
+              {BUTTON_STYLE_OPTIONS.map((opt) => {
+                const active = design.buttonStyle === opt.id;
+                const { style, className } = getButtonStyle({ ...design, buttonStyle: opt.id });
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onChange({ buttonStyle: opt.id })}
+                    className={`text-left p-2 rounded-lg border-2 transition-all ${
+                      active ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center py-2">
+                      <span
+                        className={`px-3 py-1.5 rounded text-[11px] font-semibold${className ? ` ${className}` : ''}`}
+                        style={style}
+                      >
+                        Avançar
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-semibold text-center">{opt.label}</div>
+                    <div className="text-[10px] text-muted-foreground text-center line-clamp-1">{opt.description}</div>
+                  </button>
+                );
+              })}
+            </div>
           </Field>
 
           <Field label="Barra de progresso">

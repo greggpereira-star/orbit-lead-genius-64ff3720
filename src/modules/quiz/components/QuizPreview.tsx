@@ -4,6 +4,7 @@ import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, 
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
+import { getButtonStyle } from '../lib/buttonStyles';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 
@@ -201,21 +202,8 @@ export function ProgressBar({ design, value }: { design: QuizDesign; value: numb
 }
 
 function Btn({ design, children }: { design: QuizDesign; children: React.ReactNode }) {
-  const base = 'px-6 py-3 font-semibold transition-all text-sm';
-  const style: React.CSSProperties = { borderRadius: design.radius };
-  if (design.buttonStyle === 'gradient') {
-    style.background = `linear-gradient(135deg, ${design.primary}, ${design.primary}cc)`;
-    style.color = getContrastText(design.primary);
-  } else if (design.buttonStyle === 'outline') {
-    style.border = `2px solid ${design.primary}`;
-    style.color = design.primary;
-  } else if (design.buttonStyle === 'ghost') {
-    style.color = design.primary;
-  } else {
-    style.background = design.primary;
-    style.color = getContrastText(design.primary);
-  }
-  return <button className={base} style={style}>{children}</button>;
+  const { style, className } = getButtonStyle(design);
+  return <button className={`px-6 py-3 font-semibold transition-all text-sm${className ? ` ${className}` : ''}`} style={style}>{children}</button>;
 }
 
 export function BlockRenderer({ block, design }: { block: QuizBlock; design: QuizDesign }) {
