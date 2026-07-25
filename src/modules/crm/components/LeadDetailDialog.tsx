@@ -5,7 +5,7 @@
  * tirar o usuário da lista. Duas colunas: identidade e ações à esquerda
  * (sempre visíveis), conteúdo em abas à direita.
  */
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
@@ -261,6 +261,11 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
   const { user } = useAuth();
   const [body, setBody] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  // O NotesTab aparece duas vezes no modal (aba em telas estreitas, coluna
+  // fixa em telas largas). Um id fixo duplicaria e o <label> apontaria pro
+  // campo errado.
+  const agendaId = useId();
 
   const notesQuery = useQuery({
     queryKey: ["lead-notes", leadId],
@@ -280,6 +285,7 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
     onSuccess: () => {
       setBody("");
       setScheduledFor("");
+      setExpanded(false);
       qc.invalidateQueries({ queryKey: ["lead-notes", leadId] });
       toast.success("Anotação salva");
     },
@@ -360,41 +366,61 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+      {/* Compositor cresce só quando em uso: numa coluna fixa e estreita, um
+          formulário sempre aberto empurraria o histórico pra fora da vista. */}
+      <div className="space-y-2.5 rounded-lg border bg-muted/30 p-3">
         <Textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          rows={3}
-          placeholder="O que foi conversado? Ex: cliente pediu proposta do 2 quartos, prefere entrada parcelada."
-          className="bg-background text-sm"
+          onFocus={() => setExpanded(true)}
+          rows={expanded ? 3 : 1}
+          placeholder="O que foi conversado?"
+          className="resize-none bg-background text-sm"
           aria-label="Nova anotação"
         />
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="agenda" className="text-xs">
-              Agendar retorno ou visita <span className="text-muted-foreground">(opcional)</span>
-            </Label>
-            <Input
-              id="agenda"
-              type="datetime-local"
-              value={scheduledFor}
-              onChange={(e) => setScheduledFor(e.target.value)}
-              className="h-9 w-56 bg-background text-sm"
-            />
-          </div>
-          <Button
-            onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending || !body.trim()}
-            className="h-9"
-          >
-            {createMutation.isPending ? (
-              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-3.5 w-3.5" />
-            )}
-            Salvar
-          </Button>
-        </div>
+        {expanded && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor={agendaId} className="text-xs text-muted-foreground">
+                Agendar retorno ou visita (opcional)
+              </Label>
+              <Input
+                id={agendaId}
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(e) => setScheduledFor(e.target.value)}
+                className="h-9 w-full bg-background text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending || !body.trim()}
+                size="sm"
+                className="h-8 flex-1"
+              >
+                {createMutation.isPending ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-3.5 w-3.5" />
+                )}
+                Salvar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() => {
+                  setBody("");
+                  setScheduledFor("");
+                  setExpanded(false);
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       {notesQuery.isLoading ? (
@@ -669,9 +695,39 @@ const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
   { key: "referrer" as keyof LeadRow, label: "Veio de" },
 ];
 
+/**
+ * As anotações moram na coluna fixa quando há largura pra ela e viram aba
+ * quando não há. Precisa ser decisão em JS, não `xl:hidden`: com CSS, o
+ * NotesTab existiria duas vezes no DOM e — pior — quem estivesse na aba
+ * "Anotações" e alargasse a janela veria o painel central em branco, porque a
+ * aba continuava selecionada mas seu conteúdo sumia.
+ */
+const WIDE_QUERY = "(min-width: 1280px)";
+
+function useIsWide(): boolean {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_QUERY);
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return wide;
+}
+
 export function LeadDetailDialog({
   lead, open, onOpenChange, originLabel = "Origem", onStatusChange,
 }: Props) {
+  const isWide = useIsWide();
+  const [tab, setTab] = useState("respostas");
+
+  // Alargou a janela com "Anotações" aberta: a aba deixa de existir, então
+  // devolve o foco pra primeira em vez de deixar o painel vazio.
+  useEffect(() => {
+    if (isWide && tab === "anotacoes") setTab("respostas");
+  }, [isWide, tab]);
+
   if (!lead) return null;
 
   const onStageChanged = (status: string) => onStatusChange?.(lead.id, status);
@@ -718,7 +774,7 @@ export function LeadDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0">
+      <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0 xl:max-w-6xl">
         {/* Cabeçalho: identidade + etapa + a ação principal, tudo na primeira
             linha de leitura. Antes o topo era só o nome e uma data, e a ação
             mais usada (WhatsApp) ficava enterrada abaixo de seis campos. */}
@@ -787,7 +843,11 @@ export function LeadDetailDialog({
           </div>
         )}
 
-        <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[290px_1fr]">
+        {/* Três colunas: contexto | dados do lead | trabalho.
+            As anotações saíram da aba porque ali eram consulta, não ferramenta
+            — o corretor precisa registrar o que combinou COM os dados à vista,
+            não depois de trocar de aba e perder a resposta de orçamento. */}
+        <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_330px]">
           {/* ---------- Contexto ----------
               Antes era uma lista achatada de seis campos onde telefone
               (acionável) tinha o mesmo peso de etapa (estado interno). Agora
@@ -841,7 +901,7 @@ export function LeadDetailDialog({
 
           {/* ---------- Conteúdo ---------- */}
           <div className="min-w-0">
-            <Tabs defaultValue="respostas" className="flex h-full flex-col">
+            <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
               {/* Com 5 abas o rótulo da última era cortado na largura do modal.
                   Rolagem horizontal resolve em qualquer largura sem abreviar
                   nome de aba, que é o que deixaria a navegação adivinhada. */}
@@ -859,10 +919,14 @@ export function LeadDetailDialog({
                   <Radio className="h-4 w-4" />
                   Rastreamento
                 </TabsTrigger>
-                <TabsTrigger value="anotacoes" className="gap-2">
-                  <StickyNote className="h-4 w-4" />
-                  Anotações
-                </TabsTrigger>
+                {/* Em telas estreitas não há espaço pra coluna fixa, então as
+                    anotações voltam a ser aba — só aí. */}
+                {!isWide && (
+                  <TabsTrigger value="anotacoes" className="gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Anotações
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="anexos" className="gap-2">
                   <Paperclip className="h-4 w-4" />
                   Anexos
@@ -942,9 +1006,11 @@ export function LeadDetailDialog({
                   )}
                 </TabsContent>
 
-                <TabsContent value="anotacoes" className="m-0 p-6">
-                  <NotesTab leadId={lead.id} companyId={lead.company_id} />
-                </TabsContent>
+                {!isWide && (
+                  <TabsContent value="anotacoes" className="m-0 p-6">
+                    <NotesTab leadId={lead.id} companyId={lead.company_id} />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="anexos" className="m-0 p-6">
                   <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
@@ -956,6 +1022,21 @@ export function LeadDetailDialog({
               </ScrollArea>
             </Tabs>
           </div>
+
+          {/* ---------- Anotações (coluna fixa) ---------- */}
+          {isWide && (
+            <aside className="flex flex-col border-l bg-muted/20">
+              <div className="flex items-center gap-2 border-b px-5 py-3.5">
+                <StickyNote className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold tracking-tight">Anotações</h3>
+              </div>
+              <ScrollArea className="max-h-[52vh] flex-1">
+                <div className="p-5">
+                  <NotesTab leadId={lead.id} companyId={lead.company_id} />
+                </div>
+              </ScrollArea>
+            </aside>
+          )}
         </div>
       </DialogContent>
     </Dialog>
