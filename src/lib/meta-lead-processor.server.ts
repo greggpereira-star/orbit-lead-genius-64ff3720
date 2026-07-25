@@ -260,6 +260,11 @@ export async function processMetaLeadEvent(
       // embaixo, então o seletor de etapa do mapeamento era configurado e nunca
       // surtia efeito: o lead nascia com stage_id NULL e sumia do pipeline.
       stage_id: entryStageId,
+      stage_entered_at: new Date().toISOString(),
+      // Negativo pra entrar no topo da coluna: os leads do backfill têm
+      // valores positivos, e lead novo no pé de uma coluna de 100 cards é o
+      // mesmo que não aparecer.
+      board_order: -Date.now(),
       lead_score: mapping?.default_score ?? null,
       score: mapping?.default_score ?? null,
       lead_temperature: mapping?.default_temperature ?? null,

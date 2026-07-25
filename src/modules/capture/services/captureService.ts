@@ -3,7 +3,7 @@ import { logger } from '@/core/observability/logger';
 import { formScoringService } from './formScoringService';
 import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
 import { automationService } from '@/modules/automation/services/automationService';
-import { resolveEntryStageId } from '@/modules/crm/services/stageService';
+import { resolveEntryStageId, newLeadBoardOrder } from '@/modules/crm/services/stageService';
 
 export interface LeadSubmission {
   name: string;
@@ -84,6 +84,7 @@ export const captureService = {
         status: 'new',
         stage_id: entryStageId,
         stage_entered_at: new Date().toISOString(),
+        board_order: newLeadBoardOrder(),
         score,
         temperature
       };

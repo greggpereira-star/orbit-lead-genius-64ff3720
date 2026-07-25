@@ -3,7 +3,7 @@ import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules, SocialProofSett
 import { DEFAULT_DESIGN } from '../design-presets';
 import { DEFAULT_ACCESS_RULES } from '../types';
 import { parseSubdomain } from '../lib/tenant';
-import { resolveEntryStageId } from '@/modules/crm/services/stageService';
+import { resolveEntryStageId, newLeadBoardOrder } from '@/modules/crm/services/stageService';
 
 function slugify(input: string): string {
   return input
@@ -597,6 +597,7 @@ export const quizService = {
             status: 'new',
             stage_id: entryStageId,
             stage_entered_at: new Date().toISOString(),
+            board_order: newLeadBoardOrder(),
             score: params.score,
             temperature: params.temperature,
             // `tags` não é coluna de `leads` — as etiquetas moram na tabela

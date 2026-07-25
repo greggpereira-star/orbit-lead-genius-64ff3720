@@ -178,6 +178,21 @@ export function orderBetween(before?: number | null, after?: number | null): num
   return (before + after) / 2;
 }
 
+/**
+ * Posição de um lead recém-criado: sempre no topo da coluna.
+ *
+ * O backfill deu valores positivos (1000, 2000, …) aos leads existentes, então
+ * qualquer negativo fica acima de todos. E como `Date.now()` só cresce, o
+ * negativo só diminui — o mais recente sobe sozinho, sem precisar reescrever
+ * a coluna nem ler o que já está lá.
+ *
+ * Importa porque o pipeline existe pra agir no lead fresco: nascer no pé de
+ * uma coluna de 100 cards é o mesmo que não aparecer.
+ */
+export function newLeadBoardOrder(): number {
+  return -Date.now();
+}
+
 /** Reespaça uma coluna quando as posições ficaram indistinguíveis. */
 export async function respaceColumn(leadIds: string[]): Promise<void> {
   await Promise.all(

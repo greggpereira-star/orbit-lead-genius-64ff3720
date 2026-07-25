@@ -53,9 +53,25 @@ interface Column {
   leads: LeadRow[];
 }
 
+/**
+ * Lead sem ordem definida vai pro TOPO, não pro fim.
+ *
+ * Antes caía em MAX_SAFE_INTEGER e afundava: o lead que acabou de chegar
+ * aparecia no pé de uma coluna de 100 cards, que é o oposto do que o pipeline
+ * serve pra fazer. Quem não tem posição é justamente quem acabou de entrar.
+ */
+const UNSORTED = -Number.MAX_SAFE_INTEGER;
+
 function boardOrderOf(lead: LeadRow): number {
   const v = (lead as { board_order?: number | null }).board_order;
-  return typeof v === 'number' ? v : Number.MAX_SAFE_INTEGER;
+  return typeof v === 'number' ? v : UNSORTED;
+}
+
+/** Empate (dois sem ordem) resolve pelo mais recente primeiro. */
+function compareForBoard(a: LeadRow, b: LeadRow): number {
+  const diff = boardOrderOf(a) - boardOrderOf(b);
+  if (diff !== 0) return diff;
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 }
 
 function stageIdOf(lead: LeadRow): string | null {
@@ -103,7 +119,7 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
     const byStage = (id: string | null) =>
       visible
         .filter((l) => stageIdOf(l) === id)
-        .sort((a, b) => boardOrderOf(a) - boardOrderOf(b));
+        .sort(compareForBoard);
 
     const known = new Set(stages.map((s) => s.id));
     const orphans = visible.filter((l) => {
