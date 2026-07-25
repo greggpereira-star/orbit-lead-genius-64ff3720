@@ -11,6 +11,7 @@ import {
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,8 +36,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { LeadRow } from "../services/leadService";
-import { getLeadDisplayName } from "../services/leadService";
+import { getLeadDisplayName, updateLeadStatus } from "../services/leadService";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, humanizeKey, toTitleCase, channelLabel,
@@ -48,6 +52,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Rótulo configurável: "Empreendimento" numa imobiliária, "Curso" numa escola. */
   originLabel?: string;
+  /**
+   * O modal recebe o lead por prop, então mudar a etapa aqui deixaria o objeto
+   * do pai desatualizado — reabrir mostraria a etapa antiga até o refetch.
+   */
+  onStatusChange?: (leadId: string, status: string) => void;
 }
 
 /** Iniciais dão ao modal uma âncora visual — sem elas o topo é só texto. */
@@ -95,7 +104,75 @@ const STAGE_TONE: Record<string, string> = {
   proposal: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
   won: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
   lost: "bg-rose-500/12 text-rose-700 dark:text-rose-300",
+  archived: "bg-muted text-muted-foreground",
 };
+
+/** Ordem do funil — a lista segue o caminho natural do atendimento. */
+const STAGE_ORDER = ["new", "contacted", "qualified", "proposal", "won", "lost", "archived"];
+
+/**
+ * Etapa editável na própria pill.
+ *
+ * O campo que vale é `leads.status`: `stage_id` existe no schema mas está
+ * vazio nos 99 leads, e updateLeadStatus já registra o evento no histórico.
+ */
+function StagePicker({
+  lead, onChanged,
+}: {
+  lead: LeadRow;
+  onChanged: (status: string) => void;
+}) {
+  const qc = useQueryClient();
+  const [current, setCurrent] = useState(lead.status ?? "new");
+
+  const mutation = useMutation({
+    mutationFn: (status: string) =>
+      updateLeadStatus({ leadId: lead.id, companyId: lead.company_id, status }),
+    onSuccess: (_, status) => {
+      setCurrent(status);
+      onChanged(status);
+      // A lista atrás do modal precisa refletir a mudança na hora.
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(`Etapa alterada para ${STAGE_LABEL[status] ?? status}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          disabled={mutation.isPending}
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${
+            STAGE_TONE[current] ?? "bg-muted text-muted-foreground"
+          }`}
+          aria-label={`Etapa atual: ${STAGE_LABEL[current] ?? current}. Clique para alterar.`}
+        >
+          {mutation.isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            STAGE_LABEL[current] ?? current
+          )}
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        {STAGE_ORDER.map((s) => (
+          <DropdownMenuItem
+            key={s}
+            onClick={() => s !== current && mutation.mutate(s)}
+            className="gap-2"
+          >
+            <span className={`h-2 w-2 rounded-full ${(STAGE_TONE[s] ?? "").split(" ")[0]}`} />
+            {STAGE_LABEL[s] ?? s}
+            {s === current && <Check className="ml-auto h-3.5 w-3.5" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 /** Agrupa campos com um rótulo pequeno — separa o que é contato do que é
  *  estado interno, que antes vinham na mesma lista achatada. */
@@ -581,8 +658,12 @@ const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
   { key: "referrer" as keyof LeadRow, label: "Veio de" },
 ];
 
-export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Origem" }: Props) {
+export function LeadDetailDialog({
+  lead, open, onOpenChange, originLabel = "Origem", onStatusChange,
+}: Props) {
   if (!lead) return null;
+
+  const onStageChanged = (status: string) => onStatusChange?.(lead.id, status);
 
   const name = toTitleCase(getLeadDisplayName(lead)) || getLeadDisplayName(lead);
   const origin = getLeadOrigin(lead);
@@ -622,17 +703,15 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
               </span>
               <div className="min-w-0 space-y-1">
                 <DialogTitle className="truncate text-lg leading-tight">{name}</DialogTitle>
-                <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                  <span
-                    className={`rounded-full px-2 py-0.5 font-medium ${
-                      STAGE_TONE[lead.status ?? "new"] ?? "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {STAGE_LABEL[lead.status ?? "new"] ?? lead.status}
-                  </span>
-                  <span className="text-muted-foreground/50">·</span>
-                  <span>{created}</span>
-                  {ago && <span className="text-muted-foreground/70">({ago})</span>}
+                {/* asChild: o DialogDescription vira <div>, senão o botão do
+                    seletor ficaria dentro de um <p> — HTML inválido. */}
+                <DialogDescription asChild>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <StagePicker lead={lead} onChanged={onStageChanged} />
+                    <span className="text-muted-foreground/50">·</span>
+                    <span>{created}</span>
+                    {ago && <span className="text-muted-foreground/70">({ago})</span>}
+                  </div>
                 </DialogDescription>
               </div>
             </div>

@@ -463,6 +463,11 @@ function LeadsPage() {
         open={detailLead !== null}
         onOpenChange={(o) => !o && setDetailLead(null)}
         originLabel={originLabel}
+        /* Mantém o lead em memória alinhado com o que foi salvo: sem isso,
+           fechar e reabrir mostraria a etapa antiga até o refetch chegar. */
+        onStatusChange={(leadId, status) =>
+          setDetailLead((prev) => (prev && prev.id === leadId ? { ...prev, status } : prev))
+        }
       />
     </div>
   );
