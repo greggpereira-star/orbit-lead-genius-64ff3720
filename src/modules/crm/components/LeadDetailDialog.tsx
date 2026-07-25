@@ -673,10 +673,22 @@ export function LeadDetailDialog({
   const created = formatDateTime(lead.created_at);
   const ago = relativeTime(lead.created_at);
 
-  const tracking = TRACKING_FIELDS.map((f) => ({
-    label: f.label,
-    value: (lead as unknown as Record<string, unknown>)[f.key as string],
-  })).filter((f) => typeof f.value === "string" && f.value);
+  const rawMeta = (lead as { metadata?: Record<string, unknown> }).metadata ?? {};
+
+  const tracking = TRACKING_FIELDS.map((f) => {
+    const key = f.key as string;
+    let value = (lead as unknown as Record<string, unknown>)[key];
+
+    /* Leads antigos guardaram o ID numérico em utm_campaign, porque a coleta
+       de nomes estava quebrada. Não reescrevi o dado histórico, mas exibir
+       "52525417339565" aqui enquanto a seção do Meta logo abaixo mostra o nome
+       da mesma campanha é contradição na mesma tela. */
+    if (key === "utm_campaign" && typeof value === "string" && /^\d{6,}$/.test(value)) {
+      value = (rawMeta.meta_campaign_name as string) ?? value;
+    }
+
+    return { label: f.label, value };
+  }).filter((f) => typeof f.value === "string" && f.value);
 
   const meta = (lead as { metadata?: Record<string, unknown> }).metadata ?? {};
 
