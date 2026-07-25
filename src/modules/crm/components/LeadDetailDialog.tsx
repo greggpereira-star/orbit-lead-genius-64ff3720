@@ -213,21 +213,32 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 function Field({
-  icon, label, value, copyable,
+  icon, label, value, copyable, emphasis,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | null;
   copyable?: boolean;
+  /** Telefone é o dado que se usa pra agir; merece mais peso que os demais. */
+  emphasis?: boolean;
 }) {
   return (
     <div className="group/field flex items-start gap-3">
       <span className="mt-0.5 shrink-0 text-muted-foreground/70">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+          {label}
+        </p>
         {/* truncate + title em vez de quebrar no meio: um e-mail longo virava
             "…gmail.c / om" na coluna estreita, o que parece defeito. */}
-        <p className="truncate text-sm font-medium" title={value || undefined}>
+        <p
+          className={`truncate ${
+            emphasis
+              ? "text-[15px] font-semibold tabular-nums tracking-tight"
+              : "text-sm font-medium"
+          }`}
+          title={value || undefined}
+        >
           {value || "—"}
         </p>
       </div>
@@ -783,7 +794,7 @@ export function LeadDetailDialog({
               vem agrupado por natureza da informação. */}
           <aside className="space-y-6 overflow-y-auto border-b bg-muted/20 p-6 md:border-b-0 md:border-r">
             <Section title="Contato">
-              <Field icon={<Phone className="h-4 w-4" />} label="Telefone" value={lead.phone} copyable />
+              <Field icon={<Phone className="h-4 w-4" />} label="Telefone" value={lead.phone} copyable emphasis />
               <Field icon={<Mail className="h-4 w-4" />} label="E-mail" value={lead.email} copyable />
               <Field
                 icon={<MapPin className="h-4 w-4" />}
@@ -869,18 +880,23 @@ export function LeadDetailDialog({
                       Este lead não trouxe respostas de formulário.
                     </p>
                   ) : (
-                    /* Antes cada resposta era um card com borda. Para valores
-                       de duas palavras, isso é muito contorno pra pouco
-                       conteúdo — vira ruído. Lista com divisória fina lê melhor
-                       e deixa a resposta em si com o destaque. */
-                    <dl className="divide-y rounded-lg border">
+                    /* Estas respostas são o motivo de ligar pra esta pessoa:
+                       orçamento, tipo de imóvel, prioridade. Numa tabela de
+                       linhas, "De R$220 mil a R$400 mil" ficava com o mesmo
+                       peso de qualquer campo de configuração. Em grade, a
+                       pergunta recua e o VALOR domina — que é o que se lê. */
+                    <dl className="grid gap-3 sm:grid-cols-2">
                       {answers.map((a) => (
                         <div
                           key={a.key}
-                          className="grid gap-1 px-4 py-3 sm:grid-cols-[1fr_1.2fr] sm:items-baseline sm:gap-4"
+                          className="rounded-xl border bg-muted/25 p-4 transition-colors hover:border-primary/25"
                         >
-                          <dt className="text-sm text-muted-foreground">{a.label}</dt>
-                          <dd className="text-sm font-medium">{a.value}</dd>
+                          <dt className="text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
+                            {a.label}
+                          </dt>
+                          <dd className="mt-1.5 text-base font-semibold leading-snug tracking-tight">
+                            {a.value}
+                          </dd>
                         </div>
                       ))}
                     </dl>

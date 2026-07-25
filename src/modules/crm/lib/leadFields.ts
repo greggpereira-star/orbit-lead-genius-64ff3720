@@ -25,6 +25,12 @@ const INTERNAL_KEYS = new Set([
   "meta_created_time", "quiz_id", "quiz_slug", "quiz_title", "submission_id",
   "visitor_id", "company_name", "source", "utm_source", "utm_medium",
   "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid",
+  // Nomes resolvidos da atribuição e marcação de contato repetido: são
+  // metadados nossos, não resposta que o lead digitou. Sem estar nesta lista,
+  // apareciam como "Meta ad name" no meio das perguntas do formulário e
+  // inflavam o contador de respostas.
+  "meta_ad_name", "meta_adset_name", "meta_campaign_name",
+  "duplicate_of", "duplicate_first_seen_at",
 ]);
 
 /**
