@@ -3,7 +3,7 @@ import { logger } from '@/core/observability/logger';
 import { formScoringService } from './formScoringService';
 import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
 import { automationService } from '@/modules/automation/services/automationService';
-import { listStages, resolveEntryStage } from '@/modules/crm/services/stageService';
+import { resolveEntryStageId } from '@/modules/crm/services/stageService';
 
 export interface LeadSubmission {
   name: string;
@@ -44,7 +44,6 @@ export const captureService = {
       //    pipeline, mesmo tendo sido capturado com sucesso.
       let entryStageId: string | null = null;
       try {
-        const stages = await listStages(companyId);
         let preferred: string | null = null;
         if (data.metadata?.form_id) {
           const { data: formRow } = await supabase
@@ -56,7 +55,9 @@ export const captureService = {
             ((formRow?.settings as Record<string, unknown> | undefined)
               ?.default_stage_id as string | undefined) ?? null;
         }
-        entryStageId = resolveEntryStage(stages, preferred)?.id ?? null;
+        // Via RPC: quem preenche o formulário público é anônimo e não tem
+        // permissão de leitura em `stages`.
+        entryStageId = await resolveEntryStageId(companyId, preferred);
       } catch (e) {
         // Captura não pode falhar por causa da etapa: sem ela o lead aparece
         // em "Sem etapa" no board, que é recuperável. Perder o lead não é.

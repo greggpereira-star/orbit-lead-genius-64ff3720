@@ -70,6 +70,33 @@ export function resolveEntryStage(
 }
 
 /**
+ * Mesma decisão, para quem não pode ler `stages`.
+ *
+ * O visitante de um quiz ou formulário público é anônimo, e o papel `anon` não
+ * tem SELECT nessa tabela. `listStages` lança ali, então usar a versão acima na
+ * captação pública apagava o lead inteiro — foi exatamente o que aconteceu.
+ *
+ * A função no banco é SECURITY DEFINER e devolve só um id, sem deixar
+ * enumerar o funil de outras empresas. Nunca lança: sem etapa o lead ainda
+ * entra e aparece em "Sem etapa", que é recuperável; perder o lead não é.
+ */
+export async function resolveEntryStageId(
+  companyId: string,
+  preferred?: string | null,
+): Promise<string | null> {
+  try {
+    const { data, error } = await (supabase as any).rpc('resolve_entry_stage', {
+      p_company_id: companyId,
+      p_preferred: preferred ?? null,
+    });
+    if (error) return null;
+    return (data as string | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * `status` correspondente a uma etapa.
  *
  * Grosso de propósito. `status` é um campo legado de quatro valores fixos, e o

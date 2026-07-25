@@ -3,7 +3,7 @@ import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules, SocialProofSett
 import { DEFAULT_DESIGN } from '../design-presets';
 import { DEFAULT_ACCESS_RULES } from '../types';
 import { parseSubdomain } from '../lib/tenant';
-import { listStages, resolveEntryStage } from '@/modules/crm/services/stageService';
+import { resolveEntryStageId } from '@/modules/crm/services/stageService';
 
 function slugify(input: string): string {
   return input
@@ -579,10 +579,10 @@ export const quizService = {
         const leadId = crypto.randomUUID();
 
         // Etapa de entrada configurada neste funil (aba Geral das configurações
-        // do quiz). Sem isto o lead nascia com stage_id NULL e não aparecia no
-        // pipeline — só na coluna "Sem etapa" do board do próprio quiz.
-        const stages = await listStages(params.companyId);
-        const entryStage = resolveEntryStage(stages, defaultStageId);
+        // do quiz). Via RPC, não lendo `stages`: o visitante do quiz é anônimo
+        // e não tem permissão nessa tabela — ler dali lançava e derrubava a
+        // criação do lead junto.
+        const entryStageId = await resolveEntryStageId(params.companyId, defaultStageId);
 
         const { error: leadError } = await supabase
           .from('leads')
@@ -595,11 +595,15 @@ export const quizService = {
             phone: params.phone ?? null,
             source: 'Alt Quiz',
             status: 'new',
-            stage_id: entryStage?.id ?? null,
+            stage_id: entryStageId,
             stage_entered_at: new Date().toISOString(),
             score: params.score,
             temperature: params.temperature,
-            tags: params.tags,
+            // `tags` não é coluna de `leads` — as etiquetas moram na tabela
+            // `lead_tags`. Mandar a chave aqui fazia o insert inteiro falhar
+            // com 42703, e como o erro nunca era logado, o quiz mostrava
+            // "obrigado" e o lead simplesmente não existia. Nenhum lead de
+            // quiz jamais entrou neste banco por causa disso.
             utm_source: tracking.utm_source ?? null,
             utm_medium: tracking.utm_medium ?? null,
             utm_campaign: tracking.utm_campaign ?? null,
@@ -612,9 +616,21 @@ export const quizService = {
             },
           } as never);
 
-        if (!leadError) {
+        // Sem este log, uma falha de insert sumia sem deixar rastro: o quiz
+        // mostrava "obrigado", a submissão era gravada e o lead simplesmente
+        // não existia. Foi assim que a regressão da etapa passou despercebida.
+        if (leadError) {
+          console.error('Falha ao criar lead do quiz', leadError);
+        } else {
           if (submissionId) {
             await supabase.from('quiz_submissions').update({ lead_id: leadId } as never).eq('id', submissionId);
+          }
+
+          // Etiquetas na tabela certa, como o formulário público já faz.
+          if (params.tags.length) {
+            await supabase
+              .from('lead_tags')
+              .insert(params.tags.map((tag) => ({ lead_id: leadId, tag_name: tag })) as never);
           }
 
           // Auto-assign to sales rep via routing engine
