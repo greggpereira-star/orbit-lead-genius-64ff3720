@@ -60,10 +60,73 @@ export function humanizeValue(value: unknown): string {
   return capitalized.replace(/\br\$/gi, "R$");
 }
 
+/**
+ * Assunto da pergunta, deduzido por palavra-chave.
+ *
+ * Serve pra dar ícone e cor a cada resposta sem o cliente precisar cadastrar
+ * nada: o mesmo formulário de imobiliária, clínica ou escola cai numa dessas
+ * famílias sozinho. `other` é o destino honesto de quem não reconheceu — é
+ * neutro, não um chute.
+ */
+export type AnswerKind = "money" | "budget" | "property" | "place" | "time" | "person" | "other";
+
+const KIND_PATTERNS: Array<[AnswerKind, RegExp]> = [
+  ["money", /\b(renda|salari|sal[áa]rio|ganho|faturament|receita)/i],
+  ["budget", /\b(investiment|or[çc]ament|quanto|valor|pre[çc]o|entrada|financiament)/i],
+  ["property", /\b(im[óo]vel|imovel|apartament|casa|quarto|terreno|lote|sala|produto|plano|servi[çc]o|curso|procediment)/i],
+  ["place", /\b(local|regi[ãa]o|bairro|cidade|onde|endere[çc]o|zona)/i],
+  ["time", /\b(prazo|quando|data|per[íi]odo|urg[êe]ncia|tempo|hor[áa]rio)/i],
+  ["person", /\b(idade|profiss[ãa]o|estado civil|fam[íi]lia|filhos|quem)/i],
+];
+
+export function answerKind(key: string, value?: string): AnswerKind {
+  // A pergunta manda: é ela que define o assunto. O valor entra só como
+  // desempate, senão "O que é mais importante? / Preço" viraria orçamento e
+  // ficaria com o mesmo ícone do cartão de investimento ao lado.
+  const question = key.replace(/_/g, " ");
+  for (const [kind, re] of KIND_PATTERNS) {
+    if (re.test(question)) return kind;
+  }
+  if (value) {
+    for (const [kind, re] of KIND_PATTERNS) {
+      if (re.test(value)) return kind;
+    }
+  }
+  return "other";
+}
+
+/**
+ * "Qual a sua faixa de renda?" → "Faixa de renda".
+ *
+ * A pergunta inteira é ruído quando ela vira rótulo de um cartão: o que
+ * distingue um cartão do outro é o assunto, não o "qual a sua". Num cartão
+ * estreito a pergunta completa ainda quebrava em duas linhas e empurrava o
+ * valor — que é o dado — pra baixo da dobra.
+ */
+const QUESTION_PREFIX =
+  /^(qual\s+(o|a)\s+(seu|sua)|qual\s+(seu|sua)|qual\s+(o|a)|qual|quais|o\s+que\s+[ée]|o\s+que|quanto\s+[ée]|quanto|quando|onde|como|voc[êe]\s+(tem|busca|procura))\s+/i;
+
+/** "Tipo de imóvel você busca" → "Tipo de imóvel". */
+const QUESTION_SUFFIX =
+  /\s+(que\s+)?(voc[êe]\s+)?(busca|procura|deseja|pretende|quer|tem|possui|prefere)$/i;
+
+export function shortLabel(key: string): string {
+  const full = humanizeKey(key).replace(/\s*\?+\s*$/, "");
+  const trimmed = full.replace(QUESTION_PREFIX, "").replace(QUESTION_SUFFIX, "").trim();
+  // Se sobrou pouco, a pergunta não era do formato interrogativo esperado e
+  // cortar deixaria o rótulo sem sentido ("de imóvel").
+  if (trimmed.length < 3) return full;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 export interface LeadAnswer {
   key: string;
+  /** Pergunta completa — usada como `title`, pra não perder o texto original. */
   label: string;
+  /** Rótulo curto exibido no cartão. */
+  short: string;
   value: string;
+  kind: AnswerKind;
 }
 
 /** Respostas do formulário/quiz, prontas pra exibir. */
@@ -71,7 +134,87 @@ export function getLeadAnswers(lead: LeadRow): LeadAnswer[] {
   const m = meta(lead);
   return Object.entries(m)
     .filter(([k, v]) => !INTERNAL_KEYS.has(k) && v !== null && v !== "" && !Array.isArray(v))
-    .map(([k, v]) => ({ key: k, label: humanizeKey(k), value: humanizeValue(v) }));
+    .map(([k, v]) => {
+      const value = humanizeValue(v);
+      return {
+        key: k,
+        label: humanizeKey(k),
+        short: shortLabel(k),
+        value,
+        kind: answerKind(k, value),
+      };
+    });
+}
+
+/**
+ * Frase única que resume o que o lead respondeu.
+ *
+ * É montada por template a partir das próprias respostas — sem IA, sem
+ * inferência. O ganho é de leitura: antes de ligar, o corretor lê uma linha
+ * em vez de cruzar quatro cartões na cabeça. Se as respostas não caem em
+ * nenhuma família conhecida, devolve null e o bloco simplesmente não aparece,
+ * em vez de imprimir uma frase torta.
+ */
+/**
+ * Rebaixa só a primeira letra. `toLowerCase()` na string toda transformava
+ * "Até R$700 mil" em "até r$700 mil" — o símbolo da moeda virava lixo no meio
+ * da frase.
+ */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+export function buildProfileSummary(answers: LeadAnswer[]): string | null {
+  const first = (kind: AnswerKind) => answers.find((a) => a.kind === kind)?.value;
+
+  const property = first("property");
+  const budget = first("budget");
+  const money = first("money");
+  const time = first("time");
+  const place = first("place");
+
+  const clauses: string[] = [];
+  if (property) clauses.push(`interessado em ${lowerFirst(property)}`);
+  if (budget) clauses.push(`investimento de ${lowerFirst(budget)}`);
+  if (money) clauses.push(`renda de ${lowerFirst(money)}`);
+  if (time) clauses.push(`prazo ${lowerFirst(time)}`);
+
+  if (!clauses.length && !place) return null;
+
+  let text = clauses.length ? `Contato ${clauses.join(", ")}.` : "";
+  if (place) text += `${text ? " " : ""}Prioriza ${lowerFirst(place)}.`;
+  return text.trim() || null;
+}
+
+export interface LeadCompleteness {
+  filled: number;
+  total: number;
+  /** Nomes dos dados que faltam — é isso que diz ao corretor o que perguntar. */
+  missing: string[];
+}
+
+/**
+ * Quanto se sabe sobre este lead.
+ *
+ * Substitui o "score de potencial" que o projeto não tem como calcular (não
+ * há IA nem regra de qualificação cadastrada, e `leads.score` está zerado nos
+ * 104 registros). Este número é verificável: ou o telefone está lá, ou não
+ * está. E é acionável — "falta e-mail" diz o que pedir no próximo contato.
+ */
+export function getLeadCompleteness(lead: LeadRow, answers: LeadAnswer[]): LeadCompleteness {
+  const checks: Array<[string, boolean]> = [
+    ["nome", Boolean((lead as { name?: string | null }).name?.trim())],
+    ["telefone", Boolean((lead as { phone?: string | null }).phone?.trim())],
+    ["e-mail", Boolean((lead as { email?: string | null }).email?.trim())],
+    ["cidade", Boolean(getLeadCity(lead))],
+    ["origem", Boolean(getLeadOrigin(lead))],
+    ["respostas", answers.length > 0],
+  ];
+  return {
+    filled: checks.filter(([, ok]) => ok).length,
+    total: checks.length,
+    missing: checks.filter(([, ok]) => !ok).map(([name]) => name),
+  };
 }
 
 /**

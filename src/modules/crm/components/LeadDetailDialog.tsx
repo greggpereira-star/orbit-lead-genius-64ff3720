@@ -11,7 +11,9 @@ import {
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
-  ChevronDown, AlertTriangle,
+  ChevronDown, AlertTriangle, Sparkles, DollarSign, BarChart3, Home, CircleDot,
+  PencilLine, MessagesSquare,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +46,8 @@ import { getLeadDisplayName, updateLeadStatus } from "../services/leadService";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
+  buildProfileSummary, getLeadCompleteness,
+  type AnswerKind, type LeadCompleteness,
 } from "../lib/leadFields";
 
 interface Props {
@@ -174,6 +178,84 @@ function StagePicker({
   );
 }
 
+/**
+ * Ícone e cor por assunto da resposta.
+ *
+ * A cor aqui é semântica, não decorativa: dinheiro em verde, orçamento em
+ * violeta, o que se procura em azul, onde em âmbar. Quem usa a tela o dia
+ * inteiro passa a achar o orçamento pela cor, sem ler rótulo.
+ */
+const ANSWER_KIND_STYLE: Record<
+  AnswerKind,
+  { icon: LucideIcon; tone: string }
+> = {
+  money: { icon: DollarSign, tone: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400" },
+  budget: { icon: BarChart3, tone: "bg-violet-500/12 text-violet-600 dark:text-violet-400" },
+  property: { icon: Home, tone: "bg-blue-500/12 text-blue-600 dark:text-blue-400" },
+  place: { icon: MapPin, tone: "bg-amber-500/12 text-amber-600 dark:text-amber-400" },
+  time: { icon: CalendarClock, tone: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-400" },
+  person: { icon: User, tone: "bg-rose-500/12 text-rose-600 dark:text-rose-400" },
+  other: { icon: CircleDot, tone: "bg-muted text-muted-foreground" },
+};
+
+/**
+ * Quanto se sabe sobre o lead, como anel.
+ *
+ * Ocupa o lugar onde um "score de potencial" seria natural — e é de propósito
+ * que não é um: sem IA nem regra de qualificação cadastrada, um número de
+ * potencial seria invenção. Este é conferível campo a campo, e a linha de
+ * baixo diz o que perguntar no próximo contato.
+ */
+function CompletenessMeter({ data }: { data: LeadCompleteness }) {
+  const pct = data.total ? data.filled / data.total : 0;
+  const R = 26;
+  const C = 2 * Math.PI * R;
+
+  return (
+    <div className="flex shrink-0 items-center gap-3">
+      <div className="relative h-16 w-16">
+        <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
+          <circle cx="32" cy="32" r={R} fill="none" strokeWidth="6" className="stroke-muted" />
+          <circle
+            cx="32" cy="32" r={R} fill="none" strokeWidth="6" strokeLinecap="round"
+            className="stroke-primary transition-[stroke-dashoffset] duration-700 ease-out"
+            strokeDasharray={C}
+            strokeDashoffset={C * (1 - pct)}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums">
+          {data.filled}/{data.total}
+        </span>
+      </div>
+      <div className="space-y-0.5 text-xs">
+        <p className="font-medium">Dados do lead</p>
+        <p className="text-muted-foreground">
+          {data.missing.length === 0 ? "Ficha completa" : `Falta ${data.missing.join(", ")}`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Um fato do cadastro na faixa inferior: rótulo pequeno, valor legível. */
+function FactItem({
+  icon, label, children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="text-muted-foreground/60" aria-hidden="true">{icon}</span>
+      <div className="leading-tight">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium tabular-nums">{children}</p>
+      </div>
+    </div>
+  );
+}
+
 /** Agrupa campos com um rótulo pequeno — separa o que é contato do que é
  *  estado interno, que antes vinham na mesma lista achatada. */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -213,7 +295,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 function Field({
-  icon, label, value, copyable, emphasis,
+  icon, label, value, copyable, emphasis, action,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -221,6 +303,8 @@ function Field({
   copyable?: boolean;
   /** Telefone é o dado que se usa pra agir; merece mais peso que os demais. */
   emphasis?: boolean;
+  /** Atalho direto (ligar, escrever). Substitui o copiar quando existe. */
+  action?: { href: string; icon: React.ReactNode; title: string };
 }) {
   return (
     <div className="group/field flex items-start gap-3">
@@ -242,10 +326,23 @@ function Field({
           {value || "—"}
         </p>
       </div>
-      {copyable && value ? (
-        <span className="opacity-0 transition-opacity group-hover/field:opacity-100 focus-within:opacity-100">
-          <CopyButton value={value} label={label} />
-        </span>
+      {/* Visível sempre, não só no hover: num toque não existe hover, e o
+          botão de ligar era inalcançável no celular. */}
+      {action && value ? (
+        <Button
+          asChild
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+          title={action.title}
+        >
+          <a href={action.href}>
+            {action.icon}
+            <span className="sr-only">{action.title}</span>
+          </a>
+        </Button>
+      ) : copyable && value ? (
+        <CopyButton value={value} label={label} />
       ) : null}
     </div>
   );
@@ -368,16 +465,22 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
     <div className="space-y-5">
       {/* Compositor cresce só quando em uso: numa coluna fixa e estreita, um
           formulário sempre aberto empurraria o histórico pra fora da vista. */}
-      <div className="space-y-2.5 rounded-lg border bg-muted/30 p-3">
-        <Textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onFocus={() => setExpanded(true)}
-          rows={expanded ? 3 : 1}
-          placeholder="O que foi conversado?"
-          className="resize-none bg-background text-sm"
-          aria-label="Nova anotação"
-        />
+      <div className="space-y-2.5 rounded-xl border bg-background p-3 transition-colors focus-within:border-primary/40">
+        <div className="flex items-start gap-2">
+          <PencilLine
+            className="mt-2 h-4 w-4 shrink-0 text-muted-foreground/50"
+            aria-hidden="true"
+          />
+          <Textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onFocus={() => setExpanded(true)}
+            rows={expanded ? 3 : 1}
+            placeholder="Adicionar uma anotação…"
+            className="resize-none border-0 bg-transparent p-1 text-sm shadow-none focus-visible:ring-0"
+            aria-label="Nova anotação"
+          />
+        </div>
         {expanded && (
           <>
             <div className="space-y-1.5">
@@ -426,9 +529,17 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
       {notesQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando…</p>
       ) : notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhuma anotação ainda. Registre o que foi negociado para não depender da memória.
-        </p>
+        /* Estado vazio com peso: numa coluna alta, uma frase solta no topo
+           deixava o resto da coluna parecendo conteúdo que falhou ao
+           carregar. Centrado e com ícone, lê-se como "ainda não há", que é
+           o que de fato é. */
+        <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+          <MessagesSquare className="h-8 w-8 text-muted-foreground/35" aria-hidden="true" />
+          <p className="text-sm font-medium">Nenhuma anotação ainda.</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Registre o que foi conversado para não depender da memória.
+          </p>
+        </div>
       ) : (
         <div className="space-y-4">
           {pending.length > 0 && (
@@ -728,6 +839,23 @@ export function LeadDetailDialog({
     if (isWide && tab === "anotacoes") setTab("respostas");
   }, [isWide, tab]);
 
+  /* Contagens da faixa de fatos. Mesmas chaves das abas, então o React Query
+     serve as duas do mesmo cache — abrir o modal não dispara requisição a
+     mais. `enabled` mantém a ordem dos hooks estável mesmo sem lead. */
+  const leadId = lead?.id ?? "";
+  const notesCountQuery = useQuery({
+    queryKey: ["lead-notes", leadId],
+    queryFn: () => listLeadNotes(leadId),
+    enabled: Boolean(lead) && open,
+  });
+  const attachmentsCountQuery = useQuery({
+    queryKey: ["lead-attachments", leadId],
+    queryFn: () => listLeadAttachments(leadId),
+    enabled: Boolean(lead) && open,
+  });
+  const noteCount = notesCountQuery.data?.length ?? null;
+  const attachmentCount = attachmentsCountQuery.data?.length ?? null;
+
   if (!lead) return null;
 
   const onStageChanged = (status: string) => onStatusChange?.(lead.id, status);
@@ -739,6 +867,8 @@ export function LeadDetailDialog({
   const wa = whatsappLink(lead.phone);
   const created = formatDateTime(lead.created_at);
   const ago = relativeTime(lead.created_at);
+  const summary = buildProfileSummary(answers);
+  const completeness = getLeadCompleteness(lead, answers);
 
   const rawMeta = (lead as { metadata?: Record<string, unknown> }).metadata ?? {};
 
@@ -847,15 +977,37 @@ export function LeadDetailDialog({
             As anotações saíram da aba porque ali eram consulta, não ferramenta
             — o corretor precisa registrar o que combinou COM os dados à vista,
             não depois de trocar de aba e perder a resposta de orçamento. */}
-        <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_330px]">
+        {/* No celular as colunas viram uma pilha e quem rola é o modal inteiro.
+            Com cada coluna rolando sozinha, o painel de contato ganhava uma
+            faixa de ~150px e cortava o telefone no meio do número. */}
+        <div className="grid max-h-[78vh] grid-cols-1 overflow-y-auto md:grid-cols-[260px_1fr] md:overflow-y-hidden xl:grid-cols-[260px_1fr_330px]">
           {/* ---------- Contexto ----------
               Antes era uma lista achatada de seis campos onde telefone
               (acionável) tinha o mesmo peso de etapa (estado interno). Agora
               vem agrupado por natureza da informação. */}
-          <aside className="space-y-6 overflow-y-auto border-b bg-muted/20 p-6 md:border-b-0 md:border-r">
+          <aside className="space-y-6 border-b bg-muted/20 p-6 md:overflow-y-auto md:border-b-0 md:border-r">
             <Section title="Contato">
-              <Field icon={<Phone className="h-4 w-4" />} label="Telefone" value={lead.phone} copyable emphasis />
-              <Field icon={<Mail className="h-4 w-4" />} label="E-mail" value={lead.email} copyable />
+              <Field
+                icon={<Phone className="h-4 w-4" />}
+                label="Telefone"
+                value={lead.phone}
+                emphasis
+                action={lead.phone ? {
+                  href: `tel:${lead.phone.replace(/[^\d+]/g, "")}`,
+                  icon: <Phone className="h-3.5 w-3.5" />,
+                  title: "Ligar",
+                } : undefined}
+              />
+              <Field
+                icon={<Mail className="h-4 w-4" />}
+                label="E-mail"
+                value={lead.email}
+                action={lead.email ? {
+                  href: `mailto:${lead.email}`,
+                  icon: <Mail className="h-3.5 w-3.5" />,
+                  title: "Enviar e-mail",
+                } : undefined}
+              />
               <Field
                 icon={<MapPin className="h-4 w-4" />}
                 label={city?.inferred ? "Cidade (pelo DDD)" : "Cidade"}
@@ -866,7 +1018,7 @@ export function LeadDetailDialog({
             <Separator />
 
             <Section title="Captação">
-              <Field icon={<ClipboardList className="h-4 w-4" />} label={originLabel} value={origin} />
+              <Field icon={<ClipboardList className="h-4 w-4" />} label={originLabel} value={origin} copyable />
               <Field
                 icon={<Radio className="h-4 w-4" />}
                 label="Canal"
@@ -937,34 +1089,84 @@ export function LeadDetailDialog({
                 </TabsTrigger>
               </TabsList>
 
-              <ScrollArea className="max-h-[52vh] flex-1">
-                <TabsContent value="respostas" className="m-0 p-6">
+              <ScrollArea className="flex-1 md:max-h-[62vh]">
+                <TabsContent value="respostas" className="m-0 space-y-4 p-6">
                   {answers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Este lead não trouxe respostas de formulário.
                     </p>
                   ) : (
-                    /* Estas respostas são o motivo de ligar pra esta pessoa:
-                       orçamento, tipo de imóvel, prioridade. Numa tabela de
-                       linhas, "De R$220 mil a R$400 mil" ficava com o mesmo
-                       peso de qualquer campo de configuração. Em grade, a
-                       pergunta recua e o VALOR domina — que é o que se lê. */
-                    <dl className="grid gap-3 sm:grid-cols-2">
-                      {answers.map((a) => (
-                        <div
-                          key={a.key}
-                          className="rounded-xl border bg-muted/25 p-4 transition-colors hover:border-primary/25"
-                        >
-                          <dt className="text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
-                            {a.label}
-                          </dt>
-                          <dd className="mt-1.5 text-base font-semibold leading-snug tracking-tight">
-                            {a.value}
-                          </dd>
+                    <>
+                      {/* Estas respostas são o motivo de ligar pra esta pessoa:
+                          orçamento, tipo de imóvel, prioridade. O ícone dá a
+                          cada cartão um assunto reconhecível de relance — sem
+                          ele, quatro cartões cinzas iguais obrigam a ler os
+                          quatro rótulos pra achar o orçamento. */}
+                      <dl className="grid gap-3 sm:grid-cols-2">
+                        {answers.map((a) => {
+                          const k = ANSWER_KIND_STYLE[a.kind];
+                          const Icon = k.icon;
+                          return (
+                            <div
+                              key={a.key}
+                              className="rounded-xl border bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:border-primary/30"
+                            >
+                              <span
+                                className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${k.tone}`}
+                                aria-hidden="true"
+                              >
+                                <Icon className="h-[18px] w-[18px]" />
+                              </span>
+                              <dt
+                                className="text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-foreground"
+                                title={a.label}
+                              >
+                                {a.short}
+                              </dt>
+                              <dd className="mt-1 text-[15px] font-semibold leading-snug tracking-tight">
+                                {a.value}
+                              </dd>
+                            </div>
+                          );
+                        })}
+                      </dl>
+
+                      {summary && (
+                        <div className="rounded-xl border bg-primary/[0.04] p-4">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 space-y-1.5">
+                              <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+                                <Sparkles className="h-4 w-4" />
+                                Resumo do perfil
+                              </p>
+                              {/* Montado por template a partir das respostas
+                                  acima — não há IA no projeto e uma frase
+                                  "gerada" que ninguém pode auditar seria pior
+                                  que não ter resumo nenhum. */}
+                              <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
+                            </div>
+                            <CompletenessMeter data={completeness} />
+                          </div>
                         </div>
-                      ))}
-                    </dl>
+                      )}
+                    </>
                   )}
+
+                  {/* Fatos verificáveis sobre o cadastro. Antes o "há 1h" só
+                      existia no topo, então quem rolava as respostas perdia a
+                      noção de quão quente o contato ainda está. */}
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border bg-muted/25 px-4 py-3">
+                    <FactItem icon={<CalendarClock className="h-4 w-4" />} label="Primeiro contato">
+                      {created}
+                      {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
+                    </FactItem>
+                    <FactItem icon={<StickyNote className="h-4 w-4" />} label="Anotações">
+                      {noteCount === null ? "—" : noteCount}
+                    </FactItem>
+                    <FactItem icon={<Paperclip className="h-4 w-4" />} label="Anexos">
+                      {attachmentCount === null ? "—" : attachmentCount}
+                    </FactItem>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="rastreamento" className="m-0 space-y-6 p-6">
@@ -1030,7 +1232,7 @@ export function LeadDetailDialog({
                 <StickyNote className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold tracking-tight">Anotações</h3>
               </div>
-              <ScrollArea className="max-h-[52vh] flex-1">
+              <ScrollArea className="flex-1 md:max-h-[62vh]">
                 <div className="p-5">
                   <NotesTab leadId={lead.id} companyId={lead.company_id} />
                 </div>
