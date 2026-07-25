@@ -11,7 +11,7 @@ import {
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
-  ChevronDown,
+  ChevronDown, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,7 +43,7 @@ import type { LeadRow } from "../services/leadService";
 import { getLeadDisplayName, updateLeadStatus } from "../services/leadService";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
-  relativeTime, whatsappLink, humanizeKey, toTitleCase, channelLabel,
+  relativeTime, whatsappLink, toTitleCase, channelLabel,
 } from "../lib/leadFields";
 
 interface Props {
@@ -678,13 +678,20 @@ export function LeadDetailDialog({
     value: (lead as unknown as Record<string, unknown>)[f.key as string],
   })).filter((f) => typeof f.value === "string" && f.value);
 
-  const metaKeys = ["meta_campaign_id", "meta_adset_id", "meta_ad_id", "meta_form_name"];
-  const metaInfo = metaKeys
-    .map((k) => ({
-      label: humanizeKey(k.replace(/^meta_/, "")),
-      value: ((lead as { metadata?: Record<string, unknown> }).metadata ?? {})[k],
-    }))
-    .filter((f) => typeof f.value === "string" && f.value);
+  const meta = (lead as { metadata?: Record<string, unknown> }).metadata ?? {};
+
+  /* Mostra o NOME quando existe e cai pro id só como último recurso: a ficha
+     exibia "52525417339565", que não diz a ninguém qual anúncio trouxe o lead. */
+  const metaInfo = [
+    { label: "Campanha", value: meta.meta_campaign_name ?? meta.meta_campaign_id },
+    { label: "Conjunto", value: meta.meta_adset_name ?? meta.meta_adset_id },
+    { label: "Anúncio", value: meta.meta_ad_name ?? meta.meta_ad_id },
+    { label: "Formulário", value: meta.meta_form_name },
+  ].filter((f) => typeof f.value === "string" && f.value);
+
+  const duplicateSince = typeof meta.duplicate_first_seen_at === "string"
+    ? meta.duplicate_first_seen_at
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -742,6 +749,20 @@ export function LeadDetailDialog({
             </div>
           </div>
         </DialogHeader>
+
+        {/* Contato repetido: sem isso o corretor liga pra mesma pessoa duas
+            vezes como se fossem leads diferentes. Não fundimos os cadastros —
+            cada um traz respostas próprias, e um pode ser de outro
+            empreendimento — mas o aviso precisa estar visível antes da ligação. */}
+        {duplicateSince && (
+          <div className="flex items-center gap-2.5 border-b border-amber-500/25 bg-amber-500/8 px-6 py-2.5 text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              Este contato já havia se cadastrado em{" "}
+              <strong>{formatDateTime(duplicateSince)}</strong>. Confira o histórico antes de ligar.
+            </span>
+          </div>
+        )}
 
         <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[290px_1fr]">
           {/* ---------- Contexto ----------

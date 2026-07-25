@@ -154,6 +154,58 @@ export async function fetchLead(leadgenId: string, pageAccessToken: string): Pro
   });
 }
 
+export interface MetaAdAttribution {
+  ad_id: string;
+  ad_name: string | null;
+  adset_id: string | null;
+  adset_name: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
+}
+
+interface AdNode {
+  id: string;
+  name?: string;
+  adset?: { id?: string; name?: string };
+  campaign?: { id?: string; name?: string };
+}
+
+/**
+ * Busca nome do anúncio, conjunto e campanha a partir do ad_id do lead.
+ *
+ * O lead traz só IDs numéricos ("52525417339565"), que não dizem nada pra quem
+ * olha a ficha. Esta chamada resolve os nomes reais
+ * ("[COALA][FORMULARIO][COSTA-DOURADA]"), que é o que permite saber qual
+ * anúncio está trazendo cliente.
+ *
+ * Exige o escopo ads_read no token. Devolve null em qualquer falha — atribuição
+ * é enriquecimento, nunca pode derrubar a ingestão do lead.
+ */
+export async function fetchAdAttribution(
+  adId: string,
+  accessToken: string,
+): Promise<MetaAdAttribution | null> {
+  try {
+    const node = await request<AdNode>(`/${adId}`, {
+      query: {
+        access_token: accessToken,
+        fields: "id,name,adset{id,name},campaign{id,name}",
+      },
+    });
+    if (!node?.id) return null;
+    return {
+      ad_id: node.id,
+      ad_name: node.name ?? null,
+      adset_id: node.adset?.id ?? null,
+      adset_name: node.adset?.name ?? null,
+      campaign_id: node.campaign?.id ?? null,
+      campaign_name: node.campaign?.name ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 interface LeadListResponse {
   data?: MetaLead[];
   paging?: {

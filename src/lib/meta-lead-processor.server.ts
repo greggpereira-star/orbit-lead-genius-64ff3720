@@ -7,6 +7,53 @@
 import { createHmac } from "node:crypto";
 import { fetchLead, type MetaLead } from "./meta-graph.server";
 import { dispatchLeadWhatsApp } from "./whatsapp-automation.server";
+import { resolveAdAttribution } from "./meta-attribution.server";
+
+/**
+ * Marca o lead quando o mesmo telefone já existe na empresa.
+ *
+ * Não bloqueia nem funde os leads de propósito: a pessoa pode se cadastrar em
+ * dois empreendimentos diferentes, e cada cadastro traz respostas próprias —
+ * fundir apagaria informação real. O que faltava era o corretor SABER, pra não
+ * ligar duas vezes como se fossem estranhos.
+ */
+async function findDuplicate(
+  admin: Admin,
+  companyId: string,
+  phone: string | null,
+  email: string | null,
+): Promise<{ id: string; created_at: string } | null> {
+  try {
+    const digits = phone ? String(phone).replace(/\D+/g, "").slice(-8) : null;
+
+    if (digits && digits.length >= 8) {
+      const { data } = await admin
+        .from("leads")
+        .select("id, created_at")
+        .eq("company_id", companyId)
+        .ilike("phone", `%${digits}%`)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) return data;
+    }
+
+    if (email) {
+      const { data } = await admin
+        .from("leads")
+        .select("id, created_at")
+        .eq("company_id", companyId)
+        .ilike("email", email.trim())
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) return data;
+    }
+  } catch {
+    // Detecção de duplicado é informação extra, não pode barrar o lead.
+  }
+  return null;
+}
 
 // Loose admin typing on purpose: this file is server-only and is invoked with
 // the generated supabaseAdmin client. Keeping it permissive avoids leaking
@@ -172,6 +219,17 @@ export async function processMetaLeadEvent(
     const leadDetails = input.hydratedLead ?? (await fetchLead(input.leadgenId, page.page_access_token));
     const parsed = normalizeFieldData(leadDetails.field_data ?? [], fieldMapping);
 
+    // Nomes de anúncio/campanha e aviso de contato repetido. Ambos são
+    // enriquecimento: qualquer falha devolve null e o lead entra igual.
+    const [attribution, duplicate] = await Promise.all([
+      resolveAdAttribution(admin, {
+        companyId: page.company_id,
+        adId: leadDetails.ad_id ?? input.adId ?? null,
+        accessToken: page.page_access_token,
+      }),
+      findDuplicate(admin, page.company_id, parsed.phone ?? null, parsed.email ?? null),
+    ]);
+
     const leadInsert: Record<string, unknown> = {
       company_id: page.company_id,
       name: parsed.name ?? "Lead sem nome",
@@ -181,7 +239,15 @@ export async function processMetaLeadEvent(
       status: "new",
       utm_source: mapping?.default_utm_source ?? "facebook",
       utm_medium: mapping?.default_utm_medium ?? "paid_social",
-      utm_campaign: mapping?.default_utm_campaign ?? leadDetails.campaign_id ?? null,
+      // Prefere o NOME da campanha ao id: é o que aparece nos relatórios de
+      // UTM, e "52525417339565" ali não ajuda ninguém a decidir nada.
+      utm_campaign:
+        mapping?.default_utm_campaign ??
+        attribution?.campaign_name ??
+        leadDetails.campaign_id ??
+        null,
+      utm_content: attribution?.ad_name ?? null,
+      utm_term: attribution?.adset_name ?? null,
       assigned_to: mapping?.assigned_to ?? null,
       lead_score: mapping?.default_score ?? null,
       score: mapping?.default_score ?? null,
@@ -197,6 +263,13 @@ export async function processMetaLeadEvent(
         meta_adset_id: leadDetails.adset_id ?? null,
         meta_campaign_id: leadDetails.campaign_id ?? null,
         meta_created_time: leadDetails.created_time,
+        // Nomes resolvidos via Graph API — o que a ficha do lead exibe.
+        meta_ad_name: attribution?.ad_name ?? null,
+        meta_adset_name: attribution?.adset_name ?? null,
+        meta_campaign_name: attribution?.campaign_name ?? null,
+        // Contato repetido: o corretor precisa saber antes de ligar.
+        duplicate_of: duplicate?.id ?? null,
+        duplicate_first_seen_at: duplicate?.created_at ?? null,
         mapping_id: mapping?.id ?? null,
         pipeline_id: mapping?.pipeline_id ?? null,
         stage_id: mapping?.stage_id ?? null,
