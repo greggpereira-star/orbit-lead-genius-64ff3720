@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Mail, Phone, MapPin, Calendar, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
-  StickyNote, Plus, Trash2, CalendarClock, Loader2, X,
+  StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,10 @@ import {
   listLeadNotes, createLeadNote, deleteLeadNote, toggleNoteDone,
   listLeadTags, addLeadTag, removeLeadTag, listCompanyTagNames,
 } from "../services/leadNotesService";
+import {
+  listLeadAttachments, uploadLeadAttachment, deleteLeadAttachment,
+  getAttachmentUrl, formatFileSize, type LeadAttachment,
+} from "../services/leadAttachmentsService";
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -269,6 +273,139 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
   );
 }
 
+/**
+ * Anexos: proposta, contrato, documento do cliente.
+ *
+ * O bucket é privado, então o link é assinado no clique e vale poucos minutos.
+ * Isso evita que uma proposta com valores vaze por quem receber a URL.
+ */
+function AttachmentsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [opening, setOpening] = useState<string | null>(null);
+
+  const listQuery = useQuery({
+    queryKey: ["lead-attachments", leadId],
+    queryFn: () => listLeadAttachments(leadId),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) =>
+      uploadLeadAttachment({
+        companyId,
+        leadId,
+        file,
+        uploadedBy: user?.id ?? null,
+        uploadedByName: (user as { email?: string } | null)?.email ?? null,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-attachments", leadId] });
+      toast.success("Arquivo anexado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (a: LeadAttachment) => deleteLeadAttachment(a),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-attachments", leadId] });
+      toast.success("Anexo removido");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  /** Abre numa aba nova com URL assinada na hora. */
+  const open = async (a: LeadAttachment) => {
+    setOpening(a.id);
+    try {
+      const url = await getAttachmentUrl(a.storage_path);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível abrir o arquivo.");
+    } finally {
+      setOpening(null);
+    }
+  };
+
+  const items = listQuery.data ?? [];
+
+  return (
+    <div className="space-y-5">
+      <label
+        className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/30"
+        aria-label="Anexar arquivo"
+      >
+        <input
+          type="file"
+          className="sr-only"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
+          disabled={uploadMutation.isPending}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) uploadMutation.mutate(f);
+            // Limpa pra permitir reenviar o mesmo arquivo depois de um erro.
+            e.target.value = "";
+          }}
+        />
+        {uploadMutation.isPending ? (
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        ) : (
+          <Paperclip className="h-5 w-5 text-muted-foreground" />
+        )}
+        <span className="text-sm font-medium">
+          {uploadMutation.isPending ? "Enviando…" : "Anexar proposta ou documento"}
+        </span>
+        <span className="text-xs text-muted-foreground">PDF, imagem, Word ou Excel · até 10 MB</span>
+      </label>
+
+      {listQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhum arquivo anexado a este lead.</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((a) => (
+            <div key={a.id} className="group flex items-center gap-3 rounded-lg border p-3">
+              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{a.file_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatFileSize(a.size_bytes)}
+                  {a.uploaded_by_name ? ` · ${a.uploaded_by_name}` : ""} ·{" "}
+                  {new Date(a.created_at).toLocaleDateString("pt-BR")}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0"
+                onClick={() => open(a)}
+                disabled={opening === a.id}
+              >
+                {opening === a.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-3.5 w-3.5" />
+                )}
+                <span className="ml-1.5 hidden sm:inline">Abrir</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                onClick={() => deleteMutation.mutate(a)}
+                title={`Remover ${a.file_name}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Etiquetas com sugestão das já usadas, pra não virar "Investidor" e "investidor". */
 function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
   const qc = useQueryClient();
@@ -462,7 +599,10 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
           {/* ---------- Conteúdo ---------- */}
           <div className="min-w-0">
             <Tabs defaultValue="respostas" className="flex h-full flex-col">
-              <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent px-6 pt-2">
+              {/* Com 5 abas o rótulo da última era cortado na largura do modal.
+                  Rolagem horizontal resolve em qualquer largura sem abreviar
+                  nome de aba, que é o que deixaria a navegação adivinhada. */}
+              <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent px-6 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <TabsTrigger value="respostas" className="gap-2">
                   <ClipboardList className="h-4 w-4" />
                   Respostas
@@ -479,6 +619,10 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
                 <TabsTrigger value="anotacoes" className="gap-2">
                   <StickyNote className="h-4 w-4" />
                   Anotações
+                </TabsTrigger>
+                <TabsTrigger value="anexos" className="gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  Anexos
                 </TabsTrigger>
                 <TabsTrigger value="tags" className="gap-2">
                   <TagIcon className="h-4 w-4" />
@@ -545,6 +689,10 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
 
                 <TabsContent value="anotacoes" className="m-0 p-6">
                   <NotesTab leadId={lead.id} companyId={lead.company_id} />
+                </TabsContent>
+
+                <TabsContent value="anexos" className="m-0 p-6">
+                  <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
                 </TabsContent>
 
                 <TabsContent value="tags" className="m-0 p-6">
