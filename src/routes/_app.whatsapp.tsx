@@ -35,6 +35,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 interface SettingsForm {
   greeting_enabled: boolean;
@@ -61,6 +64,40 @@ const KIND_LABEL: Record<string, string> = {
   manual: "Teste",
   reply: "Resposta",
 };
+
+/**
+ * Os campos de proteção eram três caixas com "8", "21" e "8" e o rótulo
+ * "Intervalo entre envios (s)". Nada ali dizia se era hora, dia ou minuto —
+ * o usuário tinha que adivinhar. Agora a unidade aparece dentro do próprio
+ * controle e um resumo em texto repete a configuração por extenso.
+ */
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => ({
+  value: h,
+  label: `${String(h).padStart(2, "0")}:00`,
+}));
+
+const INTERVAL_OPTIONS = [
+  { value: 0, label: "Sem espera" },
+  { value: 5, label: "5 segundos" },
+  { value: 8, label: "8 segundos" },
+  { value: 15, label: "15 segundos" },
+  { value: 30, label: "30 segundos" },
+  { value: 60, label: "1 minuto" },
+  { value: 120, label: "2 minutos" },
+  { value: 300, label: "5 minutos" },
+];
+
+function intervalLabel(seconds: number): string {
+  const known = INTERVAL_OPTIONS.find((o) => o.value === seconds);
+  if (known) return known.label;
+  if (seconds < 60) return `${seconds} segundos`;
+  const min = Math.round(seconds / 60);
+  return min === 1 ? "1 minuto" : `${min} minutos`;
+}
+
+function hourLabel(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
 
 function WhatsAppPage() {
   const qc = useQueryClient();
@@ -403,52 +440,99 @@ function WhatsAppPage() {
             )}
 
             {/* Proteções */}
-            <div className="space-y-3 rounded-lg border p-4">
-              <div className="space-y-0.5">
+            <div className="space-y-4 rounded-lg border p-4">
+              <div className="space-y-1">
                 <p className="font-medium">Proteção do número</p>
                 <p className="text-sm text-muted-foreground">
-                  A Evolution API usa o protocolo não-oficial do WhatsApp. Enviar fora de hora ou em
-                  rajada aumenta o risco de bloqueio — estes limites reduzem isso.
+                  Mandar mensagem de madrugada, ou várias de uma vez, faz o WhatsApp desconfiar do
+                  número e ele pode ser bloqueado. Os limites abaixo evitam isso.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="qh-start" className="text-xs">Enviar a partir das</Label>
-                  <Input
-                    id="qh-start"
-                    type="number"
-                    min={0}
-                    max={23}
-                    value={form.quiet_hours_start}
-                    onChange={(e) => update("quiet_hours_start", Number(e.target.value))}
-                    className="h-9 w-24"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="qh-end" className="text-xs">até as</Label>
-                  <Input
-                    id="qh-end"
-                    type="number"
-                    min={0}
-                    max={23}
-                    value={form.quiet_hours_end}
-                    onChange={(e) => update("quiet_hours_end", Number(e.target.value))}
-                    className="h-9 w-24"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="interval" className="text-xs">Intervalo entre envios (s)</Label>
-                  <Input
-                    id="interval"
-                    type="number"
-                    min={0}
-                    max={300}
-                    value={form.min_interval_seconds}
-                    onChange={(e) => update("min_interval_seconds", Number(e.target.value))}
-                    className="h-9 w-28"
-                  />
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Só enviar neste horário</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={String(form.quiet_hours_start)}
+                    onValueChange={(v) => update("quiet_hours_start", Number(v))}
+                  >
+                    <SelectTrigger className="h-9 w-28" aria-label="Horário de início dos envios">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOUR_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={String(o.value)}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">às</span>
+                  <Select
+                    value={String(form.quiet_hours_end)}
+                    onValueChange={(v) => update("quiet_hours_end", Number(v))}
+                  >
+                    <SelectTrigger className="h-9 w-28" aria-label="Horário de término dos envios">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOUR_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={String(o.value)}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">(horário de Brasília)</span>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Esperar entre uma mensagem e outra</Label>
+                <Select
+                  value={String(form.min_interval_seconds)}
+                  onValueChange={(v) => update("min_interval_seconds", Number(v))}
+                >
+                  <SelectTrigger className="h-9 w-44" aria-label="Tempo de espera entre mensagens">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INTERVAL_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Repete a configuração por extenso: o usuário confere lendo uma
+                  frase, sem precisar interpretar campo por campo. */}
+              <p className="rounded-md bg-muted/60 px-3 py-2.5 text-sm">
+                {form.quiet_hours_start === form.quiet_hours_end ? (
+                  <>Enviando a qualquer hora do dia</>
+                ) : form.quiet_hours_start < form.quiet_hours_end ? (
+                  <>
+                    Enviando das <strong>{hourLabel(form.quiet_hours_start)}</strong> às{" "}
+                    <strong>{hourLabel(form.quiet_hours_end)}</strong>
+                  </>
+                ) : (
+                  <>
+                    Enviando das <strong>{hourLabel(form.quiet_hours_start)}</strong> até as{" "}
+                    <strong>{hourLabel(form.quiet_hours_end)}</strong> do dia seguinte
+                  </>
+                )}
+                {form.min_interval_seconds > 0 ? (
+                  <>
+                    , com <strong>{intervalLabel(form.min_interval_seconds)}</strong> de espera entre
+                    cada mensagem.
+                  </>
+                ) : (
+                  <>, sem espera entre as mensagens.</>
+                )}{" "}
+                Lead que chegar fora desse horário não recebe a saudação — o cadastro dele é
+                registrado normalmente.
+              </p>
             </div>
 
             <div className="flex justify-end">
