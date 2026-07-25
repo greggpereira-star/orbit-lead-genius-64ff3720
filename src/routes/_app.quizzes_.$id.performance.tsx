@@ -72,7 +72,11 @@ function QuizPerformancePage() {
     setPromotingId(`${blockId}:${variantId}`);
     try {
       await quizService.promoteVariant({ quizId: id, companyId: company.id, userId: user.id, blockId, variantId });
-      toast.success('Variação promovida como versão principal do bloco');
+      // Promover grava rascunho, não vai pro ar sozinho — dizer só "promovida"
+      // faria o usuário achar que o visitante já está vendo a variante nova.
+      toast.success('Variação promovida no rascunho', {
+        description: 'Publique o quiz no Builder para o link público mostrar a versão nova.',
+      });
       refreshAbTests();
     } catch (e: unknown) {
       toast.error('Erro ao promover: ' + (e instanceof Error ? e.message : String(e)));

@@ -23,6 +23,7 @@ import {
   Users,
   Workflow,
   Rocket,
+  UploadCloud,
   ChevronDown,
   ChevronRight,
   AlertCircle,
@@ -71,6 +72,11 @@ function QuizBuilderPage() {
   const [autosave, setAutosave] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+  /* Rascunho e ar são coisas diferentes: salvar acumula versão, publicar troca
+     a que o visitante vê. Guardar os dois ids é o que permite dizer "você tem
+     alteração que ainda não está no ar". */
+  const [publishedVersionId, setPublishedVersionId] = useState<string | null>(null);
+  const [latestVersionId, setLatestVersionId] = useState<string | null>(null);
 
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 1024px)');
@@ -84,10 +90,16 @@ function QuizBuilderPage() {
     let mounted = true;
     (async () => {
       try {
-        const [q, s] = await Promise.all([quizService.getById(id), quizService.getLatestSchema(id)]);
+        const [q, s, pub] = await Promise.all([
+          quizService.getById(id),
+          quizService.getLatestSchema(id),
+          quizService.getPublishState(id),
+        ]);
         if (!mounted) return;
         setQuiz(q);
         setSchema({ ...s, steps: getSteps(s) });
+        setPublishedVersionId(pub.publishedVersionId);
+        setLatestVersionId(pub.latestVersionId);
       } catch (e) {
         console.error('Erro ao carregar quiz', e);
         toast.error('Não foi possível carregar este quiz agora. Tente recarregar a página.');
@@ -383,8 +395,17 @@ function QuizBuilderPage() {
     if (!company?.id || !user?.id) return;
     setSaving(true);
     try {
-      await quizService.saveSchema({ quizId: id, companyId: company.id, userId: user.id, schema });
-      if (!opts?.silent) toast.success('Alterações salvas');
+      const versionId = await quizService.saveSchema({
+        quizId: id, companyId: company.id, userId: user.id, schema,
+      });
+      setLatestVersionId(versionId);
+      if (!opts?.silent) {
+        toast.success(
+          quiz?.status === 'published'
+            ? 'Rascunho salvo — publique para o link público mudar'
+            : 'Alterações salvas',
+        );
+      }
       setDirty(false);
       setSaveError(false);
       setLastSavedAt(new Date());
@@ -411,6 +432,32 @@ function QuizBuilderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema, dirty, autosave, loading]);
 
+  /* Só um quiz publicado pode ter "alteração fora do ar": num rascunho, tudo
+     ainda está por publicar e o aviso não significaria nada. `dirty` entra
+     porque edição não salva também é mudança que o visitante não vê. */
+  const hasUnpublishedChanges =
+    quiz?.status === 'published' &&
+    (dirty || (!!latestVersionId && latestVersionId !== publishedVersionId));
+
+  /** Leva o rascunho atual para o ar, sem mexer no status do quiz. */
+  const handlePublishChanges = async () => {
+    if (!quiz) return;
+    setPublishing(true);
+    try {
+      if (dirty) await handleSave({ silent: true });
+      await quizService.publish(id);
+      const pub = await quizService.getPublishState(id);
+      setPublishedVersionId(pub.publishedVersionId);
+      setLatestVersionId(pub.latestVersionId);
+      toast.success('Alterações publicadas — o link público já mostra a versão nova.');
+    } catch (e) {
+      console.error('Erro ao publicar alterações', e);
+      toast.error('Não foi possível publicar agora. Seu rascunho está salvo.');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handleTogglePublish = async () => {
     if (!quiz) return;
     if (quiz.status === 'published' && !window.confirm('Despublicar este quiz? O link público deixará de funcionar imediatamente.')) {
@@ -426,8 +473,13 @@ function QuizBuilderPage() {
         await quizService.publish(id);
         toast.success('Quiz publicado! O link público já está no ar.');
       }
-      const fresh = await quizService.getById(id);
+      const [fresh, pub] = await Promise.all([
+        quizService.getById(id),
+        quizService.getPublishState(id),
+      ]);
       setQuiz(fresh);
+      setPublishedVersionId(pub.publishedVersionId);
+      setLatestVersionId(pub.latestVersionId);
     } catch (e) {
       console.error('Erro ao publicar/despublicar quiz', e);
       toast.error('Não foi possível atualizar a publicação agora.');
@@ -787,14 +839,19 @@ function QuizBuilderPage() {
               ) : (
                 <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
               )}
+              {/* "Salvo" sozinho virou meia verdade num quiz publicado: o
+                  rascunho está salvo, mas o visitante continua vendo a versão
+                  antiga. O indicador precisa dizer as duas coisas. */}
               <span className="hidden min-[420px]:inline">
                 {saving
                   ? 'Salvando…'
                   : dirty
                     ? 'Não salvo'
-                    : lastSavedAt
-                      ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                      : 'Salvo'}
+                    : hasUnpublishedChanges
+                      ? 'Salvo — fora do ar'
+                      : lastSavedAt
+                        ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                        : 'Salvo'}
               </span>
             </div>
           )}
@@ -802,6 +859,20 @@ function QuizBuilderPage() {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span className="hidden sm:inline">Salvar</span>
           </Button>
+          {/* Publicar alterações só aparece quando há o que publicar. Enquanto
+              o rascunho é igual ao que está no ar, este botão seria ruído — e
+              pior, sugeriria que algo está pendente quando não está. */}
+          {hasUnpublishedChanges && (
+            <Button
+              size="sm"
+              onClick={handlePublishChanges}
+              disabled={publishing || saving}
+              className="gap-2 px-2 shadow-lg shadow-primary/20 sm:px-3"
+            >
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+              <span className="hidden sm:inline">Publicar alterações</span>
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={handleTogglePublish}

@@ -181,14 +181,18 @@ function QuizFlowPage() {
               ) : (
                 <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
               )}
+              {/* Salvar grava rascunho: num quiz publicado, o visitante só vê
+                  a mudança depois de publicar pelo Builder. */}
               <span className="hidden min-[420px]:inline">
                 {saving
                   ? 'Salvando…'
                   : dirty
                     ? 'Não salvo'
-                    : lastSavedAt
-                      ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                      : 'Salvo'}
+                    : quiz?.status === 'published'
+                      ? 'Salvo — fora do ar'
+                      : lastSavedAt
+                        ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                        : 'Salvo'}
               </span>
             </div>
           )}

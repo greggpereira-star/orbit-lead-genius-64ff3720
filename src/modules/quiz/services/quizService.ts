@@ -301,12 +301,13 @@ export const quizService = {
     };
   },
 
+  /** Salva um rascunho e devolve o id da versão criada. Não publica. */
   async saveSchema(params: {
     quizId: string;
     companyId: string;
     userId: string;
     schema: QuizSchema;
-  }): Promise<void> {
+  }): Promise<string> {
     const { data: latest } = await supabase
       .from('quiz_versions')
       .select('version')
@@ -334,18 +335,34 @@ export const quizService = {
       .update({ design: params.schema.design as never, updated_at: new Date().toISOString() })
       .eq('id', params.quizId);
 
-    // Se o quiz já está publicado, cada save (incluindo autosave) já vira a versão
-    // ao vivo — evita a experiência confusa de "salvo" mas o link público não mudar.
-    const newVersionId = (inserted as { id: string }).id;
-    const { data: republished } = await supabase
-      .from('quiz_funnels')
-      .update({ published_version_id: newVersionId })
-      .eq('id', params.quizId)
-      .eq('status', 'published')
-      .select('id');
-    if (republished && republished.length > 0) {
-      await this.markVersionPublished(params.quizId, newVersionId);
-    }
+    // Salvar NÃO publica. Antes, cada save num quiz publicado — inclusive o
+    // autosave de 1,5s — virava a versão ao vivo na hora. Somado à exclusão de
+    // bloco sem confirmação, um clique errado tirava conteúdo do ar em segundos,
+    // sem aviso: foi assim que a captura de contato saiu do quiz de estética e
+    // ninguém percebeu. Agora o rascunho acumula e só `publish()` troca o que
+    // está no ar.
+    return (inserted as { id: string }).id;
+  },
+
+  /** Versão que está no ar e a última salva — para saber se há mudança pendente. */
+  async getPublishState(quizId: string): Promise<{
+    publishedVersionId: string | null;
+    latestVersionId: string | null;
+  }> {
+    const [{ data: quiz }, { data: latest }] = await Promise.all([
+      supabase.from('quiz_funnels').select('published_version_id').eq('id', quizId).maybeSingle(),
+      supabase
+        .from('quiz_versions')
+        .select('id')
+        .eq('quiz_id', quizId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    return {
+      publishedVersionId: (quiz as { published_version_id?: string | null } | null)?.published_version_id ?? null,
+      latestVersionId: (latest as { id?: string } | null)?.id ?? null,
+    };
   },
 
   // RLS de leitura pública (anon) em quiz_versions depende de is_published=true,
