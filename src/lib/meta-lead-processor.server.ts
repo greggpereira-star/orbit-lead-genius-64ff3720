@@ -6,6 +6,7 @@
  */
 import { createHmac } from "node:crypto";
 import { fetchLead, type MetaLead } from "./meta-graph.server";
+import { dispatchLeadWhatsApp } from "./whatsapp-automation.server";
 
 // Loose admin typing on purpose: this file is server-only and is invoked with
 // the generated supabaseAdmin client. Keeping it permissive avoids leaking
@@ -226,6 +227,17 @@ export async function processMetaLeadEvent(
         body: { lead_id: insertedLead.id, tenant_id: page.company_id, source: "meta_leadads" },
       })
       .catch(() => undefined);
+
+    // Saudação ao lead + alerta ao corretor via WhatsApp. Assíncrono e à prova
+    // de falha: o que der errado vira linha em whatsapp_messages, nunca exceção.
+    void dispatchLeadWhatsApp(admin, {
+      companyId: page.company_id,
+      leadId: insertedLead.id,
+      name: parsed.name ?? null,
+      phone: parsed.phone ?? null,
+      campaign: mapping?.default_utm_campaign ?? leadDetails.campaign_id ?? null,
+      source: "meta_leadads",
+    }).catch(() => undefined);
 
     // Optional external CRM routing (RD Station, HubSpot, Pipedrive, generic webhook)
     if (mapping?.external_crm_enabled && mapping.external_crm_provider) {
