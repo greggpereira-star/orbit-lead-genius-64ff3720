@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Mail, Phone, MapPin, Calendar, Copy, Check, ExternalLink,
+  Mail, Phone, MapPin, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
 } from "lucide-react";
@@ -39,7 +39,7 @@ import type { LeadRow } from "../services/leadService";
 import { getLeadDisplayName } from "../services/leadService";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
-  relativeTime, whatsappLink, humanizeKey,
+  relativeTime, whatsappLink, humanizeKey, toTitleCase, channelLabel,
 } from "../lib/leadFields";
 
 interface Props {
@@ -48,6 +48,66 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** Rótulo configurável: "Empreendimento" numa imobiliária, "Curso" numa escola. */
   originLabel?: string;
+}
+
+/** Iniciais dão ao modal uma âncora visual — sem elas o topo é só texto. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Cor derivada do nome: o mesmo lead tem sempre a mesma cor, então a lista
+ * ganha um ponto de reconhecimento sem precisar de foto.
+ */
+const AVATAR_TONES = [
+  "bg-blue-500/12 text-blue-700 dark:text-blue-300",
+  "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+  "bg-violet-500/12 text-violet-700 dark:text-violet-300",
+  "bg-amber-500/12 text-amber-700 dark:text-amber-300",
+  "bg-rose-500/12 text-rose-700 dark:text-rose-300",
+  "bg-cyan-500/12 text-cyan-700 dark:text-cyan-300",
+];
+
+function avatarTone(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_TONES[h % AVATAR_TONES.length];
+}
+
+/** O banco guarda "new"/"contacted"; a tela não deve mostrar isso cru. */
+const STAGE_LABEL: Record<string, string> = {
+  new: "Novo",
+  contacted: "Contatado",
+  qualified: "Qualificado",
+  proposal: "Proposta",
+  won: "Ganho",
+  lost: "Perdido",
+  archived: "Arquivado",
+};
+
+const STAGE_TONE: Record<string, string> = {
+  new: "bg-blue-500/12 text-blue-700 dark:text-blue-300",
+  contacted: "bg-violet-500/12 text-violet-700 dark:text-violet-300",
+  qualified: "bg-cyan-500/12 text-cyan-700 dark:text-cyan-300",
+  proposal: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
+  won: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+  lost: "bg-rose-500/12 text-rose-700 dark:text-rose-300",
+};
+
+/** Agrupa campos com um rótulo pequeno — separa o que é contato do que é
+ *  estado interno, que antes vinham na mesma lista achatada. */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        {title}
+      </h3>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
 }
 
 /** Copiar é a ação mais repetida numa ficha de lead — merece feedback próprio. */
@@ -84,13 +144,21 @@ function Field({
   copyable?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 text-muted-foreground">{icon}</span>
+    <div className="group/field flex items-start gap-3">
+      <span className="mt-0.5 shrink-0 text-muted-foreground/70">{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="break-words text-sm font-medium">{value || "—"}</p>
+        {/* truncate + title em vez de quebrar no meio: um e-mail longo virava
+            "…gmail.c / om" na coluna estreita, o que parece defeito. */}
+        <p className="truncate text-sm font-medium" title={value || undefined}>
+          {value || "—"}
+        </p>
       </div>
-      {copyable && value ? <CopyButton value={value} label={label} /> : null}
+      {copyable && value ? (
+        <span className="opacity-0 transition-opacity group-hover/field:opacity-100 focus-within:opacity-100">
+          <CopyButton value={value} label={label} />
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -516,7 +584,7 @@ const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
 export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Origem" }: Props) {
   if (!lead) return null;
 
-  const name = getLeadDisplayName(lead);
+  const name = toTitleCase(getLeadDisplayName(lead)) || getLeadDisplayName(lead);
   const origin = getLeadOrigin(lead);
   const city = getLeadCity(lead);
   const answers = getLeadAnswers(lead);
@@ -539,19 +607,70 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl gap-0 overflow-hidden p-0">
+      <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0">
+        {/* Cabeçalho: identidade + etapa + a ação principal, tudo na primeira
+            linha de leitura. Antes o topo era só o nome e uma data, e a ação
+            mais usada (WhatsApp) ficava enterrada abaixo de seis campos. */}
         <DialogHeader className="space-y-0 border-b px-6 py-5">
-          <DialogTitle className="text-xl">{name}</DialogTitle>
-          <DialogDescription>
-            Cadastrado em {created}
-            {ago ? ` · ${ago}` : ""}
-          </DialogDescription>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarTone(name)}`}
+                aria-hidden="true"
+              >
+                {initials(name)}
+              </span>
+              <div className="min-w-0 space-y-1">
+                <DialogTitle className="truncate text-lg leading-tight">{name}</DialogTitle>
+                <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                  <span
+                    className={`rounded-full px-2 py-0.5 font-medium ${
+                      STAGE_TONE[lead.status ?? "new"] ?? "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {STAGE_LABEL[lead.status ?? "new"] ?? lead.status}
+                  </span>
+                  <span className="text-muted-foreground/50">·</span>
+                  <span>{created}</span>
+                  {ago && <span className="text-muted-foreground/70">({ago})</span>}
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* WhatsApp é a ação real sobre um lead novo; e-mail e página
+                completa são secundárias, então viram ícones. */}
+            <div className="flex shrink-0 items-center gap-1.5 pr-8">
+              {lead.email && (
+                <Button asChild variant="ghost" size="icon" className="h-9 w-9" title="Enviar e-mail">
+                  <a href={`mailto:${lead.email}`}>
+                    <Mail className="h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+              <Button asChild variant="ghost" size="icon" className="h-9 w-9" title="Abrir página completa">
+                <a href={`/leads/${lead.id}`}>
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+              {wa && (
+                <Button asChild size="sm" className="h-9">
+                  <a href={wa} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[300px_1fr]">
-          {/* ---------- Identidade e ações ---------- */}
-          <aside className="space-y-5 border-b bg-muted/30 p-6 md:border-b-0 md:border-r">
-            <div className="space-y-4">
+        <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[290px_1fr]">
+          {/* ---------- Contexto ----------
+              Antes era uma lista achatada de seis campos onde telefone
+              (acionável) tinha o mesmo peso de etapa (estado interno). Agora
+              vem agrupado por natureza da informação. */}
+          <aside className="space-y-6 overflow-y-auto border-b bg-muted/20 p-6 md:border-b-0 md:border-r">
+            <Section title="Contato">
               <Field icon={<Phone className="h-4 w-4" />} label="Telefone" value={lead.phone} copyable />
               <Field icon={<Mail className="h-4 w-4" />} label="E-mail" value={lead.email} copyable />
               <Field
@@ -559,41 +678,42 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
                 label={city?.inferred ? "Cidade (pelo DDD)" : "Cidade"}
                 value={city?.label ?? null}
               />
-              <Field icon={<ClipboardList className="h-4 w-4" />} label={originLabel} value={origin} />
-              <Field
-                icon={<User className="h-4 w-4" />}
-                label="Responsável"
-                value={lead.assigned_to ? `${lead.assigned_to.slice(0, 8)}…` : null}
-              />
-              <Field icon={<Calendar className="h-4 w-4" />} label="Etapa" value={lead.status ?? null} />
-            </div>
+            </Section>
 
             <Separator />
 
-            <div className="space-y-2">
-              {wa && (
-                <Button asChild className="w-full justify-start" variant="default">
-                  <a href={wa} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    Abrir no WhatsApp
-                  </a>
-                </Button>
+            <Section title="Captação">
+              <Field icon={<ClipboardList className="h-4 w-4" />} label={originLabel} value={origin} />
+              <Field
+                icon={<Radio className="h-4 w-4" />}
+                label="Canal"
+                value={channelLabel(lead.source ?? lead.utm_source) || null}
+              />
+            </Section>
+
+            <Separator />
+
+            <Section title="Atendimento">
+              {/* Lead sem responsável é pendência, não campo vazio — antes
+                  aparecia como um travessão igual a qualquer dado ausente. */}
+              {lead.assigned_to ? (
+                <Field
+                  icon={<User className="h-4 w-4" />}
+                  label="Responsável"
+                  value={`${lead.assigned_to.slice(0, 8)}…`}
+                />
+              ) : (
+                <div className="flex items-start gap-3">
+                  <User className="mt-0.5 h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-muted-foreground">Responsável</p>
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      Ninguém atribuído
+                    </p>
+                  </div>
+                </div>
               )}
-              {lead.email && (
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <a href={`mailto:${lead.email}`}>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Enviar e-mail
-                  </a>
-                </Button>
-              )}
-              <Button asChild className="w-full justify-start" variant="ghost">
-                <a href={`/leads/${lead.id}`}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Abrir página completa
-                </a>
-              </Button>
-            </div>
+            </Section>
           </aside>
 
           {/* ---------- Conteúdo ---------- */}
@@ -637,11 +757,18 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
                       Este lead não trouxe respostas de formulário.
                     </p>
                   ) : (
-                    <dl className="space-y-4">
+                    /* Antes cada resposta era um card com borda. Para valores
+                       de duas palavras, isso é muito contorno pra pouco
+                       conteúdo — vira ruído. Lista com divisória fina lê melhor
+                       e deixa a resposta em si com o destaque. */
+                    <dl className="divide-y rounded-lg border">
                       {answers.map((a) => (
-                        <div key={a.key} className="rounded-lg border p-3.5">
-                          <dt className="text-xs text-muted-foreground">{a.label}</dt>
-                          <dd className="mt-0.5 font-medium">{a.value}</dd>
+                        <div
+                          key={a.key}
+                          className="grid gap-1 px-4 py-3 sm:grid-cols-[1fr_1.2fr] sm:items-baseline sm:gap-4"
+                        >
+                          <dt className="text-sm text-muted-foreground">{a.label}</dt>
+                          <dd className="text-sm font-medium">{a.value}</dd>
                         </div>
                       ))}
                     </dl>

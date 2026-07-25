@@ -84,6 +84,46 @@ export function getLeadOrigin(lead: LeadRow): string | null {
   return null;
 }
 
+/**
+ * Formulários do Meta costumam vir com o nome todo em caixa alta
+ * ("LUCIANO BATISTA MUNIZ"). Exibir assim é gritar com o usuário, e ainda
+ * atrapalha a leitura numa lista. Mantém partículas em minúsculo, senão vira
+ * "Maria Da Silva Dos Santos".
+ */
+const NAME_PARTICLES = new Set(["de", "da", "do", "das", "dos", "e", "di", "du", "van", "von", "la", "le"]);
+
+export function toTitleCase(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const text = raw.trim();
+  if (!text) return "";
+
+  // Só normaliza quando está tudo em caixa alta ou tudo minúsculo — se o
+  // usuário digitou "McDonald" ou "iPhone", respeita o que ele escreveu.
+  const isAllCaps = text === text.toUpperCase();
+  const isAllLower = text === text.toLowerCase();
+  if (!isAllCaps && !isAllLower) return text;
+
+  return text
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word, i) => {
+      if (i > 0 && NAME_PARTICLES.has(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+/** "facebook" → "Facebook", "meta_lead_ads" → "Meta Lead Ads". */
+export function channelLabel(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return raw
+    .replace(/_/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 /** Canal de captação (meta_lead_ads, quiz, manual…), para ícone e filtro. */
 export function getLeadChannel(lead: LeadRow): string {
   const m = meta(lead);

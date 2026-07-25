@@ -10,6 +10,7 @@ import {
   getLeadCity,
   formatDateTime,
   relativeTime,
+  toTitleCase,
 } from '@/modules/crm/lib/leadFields';
 
 import { Badge } from '@/components/ui/badge';
@@ -499,7 +500,9 @@ function LeadTableRow({
               fechava. Abrir é responsabilidade do duplo clique na linha (e do
               menu, pra quem usa teclado). */}
           <div>
-            <div className="font-bold text-foreground">{getLeadDisplayName(lead)}</div>
+            <div className="font-bold text-foreground">
+              {toTitleCase(getLeadDisplayName(lead)) || getLeadDisplayName(lead)}
+            </div>
             <div className="text-xs font-medium text-muted-foreground">{lead.phone || lead.email || 'Sem contato informado'}</div>
           </div>
         </TableCell>
