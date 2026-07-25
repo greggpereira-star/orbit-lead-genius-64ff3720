@@ -6,11 +6,22 @@
  * (sempre visíveis), conteúdo em abas à direita.
  */
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Mail, Phone, MapPin, Calendar, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
+  StickyNote, Plus, Trash2, CalendarClock, Loader2, X,
 } from "lucide-react";
 import { toast } from "sonner";
+
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  listLeadNotes, createLeadNote, deleteLeadNote, toggleNoteDone,
+  listLeadTags, addLeadTag, removeLeadTag, listCompanyTagNames,
+} from "../services/leadNotesService";
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -76,6 +87,281 @@ function Field({
         <p className="break-words text-sm font-medium">{value || "—"}</p>
       </div>
       {copyable && value ? <CopyButton value={value} label={label} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Anotações do lead. Uma anotação com data vira compromisso — é o mesmo
+ * registro, o que muda é ter prazo. Os compromissos pendentes sobem pro topo
+ * porque é neles que o corretor precisa agir.
+ */
+function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [body, setBody] = useState("");
+  const [scheduledFor, setScheduledFor] = useState("");
+
+  const notesQuery = useQuery({
+    queryKey: ["lead-notes", leadId],
+    queryFn: () => listLeadNotes(leadId),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      createLeadNote({
+        companyId,
+        leadId,
+        body,
+        scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+        authorId: user?.id ?? null,
+        authorName: (user as { email?: string } | null)?.email ?? null,
+      }),
+    onSuccess: () => {
+      setBody("");
+      setScheduledFor("");
+      qc.invalidateQueries({ queryKey: ["lead-notes", leadId] });
+      toast.success("Anotação salva");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const doneMutation = useMutation({
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => toggleNoteDone(id, done),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead-notes", leadId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteLeadNote(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-notes", leadId] });
+      toast.success("Anotação removida");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const notes = notesQuery.data ?? [];
+  const pending = notes.filter((n) => n.scheduled_for && !n.done);
+  const rest = notes.filter((n) => !n.scheduled_for || n.done);
+
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString("pt-BR", {
+      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+
+  const renderNote = (n: (typeof notes)[number]) => {
+    const overdue = n.scheduled_for && !n.done && new Date(n.scheduled_for) < new Date();
+    return (
+      <div key={n.id} className="group rounded-lg border p-3.5">
+        {n.scheduled_for && (
+          <div
+            className={`mb-2 flex items-center gap-1.5 text-xs font-medium ${
+              n.done ? "text-muted-foreground" : overdue ? "text-destructive" : "text-primary"
+            }`}
+          >
+            <CalendarClock className="h-3.5 w-3.5" />
+            {fmt(n.scheduled_for)}
+            {n.done ? " · concluído" : overdue ? " · atrasado" : ""}
+          </div>
+        )}
+        <p className={`whitespace-pre-wrap text-sm ${n.done ? "text-muted-foreground line-through" : ""}`}>
+          {n.body}
+        </p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">
+            {n.author_name || "—"} · {fmt(n.created_at)}
+          </span>
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {n.scheduled_for && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => doneMutation.mutate({ id: n.id, done: !n.done })}
+              >
+                {n.done ? "Reabrir" : "Concluir"}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => deleteMutation.mutate(n.id)}
+              title="Remover anotação"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={3}
+          placeholder="O que foi conversado? Ex: cliente pediu proposta do 2 quartos, prefere entrada parcelada."
+          className="bg-background text-sm"
+          aria-label="Nova anotação"
+        />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="agenda" className="text-xs">
+              Agendar retorno ou visita <span className="text-muted-foreground">(opcional)</span>
+            </Label>
+            <Input
+              id="agenda"
+              type="datetime-local"
+              value={scheduledFor}
+              onChange={(e) => setScheduledFor(e.target.value)}
+              className="h-9 w-56 bg-background text-sm"
+            />
+          </div>
+          <Button
+            onClick={() => createMutation.mutate()}
+            disabled={createMutation.isPending || !body.trim()}
+            className="h-9"
+          >
+            {createMutation.isPending ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-3.5 w-3.5" />
+            )}
+            Salvar
+          </Button>
+        </div>
+      </div>
+
+      {notesQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      ) : notes.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nenhuma anotação ainda. Registre o que foi negociado para não depender da memória.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {pending.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Compromissos em aberto
+              </p>
+              {pending.map(renderNote)}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <div className="space-y-2">
+              {pending.length > 0 && (
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Histórico
+                </p>
+              )}
+              {rest.map(renderNote)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Etiquetas com sugestão das já usadas, pra não virar "Investidor" e "investidor". */
+function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
+  const qc = useQueryClient();
+  const [input, setInput] = useState("");
+
+  const tagsQuery = useQuery({ queryKey: ["lead-tags", leadId], queryFn: () => listLeadTags(leadId) });
+  const suggestionsQuery = useQuery({
+    queryKey: ["company-tags", companyId],
+    queryFn: () => listCompanyTagNames(companyId),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (name: string) => addLeadTag(leadId, name),
+    onSuccess: () => {
+      setInput("");
+      qc.invalidateQueries({ queryKey: ["lead-tags", leadId] });
+      qc.invalidateQueries({ queryKey: ["company-tags", companyId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => removeLeadTag(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead-tags", leadId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const current = tagsQuery.data ?? [];
+  const currentNames = new Set(current.map((t) => t.tag_name));
+  const suggestions = (suggestionsQuery.data ?? []).filter((s) => !currentNames.has(s)).slice(0, 12);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && input.trim()) {
+              e.preventDefault();
+              addMutation.mutate(input);
+            }
+          }}
+          placeholder="Ex: Investidor, Primeira compra, Urgente"
+          className="h-9 text-sm"
+          aria-label="Nova etiqueta"
+        />
+        <Button
+          onClick={() => addMutation.mutate(input)}
+          disabled={addMutation.isPending || !input.trim()}
+          className="h-9"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {current.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhuma etiqueta neste lead.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {current.map((t) => (
+            <Badge key={t.id} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1 text-sm">
+              {t.tag_name}
+              <button
+                type="button"
+                onClick={() => removeMutation.mutate(t.id)}
+                className="rounded-full p-0.5 hover:bg-background"
+                title={`Remover ${t.tag_name}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Já usadas nesta empresa</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => addMutation.mutate(s)}
+                className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                + {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -190,6 +476,10 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
                   <Radio className="h-4 w-4" />
                   Rastreamento
                 </TabsTrigger>
+                <TabsTrigger value="anotacoes" className="gap-2">
+                  <StickyNote className="h-4 w-4" />
+                  Anotações
+                </TabsTrigger>
                 <TabsTrigger value="tags" className="gap-2">
                   <TagIcon className="h-4 w-4" />
                   Etiquetas
@@ -253,10 +543,12 @@ export function LeadDetailDialog({ lead, open, onOpenChange, originLabel = "Orig
                   )}
                 </TabsContent>
 
+                <TabsContent value="anotacoes" className="m-0 p-6">
+                  <NotesTab leadId={lead.id} companyId={lead.company_id} />
+                </TabsContent>
+
                 <TabsContent value="tags" className="m-0 p-6">
-                  <p className="text-sm text-muted-foreground">
-                    Etiquetas e anotações entram na próxima etapa desta tela.
-                  </p>
+                  <TagsTab leadId={lead.id} companyId={lead.company_id} />
                 </TabsContent>
               </ScrollArea>
             </Tabs>
