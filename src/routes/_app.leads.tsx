@@ -2,7 +2,15 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Archive, Download, Filter, Globe, Loader2, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
+import { Archive, Columns3, Download, ExternalLink, Eye, Filter, Globe, Loader2, MapPin, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
+
+import { LeadDetailDialog } from '@/modules/crm/components/LeadDetailDialog';
+import {
+  getLeadOrigin,
+  getLeadCity,
+  formatDateTime,
+  relativeTime,
+} from '@/modules/crm/lib/leadFields';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,13 +25,13 @@ import {
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -70,6 +78,55 @@ const INITIAL_FORM: LeadFormState = {
 const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost', 'archived'];
 const TEMPERATURE_OPTIONS = ['hot', 'warm', 'cold'] as const;
 
+/**
+ * Colunas da tabela.
+ *
+ * Temperatura e score saíram: eram preenchidos por valores fixos do
+ * mapeamento, não por nenhuma avaliação real, então ocupavam espaço nobre sem
+ * informar nada. No lugar entrou o que o usuário de fato precisa pra decidir
+ * quem atender primeiro — de onde veio, de onde é e há quanto tempo chegou.
+ *
+ * A coluna "origem" mostra o nome do formulário: numa imobiliária é o
+ * empreendimento, numa clínica o procedimento. Por isso o rótulo é
+ * configurável em vez de fixo — o dado generaliza, a palavra não.
+ */
+interface ColumnDef {
+  id: string;
+  label: string;
+  defaultVisible: boolean;
+  /** Colunas essenciais não entram no seletor: sem elas a linha perde sentido. */
+  locked?: boolean;
+}
+
+const COLUMNS: ColumnDef[] = [
+  { id: 'contato', label: 'Contato', defaultVisible: true, locked: true },
+  { id: 'origem', label: 'Origem', defaultVisible: true },
+  { id: 'canal', label: 'Canal', defaultVisible: true },
+  { id: 'cidade', label: 'Cidade', defaultVisible: true },
+  { id: 'status', label: 'Etapa', defaultVisible: true },
+  { id: 'atribuido', label: 'Atribuído', defaultVisible: false },
+  { id: 'criado', label: 'Cadastrado em', defaultVisible: true },
+];
+
+const COLS_STORAGE_KEY = 'altflow:leads:columns';
+
+function loadVisibleColumns(): string[] {
+  const fallback = COLUMNS.filter((c) => c.defaultVisible).map((c) => c.id);
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = window.localStorage.getItem(COLS_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return fallback;
+    // Mantém só ids que ainda existem, senão uma coluna removida do código
+    // deixaria a preferência salva quebrada.
+    const valid = parsed.filter((id) => COLUMNS.some((c) => c.id === id));
+    return valid.length ? valid : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function LeadsPage() {
   const { company, user } = useAuth();
   const navigate = useNavigate();
@@ -81,6 +138,25 @@ function LeadsPage() {
   const [metaFormId, setMetaFormId] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
+  const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
+  const [visibleCols, setVisibleCols] = useState<string[]>(loadVisibleColumns);
+
+  // Rótulo da coluna de origem por nicho. Fica no localStorage por enquanto;
+  // quando virar configuração de empresa, é só trocar a fonte aqui.
+  const originLabel =
+    (typeof window !== 'undefined' && window.localStorage.getItem('altflow:leads:originLabel')) || 'Origem';
+
+  const toggleColumn = (id: string) => {
+    setVisibleCols((prev) => {
+      const next = prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id];
+      try {
+        window.localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Preferência de coluna não vale quebrar a tela por causa de storage cheio.
+      }
+      return next;
+    });
+  };
 
   const companyId = company?.id;
   const currentUserId = user?.id ?? null;
@@ -185,7 +261,7 @@ function LeadsPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Leads</h1>
-          <p className="text-sm text-muted-foreground">Pipeline de contatos com atribuição, score e origem de captura.</p>
+          <p className="text-sm text-muted-foreground">Contatos capturados, com origem, cidade e quando chegaram.</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -259,9 +335,9 @@ function LeadsPage() {
 
       <div className="grid gap-3 md:grid-cols-4">
         <MetricCard label="Leads ativos" value={metrics.total} />
+        <MetricCard label="Últimas 24h" value={metrics.today} />
         <MetricCard label="Novos 7 dias" value={metrics.newThisWeek} />
-        <MetricCard label="Leads quentes" value={metrics.hot} />
-        <MetricCard label="Score médio" value={metrics.averageScore} suffix="/100" />
+        <MetricCard label="Sem responsável" value={metrics.unassigned} />
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 lg:flex-row lg:items-center">
@@ -318,17 +394,41 @@ function LeadsPage() {
 
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Dê um duplo clique numa linha para ver a ficha completa.
+        </p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8">
+              <Columns3 className="mr-2 h-3.5 w-3.5" />
+              Colunas
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            {COLUMNS.filter((c) => !c.locked).map((c) => (
+              <DropdownMenuCheckboxItem
+                key={c.id}
+                checked={visibleCols.includes(c.id)}
+                onCheckedChange={() => toggleColumn(c.id)}
+                onSelect={(e) => e.preventDefault()}
+              >
+                {c.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border bg-card">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="min-w-[260px]">Contato</TableHead>
-              <TableHead>Origem</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Temperatura</TableHead>
-              <TableHead className="w-[170px]">Score</TableHead>
-              <TableHead>Atribuído</TableHead>
-              <TableHead>Criado em</TableHead>
+              {COLUMNS.filter((c) => visibleCols.includes(c.id)).map((c) => (
+                <TableHead key={c.id} className={c.id === 'contato' ? 'min-w-[240px]' : undefined}>
+                  {c.id === 'origem' ? originLabel : c.label}
+                </TableHead>
+              ))}
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -337,64 +437,127 @@ function LeadsPage() {
               <LoadingRows />
             ) : leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={visibleCols.length + 1} className="h-32 text-center text-sm text-muted-foreground">
                   Nenhum lead encontrado para os filtros atuais.
                 </TableCell>
               </TableRow>
             ) : (
               leads.map((lead) => (
-                <LeadTableRow key={lead.id} lead={lead} currentUserId={currentUserId} onArchive={() => archiveMutation.mutate(lead.id)} />
+                <LeadTableRow
+                  key={lead.id}
+                  lead={lead}
+                  currentUserId={currentUserId}
+                  visibleCols={visibleCols}
+                  onArchive={() => archiveMutation.mutate(lead.id)}
+                  onOpen={() => setDetailLead(lead)}
+                />
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <LeadDetailDialog
+        lead={detailLead}
+        open={detailLead !== null}
+        onOpenChange={(o) => !o && setDetailLead(null)}
+        originLabel={originLabel}
+      />
     </div>
   );
 }
 
-function LeadTableRow({ lead, currentUserId, onArchive }: { lead: LeadRow; currentUserId: string | null; onArchive: () => void }) {
-  const score = getLeadScore(lead);
+function LeadTableRow({
+  lead, currentUserId, visibleCols, onArchive, onOpen,
+}: {
+  lead: LeadRow;
+  currentUserId: string | null;
+  visibleCols: string[];
+  onArchive: () => void;
+  onOpen: () => void;
+}) {
   const source = lead.source || lead.utm_source || 'direct';
-  const temperature = getLeadTemperature(lead);
+  const origin = getLeadOrigin(lead);
+  const city = getLeadCity(lead);
+  const ago = relativeTime(lead.created_at);
   const assignedLabel = lead.assigned_to
     ? lead.assigned_to === currentUserId ? 'Você' : `${lead.assigned_to.slice(0, 8)}…`
     : '—';
 
+  const show = (id: string) => visibleCols.includes(id);
+
   return (
-    <TableRow className="group transition-colors hover:bg-muted/60">
-      <TableCell className="p-0">
-        <Link to="/leads/$id" params={{ id: lead.id }} className="block p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <div className="font-bold text-foreground">{getLeadDisplayName(lead)}</div>
-          <div className="text-xs font-medium text-muted-foreground">{lead.email || lead.phone || 'Sem contato informado'}</div>
-        </Link>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-          {source.toLowerCase().includes('meta') ? <Share2 className="h-4 w-4 text-primary" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
-          {formatLabel(source)}
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant="secondary" className="capitalize">{formatLabel(lead.status || 'new')}</Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={temperature === 'hot' ? 'default' : 'outline'} className="capitalize">{formatLabel(temperature)}</Badge>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <Progress value={score} className="h-1.5" />
-          <span className="w-8 text-right text-xs font-bold tabular-nums">{score}</span>
-        </div>
-      </TableCell>
-      <TableCell className="text-xs font-semibold">
-        {lead.assigned_to ? (
-          <Badge variant={lead.assigned_to === currentUserId ? 'default' : 'outline'}>{assignedLabel}</Badge>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-xs font-medium text-muted-foreground">{formatDate(lead.created_at)}</TableCell>
+    <TableRow
+      className="group cursor-pointer transition-colors hover:bg-muted/60"
+      onDoubleClick={onOpen}
+    >
+      {show('contato') && (
+        <TableCell className="p-4">
+          {/* Nem <Link> nem onClick aqui, de propósito. O link navegava no
+              PRIMEIRO clique e o duplo clique nunca abria a ficha; com onClick,
+              o primeiro clique abria o modal e o segundo caía no overlay e
+              fechava. Abrir é responsabilidade do duplo clique na linha (e do
+              menu, pra quem usa teclado). */}
+          <div>
+            <div className="font-bold text-foreground">{getLeadDisplayName(lead)}</div>
+            <div className="text-xs font-medium text-muted-foreground">{lead.phone || lead.email || 'Sem contato informado'}</div>
+          </div>
+        </TableCell>
+      )}
+      {show('origem') && (
+        <TableCell>
+          {origin ? (
+            <span className="text-sm font-medium">{origin}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
+      {show('canal') && (
+        <TableCell>
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+            {source.toLowerCase().includes('meta') ? <Share2 className="h-4 w-4 text-primary" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
+            {formatLabel(source)}
+          </div>
+        </TableCell>
+      )}
+      {show('cidade') && (
+        <TableCell>
+          {city ? (
+            <span
+              className="flex items-center gap-1.5 text-sm"
+              /* Cidade deduzida do DDD é um palpite: fica em tom mais fraco e
+                 o title explica de onde veio, pra ninguém tratar como certeza. */
+              title={city.inferred ? 'Deduzido do DDD do telefone' : undefined}
+            >
+              {city.inferred && <MapPin className="h-3 w-3 text-muted-foreground/60" />}
+              <span className={city.inferred ? 'text-muted-foreground' : 'font-medium'}>{city.label}</span>
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
+      {show('status') && (
+        <TableCell>
+          <Badge variant="secondary" className="capitalize">{formatLabel(lead.status || 'new')}</Badge>
+        </TableCell>
+      )}
+      {show('atribuido') && (
+        <TableCell className="text-xs font-semibold">
+          {lead.assigned_to ? (
+            <Badge variant={lead.assigned_to === currentUserId ? 'default' : 'outline'}>{assignedLabel}</Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
+      {show('criado') && (
+        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+          <div className="font-medium text-foreground">{formatDateTime(lead.created_at)}</div>
+          {ago && <div>{ago}</div>}
+        </TableCell>
+      )}
       <TableCell className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -403,6 +566,16 @@ function LeadTableRow({ lead, currentUserId, onArchive }: { lead: LeadRow; curre
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onOpen} className="gap-2">
+              <Eye className="h-4 w-4" />
+              Ver ficha
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="gap-2">
+              <Link to="/leads/$id" params={{ id: lead.id }}>
+                <ExternalLink className="h-4 w-4" />
+                Abrir página completa
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={onArchive} className="gap-2">
               <Archive className="h-4 w-4" />
               Arquivar
@@ -446,16 +619,22 @@ function LoadingRows() {
   );
 }
 
+/**
+ * "Leads quentes" e "Score médio" saíram: vinham de valores fixos do
+ * mapeamento, não de avaliação nenhuma, e mostravam 0 e 0/100 pra todo mundo.
+ * No lugar entram contagens que respondem perguntas reais do dia a dia —
+ * quantos chegaram hoje e quantos ninguém pegou ainda.
+ */
 function buildMetrics(leads: LeadRow[]) {
   const now = Date.now();
-  const weekInMs = 7 * 24 * 60 * 60 * 1000;
-  const totalScore = leads.reduce((sum, lead) => sum + getLeadScore(lead), 0);
+  const dayInMs = 24 * 60 * 60 * 1000;
+  const weekInMs = 7 * dayInMs;
 
   return {
     total: leads.length,
-    hot: leads.filter((lead) => getLeadTemperature(lead) === 'hot').length,
+    today: leads.filter((lead) => now - new Date(lead.created_at).getTime() <= dayInMs).length,
     newThisWeek: leads.filter((lead) => now - new Date(lead.created_at).getTime() <= weekInMs).length,
-    averageScore: leads.length ? Math.round(totalScore / leads.length) : 0,
+    unassigned: leads.filter((lead) => !lead.assigned_to).length,
   };
 }
 
