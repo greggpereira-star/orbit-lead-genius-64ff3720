@@ -8,6 +8,7 @@ import { createHmac } from "node:crypto";
 import { fetchLead, type MetaLead } from "./meta-graph.server";
 import { dispatchLeadWhatsApp } from "./whatsapp-automation.server";
 import { resolveAdAttribution } from "./meta-attribution.server";
+import { resolveEntryStageId } from "./entry-stage.server";
 
 /**
  * Marca o lead quando o mesmo telefone já existe na empresa.
@@ -230,6 +231,12 @@ export async function processMetaLeadEvent(
       findDuplicate(admin, page.company_id, parsed.phone ?? null, parsed.email ?? null),
     ]);
 
+    const entryStageId = await resolveEntryStageId(
+      admin,
+      page.company_id,
+      mapping?.stage_id ?? null,
+    );
+
     const leadInsert: Record<string, unknown> = {
       company_id: page.company_id,
       name: parsed.name ?? "Lead sem nome",
@@ -249,6 +256,10 @@ export async function processMetaLeadEvent(
       utm_content: attribution?.ad_name ?? null,
       utm_term: attribution?.adset_name ?? null,
       assigned_to: mapping?.assigned_to ?? null,
+      // Coluna de topo, não dentro do metadata. Estava sendo gravado só lá
+      // embaixo, então o seletor de etapa do mapeamento era configurado e nunca
+      // surtia efeito: o lead nascia com stage_id NULL e sumia do pipeline.
+      stage_id: entryStageId,
       lead_score: mapping?.default_score ?? null,
       score: mapping?.default_score ?? null,
       lead_temperature: mapping?.default_temperature ?? null,

@@ -1,278 +1,398 @@
- import React, { useState, useEffect } from 'react';
- import { supabase } from '@/lib/supabase';
- import { useAuth } from '@/core/auth/hooks/useAuth';
- import { toast } from 'sonner';
+/**
+ * Pipeline de leads em colunas arrastáveis.
+ *
+ * Até aqui este board lia `leads.stage_id`, que nenhum caminho de criação
+ * gravava — as seis colunas apareciam vazias com 106 leads no banco. Agora a
+ * tabela `stages` é a fonte da verdade e toda movimentação passa pelo
+ * `stageService`, que grava etapa, ordem, carimbo de tempo e histórico juntos.
+ */
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
- import { Card } from '@/components/ui/card';
- import { Badge } from '@/components/ui/badge';
- import { MoreHorizontal, GripVertical } from 'lucide-react';
- import { Button } from '@/components/ui/button';
- import { useNavigate } from '@tanstack/react-router';
- 
- interface Lead {
-   id: string;
-   name: string;
-   company?: string;
-   value?: string;
-   temperature: 'cold' | 'warm' | 'hot';
-   score: number;
- }
- 
- interface Column {
-   id: string;
-   title: string;
-   leads: Lead[];
- }
- 
- const initialData: Column[] = [
-   {
-     id: 'new',
-     title: 'New Leads',
-     leads: [
-       { id: '1', name: 'John Doe', company: 'Acme Corp', value: '$1,200', temperature: 'hot', score: 85 },
-       { id: '2', name: 'Sarah Miller', company: 'Global Tech', value: '$3,500', temperature: 'warm', score: 65 },
-     ],
-   },
-   {
-     id: 'contacted',
-     title: 'Contacted',
-     leads: [
-       { id: '3', name: 'Robert Wilson', company: 'Wilson & Co', value: '$800', temperature: 'cold', score: 30 },
-     ],
-   },
-   {
-     id: 'qualified',
-     title: 'Qualified',
-     leads: [
-       { id: '4', name: 'Emma Davis', company: 'Design Pro', value: '$5,000', temperature: 'hot', score: 92 },
-     ],
-   },
-   {
-     id: 'negotiation',
-     title: 'Negotiation',
-     leads: [],
-   },
- ];
- 
- export function KanbanBoard() {
-   const { company } = useAuth();
-   const [columns, setColumns] = useState<Column[]>([]);
-   const [isLoading, setIsLoading] = useState(true);
- 
-  useEffect(() => {
-    let mounted = true;
-    if (company && mounted) {
-      fetchData();
-    }
-    return () => { mounted = false; };
-  }, [company?.id]);
- 
-    const fetchData = async () => {
-      if (!company?.id) return;
-      setIsLoading(true);
-      try {
-        // 1. Fetch stages
-        let { data: stagesData, error: stagesError } = await supabase
-          .from('stages')
-          .select('*')
-          .eq('company_id', company.id)
-          .order('order_index');
-  
-        if (stagesError) throw stagesError;
+import { toast } from 'sonner';
+import {
+  GripVertical, MessageCircle, MapPin, Radio, AlertCircle,
+  Inbox, RefreshCw,
+} from 'lucide-react';
 
-        // Auto-initialize default stages if none exist
-        if (!stagesData || stagesData.length === 0) {
-          const defaultStages = [
-            { name: 'Novo Lead', order_index: 0 },
-            { name: 'Contato', order_index: 1 },
-            { name: 'Qualificado', order_index: 2 },
-            { name: 'Reunião', order_index: 3 },
-            { name: 'Proposta', order_index: 4 },
-            { name: 'Venda', order_index: 5 }
-          ];
-          
-          const { data: createdStages, error: createError } = await supabase
-            .from('stages')
-            .insert(defaultStages.map(s => ({ ...s, company_id: company.id })))
-            .select();
-            
-          if (createError) throw createError;
-          stagesData = createdStages;
-        }
-  
-        // 2. Fetch leads
-        const { data: leadsData, error: leadsError } = await supabase
-          .from('leads')
-          .select('*')
-          .eq('company_id', company.id);
-  
-        if (leadsError) throw leadsError;
-  
-        // 3. Map leads to stages
-        const mappedColumns = (stagesData || []).map((stage: any) => ({
-          id: stage.id,
-          title: stage.name,
-            leads: (leadsData || []).filter((lead: any) => lead.stage_id === stage.id).map((lead: any) => ({
-            id: lead.id,
-            name: lead.name || 'Unnamed Lead',
-            company: (lead.metadata as any)?.company_name || lead.company_name,
-            value: lead.income ? `$${lead.income}` : undefined,
-            temperature: (lead.lead_temperature || 'cold') as 'cold' | 'warm' | 'hot',
-            score: lead.lead_score || 0
-          }))
-        }));
-  
-        setColumns(mappedColumns);
-      } catch (error: any) {
-        console.error('Error fetching Kanban data:', error);
-        toast.error(`Failed to load pipeline: ${error.message || 'Unknown error'}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
- 
-   const onDragEnd = async (result: DropResult) => {
-     const { destination, source, draggableId } = result;
- 
-     if (!destination) return;
-     if (
-       destination.droppableId === source.droppableId &&
-       destination.index === source.index
-     ) {
-       return;
-     }
- 
-     const sourceCol = columns.find(col => col.id === source.droppableId);
-     const destCol = columns.find(col => col.id === destination.droppableId);
- 
-     if (!sourceCol || !destCol) return;
- 
-     if (sourceCol === destCol) {
-       const newLeads = Array.from(sourceCol.leads);
-       const [removed] = newLeads.splice(source.index, 1);
-       newLeads.splice(destination.index, 0, removed);
- 
-       const newColumns = columns.map(col => 
-         col.id === sourceCol.id ? { ...col, leads: newLeads } : col
-       );
-       setColumns(newColumns);
-     } else {
-       const sourceLeads = Array.from(sourceCol.leads);
-       const [removed] = sourceLeads.splice(source.index, 1);
-       const destLeads = Array.from(destCol.leads);
-       destLeads.splice(destination.index, 0, removed);
- 
-       const newColumns = columns.map(col => {
-         if (col.id === sourceCol.id) return { ...col, leads: sourceLeads };
-         if (col.id === destCol.id) return { ...col, leads: destLeads };
-         return col;
-       });
-       setColumns(newColumns);
- 
-       // Update in database
-       const { error } = await supabase
-         .from('leads')
-         .update({ stage_id: destination.droppableId })
-         .eq('id', draggableId);
- 
-       if (error) {
-         toast.error('Failed to move lead');
-         fetchData(); // Revert
-       } else {
-         // Log event
-         await supabase.from('lead_events').insert({
-           lead_id: draggableId,
-           event_type: 'stage_change',
-           description: `Moved from ${sourceCol.title} to ${destCol.title}`
-         });
-       }
-     }
-   };
- 
-   return (
-     <DragDropContext onDragEnd={onDragEnd}>
-       <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-200px)] min-h-[500px]">
-         {columns.map((column) => (
-           <div key={column.id} className="flex flex-col w-80 shrink-0">
-             <div className="flex items-center justify-between mb-3 px-1">
-               <div className="flex items-center gap-2">
-                 <h3 className="font-semibold text-sm">{column.title}</h3>
-                  <Badge variant="secondary" className="bg-secondary text-secondary-foreground font-bold">
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { listLeads, type LeadRow } from '../services/leadService';
+import {
+  listStages, moveLeadToStage, orderBetween, type Stage,
+} from '../services/stageService';
+import {
+  getLeadCity, getLeadOrigin, channelLabel, toTitleCase, whatsappLink, relativeTime,
+} from '../lib/leadFields';
+import { getLeadDisplayName } from '../services/leadService';
+import { LeadDetailDialog } from './LeadDetailDialog';
+
+/**
+ * Coluna sintética para leads sem etapa.
+ *
+ * Não deveria haver nenhum depois do backfill, mas uma etapa excluída fora do
+ * app deixaria leads órfãos. Preferimos mostrá-los numa coluna esquisita a
+ * deixá-los sumir da tela, que foi o defeito original.
+ */
+const NO_STAGE = '__sem_etapa__';
+
+interface Props {
+  /** Restringe o board aos leads de um quiz — usado na tela do funil. */
+  quizId?: string;
+  /** Rótulo configurável: "Empreendimento" numa imobiliária, "Curso" numa escola. */
+  originLabel?: string;
+  search?: string;
+}
+
+interface Column {
+  id: string;
+  title: string;
+  color: string;
+  leads: LeadRow[];
+}
+
+function boardOrderOf(lead: LeadRow): number {
+  const v = (lead as { board_order?: number | null }).board_order;
+  return typeof v === 'number' ? v : Number.MAX_SAFE_INTEGER;
+}
+
+function stageIdOf(lead: LeadRow): string | null {
+  return (lead as { stage_id?: string | null }).stage_id ?? null;
+}
+
+/** Há quanto tempo o lead está parado nesta etapa — o sinal de que travou. */
+function timeInStage(lead: LeadRow): string {
+  const entered = (lead as { stage_entered_at?: string | null }).stage_entered_at;
+  return relativeTime(entered ?? lead.created_at);
+}
+
+export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Props) {
+  const { company } = useAuth();
+  const qc = useQueryClient();
+  const companyId = company?.id ?? '';
+  const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
+
+  const stagesQuery = useQuery({
+    queryKey: ['stages', companyId],
+    queryFn: () => listStages(companyId),
+    enabled: Boolean(companyId),
+  });
+
+  const leadsQuery = useQuery({
+    queryKey: ['leads', companyId, 'board'],
+    queryFn: () => listLeads(companyId),
+    enabled: Boolean(companyId),
+  });
+
+  const stages = useMemo(() => stagesQuery.data ?? [], [stagesQuery.data]);
+
+  const columns = useMemo<Column[]>(() => {
+    const all = leadsQuery.data ?? [];
+    const term = search.trim().toLowerCase();
+
+    const visible = all.filter((l) => {
+      if (quizId && (l as { quiz_id?: string | null }).quiz_id !== quizId) return false;
+      if (!term) return true;
+      const haystack = [l.name, l.email, l.phone, getLeadOrigin(l)]
+        .filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(term);
+    });
+
+    const byStage = (id: string | null) =>
+      visible
+        .filter((l) => stageIdOf(l) === id)
+        .sort((a, b) => boardOrderOf(a) - boardOrderOf(b));
+
+    const known = new Set(stages.map((s) => s.id));
+    const orphans = visible.filter((l) => {
+      const sid = stageIdOf(l);
+      return !sid || !known.has(sid);
+    });
+
+    const real: Column[] = stages.map((s) => ({
+      id: s.id,
+      title: s.name,
+      color: s.color,
+      leads: byStage(s.id),
+    }));
+
+    // A coluna de órfãos só existe quando há órfãos — uma coluna permanente
+    // vazia viraria ruído em todo board saudável.
+    return orphans.length
+      ? [{ id: NO_STAGE, title: 'Sem etapa', color: '#94a3b8', leads: orphans }, ...real]
+      : real;
+  }, [leadsQuery.data, stages, quizId, search]);
+
+  const moveMutation = useMutation({
+    mutationFn: (v: {
+      leadId: string; stageId: string; boardOrder: number;
+      fromStageName: string; toStageName: string;
+    }) =>
+      moveLeadToStage({
+        leadId: v.leadId,
+        stageId: v.stageId,
+        boardOrder: v.boardOrder,
+        fromStageName: v.fromStageName,
+        toStageName: v.toStageName,
+        stages,
+      }),
+    onError: (e: Error) => {
+      toast.error(`Não foi possível mover: ${e.message}`);
+      // Desfaz o movimento otimista buscando o estado real do servidor.
+      qc.invalidateQueries({ queryKey: ['leads', companyId, 'board'] });
+    },
+    onSuccess: () => {
+      // A tabela de Leads e a ficha mostram a mesma etapa; precisam acompanhar.
+      qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
+    // "Sem etapa" é diagnóstico, não destino: mover um lead PARA lá seria
+    // escondê-lo de novo.
+    if (destination.droppableId === NO_STAGE) {
+      toast.info('"Sem etapa" é só um aviso. Escolha uma etapa do funil.');
+      return;
+    }
+
+    const from = columns.find((c) => c.id === source.droppableId);
+    const to = columns.find((c) => c.id === destination.droppableId);
+    if (!from || !to) return;
+
+    // Vizinhos no destino, já sem o card que está sendo movido.
+    const destLeads = to.leads.filter((l) => l.id !== draggableId);
+    const before = destLeads[destination.index - 1];
+    const after = destLeads[destination.index];
+    const boardOrder = orderBetween(
+      before ? boardOrderOf(before) : null,
+      after ? boardOrderOf(after) : null,
+    );
+
+    // Update otimista: arrastar precisa parecer instantâneo. O onError acima
+    // reverte buscando o servidor se a gravação falhar.
+    qc.setQueryData<LeadRow[]>(['leads', companyId, 'board'], (prev) =>
+      (prev ?? []).map((l) =>
+        l.id === draggableId
+          ? ({ ...l, stage_id: to.id, board_order: boardOrder } as LeadRow)
+          : l,
+      ),
+    );
+
+    moveMutation.mutate({
+      leadId: draggableId,
+      stageId: to.id,
+      boardOrder,
+      fromStageName: from.title,
+      toStageName: to.title,
+    });
+  };
+
+  // ---------- estados ----------
+
+  if (stagesQuery.isError || leadsQuery.isError) {
+    const err = (stagesQuery.error ?? leadsQuery.error) as Error | undefined;
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+        <AlertCircle className="h-8 w-8 text-destructive" />
+        <div>
+          <p className="font-medium">Não foi possível carregar o pipeline.</p>
+          <p className="text-sm text-muted-foreground">{err?.message}</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            stagesQuery.refetch();
+            leadsQuery.refetch();
+          }}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Tentar de novo
+        </Button>
+      </div>
+    );
+  }
+
+  if (stagesQuery.isLoading || leadsQuery.isLoading) {
+    return (
+      <div className="flex h-full gap-4 overflow-hidden">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex w-80 shrink-0 flex-col gap-3">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stages.length) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+        <Inbox className="h-8 w-8 text-muted-foreground/40" />
+        <p className="font-medium">Seu funil ainda não tem etapas.</p>
+        <p className="text-sm text-muted-foreground">
+          Use "Gerenciar etapas" para criar a primeira coluna.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex h-full gap-4 overflow-x-auto pb-4">
+          {columns.map((column) => (
+            <section key={column.id} className="flex w-80 shrink-0 flex-col">
+              {/* A cor da etapa vive numa barra fina no topo, não no fundo da
+                  coluna: seis fundos coloridos competiriam com os cards, que
+                  são o conteúdo. */}
+              <div
+                className="h-1 rounded-full"
+                style={{ backgroundColor: column.color }}
+                aria-hidden="true"
+              />
+              <header className="flex items-center justify-between px-1 py-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h3 className="truncate text-sm font-semibold tracking-tight">{column.title}</h3>
+                  <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[11px] tabular-nums">
                     {column.leads.length}
                   </Badge>
-               </div>
-               <Button variant="ghost" size="icon" className="h-8 w-8">
-                 <MoreHorizontal className="h-4 w-4" />
-               </Button>
-             </div>
- 
-             <Droppable droppableId={column.id}>
-               {(provided, snapshot) => (
+                </div>
+              </header>
+
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className={`flex-1 rounded-lg transition-colors p-2 space-y-3 border border-dashed border-border/40 ${
-                      snapshot.isDraggingOver ? 'bg-secondary/50 border-primary/30' : 'bg-secondary/20'
+                    aria-label={`Etapa ${column.title}, ${column.leads.length} leads`}
+                    className={`flex-1 space-y-2.5 overflow-y-auto rounded-xl border border-dashed p-2 transition-colors ${
+                      snapshot.isDraggingOver
+                        ? 'border-primary/40 bg-primary/[0.04]'
+                        : 'border-border/50 bg-muted/20'
                     }`}
                   >
-                   {column.leads.map((lead, index) => (
-                     <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                       {(provided, snapshot) => (
-                          <Card
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            onClick={() => window.location.href = `/leads/${lead.id}`}
-                            className={`p-3 shadow-sm border border-border group cursor-pointer hover:ring-2 hover:ring-primary/40 hover:border-primary/40 transition-all ${
-                              snapshot.isDragging ? 'shadow-xl rotate-2 ring-2 ring-primary bg-card z-50' : 'bg-card'
-                            }`}
-                          >
-                           <div className="flex items-start justify-between mb-2">
-                             <div className="flex-1">
-                               <div className="flex items-center gap-2">
-                                 <div {...provided.dragHandleProps} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                   <GripVertical className="h-3 w-3 text-muted-foreground" />
-                                 </div>
-                                 <span className="font-medium text-sm">{lead.name}</span>
-                               </div>
-                               {lead.company && (
-                                 <p className="text-xs text-muted-foreground ml-5">{lead.company}</p>
-                               )}
-                             </div>
-                             <Badge 
-                               variant="outline" 
-                               className={`text-[10px] h-5 ${
-                                 lead.temperature === 'hot' ? 'text-rose-600 bg-rose-50 border-rose-100' : 
-                                 lead.temperature === 'warm' ? 'text-amber-600 bg-amber-50 border-amber-100' : 
-                                 'text-blue-600 bg-blue-50 border-blue-100'
-                               }`}
-                             >
-                               {lead.temperature}
-                             </Badge>
-                           </div>
-                           
-                           <div className="flex items-center justify-between mt-4">
-                             <span className="text-xs font-semibold text-foreground">{lead.value || '—'}</span>
-                             <div className="flex items-center gap-1.5">
-                               <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
-                                 <div 
-                                   className="h-full bg-primary" 
-                                   style={{ width: `${lead.score}%` }}
-                                 />
-                               </div>
-                               <span className="text-[10px] text-muted-foreground font-medium">{lead.score}</span>
-                             </div>
-                           </div>
-                         </Card>
-                       )}
-                     </Draggable>
-                   ))}
-                   {provided.placeholder}
-                 </div>
-               )}
-             </Droppable>
-           </div>
-         ))}
-       </div>
-     </DragDropContext>
-   );
- }
+                    {column.leads.length === 0 && !snapshot.isDraggingOver && (
+                      <p className="px-2 py-6 text-center text-xs text-muted-foreground/70">
+                        Arraste um lead para cá
+                      </p>
+                    )}
+
+                    {column.leads.map((lead, index) => {
+                      const name = toTitleCase(getLeadDisplayName(lead)) || getLeadDisplayName(lead);
+                      const city = getLeadCity(lead);
+                      const origin = getLeadOrigin(lead);
+                      const wa = whatsappLink(lead.phone);
+                      const parked = timeInStage(lead);
+
+                      return (
+                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                          {(dragProvided, dragSnapshot) => (
+                            <article
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              onDoubleClick={() => setDetailLead(lead)}
+                              className={`rounded-xl border bg-card p-3 transition-shadow ${
+                                dragSnapshot.isDragging
+                                  ? 'shadow-lg ring-2 ring-primary/40'
+                                  : 'shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-primary/30'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                {/* Alça sempre visível: era `opacity-0
+                                    group-hover`, ou seja, inexistente no toque. */}
+                                <span
+                                  {...dragProvided.dragHandleProps}
+                                  aria-label={`Mover ${name}`}
+                                  className="mt-0.5 cursor-grab rounded text-muted-foreground/40 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                                >
+                                  <GripVertical className="h-4 w-4" />
+                                </span>
+
+                                <div className="min-w-0 flex-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setDetailLead(lead)}
+                                    className="block w-full truncate text-left text-sm font-semibold tracking-tight hover:text-primary focus-visible:outline-none focus-visible:underline"
+                                  >
+                                    {name}
+                                  </button>
+                                  {origin && (
+                                    <p className="mt-0.5 truncate text-xs text-muted-foreground" title={`${originLabel}: ${origin}`}>
+                                      {origin}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {wa && (
+                                  <Button
+                                    asChild
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 shrink-0 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
+                                    title="Abrir no WhatsApp"
+                                  >
+                                    <a
+                                      href={wa}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <MessageCircle className="h-3.5 w-3.5" />
+                                      <span className="sr-only">Abrir conversa no WhatsApp</span>
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
+
+                              {/* Cidade e canal são o que muda a abordagem da
+                                  ligação. Score e temperatura saíram: são 0 e
+                                  NULL em todos os leads, não há IA que os
+                                  calcule. */}
+                              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-6 text-[11px] text-muted-foreground">
+                                {city && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {city.label}
+                                  </span>
+                                )}
+                                {lead.source && (
+                                  <span className="flex items-center gap-1">
+                                    <Radio className="h-3 w-3" />
+                                    {channelLabel(lead.source)}
+                                  </span>
+                                )}
+                                {parked && <span className="ml-auto tabular-nums">{parked}</span>}
+                              </div>
+                            </article>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </section>
+          ))}
+        </div>
+      </DragDropContext>
+
+      <LeadDetailDialog
+        lead={detailLead}
+        open={detailLead !== null}
+        onOpenChange={(o) => !o && setDetailLead(null)}
+        originLabel={originLabel}
+        onStatusChange={() => qc.invalidateQueries({ queryKey: ['leads'] })}
+      />
+    </>
+  );
+}

@@ -17,6 +17,8 @@ export interface Form {
     theme: string;
     cv_crm_integration: boolean;
     capture_utms: boolean;
+    /** Etapa do pipeline onde o lead entra. Ausente = etapa padrão do funil. */
+    default_stage_id?: string;
   };
   created_at: string;
   updated_at: string;

@@ -3,6 +3,7 @@ import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules, SocialProofSett
 import { DEFAULT_DESIGN } from '../design-presets';
 import { DEFAULT_ACCESS_RULES } from '../types';
 import { parseSubdomain } from '../lib/tenant';
+import { listStages, resolveEntryStage } from '@/modules/crm/services/stageService';
 
 function slugify(input: string): string {
   return input
@@ -133,6 +134,8 @@ export const quizService = {
     seoOgImage?: string;
     socialProof?: SocialProofSettings;
     urgencyBar?: UrgencyBarSettings;
+    /** Etapa do pipeline onde o lead deste quiz entra. `null` = padrão do funil. */
+    defaultStageId?: string | null;
   }): Promise<QuizFunnel> {
     const patch: Record<string, unknown> = {};
 
@@ -158,7 +161,8 @@ export const quizService = {
     const touchedSettings =
       settingsFields.some(([key]) => params[key] !== undefined) ||
       params.socialProof !== undefined ||
-      params.urgencyBar !== undefined;
+      params.urgencyBar !== undefined ||
+      params.defaultStageId !== undefined;
     if (touchedSettings) {
       const { data: current, error: fetchError } = await supabase
         .from('quiz_funnels')
@@ -176,6 +180,13 @@ export const quizService = {
       }
       if (params.socialProof !== undefined) settings.social_proof = params.socialProof as never;
       if (params.urgencyBar !== undefined) settings.urgency_bar = params.urgencyBar as never;
+      // `null` significa "usar o padrão do funil": a chave sai do settings em
+      // vez de ficar guardada como null, que depois viraria etapa órfã se a
+      // etapa escolhida fosse excluída.
+      if (params.defaultStageId !== undefined) {
+        if (params.defaultStageId) settings.default_stage_id = params.defaultStageId;
+        else delete settings.default_stage_id;
+      }
       patch.settings = settings as never;
     }
 
@@ -525,15 +536,21 @@ export const quizService = {
     if (error) throw error;
     const submissionId = (data as { id?: string } | null)?.id ?? null;
 
+    // Configurações do funil, lidas uma vez só: o webhook e a etapa de entrada
+    // moram na mesma coluna `settings`, e antes o webhook fazia essa consulta
+    // sozinho dentro do fire-and-forget.
+    const { data: quizRow } = await supabase
+      .from('quiz_funnels')
+      .select('settings')
+      .eq('id', params.quizId)
+      .maybeSingle();
+    const quizSettings = (quizRow?.settings as Record<string, unknown> | undefined) ?? {};
+    const defaultStageId = (quizSettings.default_stage_id as string | undefined) ?? null;
+
     // Fire-and-forget webhook, se configurado nas configurações do quiz
     (async () => {
       try {
-        const { data: quizRow } = await supabase
-          .from('quiz_funnels')
-          .select('settings')
-          .eq('id', params.quizId)
-          .maybeSingle();
-        const webhookUrl = (quizRow?.settings as Record<string, unknown> | undefined)?.webhook_url as string | undefined;
+        const webhookUrl = quizSettings.webhook_url as string | undefined;
         if (!webhookUrl) return;
         await fetch(webhookUrl, {
           method: 'POST',
@@ -560,6 +577,13 @@ export const quizService = {
     if (params.email || params.phone) {
       try {
         const leadId = crypto.randomUUID();
+
+        // Etapa de entrada configurada neste funil (aba Geral das configurações
+        // do quiz). Sem isto o lead nascia com stage_id NULL e não aparecia no
+        // pipeline — só na coluna "Sem etapa" do board do próprio quiz.
+        const stages = await listStages(params.companyId);
+        const entryStage = resolveEntryStage(stages, defaultStageId);
+
         const { error: leadError } = await supabase
           .from('leads')
           .insert({
@@ -570,6 +594,9 @@ export const quizService = {
             email: params.email ?? null,
             phone: params.phone ?? null,
             source: 'Alt Quiz',
+            status: 'new',
+            stage_id: entryStage?.id ?? null,
+            stage_entered_at: new Date().toISOString(),
             score: params.score,
             temperature: params.temperature,
             tags: params.tags,

@@ -3,6 +3,7 @@ import { logger } from '@/core/observability/logger';
 import { formScoringService } from './formScoringService';
 import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
 import { automationService } from '@/modules/automation/services/automationService';
+import { listStages, resolveEntryStage } from '@/modules/crm/services/stageService';
 
 export interface LeadSubmission {
   name: string;
@@ -38,7 +39,33 @@ export const captureService = {
         temperature = scoring.temperature || formScoringService.getTemperature(score, tempRules);
       }
 
-      // 2. Insert Lead
+      // 2. Etapa de entrada configurada neste formulário (aba Publicação).
+      //    Sem isto o lead nascia com stage_id NULL e ficava invisível no
+      //    pipeline, mesmo tendo sido capturado com sucesso.
+      let entryStageId: string | null = null;
+      try {
+        const stages = await listStages(companyId);
+        let preferred: string | null = null;
+        if (data.metadata?.form_id) {
+          const { data: formRow } = await supabase
+            .from('forms')
+            .select('settings')
+            .eq('id', data.metadata.form_id)
+            .maybeSingle();
+          preferred =
+            ((formRow?.settings as Record<string, unknown> | undefined)
+              ?.default_stage_id as string | undefined) ?? null;
+        }
+        entryStageId = resolveEntryStage(stages, preferred)?.id ?? null;
+      } catch (e) {
+        // Captura não pode falhar por causa da etapa: sem ela o lead aparece
+        // em "Sem etapa" no board, que é recuperável. Perder o lead não é.
+        logger.warn('Não foi possível resolver a etapa de entrada do lead', {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+
+      // 3. Insert Lead
       const lead = {
         id: crypto.randomUUID(),
         company_id: companyId,
@@ -54,6 +81,8 @@ export const captureService = {
         referrer: trackingData.referrer,
         landing_page: trackingData.landing_page,
         status: 'new',
+        stage_id: entryStageId,
+        stage_entered_at: new Date().toISOString(),
         score,
         temperature
       };

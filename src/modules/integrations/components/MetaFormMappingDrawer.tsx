@@ -275,16 +275,23 @@ export function MetaFormMappingDrawer({ open, form, onOpenChange }: Props) {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">Etapa do Pipeline</Label>
+                      <Label className="text-sm font-medium">Etapa de entrada no pipeline</Label>
                       <Select value={stageId} onValueChange={setStageId}>
                         <SelectTrigger className="h-10"><SelectValue placeholder="Selecionar etapa" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={NONE}>— Sem etapa (apenas entrada) —</SelectItem>
+                          {/* Antes dizia "Sem etapa": o lead realmente nascia
+                              sem etapa e sumia do board. Agora cai na etapa de
+                              entrada do funil, então o rótulo passa a
+                              descrever o que de fato acontece. */}
+                          <SelectItem value={NONE}>Etapa padrão do funil</SelectItem>
                           {options.data?.stages.map((s) => (
                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Em que coluna do pipeline os leads deste formulário aparecem.
+                      </p>
                     </div>
 
                     <div className="space-y-2">

@@ -12,6 +12,7 @@ import {
   relativeTime,
   toTitleCase,
 } from '@/modules/crm/lib/leadFields';
+import { listStages, type Stage } from '@/modules/crm/services/stageService';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -172,6 +173,14 @@ function LeadsPage() {
     queryFn: () => listMetaFormsForCompany(companyId ?? ''),
     enabled: Boolean(companyId),
   });
+
+  // Nome e cor da etapa vêm do funil da empresa, iguais aos do pipeline.
+  const stagesQuery = useQuery({
+    queryKey: ['stages', companyId],
+    queryFn: () => listStages(companyId ?? ''),
+    enabled: Boolean(companyId),
+  });
+  const stages = stagesQuery.data ?? [];
 
 
   const createMutation = useMutation({
@@ -449,6 +458,7 @@ function LeadsPage() {
                   lead={lead}
                   currentUserId={currentUserId}
                   visibleCols={visibleCols}
+                  stages={stages}
                   onArchive={() => archiveMutation.mutate(lead.id)}
                   onOpen={() => setDetailLead(lead)}
                 />
@@ -474,14 +484,18 @@ function LeadsPage() {
 }
 
 function LeadTableRow({
-  lead, currentUserId, visibleCols, onArchive, onOpen,
+  lead, currentUserId, visibleCols, stages, onArchive, onOpen,
 }: {
   lead: LeadRow;
   currentUserId: string | null;
   visibleCols: string[];
+  stages: Stage[];
   onArchive: () => void;
   onOpen: () => void;
 }) {
+  const stage = stages.find(
+    (s) => s.id === (lead as { stage_id?: string | null }).stage_id,
+  ) ?? null;
   const source = lead.source || lead.utm_source || 'direct';
   const origin = getLeadOrigin(lead);
   const city = getLeadCity(lead);
@@ -548,7 +562,19 @@ function LeadTableRow({
       )}
       {show('status') && (
         <TableCell>
-          <Badge variant="secondary" className="capitalize">{formatLabel(lead.status || 'new')}</Badge>
+          {/* Nome e cor da etapa real do funil, não o `status` cru. A tabela
+              mostrava "New" enquanto o pipeline dizia "Novo Lead" — dois nomes
+              para a mesma coisa, vindos de duas fontes diferentes. */}
+          {stage ? (
+            <Badge
+              variant="outline"
+              style={{ borderColor: `${stage.color}55`, backgroundColor: `${stage.color}14`, color: stage.color }}
+            >
+              {stage.name}
+            </Badge>
+          ) : (
+            <Badge variant="secondary">Sem etapa</Badge>
+          )}
         </TableCell>
       )}
       {show('atribuido') && (

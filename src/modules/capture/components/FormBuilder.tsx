@@ -48,6 +48,7 @@ import {
  import { CSS } from '@dnd-kit/utilities';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/auth/hooks/useAuth';
+import { StageSelect } from '@/modules/crm/components/StageSelect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formService, Form, FormField } from '../services/formService';
 import { toast } from 'sonner';
@@ -825,6 +826,36 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                           status: val ? 'published' : 'draft'
                         }))}
                       />
+                    </div>
+
+                    {/* Etapa de entrada no pipeline. Sem ela, o lead capturado
+                        por este formulário nascia com stage_id NULL e não
+                        aparecia em coluna nenhuma do board. */}
+                    <div className="space-y-2 pt-4 border-t">
+                      <Label className="text-xs">Etapa de entrada no pipeline</Label>
+                      <StageSelect
+                        companyId={company?.id ?? ''}
+                        value={(formConfig.settings as Record<string, unknown> | undefined)?.default_stage_id as string ?? null}
+                        onChange={(stageId) => setFormConfig(prev => {
+                          const currentSettings = prev.settings || {
+                            submit_label: 'Submit',
+                            success_message: 'Thank you!',
+                            theme: 'premium-light',
+                            cv_crm_integration: false,
+                            capture_utms: true
+                          };
+                          const next = { ...currentSettings } as Record<string, unknown>;
+                          // Remove a chave quando volta ao padrão, em vez de
+                          // guardar null — uma etapa excluída deixaria um id
+                          // órfão apontando pra lugar nenhum.
+                          if (stageId) next.default_stage_id = stageId;
+                          else delete next.default_stage_id;
+                          return { ...prev, settings: next as typeof currentSettings };
+                        })}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Em que coluna do pipeline os leads deste formulário aparecem.
+                      </p>
                     </div>
 
                     <div className="space-y-4 pt-4 border-t">

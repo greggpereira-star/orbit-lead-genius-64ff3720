@@ -18,8 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Globe, Webhook, Search, Code, Sparkles, Timer, Plus, Trash2,
-  CheckCircle2, Gift, Users, Star, Flame, Bell,
+  CheckCircle2, Gift, Users, Star, Flame, Bell, Columns3,
 } from 'lucide-react';
+import { StageSelect } from '@/modules/crm/components/StageSelect';
 import { quizService } from '../services/quizService';
 import { companyService } from '@/modules/company/services/companyService';
 import { ROOT_DOMAIN } from '../lib/tenant';
@@ -58,6 +59,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
   const [socialProof, setSocialProof] = useState<SocialProofSettings>(DEFAULT_SOCIAL_PROOF);
   const [urgencyBar, setUrgencyBar] = useState<UrgencyBarSettings>(DEFAULT_URGENCY_BAR);
   const [companySubdomain, setCompanySubdomain] = useState<string | null>(null);
+  const [defaultStageId, setDefaultStageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -87,6 +89,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         setSeoOgImage((settings.seo_og_image as string) ?? '');
         setSocialProof({ ...DEFAULT_SOCIAL_PROOF, ...(settings.social_proof as Partial<SocialProofSettings> | undefined) });
         setUrgencyBar({ ...DEFAULT_URGENCY_BAR, ...(settings.urgency_bar as Partial<UrgencyBarSettings> | undefined) });
+        setDefaultStageId((settings.default_stage_id as string | undefined) ?? null);
       })
       .catch((e: unknown) => {
         toast.error('Erro ao carregar configurações: ' + (e instanceof Error ? e.message : String(e)));
@@ -119,6 +122,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         seoOgImage,
         socialProof,
         urgencyBar,
+        defaultStageId,
       });
       setSlug(updated.slug);
       setPublicSlug(updated.slug);
@@ -192,6 +196,24 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                     <p>Depois de configurar o DNS, entre em contato para finalizarmos o certificado SSL do domínio.</p>
                   </div>
                 )}
+              </div>
+
+              {/* Onde o lead cai no pipeline. Sem escolher, ele entra na etapa
+                  de entrada do funil — nunca fica sem etapa, que é como leads
+                  sumiam do board antes. */}
+              <div className="space-y-2">
+                <Label htmlFor="quiz-settings-stage" className="flex items-center gap-1.5">
+                  <Columns3 className="h-3.5 w-3.5" /> Etapa de entrada no pipeline
+                </Label>
+                <StageSelect
+                  id="quiz-settings-stage"
+                  companyId={companyId}
+                  value={defaultStageId}
+                  onChange={setDefaultStageId}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Em que coluna do pipeline os leads deste quiz aparecem ao se cadastrar.
+                </p>
               </div>
             </TabsContent>
 

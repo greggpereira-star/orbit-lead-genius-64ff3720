@@ -42,7 +42,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LeadRow } from "../services/leadService";
-import { getLeadDisplayName, updateLeadStatus } from "../services/leadService";
+import { getLeadDisplayName } from "../services/leadService";
+import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
@@ -90,35 +91,13 @@ function avatarTone(seed: string): string {
   return AVATAR_TONES[h % AVATAR_TONES.length];
 }
 
-/** O banco guarda "new"/"contacted"; a tela não deve mostrar isso cru. */
-const STAGE_LABEL: Record<string, string> = {
-  new: "Novo",
-  contacted: "Contatado",
-  qualified: "Qualificado",
-  proposal: "Proposta",
-  won: "Ganho",
-  lost: "Perdido",
-  archived: "Arquivado",
-};
-
-const STAGE_TONE: Record<string, string> = {
-  new: "bg-blue-500/12 text-blue-700 dark:text-blue-300",
-  contacted: "bg-violet-500/12 text-violet-700 dark:text-violet-300",
-  qualified: "bg-cyan-500/12 text-cyan-700 dark:text-cyan-300",
-  proposal: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
-  won: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
-  lost: "bg-rose-500/12 text-rose-700 dark:text-rose-300",
-  archived: "bg-muted text-muted-foreground",
-};
-
-/** Ordem do funil — a lista segue o caminho natural do atendimento. */
-const STAGE_ORDER = ["new", "contacted", "qualified", "proposal", "won", "lost", "archived"];
-
 /**
  * Etapa editável na própria pill.
  *
- * O campo que vale é `leads.status`: `stage_id` existe no schema mas está
- * vazio nos 99 leads, e updateLeadStatus já registra o evento no histórico.
+ * Lê as etapas reais da empresa, não uma lista fixa. Antes eram sete rótulos
+ * codificados aqui dentro que gravavam `leads.status`, enquanto o pipeline lia
+ * `leads.stage_id` — mudar a etapa aqui não mexia o card no board, e vice-versa.
+ * Agora as duas telas escrevem pelo mesmo `moveLeadToStage`.
  */
 function StagePicker({
   lead, onChanged,
@@ -127,50 +106,70 @@ function StagePicker({
   onChanged: (status: string) => void;
 }) {
   const qc = useQueryClient();
-  const [current, setCurrent] = useState(lead.status ?? "new");
+  const [currentId, setCurrentId] = useState<string | null>(
+    (lead as { stage_id?: string | null }).stage_id ?? null,
+  );
+
+  const stagesQuery = useQuery({
+    queryKey: ["stages", lead.company_id],
+    queryFn: () => listStages(lead.company_id),
+    enabled: Boolean(lead.company_id),
+  });
+  const stages = stagesQuery.data ?? [];
+  const current = stages.find((s) => s.id === currentId) ?? null;
 
   const mutation = useMutation({
-    mutationFn: (status: string) =>
-      updateLeadStatus({ leadId: lead.id, companyId: lead.company_id, status }),
-    onSuccess: (_, status) => {
-      setCurrent(status);
-      onChanged(status);
-      // A lista atrás do modal precisa refletir a mudança na hora.
+    mutationFn: (stage: Stage) =>
+      moveLeadToStage({
+        leadId: lead.id,
+        stageId: stage.id,
+        // O modal não conhece a posição na coluna; entra no topo, que é onde
+        // um lead recém-mexido faz sentido estar.
+        boardOrder: 0,
+        fromStageName: current?.name ?? null,
+        toStageName: stage.name,
+        stages,
+      }),
+    onSuccess: (_, stage) => {
+      setCurrentId(stage.id);
+      onChanged(stage.id);
+      // A lista e o board atrás do modal precisam refletir a mudança na hora.
       qc.invalidateQueries({ queryKey: ["leads"] });
-      toast.success(`Etapa alterada para ${STAGE_LABEL[status] ?? status}`);
+      toast.success(`Etapa alterada para ${stage.name}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const label = current?.name ?? "Sem etapa";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          disabled={mutation.isPending}
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 ${
-            STAGE_TONE[current] ?? "bg-muted text-muted-foreground"
-          }`}
-          aria-label={`Etapa atual: ${STAGE_LABEL[current] ?? current}. Clique para alterar.`}
+          disabled={mutation.isPending || stagesQuery.isLoading}
+          className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          style={
+            current
+              ? { borderColor: `${current.color}55`, backgroundColor: `${current.color}14`, color: current.color }
+              : undefined
+          }
+          aria-label={`Etapa atual: ${label}. Clique para alterar.`}
         >
-          {mutation.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            STAGE_LABEL[current] ?? current
-          )}
+          {mutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : label}
           <ChevronDown className="h-3 w-3 opacity-60" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-44">
-        {STAGE_ORDER.map((s) => (
+      <DropdownMenuContent align="start" className="w-52">
+        {stages.map((s) => (
           <DropdownMenuItem
-            key={s}
-            onClick={() => s !== current && mutation.mutate(s)}
+            key={s.id}
+            onClick={() => s.id !== currentId && mutation.mutate(s)}
             className="gap-2"
           >
-            <span className={`h-2 w-2 rounded-full ${(STAGE_TONE[s] ?? "").split(" ")[0]}`} />
-            {STAGE_LABEL[s] ?? s}
-            {s === current && <Check className="ml-auto h-3.5 w-3.5" />}
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+            {s.name}
+            {s.id === currentId && <Check className="ml-auto h-3.5 w-3.5" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
