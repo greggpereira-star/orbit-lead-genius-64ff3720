@@ -77,7 +77,6 @@ const INITIAL_FORM: LeadFormState = {
   source: 'manual',
 };
 
-const STATUS_OPTIONS = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost', 'archived'];
 const TEMPERATURE_OPTIONS = ['hot', 'warm', 'cold'] as const;
 
 /**
@@ -134,7 +133,7 @@ function LeadsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('all');
+  const [stageId, setStageId] = useState('all');
   const [temperature, setTemperature] = useState<'all' | 'hot' | 'warm' | 'cold'>('all');
   const [assignment, setAssignment] = useState<'all' | 'mine' | 'unassigned'>('all');
   const [metaFormId, setMetaFormId] = useState<string>('all');
@@ -163,8 +162,8 @@ function LeadsPage() {
   const companyId = company?.id;
   const currentUserId = user?.id ?? null;
   const leadsQuery = useQuery({
-    queryKey: ['leads', companyId, search, status, temperature, assignment, metaFormId, currentUserId],
-    queryFn: () => listLeads(companyId ?? '', { search, status, temperature, assignment, metaFormId, currentUserId }),
+    queryKey: ['leads', companyId, search, stageId, temperature, assignment, metaFormId, currentUserId],
+    queryFn: () => listLeads(companyId ?? '', { search, stageId, temperature, assignment, metaFormId, currentUserId }),
     enabled: Boolean(companyId),
   });
 
@@ -236,14 +235,16 @@ function LeadsPage() {
       return;
     }
 
-    const headers = ['Nome', 'Email', 'Telefone', 'Empresa', 'Origem', 'Status', 'Temperatura', 'Score', 'Atribuído', 'Criado em'];
+    const headers = ['Nome', 'Email', 'Telefone', 'Empresa', 'Origem', 'Etapa', 'Temperatura', 'Score', 'Atribuído', 'Criado em'];
     const rows = leads.map(l => [
       getLeadDisplayName(l),
       l.email || '',
       l.phone || '',
       getLeadCompanyName(l) || '',
       l.source || '',
-      formatLabel(l.status || 'new'),
+      // Nome da etapa do funil, não o status cru: a planilha precisa dizer
+      // "Visita agendada", que é o que o corretor vê na tela.
+      stages.find((s) => s.id === (l as { stage_id?: string | null }).stage_id)?.name ?? 'Sem etapa',
       formatLabel(getLeadTemperature(l)),
       getLeadScore(l),
       l.assigned_to || 'N/A',
@@ -356,15 +357,24 @@ function LeadsPage() {
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
         </div>
         <div className="grid grid-cols-2 gap-3 lg:w-[820px] lg:grid-cols-4">
-          <Select value={status} onValueChange={setStatus}>
+          {/* Filtra pelas etapas do funil da empresa, as mesmas do pipeline.
+              Antes eram sete status fixos em inglês traduzido ("Qualificado",
+              "Proposal") que não correspondiam mais às colunas que o usuário
+              vê — escolher um deles podia não trazer ninguém. */}
+          <Select value={stageId} onValueChange={setStageId}>
             <SelectTrigger className="gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Etapa" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              {STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
+              <SelectItem value="all">Todas as etapas</SelectItem>
+              {stages.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.name}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

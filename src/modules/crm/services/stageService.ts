@@ -72,16 +72,22 @@ export function resolveEntryStage(
 /**
  * `status` correspondente a uma etapa.
  *
- * Etapas são livres — o cliente pode chamar a terceira coluna de "Visita
- * agendada" —, então a tradução é por posição e por tipo, não por nome. Só
- * serve para manter `leads.status` coerente com quem ainda o lê.
+ * Grosso de propósito. `status` é um campo legado de quatro valores fixos, e o
+ * funil tem tamanho livre — mapear posição a posição dava resultado errado
+ * assim que o cliente passava de quatro etapas abertas: com seis colunas,
+ * "Visita agendada" virava `proposal` e "Proposta enviada" virava `contacted`,
+ * invertidos.
+ *
+ * Então só afirma o que é sempre verdade: entrou agora, está em atendimento,
+ * fechou ou perdeu. Quem quiser saber a etapa exata lê `stage_id`, que é a
+ * fonte da verdade. Isto aqui existe só para automações e o sync CV.CRM não
+ * quebrarem.
  */
 function statusForStage(stage: Stage, stages: Stage[]): string {
   if (stage.kind === 'won') return 'won';
   if (stage.kind === 'lost') return 'lost';
-  const open = stages.filter((s) => s.kind === 'open');
-  const position = open.findIndex((s) => s.id === stage.id);
-  return ['new', 'contacted', 'qualified', 'proposal'][position] ?? 'contacted';
+  const firstOpen = stages.find((s) => s.kind === 'open');
+  return firstOpen?.id === stage.id ? 'new' : 'contacted';
 }
 
 export interface MoveLeadInput {

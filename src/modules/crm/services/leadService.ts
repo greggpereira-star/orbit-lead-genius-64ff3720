@@ -10,6 +10,8 @@ export type LeadTemperature = 'hot' | 'warm' | 'cold';
 export interface LeadFilters {
   search?: string;
   status?: string;
+  /** Etapa do funil (`stages.id`). Substitui o filtro por `status`. */
+  stageId?: string;
   temperature?: LeadTemperature | 'all';
   includeArchived?: boolean;
   assignment?: 'all' | 'mine' | 'unassigned';
@@ -124,6 +126,13 @@ export async function listLeads(companyId: string, filters: LeadFilters = {}): P
 
   if (filters.status && filters.status !== 'all') {
     request = request.eq('status', filters.status);
+  }
+
+  // Filtra pela etapa real do funil. O filtro antigo era por `status`, que
+  // agora é grosso (novo / em atendimento / ganho / perdido) — escolher
+  // "Qualificado" ali não traria ninguém.
+  if (filters.stageId && filters.stageId !== 'all') {
+    request = request.eq('stage_id', filters.stageId);
   }
 
   if (filters.temperature && filters.temperature !== 'all') {
