@@ -14,6 +14,48 @@ export function isEvolutionConfigured(): boolean {
   return Boolean(BASE_URL && API_KEY);
 }
 
+export function evolutionBaseUrl(): string {
+  return BASE_URL;
+}
+
+/**
+ * "Tem variável de ambiente" não é o mesmo que "a API responde".
+ *
+ * Confundir os dois fazia a tela dizer que estava tudo certo enquanto o
+ * endereço configurado sequer respondia — o usuário só descobria ao clicar em
+ * conectar e receber um erro cru. Este ping separa as duas coisas e devolve
+ * uma causa legível.
+ */
+export async function pingEvolution(): Promise<{ reachable: boolean; error?: string; version?: string }> {
+  if (!isEvolutionConfigured()) {
+    return { reachable: false, error: "EVOLUTION_API_URL / EVOLUTION_API_KEY não configuradas no servidor." };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+
+  try {
+    const res = await fetch(`${BASE_URL}/`, {
+      headers: { apikey: API_KEY },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      return { reachable: false, error: `A Evolution API respondeu ${res.status} em ${BASE_URL}.` };
+    }
+    const body = (await res.json().catch(() => null)) as { version?: string } | null;
+    return { reachable: true, version: body?.version };
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
+    // Causas comuns, traduzidas: certificado inválido, DNS, recusa de conexão.
+    const friendly = /abort/i.test(raw)
+      ? `Sem resposta de ${BASE_URL} (timeout).`
+      : `Não foi possível alcançar ${BASE_URL} — ${raw}`;
+    return { reachable: false, error: friendly };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export interface EvolutionResult<T> {
   ok: boolean;
   data?: T;

@@ -54,8 +54,13 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getInstanceState, isEvolutionConfigured } = await import("@/lib/evolution.server");
+    const { getInstanceState, isEvolutionConfigured, pingEvolution } = await import(
+      "@/lib/evolution.server"
+    );
     const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    // Testa alcance de verdade, não só presença das variáveis.
+    const health = await pingEvolution();
 
     const [{ data: instance }, { data: settings }, { data: messages }] = await Promise.all([
       (supabaseAdmin as any)
@@ -79,7 +84,7 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
     // Estado real vem da Evolution; o banco é só cache. Se divergir, corrige —
     // a sessão pode cair sozinha (celular desligado, WhatsApp Web desconectado).
     let liveState: string | null = null;
-    if (instance?.instance_name && isEvolutionConfigured()) {
+    if (instance?.instance_name && isEvolutionConfigured() && health.reachable) {
       const state = await getInstanceState(instance.instance_name);
       if (state.ok && state.data) {
         liveState = state.data.state;
@@ -100,6 +105,9 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
 
     return {
       configured: isEvolutionConfigured(),
+      reachable: health.reachable,
+      healthError: health.error ?? null,
+      evolutionVersion: health.version ?? null,
       instance: instance ?? null,
       liveState,
       settings: settings ?? { company_id: companyId, ...DEFAULT_SETTINGS },

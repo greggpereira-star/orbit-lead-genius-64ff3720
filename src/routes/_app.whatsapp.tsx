@@ -181,7 +181,10 @@ function WhatsAppPage() {
         </p>
       </div>
 
-      {!data?.configured && (
+      {/* "Configurado" e "alcançável" são coisas diferentes: antes a tela dizia
+          que estava tudo certo só porque as variáveis existiam, e o erro só
+          aparecia ao clicar em conectar. */}
+      {!data?.configured ? (
         <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <p>
@@ -189,7 +192,20 @@ function WhatsAppPage() {
             <code className="font-mono">EVOLUTION_API_KEY</code> configuradas. Sem elas, nenhuma mensagem é enviada.
           </p>
         </div>
-      )}
+      ) : !data?.reachable ? (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          <div className="space-y-1">
+            <p className="font-medium">Servidor de WhatsApp fora do ar</p>
+            <p className="text-muted-foreground">
+              {data?.healthError ?? "Não foi possível alcançar a Evolution API."}
+            </p>
+            <p className="text-muted-foreground">
+              Conectar um número não vai funcionar enquanto isso não for resolvido.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {/* ---------------- Conexão ---------------- */}
       <Card>
@@ -243,7 +259,8 @@ function WhatsAppPage() {
               ) : (
                 <Button
                   onClick={() => connectMutation.mutate()}
-                  disabled={connectMutation.isPending || !data?.configured}
+                  disabled={connectMutation.isPending || !data?.configured || !data?.reachable}
+                  title={!data?.reachable ? "Servidor de WhatsApp indisponível" : undefined}
                 >
                   {connectMutation.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
