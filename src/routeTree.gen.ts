@@ -63,7 +63,6 @@ import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizz
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -338,12 +337,6 @@ const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
   path: '/api/public/cron/meta-retry',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -398,7 +391,6 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -452,7 +444,6 @@ export interface FileRoutesByTo {
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -510,7 +501,6 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -567,7 +557,6 @@ export interface FileRouteTypes {
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
     | '/api/public/cron/meta-retry'
-    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -621,7 +610,6 @@ export interface FileRouteTypes {
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
     | '/api/public/cron/meta-retry'
-    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -678,7 +666,6 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/preview'
     | '/_app/quizzes_/$id/publish'
     | '/api/public/cron/meta-retry'
-    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -699,7 +686,6 @@ export interface RootRouteChildren {
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
-  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1082,13 +1068,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronMetaRetryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -1230,7 +1209,6 @@ const rootRouteChildren: RootRouteChildren = {
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
-  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

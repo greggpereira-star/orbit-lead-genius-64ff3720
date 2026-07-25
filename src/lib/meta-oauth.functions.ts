@@ -41,8 +41,10 @@ function getAllowedOrigins(): Set<string> {
       DEFAULT_PUBLIC_ORIGIN,
       "https://www.altleadflow.com.br",
       "https://altleadflow.com.br",
-      "https://orbit-lead-genius.lovable.app",
-      "https://id-preview--5d4053e9-e197-4195-8f1f-86c12b809081.lovable.app",
+      // Os dois domínios lovable.app saíram daqui: esta é a allowlist de
+      // origens aceitas no retorno do OAuth do Meta, e eram endereços que
+      // nós não controlamos mais. Quem precisar de origem extra usa
+      // META_OAUTH_ALLOWED_ORIGINS, sem recompilar.
       "http://localhost:8080",
       ...configuredOrigins,
     ].map(normalizeOrigin),

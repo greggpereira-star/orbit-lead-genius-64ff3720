@@ -1,9 +1,8 @@
 function EmbedDialog({ form }: { form: Form }) {
   const [copied, setCopied] = React.useState(false);
-  // Garantir que a URL aponte para o domínio de produção se estivermos em preview/local
-  const appDomain = window.location.hostname.includes('lovable.app') 
-    ? `https://${window.location.hostname}`
-    : window.location.origin;
+  // Era um ternário que tratava o preview do lovable.app à parte. Fora dali as
+  // duas pontas davam no mesmo, e hoje o app não roda mais naquele domínio.
+  const appDomain = window.location.origin;
 
   const publicUrl = `${appDomain}/f/${form.slug}`;
   

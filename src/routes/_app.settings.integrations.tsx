@@ -85,49 +85,19 @@ function IntegrationsSettings() {
     setIsTestingLead(false);
   };
 
-  const trackingScript = `<script>
-  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://cdn.lovable.app/tracking.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','TRK-LEAD-8293');
-</script>`;
-
   return (
     <div className="space-y-6">
-      <Card className="border-none shadow-sm bg-primary/[0.02] border-primary/10">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <Code className="h-5 w-5 text-primary" />
-              Tracking Pixel & attribution
-            </CardTitle>
-            <CardDescription>Install this enterprise script on your website to unify lead attribution.</CardDescription>
-          </div>
-          <Button size="sm" variant="outline" className="gap-2" onClick={() => {
-            navigator.clipboard.writeText(trackingScript);
-            toast.success('Script copied to clipboard');
-          }}>
-            <Copy className="h-4 w-4" />
-            Copy Script
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-slate-950 rounded-lg p-4 font-mono text-[11px] text-slate-300 overflow-x-auto whitespace-pre">
-            {trackingScript}
-          </div>
-          <div className="mt-4 flex items-center gap-6">
-            <div className="flex items-center gap-2 text-xs font-medium text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
-              Verified on 3 domains
-            </div>
-            <div className="flex items-center gap-2 text-xs font-medium text-primary">
-              <Zap className="h-4 w-4" />
-              Real-time CAPI Enabled
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Aqui existia um card "Tracking Pixel & attribution" que entregava ao
+          cliente um <script> para instalar no site dele. Era inteiramente
+          falso: carregava de cdn.lovable.app (CDN de terceiro, do editor em
+          que o projeto nasceu), com um id fixo TRK-LEAD-8293 igual para todo
+          mundo, e exibia "Verified on 3 domains" e "Real-time CAPI Enabled"
+          como texto cravado. Instalar aquilo não rastreava nada.
+
+          O rastreio real do produto já acontece por outro caminho — UTMs
+          capturadas no quiz e no formulário, e a CAPI do Meta. Um pixel
+          próprio, se um dia fizer sentido, precisa de id por empresa e de um
+          endpoint nosso. */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {company && <MetaIntegration companyId={company.id} />}
