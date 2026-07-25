@@ -53,6 +53,7 @@ import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.w
 import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
 import { Route as ApiPublicWhatsappCapiRetryRouteImport } from './routes/api/public/whatsapp-capi-retry'
 import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
+import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp-webhook'
 import { Route as FunctionsV1OauthCallbackRouteImport } from './routes/functions.v1.oauth-callback'
 import { Route as IntegrationsMetaCallbackRouteImport } from './routes/integrations.meta.callback'
 import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes_.$id.builder'
@@ -284,6 +285,12 @@ const ApiPublicWhatsappClickRoute = ApiPublicWhatsappClickRouteImport.update({
   path: '/api/public/whatsapp-click',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWhatsappWebhookRoute =
+  ApiPublicWhatsappWebhookRouteImport.update({
+    id: '/api/public/whatsapp-webhook',
+    path: '/api/public/whatsapp-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FunctionsV1OauthCallbackRoute =
   FunctionsV1OauthCallbackRouteImport.update({
     id: '/functions/v1/oauth-callback',
@@ -380,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
+  '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings/': typeof AppSettingsIndexRoute
@@ -433,6 +441,7 @@ export interface FileRoutesByTo {
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
+  '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings': typeof AppSettingsIndexRoute
@@ -490,6 +499,7 @@ export interface FileRoutesById {
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
+  '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
   '/functions/v1/oauth-callback': typeof FunctionsV1OauthCallbackRoute
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/api/public/meta-webhook'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
+    | '/api/public/whatsapp-webhook'
     | '/functions/v1/oauth-callback'
     | '/integrations/meta/callback'
     | '/settings/'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/api/public/meta-webhook'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
+    | '/api/public/whatsapp-webhook'
     | '/functions/v1/oauth-callback'
     | '/integrations/meta/callback'
     | '/settings'
@@ -655,6 +667,7 @@ export interface FileRouteTypes {
     | '/api/public/meta-webhook'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
+    | '/api/public/whatsapp-webhook'
     | '/functions/v1/oauth-callback'
     | '/integrations/meta/callback'
     | '/_app/settings/'
@@ -682,6 +695,7 @@ export interface RootRouteChildren {
   ApiPublicMetaWebhookRoute: typeof ApiPublicMetaWebhookRoute
   ApiPublicWhatsappCapiRetryRoute: typeof ApiPublicWhatsappCapiRetryRoute
   ApiPublicWhatsappClickRoute: typeof ApiPublicWhatsappClickRoute
+  ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
@@ -998,6 +1012,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWhatsappClickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/whatsapp-webhook': {
+      id: '/api/public/whatsapp-webhook'
+      path: '/api/public/whatsapp-webhook'
+      fullPath: '/api/public/whatsapp-webhook'
+      preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/functions/v1/oauth-callback': {
       id: '/functions/v1/oauth-callback'
       path: '/functions/v1/oauth-callback'
@@ -1205,6 +1226,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMetaWebhookRoute: ApiPublicMetaWebhookRoute,
   ApiPublicWhatsappCapiRetryRoute: ApiPublicWhatsappCapiRetryRoute,
   ApiPublicWhatsappClickRoute: ApiPublicWhatsappClickRoute,
+  ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,

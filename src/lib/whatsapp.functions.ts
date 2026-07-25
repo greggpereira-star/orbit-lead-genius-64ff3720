@@ -129,7 +129,17 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
     // anterior — a Evolution não reemite QR de instância em estado ruim.
     await deleteInstance(instanceName);
 
-    const created = await createInstance(instanceName);
+    // Webhook do caminho de volta: mantém o status da conexão correto em tempo
+    // real e recebe as respostas dos leads. Só registra se houver segredo — sem
+    // ele o endpoint recusa tudo, e apontar a Evolution pra um 401 é só ruído.
+    const base = (process.env.PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+    const secret = process.env.WHATSAPP_WEBHOOK_SECRET ?? "";
+    const webhookUrl =
+      base && secret
+        ? `${base}/api/public/whatsapp-webhook?token=${encodeURIComponent(secret)}`
+        : undefined;
+
+    const created = await createInstance(instanceName, webhookUrl);
     if (!created.ok) throw new Error(created.error ?? "Falha ao criar instância.");
 
     let qr = created.data?.qrCodeBase64 ?? null;

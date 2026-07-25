@@ -151,7 +151,33 @@ export async function dispatchLeadWhatsApp(
     // ---- Saudação ao lead ------------------------------------------------
     if (cfg.greeting_enabled) {
       const leadNumber = toWhatsAppNumber(input.phone);
-      if (!leadNumber) {
+
+      // Quem pediu pra parar não recebe, mesmo voltando como lead novo.
+      // Ignorar isso é o caminho mais rápido pra denúncia — e denúncia é o
+      // que derruba o número.
+      let optedOut = false;
+      if (leadNumber) {
+        const { data: optout } = await admin
+          .from("whatsapp_optouts")
+          .select("phone")
+          .eq("company_id", input.companyId)
+          .eq("phone", leadNumber)
+          .maybeSingle();
+        optedOut = Boolean(optout);
+      }
+
+      if (optedOut) {
+        await logMessage(admin, {
+          company_id: input.companyId,
+          lead_id: input.leadId,
+          direction: "outbound",
+          kind: "greeting",
+          to_phone: leadNumber ?? "",
+          body: "",
+          status: "skipped",
+          skipped_reason: "Contato pediu para não receber mensagens",
+        });
+      } else if (!leadNumber) {
         await logMessage(admin, {
           company_id: input.companyId,
           lead_id: input.leadId,
