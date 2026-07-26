@@ -3,6 +3,7 @@ import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye, PhoneCall, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
+import { RichText } from './RichText';
 import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
@@ -311,10 +312,24 @@ export function BlockRenderer({
   const title = block.title || '(sem título)';
   const sub = block.subtitle;
 
+  // Mesmo <RichText> do player — o canvas não pode ter renderizador próprio,
+  // senão formatar aqui e ver outra coisa lá vira questão de tempo.
   const heading = (
     <div className="space-y-2">
-      <h2 className="text-2xl font-bold leading-tight" style={{ color: design.text, fontFamily: design.fontHeading }}>{title}</h2>
-      {sub && <p className="text-sm" style={{ color: design.muted }}>{sub}</p>}
+      <RichText
+        doc={block.titleRich}
+        fallback={title}
+        className="quiz-rich text-2xl font-bold leading-tight"
+        style={{ color: design.text, fontFamily: design.fontHeading }}
+      />
+      {(block.subtitleRich || sub) && (
+        <RichText
+          doc={block.subtitleRich}
+          fallback={sub}
+          className="quiz-rich text-sm"
+          style={{ color: design.muted }}
+        />
+      )}
     </div>
   );
 
@@ -331,8 +346,20 @@ export function BlockRenderer({
               className="mx-auto w-full max-h-72 object-cover rounded-xl"
             />
           )}
-          <h1 className="text-4xl font-bold" style={{ color: design.text, fontFamily: design.fontHeading }}>{title}</h1>
-          {sub && <p className="text-base max-w-md mx-auto" style={{ color: design.muted }}>{sub}</p>}
+          <RichText
+            doc={block.titleRich}
+            fallback={title}
+            className="quiz-rich text-4xl font-bold"
+            style={{ color: design.text, fontFamily: design.fontHeading }}
+          />
+          {(block.subtitleRich || sub) && (
+            <RichText
+              doc={block.subtitleRich}
+              fallback={sub}
+              className="quiz-rich text-base max-w-md mx-auto"
+              style={{ color: design.muted }}
+            />
+          )}
           <Btn design={design}>{block.ctaLabel || 'Começar'}</Btn>
         </div>
       );
@@ -503,7 +530,7 @@ export function BlockRenderer({
     case 'countdown':
       return (
         <div className="space-y-3 text-center">
-          {title && <h2 className="text-lg font-semibold" style={{ color: design.text }}>{title}</h2>}
+          {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} className="quiz-rich text-lg font-semibold" style={{ color: design.text }} />)}
           <CountdownTimer endsAt={block.countdownEndsAt} minutes={block.countdownMinutes ?? 15} color={design.primary} />
         </div>
       );

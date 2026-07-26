@@ -9,6 +9,7 @@ import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { resolveScope, interpolateText, type VariableScope } from '../lib/variables';
+import { RichText } from './RichText';
 import {
   createInitialState,
   evaluateResponse,
@@ -1080,17 +1081,28 @@ function BlockView({
   // dinâmica com base em respostas anteriores (ex.: "Seu IMC é {{calc(peso/(altura/100)^2)}}").
   const title = interpolateText(block.title, scope);
   const subtitle = interpolateText(block.subtitle, scope);
+  /* Quando o bloco tem texto rico, ele manda; sem documento, cai no texto
+     simples de sempre. Os dois passam pelo MESMO <RichText> que o Preview usa —
+     é isso que garante que o que foi formatado é o que o visitante vê. */
   const heading = (
     <div className="space-y-3 mb-6">
-      {title && (
-        <h2 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ fontFamily: design.fontHeading }}>
-          {title}
-        </h2>
+      {(block.titleRich || title) && (
+        <RichText
+          doc={block.titleRich}
+          fallback={title}
+          scope={scope}
+          className="quiz-rich text-2xl sm:text-3xl font-bold leading-tight"
+          style={{ fontFamily: design.fontHeading }}
+        />
       )}
-      {subtitle && (
-        <p className="text-base opacity-80" style={{ color: design.muted }}>
-          {subtitle}
-        </p>
+      {(block.subtitleRich || subtitle) && (
+        <RichText
+          doc={block.subtitleRich}
+          fallback={subtitle}
+          scope={scope}
+          className="quiz-rich text-base opacity-80"
+          style={{ color: design.muted }}
+        />
       )}
     </div>
   );
@@ -1106,11 +1118,21 @@ function BlockView({
               className="mx-auto w-full max-h-72 object-cover rounded-xl"
             />
           )}
-          <h1 className="text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>{title}</h1>
-          {subtitle && (
-            <p className="text-lg max-w-md mx-auto" style={{ color: design.muted }}>
-              {subtitle}
-            </p>
+          <RichText
+            doc={block.titleRich}
+            fallback={title}
+            scope={scope}
+            className="quiz-rich text-4xl font-bold"
+            style={{ fontFamily: design.fontHeading }}
+          />
+          {(block.subtitleRich || subtitle) && (
+            <RichText
+              doc={block.subtitleRich}
+              fallback={subtitle}
+              scope={scope}
+              className="quiz-rich text-lg max-w-md mx-auto"
+              style={{ color: design.muted }}
+            />
           )}
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Começar'}
@@ -1669,7 +1691,7 @@ function BlockView({
     case 'pricing':
       return (
         <div className="text-center space-y-5">
-          {title && <h2 className="text-xl font-semibold" style={{ fontFamily: design.fontHeading }}>{title}</h2>}
+          {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-semibold" style={{ fontFamily: design.fontHeading }} />)}
           <div className="flex items-end justify-center gap-2">
             <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice ?? 'R$ 0'}</span>
             <span className="text-base opacity-70">{block.pricingPeriod}</span>

@@ -13,6 +13,7 @@ import { BLOCK_LIBRARY } from '../blocks-library';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MediaUploader } from './MediaUploader';
+import { RichTextEditor } from './RichTextEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Palette, SlidersHorizontal } from 'lucide-react';
 import { BUTTON_STYLE_OPTIONS, getButtonStyle } from '../lib/buttonStyles';
@@ -102,6 +103,16 @@ function BlockInspector({
   // — do contrário fica fácil "perder" o bloco depois de entrar pra editá-lo.
   const parentContainer = allBlocks.find((b) => b.childBlockIds?.includes(block.id));
 
+  /* Variáveis oferecidas pelo botão fx: só as de blocos ANTERIORES a este —
+     citar a resposta de um bloco que ainda não foi respondido renderiza vazio. */
+  const availableVariables = (() => {
+    const idx = allBlocks.findIndex((b) => b.id === block.id);
+    return allBlocks
+      .slice(0, idx >= 0 ? idx : allBlocks.length)
+      .map((b) => b.outputVariable?.trim())
+      .filter((v): v is string => !!v);
+  })();
+
   const ctaEligible = [
     'intro', 'cta', 'result', 'short-text', 'long-text', 'email', 'phone',
     'argument', 'argument-progress', 'level', 'notification', 'faq', 'form',
@@ -145,18 +156,38 @@ function BlockInspector({
             <Field label="Título do resultado">
               <Input value={block.resultTitle ?? ''} onChange={(e) => onChange({ resultTitle: e.target.value })} />
             </Field>
-            <Field label="Descrição do resultado">
-              <Textarea rows={4} value={block.resultBody ?? ''} onChange={(e) => onChange({ resultBody: e.target.value })} />
-            </Field>
+            {/* `key` no id do bloco: o editor monta seu conteúdo uma vez só (senão
+                o cursor pularia a cada tecla). Trocar de bloco precisa remontar. */}
+            <RichTextEditor
+              key={`${block.id}-body`}
+              label="Descrição do resultado"
+              value={block.resultBodyRich}
+              fallbackText={block.resultBody}
+              variables={availableVariables}
+              minHeight={120}
+              onChange={(doc, text) => onChange({ resultBodyRich: doc, resultBody: text })}
+            />
           </>
         ) : block.type === 'custom' || block.type === 'container' || block.type === 'spacer' ? null : (
           <>
-            <Field label="Título">
-              <Input value={block.title ?? ''} onChange={(e) => onChange({ title: e.target.value })} />
-            </Field>
-            <Field label="Subtítulo">
-              <Textarea rows={2} value={block.subtitle ?? ''} onChange={(e) => onChange({ subtitle: e.target.value })} />
-            </Field>
+            <RichTextEditor
+              key={`${block.id}-title`}
+              label="Título"
+              value={block.titleRich}
+              fallbackText={block.title}
+              variables={availableVariables}
+              minHeight={68}
+              onChange={(doc, text) => onChange({ titleRich: doc, title: text })}
+            />
+            <RichTextEditor
+              key={`${block.id}-subtitle`}
+              label="Subtítulo"
+              value={block.subtitleRich}
+              fallbackText={block.subtitle}
+              variables={availableVariables}
+              minHeight={68}
+              onChange={(doc, text) => onChange({ subtitleRich: doc, subtitle: text })}
+            />
           </>
         )}
 

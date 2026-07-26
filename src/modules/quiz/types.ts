@@ -1,3 +1,6 @@
+import type { RichDoc } from './lib/richdoc';
+export type { RichDoc };
+
 export type QuizStatus = 'draft' | 'published' | 'archived';
 export type QuizLayoutMode = 'fullscreen' | 'card' | 'split' | 'story' | 'inline' | 'modal';
 export type QuizTemperature = 'hot' | 'warm' | 'cold';
@@ -118,6 +121,17 @@ export interface QuizBlock {
   type: BlockType;
   title?: string;
   subtitle?: string;
+  /**
+   * Versão rica de `title`/`subtitle`.
+   *
+   * Os campos de texto simples CONTINUAM sendo gravados junto, com o texto puro
+   * extraído do documento. Não é redundância à toa: nada de migração nos quizzes
+   * que já existem, e o painel de etapas, o `aria-label` e a busca seguem tendo
+   * uma string legível para mostrar. Quando o documento existe, ele manda na
+   * renderização; quando não existe, cai no texto simples de sempre.
+   */
+  titleRich?: RichDoc;
+  subtitleRich?: RichDoc;
   placeholder?: string;
   required?: boolean;
   options?: BlockOption[];
@@ -133,6 +147,7 @@ export interface QuizBlock {
   allowUnitToggle?: boolean; // ausente = true (comportamento padrão)
   resultTitle?: string;
   resultBody?: string;
+  resultBodyRich?: RichDoc;
   // Rich media (Phase 3)
   mediaUrl?: string;
   mediaProvider?: 'youtube' | 'vimeo' | 'mp4' | 'file';
