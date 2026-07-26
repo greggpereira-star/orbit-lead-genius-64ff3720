@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye, PhoneCall } from 'lucide-react';
+import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye, PhoneCall, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
@@ -36,6 +36,13 @@ interface Props {
   // o estado vazio mostra um botão de "Adicionar bloco" em vez de mandar o usuário
   // "arrastar da paleta" (que não está visível).
   onRequestAddBlock?: () => void;
+  /**
+   * Etapa mostrada no canvas. O canvas exibe UMA etapa por vez, porque é isso
+   * que o visitante vê: uma tela. Empilhar todas com um tracinho entre elas
+   * fazia parecer que o quiz era uma página comprida.
+   */
+  currentStepId?: string | null;
+  onChangeStep?: (stepId: string) => void;
 }
 
 // Largura fixa do quiz em qualquer dispositivo (mesmo padrão de QuizPlayer.tsx) — o
@@ -43,9 +50,24 @@ interface Props {
 // viewport de cada dispositivo por fora, mas mantém o quiz nessa largura por dentro.
 const QUIZ_MAX_WIDTH = 448;
 
-export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'desktop', onRequestAddBlock }: Props) {
+export function QuizPreview({
+  schema, activeBlockId, onSelectBlock, device = 'desktop', onRequestAddBlock,
+  currentStepId, onChangeStep,
+}: Props) {
   const { design, blocks } = schema;
-  const steps = useMemo(() => getSteps(schema), [schema]);
+  // keepEmpty: uma etapa recém-criada precisa aparecer no canvas mesmo antes de
+  // ganhar o primeiro bloco — senão o usuário cria a tela e não vê nada.
+  const steps = useMemo(() => getSteps(schema, { keepEmpty: true }), [schema]);
+
+  const stepIndex = useMemo(() => {
+    const i = currentStepId ? steps.findIndex((s) => s.id === currentStepId) : -1;
+    return i >= 0 ? i : 0;
+  }, [steps, currentStepId]);
+  const step = steps[stepIndex] ?? null;
+  const stepBlocks = useMemo(
+    () => (step ? step.blockIds.map((bid) => blocks.find((b) => b.id === bid)).filter((b): b is QuizBlock => !!b) : []),
+    [step, blocks],
+  );
   // hover:bg-white/5 fica invisível em fundos claros (Clean Beauty, Mono, Minimal Light,
   // Candy) — escolhe a tinta de hover pelo mesmo teste de luminância do contraste de botão.
   const hoverTintClass = getContrastText(design.background) === '#1a1a1a' ? 'hover:bg-black/5' : 'hover:bg-white/5';
@@ -66,7 +88,55 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
   );
 
   return (
-    <div className="w-full h-full flex overflow-auto p-6" style={{ background: '#0a0a0a' }}>
+    <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: '#0a0a0a' }}>
+      {/* Navegador de etapas: fica FORA do device-frame de propósito. Dentro
+          dele, viraria parte da tela simulada e o usuário acharia que o
+          visitante vê esses controles. */}
+      {steps.length > 0 && (
+        <div className="flex shrink-0 items-center justify-center gap-3 px-6 pt-4 pb-1">
+          <button
+            type="button"
+            onClick={() => onChangeStep?.(steps[stepIndex - 1].id)}
+            disabled={stepIndex === 0}
+            aria-label="Etapa anterior"
+            className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {steps.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => onChangeStep?.(s.id)}
+                aria-label={`Ir para ${s.name || `Etapa ${i + 1}`}`}
+                aria-current={i === stepIndex ? 'true' : undefined}
+                title={s.name || `Etapa ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === stepIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/25 hover:bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onChangeStep?.(steps[stepIndex + 1].id)}
+            disabled={stepIndex >= steps.length - 1}
+            aria-label="Próxima etapa"
+            className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+
+          <span className="ml-1 text-xs tabular-nums text-white/50">
+            {step?.name || `Etapa ${stepIndex + 1}`} de {steps.length}
+          </span>
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1 overflow-auto p-6">
       <div
         // m-auto (não items-center/justify-center no pai) centraliza o device-frame
         // quando ele cabe no painel, mas nunca corta o topo/lado quando ele é maior
@@ -78,9 +148,17 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
       >
         <div className="w-full transition-all" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
           <div className="p-6 border-b" style={{ borderColor: design.surface }}>
-            <ProgressBar design={design} value={0.15} />
+            {/* A barra de progresso reflete a etapa aberta: é o que o visitante
+                veria nesse ponto do quiz, e não um valor decorativo fixo. */}
+            <ProgressBar
+              design={design}
+              value={steps.length ? (stepIndex + 1) / steps.length : 0.15}
+            />
           </div>
-          <Droppable droppableId="canvas">
+          {/* Um droppable POR ETAPA (`canvas-step-<id>`): com uma lista só, os
+              índices do arraste eram globais e não batiam com a posição dentro
+              da etapa — arrastar no canvas simplesmente não fazia nada. */}
+          <Droppable droppableId={step ? `canvas-step-${step.id}` : 'canvas'}>
             {(dropProvided, dropSnapshot) => (
               <div
                 ref={dropProvided.innerRef}
@@ -110,17 +188,22 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                       </p>
                     )}
                   </div>
+                ) : stepBlocks.length === 0 ? (
+                  <div
+                    className={`text-center py-20 rounded-xl border-2 border-dashed transition-colors ${
+                      dropSnapshot.isDraggingOver ? 'border-primary/50 opacity-100' : 'opacity-60 border-transparent'
+                    }`}
+                  >
+                    <p className="text-sm" style={{ color: design.muted }}>
+                      {step?.name || `Etapa ${stepIndex + 1}`} está vazia.
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: design.muted }}>
+                      Escolha um bloco na paleta — ele entra nesta etapa.
+                    </p>
+                  </div>
                 ) : (
-                  steps.map((step, stepIdx) => (
-                    <div key={step.id} className={stepIdx > 0 ? 'mt-8 pt-8 border-t border-dashed' : ''} style={{ borderColor: design.surface }}>
-                      <div className="text-[10px] font-semibold uppercase tracking-wide mb-4 opacity-50" style={{ color: design.muted }}>
-                        Etapa {stepIdx + 1}
-                      </div>
-                      <div className="flex flex-col">
-                        {step.blockIds.map((blockId) => {
-                          const b = blocks.find((x) => x.id === blockId);
-                          if (!b) return null;
-                          const i = blocks.findIndex((x) => x.id === blockId);
+                    <div className="flex flex-col">
+                        {stepBlocks.map((b, i) => {
                           return (
                             <Draggable key={b.id} draggableId={b.id} index={i}>
                               {(dragProvided, dragSnapshot) => (
@@ -158,15 +241,14 @@ export function QuizPreview({ schema, activeBlockId, onSelectBlock, device = 'de
                             </Draggable>
                           );
                         })}
-                      </div>
                     </div>
-                  ))
                 )}
                 {dropProvided.placeholder}
               </div>
             )}
           </Droppable>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -122,14 +122,19 @@ function QuizBuilderPage() {
    * Era isto que faltava: sem um "onde estou montando", clicar na paleta só
    * podia criar etapa nova — e era exatamente esse o defeito relatado. A etapa
    * escolhida na barra manda; sem escolha, vale a etapa do componente
-   * selecionado; sem nada, a última — que é onde a pessoa estava trabalhando.
+   * selecionado; sem nada, a primeira.
+   *
+   * A primeira, e não a última, porque esta mesma etapa é a que o canvas
+   * mostra: ao abrir o builder você vê a tela de abertura do quiz, e o bloco
+   * cai onde você está olhando. Um destino diferente do que está na tela seria
+   * a mesma classe de confusão que este trabalho veio corrigir.
    */
   const targetStep = useMemo(() => {
     const byPick = activeStepId ? steps.find((s) => s.id === activeStepId) : undefined;
     if (byPick) return byPick;
     const byBlock = activeBlockId ? steps.find((s) => s.blockIds.includes(activeBlockId)) : undefined;
     if (byBlock) return byBlock;
-    return steps[steps.length - 1] ?? null;
+    return steps[0] ?? null;
   }, [steps, activeStepId, activeBlockId]);
 
   const targetStepIndex = targetStep ? steps.findIndex((s) => s.id === targetStep.id) : -1;
@@ -397,7 +402,19 @@ function QuizBuilderPage() {
     });
   };
 
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = (rawResult: DropResult) => {
+    /* O canvas usa `canvas-step-<id>` e o painel usa `step-<id>` pra MESMA
+       etapa. Normalizar aqui faz soltar no canvas e soltar no painel caírem
+       nas mesmas regras — antes o canvas não batia com nenhum ramo e arrastar
+       lá dentro simplesmente não fazia nada. */
+    const unprefix = (dropId: string) => (dropId.startsWith('canvas-step-') ? dropId.slice('canvas-'.length) : dropId);
+    const result: DropResult = {
+      ...rawResult,
+      source: { ...rawResult.source, droppableId: unprefix(rawResult.source.droppableId) },
+      destination: rawResult.destination
+        ? { ...rawResult.destination, droppableId: unprefix(rawResult.destination.droppableId) }
+        : rawResult.destination,
+    };
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === 'palette') return;
@@ -1029,6 +1046,15 @@ function QuizBuilderPage() {
             onSelectBlock={(blockId) => { setActiveBlockId(blockId); setMobilePanel('inspector'); }}
             device={device}
             onRequestAddBlock={!isDesktop ? () => setMobilePanel('blocks') : undefined}
+            /* Canvas e painel olham pra mesma etapa: selecionar um bloco na
+               lista traz o canvas junto, e navegar no canvas muda o destino
+               dos próximos componentes. */
+            currentStepId={targetStep?.id ?? null}
+            onChangeStep={(stepId) => {
+              setActiveStepId(stepId);
+              setActiveBlockId(null);
+              setExpandedSteps((prev) => new Set(prev).add(stepId));
+            }}
           />
         </main>
 
