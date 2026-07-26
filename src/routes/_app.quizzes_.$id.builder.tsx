@@ -59,6 +59,8 @@ function QuizBuilderPage() {
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
   const [schema, setSchema] = useState<QuizSchema>({ blocks: [], design: DEFAULT_DESIGN, results: [] });
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  /** Etapa escolhida na barra lateral como destino dos próximos componentes. */
+  const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,7 +112,27 @@ function QuizBuilderPage() {
     return () => { mounted = false; };
   }, [id]);
 
-  const steps = useMemo(() => getSteps(schema), [schema]);
+  // `keepEmpty`: no builder uma etapa recém-criada vive vazia até ganhar o
+  // primeiro componente. Preview e player continuam podando as vazias.
+  const steps = useMemo(() => getSteps(schema, { keepEmpty: true }), [schema]);
+
+  /**
+   * Etapa onde o próximo bloco vai cair.
+   *
+   * Era isto que faltava: sem um "onde estou montando", clicar na paleta só
+   * podia criar etapa nova — e era exatamente esse o defeito relatado. A etapa
+   * escolhida na barra manda; sem escolha, vale a etapa do componente
+   * selecionado; sem nada, a última — que é onde a pessoa estava trabalhando.
+   */
+  const targetStep = useMemo(() => {
+    const byPick = activeStepId ? steps.find((s) => s.id === activeStepId) : undefined;
+    if (byPick) return byPick;
+    const byBlock = activeBlockId ? steps.find((s) => s.blockIds.includes(activeBlockId)) : undefined;
+    if (byBlock) return byBlock;
+    return steps[steps.length - 1] ?? null;
+  }, [steps, activeStepId, activeBlockId]);
+
+  const targetStepIndex = targetStep ? steps.findIndex((s) => s.id === targetStep.id) : -1;
 
   const activeBlock = useMemo(
     () => schema.blocks.find((b) => b.id === activeBlockId) ?? null,
@@ -132,9 +154,12 @@ function QuizBuilderPage() {
       const rawSteps = buildSteps(prev);
       const existing = new Set(prev.blocks.map((b) => b.id));
       // sanea referências pendentes e etapas vazias
-      const cleaned = rawSteps
-        .map((s) => ({ ...s, blockIds: s.blockIds.filter((id) => existing.has(id)) }))
-        .filter((s) => s.blockIds.length > 0);
+      // Etapa vazia sobrevive no builder de propósito: ela é uma tela que o
+      // usuário criou e ainda não preencheu. Quem poda é o preview/player.
+      const cleaned = rawSteps.map((s) => ({
+        ...s,
+        blockIds: s.blockIds.filter((id) => existing.has(id)),
+      }));
       // reanexa qualquer bloco que ficou de fora — mas um bloco "filho" de algum
       // Container (childBlockIds) também conta como coberto: ele nunca aparece no
       // blockIds de uma etapa, só na lista do Container que o contém.
@@ -166,20 +191,84 @@ function QuizBuilderPage() {
     toast.success(`Etapa "${template.name}" adicionada`);
   };
 
+  /**
+   * Cria uma etapa vazia e passa a montá-la.
+   *
+   * Etapa nova só nasce por ação explícita. Antes ela nascia sozinha a cada
+   * bloco adicionado, e por isso nenhuma etapa passava de um componente.
+   */
+  const addStep = () => {
+    const newStep: QuizStep = { id: `step-${crypto.randomUUID()}`, blockIds: [] };
+    updateSchema((prev) => ({
+      ...prev,
+      steps: [...getSteps(prev, { keepEmpty: true }), newStep],
+    }));
+    setActiveStepId(newStep.id);
+    setActiveBlockId(null);
+    setExpandedSteps((prev) => new Set(prev).add(newStep.id));
+    toast.success('Etapa criada — agora escolha os componentes dela');
+  };
+
   const addBlock = (defIndex: number) => {
     const def = BLOCK_LIBRARY[defIndex];
     const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
+    // Guarda só o ID da etapa alvo, não o objeto: cliques em sucessão rápida no
+    // mesmo lote de eventos compartilham este closure, e o ID continua válido
+    // enquanto o objeto memoizado já estaria velho.
+    const targetId = targetStep?.id ?? null;
+    const anchorId = activeBlockId;
+
+    updateSchema((prev) => {
+      const prevSteps = getSteps(prev, { keepEmpty: true });
+      const target = targetId ? prevSteps.find((s) => s.id === targetId) : undefined;
+
+      // Sem etapa alvo (quiz vazio, ou a etapa sumiu) o bloco inaugura a primeira.
+      if (!target) {
+        return {
+          ...prev,
+          blocks: [...prev.blocks, newBlock],
+          steps: [...prevSteps, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] }],
+        };
+      }
+
+      const nextSteps = prevSteps.map((s) => {
+        if (s.id !== target.id) return s;
+        // Entra logo abaixo do componente selecionado, quando ele é desta etapa —
+        // é onde a pessoa está olhando. Senão, no fim da etapa.
+        const at = anchorId ? s.blockIds.indexOf(anchorId) : -1;
+        const ids = Array.from(s.blockIds);
+        ids.splice(at >= 0 ? at + 1 : ids.length, 0, newBlock.id);
+        return { ...s, blockIds: ids };
+      });
+      return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
+    });
+
+    setActiveBlockId(newBlock.id);
+    if (targetId) {
+      setActiveStepId(targetId);
+      setExpandedSteps((prev) => new Set(prev).add(targetId));
+    }
+    setMobilePanel('inspector');
+  };
+
+  /** Exclui a etapa inteira: a tela e todos os componentes dela. */
+  const deleteStep = (stepId: string) => {
+    const step = steps.find((s) => s.id === stepId);
+    if (!step) return;
+    const childIds = step.blockIds.flatMap(
+      (bid) => schema.blocks.find((b) => b.id === bid)?.childBlockIds ?? [],
+    );
+    const idsToRemove = new Set([...step.blockIds, ...childIds]);
     updateSchema((prev) => ({
       ...prev,
-      blocks: [...prev.blocks, newBlock],
-      // Usa prev.steps (não a `steps` memoizada do render) — cliques em sucessão rápida
-      // no mesmo lote de eventos compartilham o mesmo closure da `steps` desse render, e
-      // basear-se nela aqui descartaria silenciosamente as etapas de blocos adicionados
-      // entre um render e outro.
-      steps: [...(prev.steps ?? []), { id: `step-${newBlock.id}`, blockIds: [newBlock.id] }],
+      blocks: prev.blocks.filter((b) => !idsToRemove.has(b.id)),
+      steps: getSteps(prev, { keepEmpty: true }).filter((s) => s.id !== stepId),
     }));
-    setActiveBlockId(newBlock.id);
-    setMobilePanel('inspector');
+    if (activeBlockId && idsToRemove.has(activeBlockId)) setActiveBlockId(null);
+    if (activeStepId === stepId) setActiveStepId(null);
+    toast(`Etapa excluída`, {
+      description: idsToRemove.size === 1 ? '1 componente removido' : `${idsToRemove.size} componentes removidos`,
+    });
   };
 
   const patchBlock = (patch: Partial<QuizBlock>) => {
@@ -210,9 +299,11 @@ function QuizBuilderPage() {
         .filter((b) => !idsToRemove.has(b.id))
         // se o bloco excluído era filho de outro Container, tira a referência de lá também
         .map((b) => (b.childBlockIds?.includes(target) ? { ...b, childBlockIds: b.childBlockIds.filter((id) => id !== target) } : b)),
-      steps: (prev.steps ?? [])
-        .map((s) => (s.blockIds.includes(target) ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) } : s))
-        .filter((s) => s.blockIds.length > 0),
+      // A etapa fica, mesmo esvaziada: apagar um componente é apagar um
+      // componente. Quem apaga a tela é o botão de excluir etapa.
+      steps: getSteps(prev, { keepEmpty: true }).map((s) =>
+        s.blockIds.includes(target) ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) } : s,
+      ),
     }));
     if (target === activeBlockId) setActiveBlockId(null);
     toast(cascadeIds.length > 0 ? `Container e ${cascadeIds.length} componente(s) excluídos` : 'Bloco excluído', {
@@ -246,9 +337,9 @@ function QuizBuilderPage() {
       blocks: prev.blocks.map((b) =>
         b.id === containerId ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), blockId] } : b
       ),
-      steps: (prev.steps ?? [])
-        .map((s) => (s.blockIds.includes(blockId) ? { ...s, blockIds: s.blockIds.filter((id) => id !== blockId) } : s))
-        .filter((s) => s.blockIds.length > 0),
+      steps: getSteps(prev, { keepEmpty: true }).map((s) =>
+        s.blockIds.includes(blockId) ? { ...s, blockIds: s.blockIds.filter((id) => id !== blockId) } : s,
+      ),
     }));
   };
 
@@ -323,7 +414,7 @@ function QuizBuilderPage() {
         // não cria uma etapa nova (pedido explícito: nova etapa só nasce por ação clara).
         const targetStepId = destination.droppableId.slice('step-'.length);
         updateSchema((prev) => {
-          const prevSteps = getSteps(prev);
+          const prevSteps = getSteps(prev, { keepEmpty: true });
           const nextSteps = prevSteps.map((s) =>
             s.id === targetStepId
               ? { ...s, blockIds: [...s.blockIds.slice(0, destination.index), newBlock.id, ...s.blockIds.slice(destination.index)] }
@@ -334,7 +425,7 @@ function QuizBuilderPage() {
       } else {
         // Soltou na lista de etapas (fora de uma expandida) — cria etapa nova.
         updateSchema((prev) => {
-          const nextSteps = Array.from(getSteps(prev));
+          const nextSteps = Array.from(getSteps(prev, { keepEmpty: true }));
           nextSteps.splice(destination.index, 0, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] });
           return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
         });
@@ -348,7 +439,7 @@ function QuizBuilderPage() {
       // Reordena etapas inteiras.
       if (source.index === destination.index) return;
       applySteps((prev) => {
-        const nextSteps = Array.from(getSteps(prev));
+        const nextSteps = Array.from(getSteps(prev, { keepEmpty: true }));
         const [moved] = nextSteps.splice(source.index, 1);
         if (moved) nextSteps.splice(destination.index, 0, moved);
         return nextSteps;
@@ -364,7 +455,7 @@ function QuizBuilderPage() {
       if (sourceStepId === destStepId) {
         if (source.index === destination.index) return;
         applySteps((prev) =>
-          getSteps(prev).map((s) => {
+          getSteps(prev, { keepEmpty: true }).map((s) => {
             if (s.id !== sourceStepId) return s;
             const ids = Array.from(s.blockIds);
             const [moved] = ids.splice(source.index, 1);
@@ -378,9 +469,11 @@ function QuizBuilderPage() {
       // Move o componente de uma etapa pra outra; remove a etapa de origem se ficar vazia.
       const movedId = draggableId;
       applySteps((prev) => {
-        const withoutMoved = getSteps(prev)
-          .map((s) => (s.id === sourceStepId ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) } : s))
-          .filter((s) => s.id === destStepId || s.blockIds.length > 0);
+        // A etapa de origem fica mesmo se esvaziar: tirar o último componente
+        // dela não é o mesmo que dizer "quero apagar esta tela".
+        const withoutMoved = getSteps(prev, { keepEmpty: true }).map((s) =>
+          s.id === sourceStepId ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) } : s,
+        );
         return withoutMoved.map((s) => {
           if (s.id !== destStepId) return s;
           const ids = Array.from(s.blockIds);
@@ -535,6 +628,29 @@ function QuizBuilderPage() {
       </div>
       <div className="p-3 border-b">
         <h3 className="font-bold text-sm mb-2">Blocos</h3>
+        {/* Dizer ONDE o bloco vai cair é metade do conserto: antes cada clique
+            criava uma etapa nova e não havia como saber (nem escolher) o
+            destino. Clicar aqui leva à etapa alvo na lista abaixo. */}
+        {targetStep ? (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveStepId(targetStep.id);
+              setExpandedSteps((prev) => new Set(prev).add(targetStep.id));
+            }}
+            className="mb-3 flex w-full items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1.5 text-left text-[11px] transition-colors hover:bg-primary/10"
+          >
+            <LayoutGrid className="h-3 w-3 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1 truncate">
+              Adicionando na <strong className="font-semibold">Etapa {targetStepIndex + 1}</strong>
+              {targetStep.blockIds.length > 0 && ` · ${targetStep.blockIds.length} componente${targetStep.blockIds.length > 1 ? 's' : ''}`}
+            </span>
+          </button>
+        ) : (
+          <p className="text-[11px] text-muted-foreground mb-3">
+            O primeiro bloco cria a Etapa 1. Depois, cada bloco entra na etapa selecionada.
+          </p>
+        )}
         <p className="text-[11px] text-muted-foreground mb-3">Arraste até o canvas ou clique para adicionar</p>
         <Droppable droppableId="palette" isDropDisabled>
           {(provided) => (
@@ -583,7 +699,7 @@ function QuizBuilderPage() {
         </Droppable>
       </div>
       <div className="p-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-sm">Etapas ({steps.length})</h3>
           <button
             onClick={() => { setActiveBlockId(null); setMobilePanel(null); }}
@@ -592,6 +708,13 @@ function QuizBuilderPage() {
             <Palette className="h-3 w-3" /> Design
           </button>
         </div>
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          Cada etapa é uma tela do quiz e cabe quantos componentes você quiser.
+        </p>
+        <Button variant="outline" size="sm" className="mb-2.5 w-full" onClick={addStep}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Nova etapa
+        </Button>
         <Droppable droppableId="steps">
           {(stepsProvided) => (
             <div className="space-y-1.5" ref={stepsProvided.innerRef} {...stepsProvided.droppableProps}>
@@ -599,12 +722,15 @@ function QuizBuilderPage() {
                 const stepBlocks = step.blockIds.map((bid) => schema.blocks.find((b) => b.id === bid)).filter(Boolean) as QuizBlock[];
                 const firstBlock = stepBlocks[0];
                 const firstDef = firstBlock ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type) : undefined;
-                // Etapa com um único componente não tem nada de novo pra "revelar" ao
-                // expandir — o cabeçalho e o item interno mostravam exatamente a mesma
-                // coisa duas vezes. Aqui a própria linha da etapa JÁ é o componente: sem
-                // seta, com o botão de excluir direto, e o clique seleciona pro Inspetor.
-                const soloBlock = stepBlocks.length === 1 ? stepBlocks[0] : null;
-                const expanded = !soloBlock && expandedSteps.has(step.id);
+                // TODA etapa expande — inclusive a de um componente só.
+                //
+                // Antes, etapa com 1 bloco virava "solo": sem seta, sem área de
+                // solta. Como todo bloco novo nascia na própria etapa, nenhuma
+                // etapa jamais chegava a dois componentes: ela nascia solo e
+                // solo não recebia nada. Era o beco sem saída que fazia parecer
+                // que "cada bloco vira uma etapa".
+                const expanded = expandedSteps.has(step.id);
+                const isTarget = step.id === targetStep?.id;
                 return (
                   <Draggable key={step.id} draggableId={`step-drag-${step.id}`} index={stepIdx}>
                     {(stepDragProvided, stepDragSnapshot) => (
@@ -612,29 +738,24 @@ function QuizBuilderPage() {
                         ref={stepDragProvided.innerRef}
                         {...stepDragProvided.draggableProps}
                         className={`rounded-xl border transition-all ${
-                          stepDragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' : 'border-transparent'
+                          stepDragSnapshot.isDragging
+                            ? 'shadow-lg bg-card ring-2 ring-primary/40'
+                            : isTarget ? 'border-primary/30 bg-primary/[0.03]' : 'border-transparent'
                         }`}
                       >
                         <div
                           role="button"
                           tabIndex={0}
-                          onClick={() => {
-                            if (soloBlock) { setActiveBlockId(soloBlock.id); setMobilePanel('inspector'); }
-                            else toggleStepExpanded(step.id);
-                          }}
+                          /* Clicar na etapa a torna o destino dos próximos
+                             componentes — é assim que se escolhe onde montar. */
+                          onClick={() => { setActiveStepId(step.id); toggleStepExpanded(step.id); }}
                           onKeyDown={(e) => {
                             if (e.key !== 'Enter') return;
-                            if (soloBlock) { setActiveBlockId(soloBlock.id); setMobilePanel('inspector'); }
-                            else toggleStepExpanded(step.id);
+                            setActiveStepId(step.id);
+                            toggleStepExpanded(step.id);
                           }}
                           className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
-                            soloBlock
-                              ? activeBlockId === soloBlock.id
-                                ? 'bg-primary/10 border border-primary/30'
-                                : 'hover:bg-muted border border-transparent'
-                              : expanded
-                                ? 'bg-muted'
-                                : 'hover:bg-muted border border-transparent'
+                            expanded ? 'bg-muted' : 'hover:bg-muted border border-transparent'
                           }`}
                         >
                           <div
@@ -649,21 +770,23 @@ function QuizBuilderPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-semibold truncate">
-                              Etapa {stepIdx + 1}{firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}
+                              {step.name || `Etapa ${stepIdx + 1}`}
+                              {firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}
                             </div>
                             <div className="text-[10px] text-muted-foreground truncate">
-                              {soloBlock ? (firstDef?.label ?? firstBlock?.type) : `${stepBlocks.length} componentes`}
+                              {stepBlocks.length === 0
+                                ? 'Vazia — escolha um bloco na paleta'
+                                : `${stepBlocks.length} componente${stepBlocks.length > 1 ? 's' : ''}`}
                             </div>
                           </div>
-                          {soloBlock ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteBlock(soloBlock.id); }}
-                              className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
-                              aria-label="Excluir etapa"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          ) : expanded ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}
+                            className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                            aria-label={`Excluir ${step.name || `Etapa ${stepIdx + 1}`} e seus componentes`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                          {expanded ? (
                             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           ) : (
                             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -677,6 +800,13 @@ function QuizBuilderPage() {
                                 ref={moduleProvided.innerRef}
                                 {...moduleProvided.droppableProps}
                               >
+                                {stepBlocks.length === 0 && (
+                                  <p className="rounded-lg border border-dashed px-2 py-4 text-center text-[10px] text-muted-foreground">
+                                    {isTarget
+                                      ? 'Clique num bloco da paleta — ele entra aqui.'
+                                      : 'Etapa vazia. Selecione-a para adicionar componentes.'}
+                                  </p>
+                                )}
                                 {stepBlocks.map((b, bi) => {
                                   const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
                                   return (
