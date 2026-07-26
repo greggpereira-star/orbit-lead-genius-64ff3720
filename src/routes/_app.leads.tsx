@@ -19,6 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -51,6 +52,7 @@ import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
   createLead,
   deleteLead,
+  deleteLeads,
   getLeadDisplayName,
   getLeadScore,
   getLeadTemperature,
@@ -145,6 +147,8 @@ function LeadsPage() {
   const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
   const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<LeadRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [visibleCols, setVisibleCols] = useState<string[]>(loadVisibleColumns);
 
   // Rótulo da coluna de origem por nicho. Fica no localStorage por enquanto;
@@ -224,6 +228,20 @@ function LeadsPage() {
       toast.success('Lead excluído');
     },
     onError: (e: Error) => toast.error(e.message || 'Não foi possível excluir o lead.'),
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: () => {
+      if (!companyId) throw new Error('Workspace não carregado.');
+      return deleteLeads({ leadIds: selectedIds, companyId });
+    },
+    onSuccess: async (count) => {
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      setSelectedIds([]);
+      setConfirmBulkDelete(false);
+      toast.success(count === 1 ? '1 lead excluído' : `${count} leads excluídos`);
+    },
+    onError: (e: Error) => toast.error(e.message || 'Não foi possível excluir os leads.'),
   });
 
   const leads = leadsQuery.data ?? [];
@@ -448,10 +466,48 @@ function LeadsPage() {
         </DropdownMenu>
       </div>
 
+      {/* Barra só aparece com algo selecionado: parada, ocuparia uma faixa da
+          tela pra oferecer uma ação impossível. */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <span className="text-sm font-semibold text-primary">
+            {selectedIds.length === 1
+              ? '1 lead selecionado'
+              : `${selectedIds.length} leads selecionados`}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
+              Limpar seleção
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2"
+              onClick={() => setConfirmBulkDelete(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir selecionados
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border bg-card">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
+              <TableHead className="w-10">
+                {/* Marca só o que está FILTRADO na tela. Selecionar tudo
+                    incluindo linha que o filtro escondeu seria excluir às
+                    cegas. */}
+                <Checkbox
+                  aria-label="Selecionar todos os leads visíveis"
+                  checked={leads.length > 0 && selectedIds.length === leads.length}
+                  onCheckedChange={(v) =>
+                    setSelectedIds(v ? leads.map((l) => l.id) : [])
+                  }
+                />
+              </TableHead>
               {COLUMNS.filter((c) => visibleCols.includes(c.id)).map((c) => (
                 <TableHead key={c.id} className={c.id === 'contato' ? 'min-w-[240px]' : undefined}>
                   {c.id === 'origem' ? originLabel : c.label}
@@ -465,7 +521,7 @@ function LeadsPage() {
               <LoadingRows />
             ) : leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={visibleCols.length + 1} className="h-32 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={visibleCols.length + 2} className="h-32 text-center text-sm text-muted-foreground">
                   Nenhum lead encontrado para os filtros atuais.
                 </TableCell>
               </TableRow>
@@ -477,6 +533,12 @@ function LeadsPage() {
                   currentUserId={currentUserId}
                   visibleCols={visibleCols}
                   stages={stages}
+                  selected={selectedIds.includes(lead.id)}
+                  onToggleSelect={() =>
+                    setSelectedIds((prev) =>
+                      prev.includes(lead.id) ? prev.filter((id) => id !== lead.id) : [...prev, lead.id],
+                    )
+                  }
                   onDelete={() => setLeadToDelete(lead)}
                   onOpen={() => setDetailLead(lead)}
                 />
@@ -533,17 +595,47 @@ function LeadsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* No lote não dá pra nomear cada um, então o número é o freio: quem
+          selecionou sem querer vê "43" e para. */}
+      <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir {selectedIds.length}{' '}
+              {selectedIds.length === 1 ? 'lead' : 'leads'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Some junto tudo que está preso a eles: anotações, anexos,
+              etiquetas, histórico e mensagens de WhatsApp. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkDeleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); bulkDeleteMutation.mutate(); }}
+            >
+              {bulkDeleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function LeadTableRow({
-  lead, currentUserId, visibleCols, stages, onDelete, onOpen,
+  lead, currentUserId, visibleCols, stages, selected, onToggleSelect, onDelete, onOpen,
 }: {
   lead: LeadRow;
   currentUserId: string | null;
   visibleCols: string[];
   stages: Stage[];
+  selected: boolean;
+  onToggleSelect: () => void;
   onDelete: () => void;
   onOpen: () => void;
 }) {
@@ -564,7 +656,17 @@ function LeadTableRow({
     <TableRow
       className="group cursor-pointer transition-colors hover:bg-muted/60"
       onDoubleClick={onOpen}
+      data-state={selected ? 'selected' : undefined}
     >
+      {/* stopPropagation: sem isso, marcar a caixa contaria como clique na
+          linha e o duplo clique acabaria abrindo a ficha sem querer. */}
+      <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggleSelect}
+          aria-label={`Selecionar ${getLeadDisplayName(lead)}`}
+        />
+      </TableCell>
       {show('contato') && (
         <TableCell className="p-4">
           {/* Nem <Link> nem onClick aqui, de propósito. O link navegava no

@@ -295,6 +295,34 @@ export async function updateLead(input: {
  * Os arquivos dos anexos ficam no Storage e não seguem a cascata do Postgres,
  * então são removidos aqui, antes, senão viram lixo pago para sempre.
  */
+export async function deleteLeads(input: { leadIds: string[]; companyId: string }): Promise<number> {
+  if (!input.leadIds.length) return 0;
+
+  // Uma consulta e um remove pro lote inteiro, em vez de N chamadas: com 50
+  // leads selecionados, o laço faria 100 idas ao servidor.
+  const { data: files } = await (supabase as any)
+    .from('lead_attachments')
+    .select('storage_path')
+    .in('lead_id', input.leadIds);
+
+  const paths = (files ?? [])
+    .map((f: { storage_path?: string | null }) => f.storage_path)
+    .filter(Boolean) as string[];
+
+  if (paths.length) {
+    await supabase.storage.from('lead-attachments').remove(paths);
+  }
+
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .in('id', input.leadIds)
+    .eq('company_id', input.companyId);
+
+  if (error) throw new Error(error.message);
+  return input.leadIds.length;
+}
+
 export async function deleteLead(input: { leadId: string; companyId: string }): Promise<void> {
   const { data: files } = await (supabase as any)
     .from('lead_attachments')

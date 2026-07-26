@@ -877,6 +877,8 @@ export function LeadDetailDialog({
   const qc = useQueryClient();
   const [tab, setTab] = useState("respostas");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   // Alargou a janela com "Anotações" aberta: a aba deixa de existir, então
   // devolve o foco pra primeira em vez de deixar o painel vazio.
@@ -928,6 +930,15 @@ export function LeadDetailDialog({
   });
 
   if (!lead) return null;
+
+  /* Compara com o nome BRUTO do banco, não com o exibido: `toTitleCase`
+     transforma "MARIA SILVA" em "Maria Silva" só na tela, e comparar com o
+     formatado gravaria essa mudança cosmética como se fosse edição. */
+  const commitName = () => {
+    setEditingName(false);
+    const next = nameDraft.trim();
+    if (next && next !== (lead.name ?? "").trim()) editMutation.mutate({ name: next });
+  };
 
   const onStageChanged = (status: string) => onStatusChange?.(lead.id, status);
 
@@ -989,7 +1000,35 @@ export function LeadDetailDialog({
                 {initials(name)}
               </span>
               <div className="min-w-0 space-y-1">
-                <DialogTitle className="truncate text-lg leading-tight">{name}</DialogTitle>
+                {/* O nome também se corrige aqui. Vem em CAIXA ALTA do Meta e
+                    às vezes só com o primeiro nome — sem isto, arrumar exigia
+                    ir ao banco. `asChild` mantém o DialogTitle como rótulo
+                    acessível do modal mesmo virando input. */}
+                <DialogTitle asChild>
+                  {editingName ? (
+                    <Input
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onBlur={commitName}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); commitName(); }
+                        if (e.key === "Escape") { setNameDraft(name); setEditingName(false); }
+                      }}
+                      aria-label="Nome do lead"
+                      className="h-8 max-w-[22rem] px-1.5 text-lg font-semibold leading-tight"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setNameDraft(name); setEditingName(true); }}
+                      title="Clique para editar o nome"
+                      className="-mx-1 truncate rounded px-1 text-left text-lg font-semibold leading-tight hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {name}
+                    </button>
+                  )}
+                </DialogTitle>
                 {/* asChild: o DialogDescription vira <div>, senão o botão do
                     seletor ficaria dentro de um <p> — HTML inválido. */}
                 <DialogDescription asChild>
