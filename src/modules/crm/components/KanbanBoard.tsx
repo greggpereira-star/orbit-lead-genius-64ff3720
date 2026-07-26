@@ -6,20 +6,31 @@
  * tabela `stages` é a fonte da verdade e toda movimentação passa pelo
  * `stageService`, que grava etapa, ordem, carimbo de tempo e histórico juntos.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import {
   GripVertical, MessageCircle, MapPin, Radio, AlertCircle,
-  Inbox, RefreshCw,
+  Inbox, RefreshCw, Loader2, Trash2,
 } from 'lucide-react';
 
 import { useAuth } from '@/core/auth/hooks/useAuth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { listLeads, type LeadRow } from '../services/leadService';
+import { deleteLeads, listLeads, type LeadRow } from '../services/leadService';
 import {
   listStages, moveLeadToStage, orderBetween, type Stage,
 } from '../services/stageService';
@@ -44,6 +55,16 @@ interface Props {
   /** Rótulo configurável: "Empreendimento" numa imobiliária, "Curso" numa escola. */
   originLabel?: string;
   search?: string;
+  /**
+   * Modo seleção: o card ganha caixa e para de arrastar.
+   *
+   * Quem liga o modo é a página (o botão fica na barra junto de "Gerenciar
+   * etapas"); o board cuida do resto. Sem um modo explícito não há onde
+   * pendurar a caixa num kanban: no hover ela some no celular, e fixa no card
+   * ela brigaria com o gesto de arrastar, que é a função principal da tela.
+   */
+  selecting?: boolean;
+  onExitSelection?: () => void;
 }
 
 interface Column {
@@ -84,11 +105,21 @@ function timeInStage(lead: LeadRow): string {
   return relativeTime(entered ?? lead.created_at);
 }
 
-export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Props) {
+export function KanbanBoard({
+  quizId, originLabel = 'Origem', search = '', selecting = false, onExitSelection,
+}: Props) {
   const { company } = useAuth();
   const qc = useQueryClient();
   const companyId = company?.id ?? '';
   const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Sair do modo não pode deixar seleção pendurada: ao voltar, o usuário
+  // encontraria cards já marcados sem ter marcado nada.
+  useEffect(() => {
+    if (!selecting) setSelectedIds([]);
+  }, [selecting]);
 
   const stagesQuery = useQuery({
     queryKey: ['stages', companyId],
@@ -163,6 +194,47 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
       // A tabela de Leads e a ficha mostram a mesma etapa; precisam acompanhar.
       qc.invalidateQueries({ queryKey: ['leads'] });
     },
+  });
+
+  /**
+   * Conta só o que está na tela.
+   *
+   * Um lead selecionado pode sumir do board por refetch, filtro de busca ou
+   * exclusão feita noutra aba. Contar pelos ids crus mostraria "3
+   * selecionados" com dois cards visíveis — a barra tem que dizer a verdade.
+   */
+  const visibleSelected = useMemo(() => {
+    const onBoard = new Set(columns.flatMap((c) => c.leads.map((l) => l.id)));
+    return selectedIds.filter((id) => onBoard.has(id));
+  }, [columns, selectedIds]);
+
+  const toggleLead = (id: string) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleColumn = (column: Column, checked: boolean) => {
+    const ids = column.leads.map((l) => l.id);
+    setSelectedIds((prev) =>
+      checked
+        ? [...prev, ...ids.filter((id) => !prev.includes(id))]
+        : prev.filter((id) => !ids.includes(id)),
+    );
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (!companyId) throw new Error('Workspace não carregado.');
+      return deleteLeads({ leadIds: visibleSelected, companyId });
+    },
+    onSuccess: async (count) => {
+      await qc.invalidateQueries({ queryKey: ['leads'] });
+      setSelectedIds([]);
+      setConfirmDelete(false);
+      onExitSelection?.();
+      toast.success(count === 1 ? '1 lead excluído' : `${count} leads excluídos`);
+    },
+    onError: (e: Error) => toast.error(e.message || 'Não foi possível excluir os leads.'),
   });
 
   const onDragEnd = (result: DropResult) => {
@@ -282,6 +354,15 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
               />
               <header className="flex items-center justify-between px-1 py-2.5">
                 <div className="flex min-w-0 items-center gap-2">
+                  {/* Marcar a etapa inteira é o caso real: limpar uma coluna de
+                      leads frios sem clicar em trinta cards. */}
+                  {selecting && column.leads.length > 0 && (
+                    <Checkbox
+                      checked={column.leads.every((l) => selectedIds.includes(l.id))}
+                      onCheckedChange={(v) => toggleColumn(column, v === true)}
+                      aria-label={`Selecionar os ${column.leads.length} leads da etapa ${column.title}`}
+                    />
+                  )}
                   <h3 className="truncate text-sm font-semibold tracking-tight">{column.title}</h3>
                   <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[11px] tabular-nums">
                     {column.leads.length}
@@ -299,11 +380,16 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
                       snapshot.isDraggingOver
                         ? 'border-primary/40 bg-primary/[0.04]'
                         : 'border-border/50 bg-muted/20'
+                    } ${
+                      // Espaço pra barra flutuante não cobrir o último card:
+                      // sem isso o card do pé da coluna fica atrás dela e não
+                      // dá pra marcar sem rolar.
+                      selecting ? 'pb-16' : ''
                     }`}
                   >
                     {column.leads.length === 0 && !snapshot.isDraggingOver && (
                       <p className="px-2 py-6 text-center text-xs text-muted-foreground/70">
-                        Arraste um lead para cá
+                        {selecting ? 'Nenhum lead nesta etapa' : 'Arraste um lead para cá'}
                       </p>
                     )}
 
@@ -313,6 +399,7 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
                       const origin = getLeadOrigin(lead);
                       const wa = whatsappLink(lead.phone);
                       const parked = timeInStage(lead);
+                      const checked = selectedIds.includes(lead.id);
 
                       return (
                         // O CARD INTEIRO arrasta, não só a alça. A alça sozinha
@@ -320,39 +407,82 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
                         // card pelo corpo — o gesto natural, e o que o
                         // GoHighLevel faz — não movia nada. A alça continua
                         // como pista visual; o foco de teclado foi pro card.
-                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                        // No modo seleção o card não arrasta: arrastar e marcar
+                        // partem do mesmo gesto (pegar o card), e deixar os
+                        // dois ativos faria um cancelar o outro.
+                        <Draggable
+                          key={lead.id}
+                          draggableId={lead.id}
+                          index={index}
+                          isDragDisabled={selecting}
+                        >
                           {(dragProvided, dragSnapshot) => (
                             <article
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              onDoubleClick={() => setDetailLead(lead)}
-                              className={`cursor-grab rounded-xl border bg-card p-3 transition-shadow active:cursor-grabbing ${
-                                dragSnapshot.isDragging
-                                  ? 'shadow-lg ring-2 ring-primary/40'
-                                  : 'shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-primary/30'
+                              onClick={selecting ? () => toggleLead(lead.id) : undefined}
+                              onDoubleClick={selecting ? undefined : () => setDetailLead(lead)}
+                              className={`rounded-xl border bg-card p-3 transition-shadow ${
+                                selecting
+                                  ? `cursor-pointer ${
+                                      checked
+                                        ? 'border-primary/60 bg-primary/[0.04] shadow-[0_1px_2px_rgba(16,24,40,0.04)]'
+                                        : 'shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-primary/30'
+                                    }`
+                                  : `cursor-grab active:cursor-grabbing ${
+                                      dragSnapshot.isDragging
+                                        ? 'shadow-lg ring-2 ring-primary/40'
+                                        : 'shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-primary/30'
+                                    }`
                               }`}
                             >
                               <div className="flex items-start gap-2">
-                                {/* Só pista visual de que o card se move. O
-                                    dragHandleProps agora vive no <article>: se
-                                    ficasse aqui também, seriam duas alças pro
-                                    mesmo item e a biblioteca acusa conflito. */}
-                                <span
-                                  aria-hidden="true"
-                                  className="mt-0.5 text-muted-foreground/40"
-                                >
-                                  <GripVertical className="h-4 w-4" />
-                                </span>
+                                {/* A caixa ocupa o lugar da alça: no modo
+                                    seleção o card não arrasta, então a alça
+                                    estaria mentindo sobre o que ele faz. */}
+                                {selecting ? (
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() => toggleLead(lead.id)}
+                                    /* O clique já é tratado no card inteiro; sem
+                                       parar aqui a caixa marcaria e o card
+                                       desmarcaria no mesmo clique. */
+                                    onClick={(e) => e.stopPropagation()}
+                                    aria-label={`Selecionar ${name}`}
+                                    className="mt-0.5"
+                                  />
+                                ) : (
+                                  /* Só pista visual de que o card se move. O
+                                     dragHandleProps agora vive no <article>: se
+                                     ficasse aqui também, seriam duas alças pro
+                                     mesmo item e a biblioteca acusa conflito. */
+                                  <span
+                                    aria-hidden="true"
+                                    className="mt-0.5 text-muted-foreground/40"
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </span>
+                                )}
 
                                 <div className="min-w-0 flex-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => setDetailLead(lead)}
-                                    className="block w-full truncate text-left text-sm font-semibold tracking-tight hover:text-primary focus-visible:outline-none focus-visible:underline"
-                                  >
-                                    {name}
-                                  </button>
+                                  {/* Vira texto puro no modo seleção. Um botão
+                                      desabilitado aqui engoliria o clique — e o
+                                      nome é o maior alvo do card, justamente
+                                      onde a pessoa clica pra marcar. */}
+                                  {selecting ? (
+                                    <p className="truncate text-sm font-semibold tracking-tight">
+                                      {name}
+                                    </p>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDetailLead(lead)}
+                                      className="block w-full truncate text-left text-sm font-semibold tracking-tight hover:text-primary focus-visible:underline focus-visible:outline-none"
+                                    >
+                                      {name}
+                                    </button>
+                                  )}
                                   {origin && (
                                     <p className="mt-0.5 truncate text-xs text-muted-foreground" title={`${originLabel}: ${origin}`}>
                                       {origin}
@@ -413,6 +543,66 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
           ))}
         </div>
       </DragDropContext>
+
+      {/* Barra flutuante em vez de fixa no topo: só existe enquanto o modo
+          está ligado, e assim não rouba altura do board — que já disputa cada
+          pixel com as colunas em telas de notebook. */}
+      {selecting && (
+        <div
+          role="status"
+          className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
+        >
+          <div className="pointer-events-auto flex items-center gap-3 rounded-full border bg-card/95 py-2 pl-5 pr-2 shadow-lg backdrop-blur">
+            <span className="text-sm font-medium tabular-nums">
+              {visibleSelected.length === 0
+                ? 'Toque nos cards para selecionar'
+                : `${visibleSelected.length} ${
+                    visibleSelected.length === 1 ? 'lead selecionado' : 'leads selecionados'
+                  }`}
+            </span>
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={onExitSelection}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-full"
+              disabled={visibleSelected.length === 0}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir selecionados
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {visibleSelected.length === 1
+                ? 'Excluir 1 lead?'
+                : `Excluir ${visibleSelected.length} leads?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Some junto tudo que está preso a eles: anotações, anexos, etiquetas,
+              histórico e mensagens de WhatsApp. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <LeadDetailDialog
         lead={detailLead}

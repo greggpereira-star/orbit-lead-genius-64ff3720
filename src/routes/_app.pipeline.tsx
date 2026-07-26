@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { CheckSquare, Search, SlidersHorizontal } from 'lucide-react';
 
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { KanbanBoard } from '@/modules/crm/components/KanbanBoard';
@@ -28,6 +28,7 @@ function PipelinePage() {
   const companyId = company?.id ?? '';
   const [search, setSearch] = useState('');
   const [managing, setManaging] = useState(false);
+  const [selecting, setSelecting] = useState(false);
 
   // Mesma chave do board: o React Query serve as duas do mesmo cache, então o
   // contador não custa uma requisição a mais.
@@ -51,9 +52,11 @@ function PipelinePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>
           <p className="text-sm text-muted-foreground">
-            {total > 0
-              ? `${total} ${total === 1 ? 'lead' : 'leads'} no funil. Arraste para mudar de etapa.`
-              : 'Arraste os leads entre as etapas do seu funil.'}
+            {selecting
+              ? 'Clique nos cards que você quer excluir.'
+              : total > 0
+                ? `${total} ${total === 1 ? 'lead' : 'leads'} no funil. Arraste para mudar de etapa.`
+                : 'Arraste os leads entre as etapas do seu funil.'}
           </p>
         </div>
 
@@ -71,6 +74,15 @@ function PipelinePage() {
               className="h-9 w-56 pl-9"
             />
           </div>
+          <Button
+            variant={selecting ? 'secondary' : 'outline'}
+            className="h-9"
+            aria-pressed={selecting}
+            onClick={() => setSelecting((v) => !v)}
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            {selecting ? 'Sair da seleção' : 'Selecionar'}
+          </Button>
           <Button variant="outline" className="h-9" onClick={() => setManaging(true)}>
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             Gerenciar etapas
@@ -80,7 +92,11 @@ function PipelinePage() {
 
       <div className="min-h-0 flex-1">
         <ErrorBoundary name="KanbanBoard">
-          <KanbanBoard search={search} />
+          <KanbanBoard
+            search={search}
+            selecting={selecting}
+            onExitSelection={() => setSelecting(false)}
+          />
         </ErrorBoundary>
       </div>
 
