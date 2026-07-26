@@ -8,7 +8,7 @@ import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
-import { resolveScope, interpolateText, type VariableScope } from '../lib/variables';
+import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
 import {
   createInitialState,
@@ -208,7 +208,7 @@ function PlayerRunner({
   // Escopo do motor de variáveis/fórmulas: {nomeDaVariavel: valor}, recalculado a
   // cada resposta nova — usado tanto pra exibição condicional em modo fórmula
   // (ex.: IMC = peso/(altura/100)^2) quanto pra interpolar {{variavel}} nos textos.
-  const scope = useMemo(() => resolveScope(blocks, state.responses), [blocks, state.responses]);
+  const scope = useMemo(() => resolveScope(blocks, state.responses, { score: state.score }), [blocks, state.responses, state.score]);
 
   // Exibição condicional: só renderiza (e pontua) blocos cuja condição é verdadeira
   // frente às respostas já registradas das etapas anteriores.
@@ -1511,17 +1511,40 @@ function BlockView({
     }
 
     case 'level': {
-      const pct = block.progressValue ?? 50;
+      // A fórmula manda quando existe; sem ela, ou quando não resulta em
+      // número, vale o valor fixo do slider.
+      const pct = evaluatePercent(block.meterFormula, scope) ?? block.progressValue ?? 50;
+      const captions = (block.meterCaptions ?? []).filter((c) => c.trim());
       return (
         <div>
           {heading}
           <div className="flex items-center justify-between text-sm font-semibold mb-2">
-            <span>{block.levelLabel ?? ''}</span>
-            <span>{pct}%</span>
+            <span>{interpolateText(block.levelLabel ?? '', scope)}</span>
+            <span className="tabular-nums">{pct}%</span>
           </div>
-          <div className="h-3.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
+          <div className="h-3.5 rounded-full overflow-hidden" style={{ background: design.surface }}>
             <div className="h-full transition-all duration-700 motion-reduce:transition-none" style={{ width: `${pct}%`, background: design.primary }} />
           </div>
+          {captions.length > 0 && (
+            <div
+              className="mt-2 grid gap-1 text-[11px]"
+              style={{ gridTemplateColumns: `repeat(${captions.length}, minmax(0, 1fr))`, color: design.muted }}
+            >
+              {captions.map((c, i) => (
+                <span
+                  key={i}
+                  className="truncate"
+                  // Primeira à esquerda, última à direita, intermediárias
+                  // centradas: é assim que a legenda casa com a régua.
+                  style={{ textAlign: i === 0 ? 'left' : i === captions.length - 1 ? 'right' : 'center' }}
+                  title={c}
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mb-6" />
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
@@ -1904,7 +1927,7 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
   const pct = max > 0 ? Math.round((state.score / max) * 100) : 0;
   // A tela de resultado é o lugar de maior valor pra personalização dinâmica —
   // "Baseado no seu peso de {{peso}}kg e IMC {{calc(peso/(altura/100)^2)}}...".
-  const scope = resolveScope(schema.blocks, state.responses);
+  const scope = resolveScope(schema.blocks, state.responses, { score: state.score });
   const resultTitle = interpolateText(resultBlock?.resultTitle, scope);
   const resultBody = interpolateText(resultBlock?.resultBody, scope);
 

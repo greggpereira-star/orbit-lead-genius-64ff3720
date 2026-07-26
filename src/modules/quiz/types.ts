@@ -180,6 +180,16 @@ export interface QuizBlock {
   argumentIcon?: string;
   progressValue?: number; // 0-100, used by argument-progress and level
   levelLabel?: string;
+  /**
+   * Medidor por fórmula (bloco "Nível").
+   *
+   * Quando preenchida, substitui a porcentagem fixa do slider — no canvas e no
+   * quiz publicado. Aceita expressão crua (`score*2`) ou com chaves
+   * (`{{calc(score*2)}}`), e `score` é a pontuação acumulada da sessão.
+   */
+  meterFormula?: string;
+  /** Legendas distribuídas embaixo da barra (ex.: Incomoda, Afeta, Evito praia). */
+  meterCaptions?: string[];
   loadingSeconds?: number;
   loadingSteps?: string[];
   faqItems?: FaqItem[];

@@ -22,8 +22,17 @@ const TEXT_TYPES = new Set(['short-text', 'long-text', 'email', 'phone']);
  * Constrói o mapa {nomeDaVariavel: valor} a partir das respostas já dadas.
  * Blocos sem `outputVariable` configurado simplesmente não entram no mapa.
  */
-export function resolveScope(blocks: QuizBlock[], responses: Record<string, unknown>): VariableScope {
-  const scope: VariableScope = {};
+export function resolveScope(
+  blocks: QuizBlock[],
+  responses: Record<string, unknown>,
+  /**
+   * Variáveis embutidas — hoje só `score`, a pontuação acumulada da sessão.
+   * Sem isso, plotar a própria pontuação num medidor exigiria que o autor
+   * criasse uma variável de saída pra um número que o motor já calcula.
+   */
+  builtins?: VariableScope,
+): VariableScope {
+  const scope: VariableScope = { ...builtins };
   for (const b of blocks) {
     const name = b.outputVariable?.trim();
     if (!name) continue;
@@ -284,4 +293,41 @@ export function interpolateText(text: string | undefined, scope: VariableScope):
     }
   }
   return out;
+}
+
+/**
+ * Resolve a porcentagem de um medidor a partir de uma fórmula do autor.
+ *
+ * Aceita as duas formas que a pessoa naturalmente escreve: a expressão crua
+ * (`score*2`) e a forma com chaves que ela já viu nos textos
+ * (`{{calc(score*2)}}`). Exigir só uma delas garantiria suporte na semana
+ * seguinte.
+ *
+ * Devolve `null` quando não há fórmula ou quando ela não resulta num número —
+ * quem chama cai no valor fixo do slider em vez de mostrar uma barra vazia.
+ * O resultado é limitado a 0–100: uma fórmula que estoure não pode desenhar
+ * uma barra maior que a régua.
+ */
+export function evaluatePercent(formula: string | undefined, scope: VariableScope): number | null {
+  const raw = formula?.trim();
+  if (!raw) return null;
+
+  let value: number;
+  if (raw.includes('{{')) {
+    const rendered = interpolateText(raw, scope).trim();
+    // Vazio = a variável ainda não existe (é o caso do canvas, antes de
+    // qualquer resposta). Number('') seria 0 e desenharia uma barra zerada no
+    // lugar do valor fixo — pior que não ter fórmula.
+    if (!rendered) return null;
+    value = Number(rendered.replace('%', '').replace(',', '.'));
+  } else {
+    try {
+      value = evaluateExpression(raw, scope);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(100, Math.round(value)));
 }

@@ -363,9 +363,60 @@ function BlockInspector({
         )}
 
         {block.type === 'level' && (
-          <Field label="Rótulo do nível">
-            <Input value={block.levelLabel ?? ''} onChange={(e) => onChange({ levelLabel: e.target.value })} placeholder="Ex: Intermediário" />
-          </Field>
+          <>
+            {/* Atalhos: mirar 25/50/75/100 no slider é chato e o número redondo
+                é o que a maioria quer. */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {[25, 50, 75, 100].map((v) => (
+                <Button
+                  key={v}
+                  size="sm"
+                  variant={block.progressValue === v ? 'secondary' : 'outline'}
+                  className="h-7 text-xs"
+                  onClick={() => onChange({ progressValue: v })}
+                >
+                  {v}%
+                </Button>
+              ))}
+            </div>
+
+            <Field label="Fórmula da porcentagem (opcional)">
+              <Input
+                value={block.meterFormula ?? ''}
+                onChange={(e) => onChange({ meterFormula: e.target.value })}
+                placeholder="Ex: {{calc(score*2)}}"
+              />
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                Quando preenchida, substitui a porcentagem fixa acima — no canvas e no
+                quiz publicado. <code className="text-[10px]">score</code> é a pontuação
+                acumulada; variáveis de respostas anteriores também valem.
+              </p>
+            </Field>
+
+            <Field label="Texto do indicador">
+              <Input value={block.levelLabel ?? ''} onChange={(e) => onChange({ levelLabel: e.target.value })} placeholder="Ex: Nível de insatisfação" />
+            </Field>
+
+            <Field label="Legendas (separadas por vírgula)">
+              <Input
+                value={(block.meterCaptions ?? []).join(',')}
+                onChange={(e) =>
+                  onChange({
+                    // Guarda como lista pra renderização não precisar reparsear a
+                    // cada quadro; o espaço em volta da vírgula é do digitador.
+                    meterCaptions: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                placeholder="Incomoda,Afeta autoestima,Evito praia"
+              />
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                Distribuídas embaixo da barra, da esquerda para a direita.
+              </p>
+            </Field>
+          </>
         )}
 
         {block.type === 'loading' && (

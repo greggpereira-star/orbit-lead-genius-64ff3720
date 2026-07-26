@@ -7,6 +7,7 @@ import { RichText } from './RichText';
 import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
+import { evaluatePercent } from '../lib/variables';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
@@ -612,16 +613,39 @@ export function BlockRenderer({
     }
 
     case 'level': {
-      const pct = block.progressValue ?? 50;
+      /* No canvas não há respostas ainda, então a fórmula é avaliada com escopo
+         vazio: dá pra ver se ela é válida, e o número real só aparece quando o
+         visitante responde. Fórmula inválida cai no valor do slider. */
+      const pct = evaluatePercent(block.meterFormula, {}) ?? block.progressValue ?? 50;
+      const captions = (block.meterCaptions ?? []).filter((c) => c.trim());
       return (
         <div className="space-y-4">
           {heading}
-          <div className="flex items-center justify-between text-sm font-semibold" style={{ color: design.text }}>
-            <span>{block.levelLabel ?? ''}</span>
-            <span>{pct}%</span>
-          </div>
-          <div className="h-3 rounded-full overflow-hidden" style={{ background: design.surface }}>
-            <div className="h-full transition-all" style={{ width: `${pct}%`, background: design.primary }} />
+          <div>
+            <div className="flex items-center justify-between text-sm font-semibold" style={{ color: design.text }}>
+              <span>{block.levelLabel ?? ''}</span>
+              <span className="tabular-nums">{pct}%</span>
+            </div>
+            <div className="mt-2 h-3 rounded-full overflow-hidden" style={{ background: design.surface }}>
+              <div className="h-full transition-all" style={{ width: `${pct}%`, background: design.primary }} />
+            </div>
+            {captions.length > 0 && (
+              <div
+                className="mt-2 grid gap-1 text-[10px]"
+                style={{ gridTemplateColumns: `repeat(${captions.length}, minmax(0, 1fr))`, color: design.muted }}
+              >
+                {captions.map((c, i) => (
+                  <span
+                    key={i}
+                    className="truncate"
+                    style={{ textAlign: i === 0 ? 'left' : i === captions.length - 1 ? 'right' : 'center' }}
+                    title={c}
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       );
