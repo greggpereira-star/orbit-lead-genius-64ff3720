@@ -483,26 +483,44 @@ export const quizService = {
     return { quiz: quiz as unknown as QuizFunnel, schema };
   },
 
-  async publish(quizId: string): Promise<void> {
-    const { data: latest } = await supabase
-      .from('quiz_versions')
-      .select('id')
-      .eq('quiz_id', quizId)
-      .order('version', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const versionId = (latest as { id?: string } | null)?.id ?? null;
+  /**
+   * Coloca uma versão no ar.
+   *
+   * `versionId` deve ser informado por quem acabou de salvar. Sem ele, esta
+   * função relê "a última versão" — e foi assim que o link público quebrou com
+   * "Quiz não encontrado": o autosave (1,5s) inseriu uma versão NOVA entre a
+   * leitura do ponteiro e a marcação da flag, e cada uma foi parar numa linha
+   * diferente. O visitante pedia a versão do ponteiro e o banco só liberava a
+   * da flag.
+   */
+  async publish(quizId: string, versionId?: string): Promise<void> {
+    let target = versionId ?? null;
+    if (!target) {
+      const { data: latest } = await supabase
+        .from('quiz_versions')
+        .select('id')
+        .eq('quiz_id', quizId)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      target = (latest as { id?: string } | null)?.id ?? null;
+    }
 
-    await supabase
+    // A flag vem ANTES do ponteiro. Se algo falhar no meio, sobra uma flag sem
+    // ponteiro — inofensivo, porque a leitura pública passou a derivar do
+    // ponteiro. Na ordem inversa, sobraria um ponteiro para uma versão que o
+    // visitante não pode ler: exatamente a falha que estamos corrigindo.
+    if (target) await this.markVersionPublished(quizId, target);
+
+    const { error } = await supabase
       .from('quiz_funnels')
       .update({
         status: 'published',
-        published_version_id: versionId,
+        published_version_id: target,
         published_at: new Date().toISOString(),
       })
       .eq('id', quizId);
-
-    if (versionId) await this.markVersionPublished(quizId, versionId);
+    if (error) throw error;
   },
 
   async unpublish(quizId: string): Promise<void> {

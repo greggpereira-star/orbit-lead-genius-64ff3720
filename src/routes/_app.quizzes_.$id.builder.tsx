@@ -501,8 +501,9 @@ function QuizBuilderPage() {
     }
   };
 
-  const handleSave = async (opts?: { silent?: boolean }) => {
-    if (!company?.id || !user?.id) return;
+  /** Devolve o id da versão gravada — quem publica precisa publicar ESTA. */
+  const handleSave = async (opts?: { silent?: boolean }): Promise<string | null> => {
+    if (!company?.id || !user?.id) return null;
     setSaving(true);
     try {
       const versionId = await quizService.saveSchema({
@@ -519,6 +520,7 @@ function QuizBuilderPage() {
       setDirty(false);
       setSaveError(false);
       setLastSavedAt(new Date());
+      return versionId;
     } catch (e) {
       console.error('Erro ao salvar quiz', e);
       // Mesmo num autosave silencioso, uma FALHA nunca pode passar despercebida —
@@ -526,6 +528,7 @@ function QuizBuilderPage() {
       // erro (o indicador fica vermelho) e avisa uma vez por falha.
       setSaveError(true);
       toast.error('Não foi possível salvar. Suas alterações ainda estão só nesta aba — tente salvar de novo.');
+      return null;
     } finally {
       setSaving(false);
     }
@@ -554,8 +557,11 @@ function QuizBuilderPage() {
     if (!quiz) return;
     setPublishing(true);
     try {
-      if (dirty) await handleSave({ silent: true });
-      await quizService.publish(id);
+      // Publica exatamente a versão que acabou de ser gravada. Reler "a última
+      // versão" dentro do publish deixava o autosave se meter no meio e o
+      // ponteiro do funil apontar pra uma versão diferente da marcada.
+      const target = dirty ? await handleSave({ silent: true }) : latestVersionId;
+      await quizService.publish(id, target ?? undefined);
       const pub = await quizService.getPublishState(id);
       setPublishedVersionId(pub.publishedVersionId);
       setLatestVersionId(pub.latestVersionId);
@@ -575,12 +581,12 @@ function QuizBuilderPage() {
     }
     setPublishing(true);
     try {
-      if (dirty) await handleSave({ silent: true });
+      const target = dirty ? await handleSave({ silent: true }) : latestVersionId;
       if (quiz.status === 'published') {
         await quizService.unpublish(id);
         toast.success('Quiz despublicado — o link público deixou de funcionar.');
       } else {
-        await quizService.publish(id);
+        await quizService.publish(id, target ?? undefined);
         toast.success('Quiz publicado! O link público já está no ar.');
       }
       const [fresh, pub] = await Promise.all([
