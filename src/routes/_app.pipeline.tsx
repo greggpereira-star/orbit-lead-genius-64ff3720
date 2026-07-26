@@ -39,7 +39,14 @@ function PipelinePage() {
   const total = leadsQuery.data?.length ?? 0;
 
   return (
-    <div className="flex h-full flex-col gap-5 overflow-hidden">
+    /* Altura presa ao viewport, e não `h-full`.
+       O <main> do shell tem min-height:auto e cresce com o conteúdo, então
+       `h-full` aqui resolvia contra um pai que já havia esticado — as colunas
+       viravam uma lista de 11.000px e a rolagem horizontal ficava fora da
+       tela. Descontar só o padding do <main> (p-4 / md:p-6) deixa o cabeçalho
+       da página variar de altura sem quebrar nada, porque quem absorve é o
+       `flex-1 min-h-0` abaixo. */
+    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-5 overflow-hidden md:h-[calc(100dvh-3rem)]">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>

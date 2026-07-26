@@ -171,3 +171,37 @@
 .quiz-btn-pulse {
   animation: quiz-pulse 1.8s ease-out infinite;
 }
+
+/* ---------------------------------------------------------------------------
+   Barra de rolagem discreta — usada no pipeline (colunas e board).
+   Fina, arredondada e sem setas: some no fundo até o usuário passar o mouse,
+   quando ganha contraste. Sem isso a rolagem horizontal do board era
+   invisível, e o usuário não descobria que existiam etapas fora da tela.
+   --------------------------------------------------------------------------- */
+.scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+}
+.scrollbar-slim::-webkit-scrollbar {
+  width: 8px;
+  height: 10px;
+}
+.scrollbar-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.22);
+  border-radius: 9999px;
+  /* borda transparente + background-clip afina o polegar sem encostar na borda */
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.scrollbar-slim:hover::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+}
+.scrollbar-slim::-webkit-scrollbar-thumb:active {
+  background-color: hsl(var(--muted-foreground) / 0.55);
+}
+.scrollbar-slim::-webkit-scrollbar-corner {
+  background: transparent;
+}

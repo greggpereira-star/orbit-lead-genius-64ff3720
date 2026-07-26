@@ -264,9 +264,14 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex h-full gap-4 overflow-x-auto pb-4">
+        {/* `min-h-0` nos dois níveis é o que faz a coluna rolar em vez de
+            esticar: sem ele o item flex assume min-height:auto, cresce até
+            caber todos os cards e empurra o board pra fora da tela — era por
+            isso que 108 cards vazavam pra baixo e a rolagem horizontal nunca
+            aparecia. */}
+        <div className="scrollbar-slim flex h-full min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2">
           {columns.map((column) => (
-            <section key={column.id} className="flex w-80 shrink-0 flex-col">
+            <section key={column.id} className="flex min-h-0 w-80 shrink-0 flex-col">
               {/* A cor da etapa vive numa barra fina no topo, não no fundo da
                   coluna: seis fundos coloridos competiriam com os cards, que
                   são o conteúdo. */}
@@ -290,7 +295,7 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
                     {...provided.droppableProps}
                     ref={provided.innerRef}
                     aria-label={`Etapa ${column.title}, ${column.leads.length} leads`}
-                    className={`flex-1 space-y-2.5 overflow-y-auto rounded-xl border border-dashed p-2 transition-colors ${
+                    className={`scrollbar-slim min-h-0 flex-1 space-y-2.5 overflow-y-auto rounded-xl border border-dashed p-2 transition-colors ${
                       snapshot.isDraggingOver
                         ? 'border-primary/40 bg-primary/[0.04]'
                         : 'border-border/50 bg-muted/20'
@@ -310,25 +315,32 @@ export function KanbanBoard({ quizId, originLabel = 'Origem', search = '' }: Pro
                       const parked = timeInStage(lead);
 
                       return (
+                        // O CARD INTEIRO arrasta, não só a alça. A alça sozinha
+                        // era um alvo de 16px que ninguém achava: quem pegava o
+                        // card pelo corpo — o gesto natural, e o que o
+                        // GoHighLevel faz — não movia nada. A alça continua
+                        // como pista visual; o foco de teclado foi pro card.
                         <Draggable key={lead.id} draggableId={lead.id} index={index}>
                           {(dragProvided, dragSnapshot) => (
                             <article
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
+                              {...dragProvided.dragHandleProps}
                               onDoubleClick={() => setDetailLead(lead)}
-                              className={`rounded-xl border bg-card p-3 transition-shadow ${
+                              className={`cursor-grab rounded-xl border bg-card p-3 transition-shadow active:cursor-grabbing ${
                                 dragSnapshot.isDragging
                                   ? 'shadow-lg ring-2 ring-primary/40'
                                   : 'shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-primary/30'
                               }`}
                             >
                               <div className="flex items-start gap-2">
-                                {/* Alça sempre visível: era `opacity-0
-                                    group-hover`, ou seja, inexistente no toque. */}
+                                {/* Só pista visual de que o card se move. O
+                                    dragHandleProps agora vive no <article>: se
+                                    ficasse aqui também, seriam duas alças pro
+                                    mesmo item e a biblioteca acusa conflito. */}
                                 <span
-                                  {...dragProvided.dragHandleProps}
-                                  aria-label={`Mover ${name}`}
-                                  className="mt-0.5 cursor-grab rounded text-muted-foreground/40 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                                  aria-hidden="true"
+                                  className="mt-0.5 text-muted-foreground/40"
                                 >
                                   <GripVertical className="h-4 w-4" />
                                 </span>
