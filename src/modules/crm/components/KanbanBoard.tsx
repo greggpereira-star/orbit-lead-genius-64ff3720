@@ -6,7 +6,7 @@
  * tabela `stages` é a fonte da verdade e toda movimentação passa pelo
  * `stageService`, que grava etapa, ordem, carimbo de tempo e histórico juntos.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
@@ -41,6 +41,48 @@ import { getLeadDisplayName } from '../services/leadService';
 import { LeadDetailDialog } from './LeadDetailDialog';
 
 /**
+ * Corpo da coluna — a área tracejada que rola.
+ *
+ * Exportado porque a tela do quiz monta uma coluna própria ("Visitantes", que
+ * não são leads e não entram no funil) e ela precisa parecer irmã das outras,
+ * não uma peça de outro board.
+ */
+export function boardBodyClass(active = false): string {
+  return `scrollbar-slim min-h-0 flex-1 space-y-2.5 overflow-y-auto rounded-xl border border-dashed p-2 transition-colors ${
+    active ? 'border-primary/40 bg-primary/[0.04]' : 'border-border/50 bg-muted/20'
+  }`;
+}
+
+/** Casca da coluna: barra de cor, título, contagem e o corpo que rola. */
+export function BoardColumn({
+  title, color, count, headerExtra, children,
+}: {
+  title: string;
+  color: string;
+  count: number;
+  headerExtra?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex min-h-0 w-80 shrink-0 flex-col">
+      {/* A cor da etapa vive numa barra fina no topo, não no fundo da coluna:
+          seis fundos coloridos competiriam com os cards, que são o conteúdo. */}
+      <div className="h-1 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+      <header className="flex items-center justify-between px-1 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          {headerExtra}
+          <h3 className="truncate text-sm font-semibold tracking-tight">{title}</h3>
+          <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[11px] tabular-nums">
+            {count}
+          </Badge>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+/**
  * Coluna sintética para leads sem etapa.
  *
  * Não deveria haver nenhum depois do backfill, mas uma etapa excluída fora do
@@ -65,6 +107,14 @@ interface Props {
    */
   selecting?: boolean;
   onExitSelection?: () => void;
+  /**
+   * Coluna extra encaixada antes das etapas, na mesma faixa de rolagem.
+   *
+   * Serve pra tela do quiz mostrar "Visitantes" ao lado do funil: são
+   * submissões sem lead, então não pertencem a etapa nenhuma e não podem
+   * receber card arrastado.
+   */
+  leadingColumn?: ReactNode;
 }
 
 interface Column {
@@ -107,6 +157,7 @@ function timeInStage(lead: LeadRow): string {
 
 export function KanbanBoard({
   quizId, originLabel = 'Origem', search = '', selecting = false, onExitSelection,
+  leadingColumn,
 }: Props) {
   const { company } = useAuth();
   const qc = useQueryClient();
@@ -342,45 +393,32 @@ export function KanbanBoard({
             isso que 108 cards vazavam pra baixo e a rolagem horizontal nunca
             aparecia. */}
         <div className="scrollbar-slim flex h-full min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2">
+          {leadingColumn}
           {columns.map((column) => (
-            <section key={column.id} className="flex min-h-0 w-80 shrink-0 flex-col">
-              {/* A cor da etapa vive numa barra fina no topo, não no fundo da
-                  coluna: seis fundos coloridos competiriam com os cards, que
-                  são o conteúdo. */}
-              <div
-                className="h-1 rounded-full"
-                style={{ backgroundColor: column.color }}
-                aria-hidden="true"
-              />
-              <header className="flex items-center justify-between px-1 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  {/* Marcar a etapa inteira é o caso real: limpar uma coluna de
-                      leads frios sem clicar em trinta cards. */}
-                  {selecting && column.leads.length > 0 && (
-                    <Checkbox
-                      checked={column.leads.every((l) => selectedIds.includes(l.id))}
-                      onCheckedChange={(v) => toggleColumn(column, v === true)}
-                      aria-label={`Selecionar os ${column.leads.length} leads da etapa ${column.title}`}
-                    />
-                  )}
-                  <h3 className="truncate text-sm font-semibold tracking-tight">{column.title}</h3>
-                  <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[11px] tabular-nums">
-                    {column.leads.length}
-                  </Badge>
-                </div>
-              </header>
-
+            <BoardColumn
+              key={column.id}
+              title={column.title}
+              color={column.color}
+              count={column.leads.length}
+              headerExtra={
+                /* Marcar a etapa inteira é o caso real: limpar uma coluna de
+                   leads frios sem clicar em trinta cards. */
+                selecting && column.leads.length > 0 ? (
+                  <Checkbox
+                    checked={column.leads.every((l) => selectedIds.includes(l.id))}
+                    onCheckedChange={(v) => toggleColumn(column, v === true)}
+                    aria-label={`Selecionar os ${column.leads.length} leads da etapa ${column.title}`}
+                  />
+                ) : null
+              }
+            >
               <Droppable droppableId={column.id}>
                 {(provided, snapshot) => (
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
                     aria-label={`Etapa ${column.title}, ${column.leads.length} leads`}
-                    className={`scrollbar-slim min-h-0 flex-1 space-y-2.5 overflow-y-auto rounded-xl border border-dashed p-2 transition-colors ${
-                      snapshot.isDraggingOver
-                        ? 'border-primary/40 bg-primary/[0.04]'
-                        : 'border-border/50 bg-muted/20'
-                    } ${
+                    className={`${boardBodyClass(snapshot.isDraggingOver)} ${
                       // Espaço pra barra flutuante não cobrir o último card:
                       // sem isso o card do pé da coluna fica atrás dela e não
                       // dá pra marcar sem rolar.
@@ -539,7 +577,7 @@ export function KanbanBoard({
                   </div>
                 )}
               </Droppable>
-            </section>
+            </BoardColumn>
           ))}
         </div>
       </DragDropContext>

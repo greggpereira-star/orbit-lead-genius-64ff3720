@@ -13,7 +13,10 @@ function QuizLeadsPage() {
   const { company } = useAuth();
 
   return (
-    <div className="space-y-6">
+    /* Mesma altura presa ao viewport da página de Pipeline: o board rola por
+       dentro (colunas na vertical, funil na horizontal) e, sem um pai de
+       altura definida, ele cresceria até empurrar a rolagem pra fora da tela. */
+    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-5 overflow-hidden md:h-[calc(100dvh-3rem)]">
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link to="/quizzes"><ArrowLeft className="h-4 w-4 mr-2" />Voltar</Link>
@@ -24,7 +27,9 @@ function QuizLeadsPage() {
         </div>
       </div>
 
-      {company?.id && <QuizLeadsBoard quizId={id} companyId={company.id} />}
+      <div className="min-h-0 flex-1">
+        {company?.id && <QuizLeadsBoard quizId={id} companyId={company.id} />}
+      </div>
     </div>
   );
 }
