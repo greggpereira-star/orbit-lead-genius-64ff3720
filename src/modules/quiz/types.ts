@@ -134,6 +134,14 @@ export interface QuizBlock {
   subtitleRich?: RichDoc;
   placeholder?: string;
   required?: boolean;
+  /**
+   * Escolha única: clicar na opção já avança a etapa.
+   *
+   * Ausente = true, que é o comportamento de sempre — desligar é que é a
+   * novidade. Serve pra quando a pergunta precisa de conferência antes de
+   * seguir (ex.: opção com preço), aí aparece um botão de continuar.
+   */
+  autoAdvance?: boolean;
   options?: BlockOption[];
   ctaLabel?: string;
   imageUrl?: string;

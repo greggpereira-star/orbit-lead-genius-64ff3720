@@ -390,6 +390,12 @@ export function BlockRenderer({
             ))}
             {opts.length === 0 && <p className="text-xs opacity-60" style={{ color: design.muted }}>Nenhuma opção — adicione no inspetor.</p>}
           </div>
+          {/* Espelha o player: sem autoavançar, a escolha só segue pelo botão. */}
+          {block.autoAdvance === false && (
+            <div className="mt-5">
+              <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
+            </div>
+          )}
         </div>
       );
     case 'short-text':

@@ -452,6 +452,25 @@ function QuizBuilderPage() {
       return;
     }
 
+    // Reordena as opções de uma pergunta (o painel vive dentro deste contexto).
+    if (source.droppableId.startsWith('options-')) {
+      if (destination.droppableId !== source.droppableId) return;
+      if (source.index === destination.index) return;
+      const targetId = activeBlockId;
+      if (!targetId) return;
+      updateSchema((prev) => ({
+        ...prev,
+        blocks: prev.blocks.map((b) => {
+          if (b.id !== targetId) return b;
+          const opts = Array.from(b.options ?? []);
+          const [moved] = opts.splice(source.index, 1);
+          if (moved) opts.splice(destination.index, 0, moved);
+          return { ...b, options: opts };
+        }),
+      }));
+      return;
+    }
+
     if (source.droppableId === 'steps') {
       // Reordena etapas inteiras.
       if (source.index === destination.index) return;
@@ -1113,6 +1132,7 @@ function QuizBuilderPage() {
             onAddChildToContainer={addChildToContainer}
             onDeleteChildBlock={deleteBlock}
             onSelectBlock={(blockId) => setActiveBlockId(blockId)}
+            dndScope="mobile"
             className="w-full"
           />
         </SheetContent>

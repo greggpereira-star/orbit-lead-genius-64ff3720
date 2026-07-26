@@ -1158,7 +1158,9 @@ function BlockView({
                       return;
                     }
                     setValue(o.id);
-                    if (terminal) onSubmit(o.id);
+                    // Ausente = avança (comportamento de sempre). Só quem
+                    // desliga o Autoavançar ganha o botão de continuar abaixo.
+                    if (terminal && block.autoAdvance !== false) onSubmit(o.id);
                   }}
                   role="radio"
                   aria-checked={active}
@@ -1180,6 +1182,20 @@ function BlockView({
               );
             })}
           </div>
+          {/* Com o Autoavançar desligado, a escolha precisa de confirmação —
+              sem este botão a etapa viraria um beco sem saída. */}
+          {block.autoAdvance === false && (
+            <div className="mt-6">
+              <PrimaryBtn
+                design={design}
+                hidden={!terminal}
+                disabled={!value || saving}
+                onClick={() => onSubmit(value)}
+              >
+                {block.ctaLabel || 'Continuar'}
+              </PrimaryBtn>
+            </div>
+          )}
         </div>
       );
 

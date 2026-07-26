@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
+import { GripVertical, Copy } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks, Eye, CornerDownRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
@@ -37,6 +39,8 @@ interface Props {
   onDeleteChildBlock?: (blockId: string) => void;
   onSelectBlock?: (blockId: string) => void;
   className?: string;
+  /** Distingue as duas montagens do inspetor (coluna e gaveta) nos ids de arraste. */
+  dndScope?: 'desktop' | 'mobile';
 }
 
 export function QuizInspector({
@@ -44,6 +48,7 @@ export function QuizInspector({
   onMoveBlockIntoContainer, onRemoveChildFromContainer, onReorderContainerChildren, onAddChildToContainer, onDeleteChildBlock,
   onSelectBlock,
   className,
+  dndScope,
 }: Props) {
   return (
     <div className={className ?? 'w-80 border-l bg-card overflow-y-auto'}>
@@ -61,6 +66,7 @@ export function QuizInspector({
           onAddChildToContainer={onAddChildToContainer}
           onDeleteChildBlock={onDeleteChildBlock}
           onSelectBlock={onSelectBlock}
+          dndScope={dndScope}
         />
       ) : (
         <DesignInspector design={design} onChange={onChangeDesign} />
@@ -81,6 +87,7 @@ function BlockInspector({
   onReorderContainerChildren,
   onAddChildToContainer,
   onDeleteChildBlock,
+  dndScope = 'desktop',
   onSelectBlock,
 }: {
   quizId: string;
@@ -94,6 +101,8 @@ function BlockInspector({
   onReorderContainerChildren?: (containerId: string, fromIndex: number, toIndex: number) => void;
   onAddChildToContainer?: (containerId: string, defIndex: number) => void;
   onDeleteChildBlock?: (blockId: string) => void;
+  /** Distingue as duas montagens do inspetor (coluna e gaveta) nos ids de arraste. */
+  dndScope?: 'desktop' | 'mobile';
   onSelectBlock?: (blockId: string) => void;
 }) {
   const hasOptions = block.type === 'single-choice' || block.type === 'multi-choice';
@@ -622,26 +631,53 @@ function BlockInspector({
       )}
 
       {hasOptions && (
-        <Section title="Opções" icon={ListChecks}>
-          {(block.options ?? []).map((opt, i) => (
-            <OptionEditor
-              key={opt.id}
-              quizId={quizId}
-              option={opt}
-              blockType={block.type}
-              allBlocks={allBlocks}
-              currentBlockId={block.id}
-              onUpdate={(patch) => {
-                const next = [...(block.options ?? [])];
-                next[i] = { ...opt, ...patch };
-                onChange({ options: next });
-              }}
-              onDelete={() => {
-                const next = (block.options ?? []).filter((o) => o.id !== opt.id);
-                onChange({ options: next });
-              }}
-            />
-          ))}
+        <Section title="Opções" icon={ListChecks} count={(block.options ?? []).length}>
+          {/* O id do droppable carrega o escopo porque o inspetor é montado DUAS
+              vezes (coluna do desktop + gaveta do celular). Dois droppables com
+              o mesmo id no mesmo contexto quebram a biblioteca de arraste. */}
+          <Droppable droppableId={`options-${dndScope}`}>
+            {(dropProvided) => (
+              <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="space-y-2">
+                {(block.options ?? []).map((opt, i) => (
+                  <Draggable key={opt.id} draggableId={`opt-${opt.id}`} index={i}>
+                    {(dragProvided, dragSnapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        className={dragSnapshot.isDragging ? 'rounded-lg shadow-lg ring-2 ring-primary/40' : ''}
+                      >
+                        <OptionEditor
+                          quizId={quizId}
+                          option={opt}
+                          blockType={block.type}
+                          allBlocks={allBlocks}
+                          currentBlockId={block.id}
+                          dragHandleProps={dragProvided.dragHandleProps}
+                          onUpdate={(patch) => {
+                            const next = [...(block.options ?? [])];
+                            next[i] = { ...opt, ...patch };
+                            onChange({ options: next });
+                          }}
+                          onDuplicate={() => {
+                            const next = [...(block.options ?? [])];
+                            // Entra logo abaixo da original — é onde a pessoa
+                            // está olhando, e mantém a ordem previsível.
+                            next.splice(i + 1, 0, { ...opt, id: crypto.randomUUID() });
+                            onChange({ options: next });
+                          }}
+                          onDelete={() => {
+                            const next = (block.options ?? []).filter((o) => o.id !== opt.id);
+                            onChange({ options: next });
+                          }}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {dropProvided.placeholder}
+              </div>
+            )}
+          </Droppable>
           <Button
             size="sm"
             variant="outline"
@@ -657,6 +693,31 @@ function BlockInspector({
           >
             <Plus className="h-3.5 w-3.5" /> Adicionar opção
           </Button>
+        </Section>
+      )}
+
+      {hasOptions && (
+        <Section title="Comportamento" icon={SlidersHorizontal}>
+          <Toggle
+            label="Múltipla escolha"
+            hint="Permite marcar mais de uma opção"
+            checked={block.type === 'multi-choice'}
+            onChange={(v) => onChange({ type: v ? 'multi-choice' : 'single-choice' })}
+          />
+          <Toggle
+            label="Obrigatório"
+            hint="Só avança depois de escolher"
+            checked={block.required === true}
+            onChange={(v) => onChange({ required: v })}
+          />
+          {block.type === 'single-choice' && (
+            <Toggle
+              label="Autoavançar"
+              hint="Clicar na opção já passa para a próxima etapa"
+              checked={block.autoAdvance !== false}
+              onChange={(v) => onChange({ autoAdvance: v })}
+            />
+          )}
         </Section>
       )}
 
@@ -983,7 +1044,9 @@ function OptionEditor({
   blockType,
   allBlocks,
   currentBlockId,
+  dragHandleProps,
   onUpdate,
+  onDuplicate,
   onDelete,
 }: {
   quizId: string;
@@ -991,7 +1054,9 @@ function OptionEditor({
   blockType: QuizBlock['type'];
   allBlocks: QuizBlock[];
   currentBlockId: string;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
   onUpdate: (patch: Partial<BlockOption>) => void;
+  onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -1016,8 +1081,18 @@ function OptionEditor({
   }
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border bg-card">
       <div className="flex items-center gap-1.5 p-1.5">
+        {/* Alça sempre visível: escondida no hover ela não existe no toque —
+            foi o mesmo defeito já corrigido nos cards do pipeline. */}
+        <div
+          {...dragHandleProps}
+          className="shrink-0 cursor-grab p-0.5 text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
+          aria-label="Arrastar para reordenar"
+          title="Arrastar para reordenar"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </div>
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted overflow-hidden">
           {option.imageUrl ? (
             <img src={option.imageUrl} alt="" className="h-full w-full object-cover" />
@@ -1048,7 +1123,17 @@ function OptionEditor({
         >
           {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
-        <Button size="sm" variant="ghost" onClick={onDelete} className="h-8 w-8 p-0 shrink-0" aria-label="Excluir opção">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onDuplicate}
+          className="h-8 w-8 shrink-0 p-0"
+          aria-label="Duplicar opção"
+          title="Duplicar — copia mídia, pontuação e ação junto"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onDelete} className="h-8 w-8 p-0 shrink-0 text-muted-foreground hover:text-destructive" aria-label="Excluir opção">
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -1370,11 +1455,14 @@ function Section({
   title,
   icon: Icon,
   first,
+  count,
   children,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   first?: boolean;
+  /** Contagem à direita do título (ex.: "4 opções"). */
+  count?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -1382,8 +1470,33 @@ function Section({
       <div className="flex items-center gap-1.5">
         <Icon className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+        {count !== undefined && (
+          <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+            {count} {count === 1 ? 'opção' : 'opções'}
+          </span>
+        )}
       </div>
       <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+/** Interruptor com rótulo e explicação — o padrão do cartão de Comportamento. */
+function Toggle({
+  label, hint, checked, onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-xs font-medium">{label}</p>
+        <p className="text-[11px] leading-snug text-muted-foreground">{hint}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} className="mt-0.5 shrink-0" />
     </div>
   );
 }
