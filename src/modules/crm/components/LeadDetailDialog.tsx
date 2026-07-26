@@ -33,6 +33,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +46,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LeadRow } from "../services/leadService";
-import { getLeadDisplayName } from "../services/leadService";
+import { getLeadDisplayName, updateLead, deleteLead, type EditableLeadFields } from "../services/leadService";
 import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
@@ -62,6 +66,8 @@ interface Props {
    * do pai desatualizado — reabrir mostraria a etapa antiga até o refetch.
    */
   onStatusChange?: (leadId: string, status: string) => void;
+  /** Devolve o lead já salvo pro pai manter a linha da tabela em dia. */
+  onLeadUpdated?: (lead: LeadRow) => void;
 }
 
 /** Iniciais dão ao modal uma âncora visual — sem elas o topo é só texto. */
@@ -294,7 +300,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 function Field({
-  icon, label, value, copyable, emphasis, action,
+  icon, label, value, copyable, emphasis, action, onSave, placeholder,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -304,7 +310,22 @@ function Field({
   emphasis?: boolean;
   /** Atalho direto (ligar, escrever). Substitui o copiar quando existe. */
   action?: { href: string; icon: React.ReactNode; title: string };
+  /** Presente = campo editável no clique. Ausente = só leitura. */
+  onSave?: (next: string) => void;
+  placeholder?: string;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+
+  const commit = () => {
+    setEditing(false);
+    if (draft.trim() !== (value ?? "").trim()) onSave?.(draft);
+  };
+
+  const textClass = emphasis
+    ? "text-[15px] font-semibold tabular-nums tracking-tight"
+    : "text-sm font-medium";
+
   return (
     <div className="group/field flex items-start gap-3">
       <span className="mt-0.5 shrink-0 text-muted-foreground/70">{icon}</span>
@@ -312,18 +333,41 @@ function Field({
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
           {label}
         </p>
-        {/* truncate + title em vez de quebrar no meio: um e-mail longo virava
-            "…gmail.c / om" na coluna estreita, o que parece defeito. */}
-        <p
-          className={`truncate ${
-            emphasis
-              ? "text-[15px] font-semibold tabular-nums tracking-tight"
-              : "text-sm font-medium"
-          }`}
-          title={value || undefined}
-        >
-          {value || "—"}
-        </p>
+        {editing ? (
+          /* Salva ao sair do campo e no Enter; Esc descarta. Mesmo gesto do
+             seletor de etapa, que o usuário já conhece — sem modal, sem botão
+             de salvar pra um campo só. */
+          <Input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); commit(); }
+              if (e.key === "Escape") { setDraft(value ?? ""); setEditing(false); }
+            }}
+            placeholder={placeholder}
+            aria-label={label}
+            className={`h-7 px-1.5 py-0 ${textClass}`}
+          />
+        ) : onSave ? (
+          <button
+            type="button"
+            onClick={() => { setDraft(value ?? ""); setEditing(true); }}
+            title={value ? `${value} — clique para editar` : "Clique para preencher"}
+            className={`-mx-1 block w-full truncate rounded px-1 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${textClass} ${
+              value ? "" : "text-muted-foreground"
+            }`}
+          >
+            {value || placeholder || "—"}
+          </button>
+        ) : (
+          /* truncate + title em vez de quebrar no meio: um e-mail longo virava
+             "…gmail.c / om" na coluna estreita, o que parece defeito. */
+          <p className={`truncate ${textClass}`} title={value || undefined}>
+            {value || "—"}
+          </p>
+        )}
       </div>
       {/* Visível sempre, não só no hover: num toque não existe hover, e o
           botão de ligar era inalcançável no celular. */}
@@ -827,10 +871,12 @@ function useIsWide(): boolean {
 }
 
 export function LeadDetailDialog({
-  lead, open, onOpenChange, originLabel = "Origem", onStatusChange,
+  lead, open, onOpenChange, originLabel = "Origem", onStatusChange, onLeadUpdated,
 }: Props) {
   const isWide = useIsWide();
+  const qc = useQueryClient();
   const [tab, setTab] = useState("respostas");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Alargou a janela com "Anotações" aberta: a aba deixa de existir, então
   // devolve o foco pra primeira em vez de deixar o painel vazio.
@@ -854,6 +900,32 @@ export function LeadDetailDialog({
   });
   const noteCount = notesCountQuery.data?.length ?? null;
   const attachmentCount = attachmentsCountQuery.data?.length ?? null;
+
+  /* Corrige dado de contato digitado errado na origem — telefone sem o nono
+     dígito, e-mail com typo. Antes a ficha era só leitura e não havia como
+     arrumar sem ir no banco. */
+  const editMutation = useMutation({
+    mutationFn: (patch: Partial<EditableLeadFields>) =>
+      updateLead({ leadId: leadId, companyId: lead?.company_id ?? '', patch }),
+    onSuccess: (updated) => {
+      // A tabela e o board mostram os mesmos campos; precisam acompanhar.
+      qc.invalidateQueries({ queryKey: ['leads'] });
+      onLeadUpdated?.(updated);
+      toast.success('Dado atualizado');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteLead({ leadId, companyId: lead?.company_id ?? '' }),
+    onSuccess: () => {
+      setConfirmDelete(false);
+      onOpenChange(false);
+      qc.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead excluído');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   if (!lead) return null;
 
@@ -946,6 +1018,19 @@ export function LeadDetailDialog({
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </Button>
+              {/* Excluir mora aqui, e não no card do pipeline: a ficha abre dos
+                  dois lugares, então um comando só cobre a tabela e o board sem
+                  encher o card de botão. */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                title="Excluir lead"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Excluir lead</span>
+              </Button>
               {wa && (
                 <Button asChild size="sm" className="h-9">
                   <a href={wa} target="_blank" rel="noopener noreferrer">
@@ -991,6 +1076,8 @@ export function LeadDetailDialog({
                 label="Telefone"
                 value={lead.phone}
                 emphasis
+                placeholder="Sem telefone"
+                onSave={(phone) => editMutation.mutate({ phone })}
                 action={lead.phone ? {
                   href: `tel:${lead.phone.replace(/[^\d+]/g, "")}`,
                   icon: <Phone className="h-3.5 w-3.5" />,
@@ -1001,16 +1088,23 @@ export function LeadDetailDialog({
                 icon={<Mail className="h-4 w-4" />}
                 label="E-mail"
                 value={lead.email}
+                placeholder="Sem e-mail"
+                onSave={(email) => editMutation.mutate({ email })}
                 action={lead.email ? {
                   href: `mailto:${lead.email}`,
                   icon: <Mail className="h-3.5 w-3.5" />,
                   title: "Enviar e-mail",
                 } : undefined}
               />
+              {/* Editar cidade grava no campo de verdade e a partir daí ele
+                  vence a dedução pelo DDD — que continua valendo pra quem
+                  nunca preencheu. */}
               <Field
                 icon={<MapPin className="h-4 w-4" />}
                 label={city?.inferred ? "Cidade (pelo DDD)" : "Cidade"}
                 value={city?.label ?? null}
+                placeholder="Sem cidade"
+                onSave={(cityName) => editMutation.mutate({ city: cityName })}
               />
             </Section>
 
@@ -1240,6 +1334,31 @@ export function LeadDetailDialog({
           )}
         </div>
       </DialogContent>
+
+      {/* Nomear quem vai sumir: "Excluir este lead?" some no automático de
+          quem clica rápido, e aqui não há desfazer. */}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Some junto tudo que está preso a este lead: anotações, anexos,
+              etiquetas, histórico e mensagens de WhatsApp. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

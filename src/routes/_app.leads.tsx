@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Archive, Columns3, Download, ExternalLink, Eye, Filter, Globe, Loader2, MapPin, MoreHorizontal, Plus, Search, Share2, UserPlus } from 'lucide-react';
+import { Columns3, Download, ExternalLink, Eye, Filter, Globe, Loader2, MapPin, MoreHorizontal, Plus, Search, Share2, Trash2, UserPlus } from 'lucide-react';
 
 import { LeadDetailDialog } from '@/modules/crm/components/LeadDetailDialog';
 import {
@@ -14,6 +14,10 @@ import {
 } from '@/modules/crm/lib/leadFields';
 import { listStages, type Stage } from '@/modules/crm/services/stageService';
 
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,8 +49,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
-  archiveLead,
   createLead,
+  deleteLead,
   getLeadDisplayName,
   getLeadScore,
   getLeadTemperature,
@@ -140,6 +144,7 @@ function LeadsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [form, setForm] = useState<LeadFormState>(INITIAL_FORM);
   const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
+  const [leadToDelete, setLeadToDelete] = useState<LeadRow | null>(null);
   const [visibleCols, setVisibleCols] = useState<string[]>(loadVisibleColumns);
 
   // Rótulo da coluna de origem por nicho. Fica no localStorage por enquanto;
@@ -206,16 +211,19 @@ function LeadsPage() {
     },
   });
 
-  const archiveMutation = useMutation({
+  /* Exclusão definitiva: leva junto anotações, anexos, etiquetas e histórico,
+     por cascata no banco. Por isso passa por confirmação antes de chegar aqui. */
+  const deleteMutation = useMutation({
     mutationFn: (leadId: string) => {
       if (!companyId) throw new Error('Workspace não carregado.');
-      return archiveLead({ leadId, companyId });
+      return deleteLead({ leadId, companyId });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast.success('Lead arquivado sem perder histórico.');
+      setLeadToDelete(null);
+      toast.success('Lead excluído');
     },
-    onError: () => toast.error('Não foi possível arquivar o lead.'),
+    onError: (e: Error) => toast.error(e.message || 'Não foi possível excluir o lead.'),
   });
 
   const leads = leadsQuery.data ?? [];
@@ -469,7 +477,7 @@ function LeadsPage() {
                   currentUserId={currentUserId}
                   visibleCols={visibleCols}
                   stages={stages}
-                  onArchive={() => archiveMutation.mutate(lead.id)}
+                  onDelete={() => setLeadToDelete(lead)}
                   onOpen={() => setDetailLead(lead)}
                 />
               ))
@@ -488,19 +496,55 @@ function LeadsPage() {
         onStatusChange={(leadId, status) =>
           setDetailLead((prev) => (prev && prev.id === leadId ? { ...prev, status } : prev))
         }
+        /* A ficha salva direto no banco; a linha aberta em memória precisa
+           acompanhar, senão fechar e reabrir mostraria o valor antigo. */
+        onLeadUpdated={(updated) =>
+          setDetailLead((prev) => (prev && prev.id === updated.id ? updated : prev))
+        }
       />
+
+      {/* Exclusão é irreversível e leva o histórico junto, então o diálogo diz
+          o nome de quem vai sumir — "Excluir este lead?" some no automático de
+          quem clica rápido. */}
+      <AlertDialog open={leadToDelete !== null} onOpenChange={(o) => !o && setLeadToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir {toTitleCase(getLeadDisplayName(leadToDelete ?? ({} as LeadRow))) || 'este lead'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Some junto tudo que está preso a ele: anotações, anexos, etiquetas,
+              histórico e mensagens de WhatsApp. Não dá para desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                if (leadToDelete) deleteMutation.mutate(leadToDelete.id);
+              }}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function LeadTableRow({
-  lead, currentUserId, visibleCols, stages, onArchive, onOpen,
+  lead, currentUserId, visibleCols, stages, onDelete, onOpen,
 }: {
   lead: LeadRow;
   currentUserId: string | null;
   visibleCols: string[];
   stages: Stage[];
-  onArchive: () => void;
+  onDelete: () => void;
   onOpen: () => void;
 }) {
   const stage = stages.find(
@@ -620,9 +664,15 @@ function LeadTableRow({
                 Abrir página completa
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onArchive} className="gap-2">
-              <Archive className="h-4 w-4" />
-              Arquivar
+            {/* Era "Arquivar", que gravava status='archived' e sumia com o
+                lead sem nenhuma tela pra encontrá-lo de volta — um beco sem
+                saída. Virou exclusão de verdade, com confirmação. */}
+            <DropdownMenuItem
+              onClick={onDelete}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

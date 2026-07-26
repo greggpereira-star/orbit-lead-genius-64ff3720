@@ -240,6 +240,86 @@ export async function updateLeadStatus(input: UpdateLeadStatusInput): Promise<Le
   return data as LeadRow;
 }
 
+/** Campos do lead que o usuário edita à mão na ficha. */
+export interface EditableLeadFields {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+}
+
+/**
+ * Corrige os dados de contato de um lead.
+ *
+ * Só estes quatro campos: o resto da ficha é rastro de origem (UTMs, id do
+ * anúncio, respostas do formulário) e reescrever isso à mão transformaria o
+ * histórico de captação em ficção.
+ *
+ * `company_id` no filtro além do id: sem ele, um id vazado editaria lead de
+ * outra empresa mesmo com o RLS ativo, caso a policy afrouxe um dia.
+ */
+export async function updateLead(input: {
+  leadId: string;
+  companyId: string;
+  patch: Partial<EditableLeadFields>;
+}): Promise<LeadRow> {
+  const patch: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input.patch)) {
+    // String vazia vira NULL: "—" na ficha é honesto, "" é um campo que
+    // parece preenchido e não está.
+    const trimmed = typeof value === 'string' ? value.trim() : value;
+    patch[key] = trimmed === '' ? null : trimmed;
+  }
+  if (!Object.keys(patch).length) throw new Error('Nada para salvar.');
+  patch.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('leads')
+    .update(patch as never)
+    .eq('id', input.leadId)
+    .eq('company_id', input.companyId)
+    .select('*')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as LeadRow;
+}
+
+/**
+ * Apaga o lead de vez.
+ *
+ * Dez tabelas apagam em cascata junto: anotações, anexos, etiquetas,
+ * histórico, mensagens de WhatsApp e afins. Não há desfazer — quem chama
+ * precisa ter confirmado com o usuário antes.
+ *
+ * Os arquivos dos anexos ficam no Storage e não seguem a cascata do Postgres,
+ * então são removidos aqui, antes, senão viram lixo pago para sempre.
+ */
+export async function deleteLead(input: { leadId: string; companyId: string }): Promise<void> {
+  const { data: files } = await (supabase as any)
+    .from('lead_attachments')
+    .select('storage_path')
+    .eq('lead_id', input.leadId);
+
+  const paths = (files ?? [])
+    .map((f: { storage_path?: string | null }) => f.storage_path)
+    .filter(Boolean) as string[];
+
+  if (paths.length) {
+    // Falha aqui não impede a exclusão do lead: um arquivo órfão no bucket é
+    // menos grave do que deixar o lead que o usuário mandou apagar.
+    await supabase.storage.from('lead-attachments').remove(paths);
+  }
+
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', input.leadId)
+    .eq('company_id', input.companyId);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function archiveLead(input: ArchiveLeadInput): Promise<LeadRow> {
   const archivedAt = new Date().toISOString();
   const { data: currentLead, error: readError } = await supabase
