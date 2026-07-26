@@ -238,6 +238,65 @@ export const saveMetaFormMapping = createServerFn({ method: "POST" })
   });
 
 // -------------------------------------------------------------
+// bulkSetMetaFormStage — etapa de entrada de vários formulários
+// -------------------------------------------------------------
+
+/**
+ * Define a etapa de entrada de N formulários de uma vez.
+ *
+ * Existe separado de `saveMetaFormMapping` de propósito: aquele é um upsert do
+ * mapeamento INTEIRO, com defaults do Zod. Chamá-lo só com a etapa zeraria
+ * tags, score, regras de qualificação e responsável de cada formulário. Aqui só
+ * a coluna `stage_id` é tocada.
+ *
+ * Formulário que ainda não tem mapeamento ganha um: sem linha, não há onde
+ * guardar a etapa, e o lead cairia na etapa padrão do funil sem o usuário
+ * entender por quê.
+ */
+export const bulkSetMetaFormStage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        forms: z.array(z.object({ form_id: z.string(), page_id: z.string() })).min(1),
+        stage_id: z.string().uuid().nullable(),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    // A etapa precisa ser da própria empresa: um id de outro tenant deixaria o
+    // lead apontando pra uma coluna que este board nunca mostra.
+    if (data.stage_id) {
+      const { data: owned } = await supabaseAdmin
+        .from("stages")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("id", data.stage_id)
+        .maybeSingle();
+      if (!owned) throw new Error("Etapa não pertence a esta empresa.");
+    }
+
+    // Só estas colunas entram no upsert, então o ON CONFLICT atualiza só elas —
+    // o resto do mapeamento fica como estava.
+    const rows = data.forms.map((f) => ({
+      company_id: companyId,
+      page_id: f.page_id,
+      form_id: f.form_id,
+      stage_id: data.stage_id,
+    }));
+
+    const { error } = await supabaseAdmin
+      .from("meta_form_mappings")
+      .upsert(rows as never, { onConflict: "company_id,form_id" });
+
+    if (error) throw new Error(`Erro ao definir etapa: ${error.message}`);
+    return { ok: true, count: rows.length };
+  });
+
+// -------------------------------------------------------------
 // deleteMetaFormMapping
 // -------------------------------------------------------------
 

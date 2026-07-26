@@ -24,8 +24,11 @@ import {
   deactivateMetaForm,
   bulkDeactivateMetaForms,
   reactivateMetaForm,
-  bulkReactivateMetaForms
+  bulkReactivateMetaForms,
+  bulkSetMetaFormStage
 } from "@/lib/meta-forms.functions";
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import { StageSelect } from "@/modules/crm/components/StageSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -153,6 +156,8 @@ function MetaIntegrationsPage() {
   const bulkDeactivate = useServerFn(bulkDeactivateMetaForms);
   const reactivate = useServerFn(reactivateMetaForm);
   const bulkReactivate = useServerFn(bulkReactivateMetaForms);
+  const bulkSetStage = useServerFn(bulkSetMetaFormStage);
+  const { company } = useAuth();
 
 
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
@@ -162,6 +167,9 @@ function MetaIntegrationsPage() {
   const [previewFormId, setPreviewFormId] = useState<string | null>(null);
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
   const [bulkImportRange, setBulkImportRange] = useState<{ since: string; until: string }>({ since: "", until: "" });
+  /* Etapa aplicada aos formulários selecionados. `null` = etapa padrão do
+     funil, que é o comportamento de quem nunca escolheu nada. */
+  const [bulkStageId, setBulkStageId] = useState<string | null>(null);
   const [formToDelete, setFormToDelete] = useState<string | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [currentOrigin, setCurrentOrigin] = useState("https://altleadflow.com.br");
@@ -296,6 +304,34 @@ function MetaIntegrationsPage() {
   // (que antes só alimentava "Remover Selecionados") a uma importação de verdade.
   // Sequencial (não Promise.all) pra não disparar N chamadas simultâneas contra a
   // Graph API do Meta de uma vez só.
+  /**
+   * Grava a etapa de entrada nos formulários selecionados.
+   *
+   * Endpoint próprio, e não o `saveMetaFormMapping`: aquele é upsert do
+   * mapeamento inteiro e zeraria tags, score e regras de qualificação de cada
+   * formulário só pra mudar a etapa.
+   */
+  const bulkStageMutation = useMutation({
+    mutationFn: async (stageId: string | null) => {
+      const selected = (formsQuery.data?.forms ?? [])
+        .filter((f: any) => selectedFormIds.includes(f.form_id))
+        .map((f: any) => ({ form_id: f.form_id, page_id: f.page_id }));
+      if (!selected.length) return { count: 0 };
+      return bulkSetStage({ data: { forms: selected, stage_id: stageId } });
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["meta-forms"] });
+      const n = (res as { count?: number }).count ?? 0;
+      toast.success(
+        n === 1 ? 'Etapa definida para 1 formulário' : `Etapa definida para ${n} formulários`,
+        { description: 'Vale para os próximos leads e para o que você importar agora.' },
+      );
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : 'Não foi possível definir a etapa.');
+    },
+  });
+
   const bulkImportMutation = useMutation({
     mutationFn: async (input: { formIds: string[]; since: string | null; until: string | null }) => {
       const results: { formId: string; ok: boolean; error?: string; imported?: number; duplicates?: number; failed?: number }[] = [];
@@ -791,6 +827,22 @@ function MetaIntegrationsPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Definir a etapa aqui, junto da seleção, evita ter
+                              que abrir o mapeamento formulário por formulário
+                              depois. Vale pros leads que vierem daqui pra
+                              frente E pros que a importação abaixo trouxer —
+                              a importação lê a etapa do mapeamento. */}
+                          <div className="w-[190px]">
+                            <StageSelect
+                              companyId={company?.id ?? ''}
+                              value={bulkStageId}
+                              onChange={(stageId) => {
+                                setBulkStageId(stageId);
+                                bulkStageMutation.mutate(stageId);
+                              }}
+                              disabled={bulkStageMutation.isPending}
+                            />
+                          </div>
                           <Input
                             type="date"
                             value={bulkImportRange.since}
