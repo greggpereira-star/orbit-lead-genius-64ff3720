@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   getFbCookies,
+  hashContact,
   initPixels,
   newEventId,
+  pushDataLayer,
   sendCapiEvent,
+  setMetaAdvancedMatching,
   trackGoogleConversion,
   trackMeta,
+  type HashedContact,
   type PixelConfig,
-} from '@/core/tracking/pixels';
-import { pixelService, mergePixelConfig } from '@/modules/integrations/services/pixelService';
+} from "@/core/tracking/pixels";
+import { pixelService, mergePixelConfig } from "@/modules/integrations/services/pixelService";
 
 /**
  * Medição das páginas públicas — quiz e formulário usam o mesmo caminho.
@@ -33,7 +37,7 @@ export function usePixelTracking(opts: {
   const { companyId, quizId, formId, overrides, tracking, enabled } = opts;
 
   const { data: companyConfig } = useQuery({
-    queryKey: ['pixel-config', companyId],
+    queryKey: ["pixel-config", companyId],
     queryFn: () => pixelService.getPublicConfig(companyId!),
     enabled: enabled && !!companyId,
     staleTime: 5 * 60_000,
@@ -55,14 +59,15 @@ export function usePixelTracking(opts: {
     pageViewSent.current = true;
 
     const eventId = newEventId();
-    trackMeta('PageView', {}, eventId);
+    trackMeta("PageView", {}, eventId);
+    pushDataLayer("page_view", { funil_id: quizId ?? formId, event_id: eventId });
     // O `_fbp` é gravado pelo próprio Pixel no `init` acima. Ler no próximo
     // tique dá tempo de ele existir — sem isso o primeiro evento sai sem o
     // cookie e perde correspondência.
     setTimeout(() => {
       const { fbp, fbc } = getFbCookies(tracking?.fbclid);
       sendCapiEvent({
-        eventName: 'PageView',
+        eventName: "PageView",
         eventId,
         quizId,
         formId,
@@ -78,41 +83,65 @@ export function usePixelTracking(opts: {
   const trackStep = useCallback(
     (stepIndex: number, stepName?: string) => {
       if (!active) return;
-      trackMeta('ViewContent', {
-        content_name: stepName ?? `Etapa ${stepIndex + 1}`,
-        content_category: 'quiz_step',
+      const nome = stepName ?? `Etapa ${stepIndex + 1}`;
+      trackMeta("ViewContent", {
+        content_name: nome,
+        content_category: "quiz_step",
         step: stepIndex + 1,
       });
+      pushDataLayer("step", { etapa: stepIndex + 1, etapa_nome: nome, funil_id: quizId ?? formId });
     },
-    [active],
+    [active, quizId, formId],
   );
 
   const fire = useCallback(
-    (
-      eventName: 'Lead' | 'CompleteRegistration',
+    async (
+      eventName: "Lead" | "CompleteRegistration",
       googleLabel: string | undefined,
       contact: { email?: string; phone?: string },
       customData?: Record<string, unknown>,
     ) => {
       if (!active) return;
-      const eventId = newEventId();
-      const { fbp, fbc } = getFbCookies(tracking?.fbclid);
+      try {
+        const eventId = newEventId();
+        const { fbp, fbc } = getFbCookies(tracking?.fbclid);
 
-      trackMeta(eventName, customData ?? {}, eventId);
-      trackGoogleConversion(config, googleLabel, { transactionId: eventId });
-      sendCapiEvent({
-        eventName,
-        eventId,
-        quizId,
-        formId,
-        email: contact.email,
-        phone: contact.phone,
-        pageUrl: window.location.href,
-        fbp,
-        fbc,
-        tracking,
-        customData,
-      });
+        // O hash vem antes do disparo porque é o que carrega o contato nos dois
+        // eventos do navegador. Sem ele, o Meta recebe um evento anônimo e a
+        // conversão do Google não tem como ser otimizada.
+        const hashed: HashedContact = await hashContact(contact).catch(() => ({}));
+
+        setMetaAdvancedMatching(config.metaPixelId, hashed);
+        trackMeta(eventName, customData ?? {}, eventId);
+        trackGoogleConversion(config, googleLabel, { transactionId: eventId, hashed });
+        pushDataLayer(eventName === "Lead" ? "lead" : "complete", {
+          funil_id: quizId ?? formId,
+          event_id: eventId,
+          // Contato só em hash: o dataLayer é lido por qualquer tag instalada no
+          // GTM, inclusive de terceiros. E-mail em texto puro ali vazaria para
+          // quem o cliente nem sabe que está na página.
+          ...(hashed.em ? { email_sha256: hashed.em } : {}),
+          ...(hashed.ph ? { telefone_sha256: hashed.ph } : {}),
+          ...(customData ?? {}),
+        });
+        sendCapiEvent({
+          eventName,
+          eventId,
+          quizId,
+          formId,
+          email: contact.email,
+          phone: contact.phone,
+          pageUrl: window.location.href,
+          fbp,
+          fbc,
+          tracking,
+          customData,
+        });
+      } catch (err) {
+        // Medição nunca derruba o funil: o lead já está gravado por outro
+        // caminho, e uma exceção aqui só custaria a leitura da campanha.
+        console.error("Falha ao disparar evento de conversão", err);
+      }
     },
     [active, config, quizId, formId, tracking],
   );
@@ -120,14 +149,14 @@ export function usePixelTracking(opts: {
   /** Contato capturado — o mesmo instante em que o lead nasce no CRM. */
   const trackLead = useCallback(
     (contact: { email?: string; phone?: string }, customData?: Record<string, unknown>) =>
-      fire('Lead', config.googleLeadLabel, contact, customData),
+      fire("Lead", config.googleLeadLabel, contact, customData),
     [fire, config.googleLeadLabel],
   );
 
   /** Funil concluído. */
   const trackComplete = useCallback(
     (contact: { email?: string; phone?: string }, customData?: Record<string, unknown>) =>
-      fire('CompleteRegistration', config.googleCompleteLabel, contact, customData),
+      fire("CompleteRegistration", config.googleCompleteLabel, contact, customData),
     [fire, config.googleCompleteLabel],
   );
 

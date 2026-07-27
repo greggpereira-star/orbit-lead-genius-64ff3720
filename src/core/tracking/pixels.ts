@@ -100,8 +100,69 @@ export function initPixels(config: PixelConfig) {
   if (config.googleConversionId && !initialized.has(`google:${config.googleConversionId}`)) {
     initialized.add(`google:${config.googleConversionId}`);
     ensureGtag(config.googleConversionId);
-    window.gtag!('config', config.googleConversionId);
+    // Sem `allow_enhanced_conversions`, o `user_data` que mandamos junto da
+    // conversão é ignorado — e a conversão otimizada não sai do papel.
+    window.gtag!('config', config.googleConversionId, { allow_enhanced_conversions: true });
   }
+}
+
+/* ============ Dados de contato com hash ============
+ *
+ * Meta e Google só aceitam contato em SHA-256, e cada um exige a sua
+ * normalização. Errar a normalização não dá erro: o evento é aceito e
+ * simplesmente não casa com ninguém — o pior tipo de falha, porque parece que
+ * está funcionando.
+ */
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+/**
+ * Telefone em E.164, sem o `+`.
+ *
+ * Quem digita num quiz brasileiro escreve "(11) 99999-9999" — 10 ou 11
+ * dígitos, sem país. Mandar assim não casa com ninguém, porque as plataformas
+ * esperam o código do país. Números que já vêm com 12+ dígitos são deixados
+ * como estão: ou já têm o país, ou não é um número brasileiro para adivinhar.
+ */
+function normalizePhone(phone: string): string | undefined {
+  const digits = phone.replace(/\D+/g, '');
+  if (!digits) return undefined;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
+
+export interface HashedContact { em?: string; ph?: string }
+
+export async function hashContact(contact: { email?: string; phone?: string }): Promise<HashedContact> {
+  const out: HashedContact = {};
+  if (typeof crypto === 'undefined' || !crypto.subtle) return out;
+  if (contact.email?.trim()) out.em = await sha256Hex(normalizeEmail(contact.email));
+  const phone = contact.phone ? normalizePhone(contact.phone) : undefined;
+  if (phone) out.ph = await sha256Hex(phone);
+  return out;
+}
+
+/**
+ * Correspondência avançada do Meta.
+ *
+ * Um `init` posterior com `em`/`ph` atualiza os dados de correspondência da
+ * página — é o caminho documentado para quando o contato só aparece no meio do
+ * funil, que é exatamente o nosso caso. Os eventos disparados depois disto
+ * levam o contato junto.
+ */
+export function setMetaAdvancedMatching(pixelId: string | undefined, hashed: HashedContact) {
+  if (typeof window === 'undefined' || !window.fbq || !pixelId) return;
+  if (!hashed.em && !hashed.ph) return;
+  window.fbq('init', pixelId, {
+    ...(hashed.em ? { em: hashed.em } : {}),
+    ...(hashed.ph ? { ph: hashed.ph } : {}),
+  });
 }
 
 /** Dispara um evento padrão do Meta no navegador. */
@@ -120,20 +181,56 @@ export function trackMeta(
  * `transactionId` é o mesmo `eventId` do Meta. O Google usa esse campo para
  * descartar a segunda chegada do mesmo evento — por exemplo quando o visitante
  * recarrega a tela de obrigado.
+ *
+ * O `user_data` vai num `set` separado, antes do evento, porque é assim que o
+ * gtag espera receber a conversão otimizada; passar no próprio evento não tem
+ * efeito. As chaves com prefixo `sha256_` avisam que o valor já vem com hash —
+ * sem elas o Google tentaria fazer o hash de um hash.
  */
 export function trackGoogleConversion(
   config: PixelConfig,
   label: string | undefined,
-  params?: { value?: number; currency?: string; transactionId?: string },
+  params?: { value?: number; currency?: string; transactionId?: string; hashed?: HashedContact },
 ) {
   if (typeof window === 'undefined' || !window.gtag) return;
   if (!config.googleConversionId || !label) return;
+
+  const hashed = params?.hashed;
+  const userData = hashed?.em || hashed?.ph
+    ? {
+        ...(hashed.em ? { sha256_email_address: hashed.em } : {}),
+        ...(hashed.ph ? { sha256_phone_number: hashed.ph } : {}),
+      }
+    : undefined;
+
+  // O Google aceita o dado de usuário por dois caminhos, e eles não são
+  // equivalentes na prática: o `set` vale para tudo que vier depois, e o campo
+  // no próprio evento é o que a documentação atual recomenda. Mandamos pelos
+  // dois porque a conta do cliente pode estar em qualquer um dos dois modos, e
+  // o custo de duplicar é zero — o Google usa o mesmo dado uma vez só.
+  if (userData) window.gtag('set', 'user_data', userData);
+
   window.gtag('event', 'conversion', {
     send_to: `${config.googleConversionId}/${label}`,
     value: params?.value,
     currency: params?.currency ?? 'BRL',
     transaction_id: params?.transactionId,
+    ...(userData ? { user_data: userData } : {}),
   });
+}
+
+/**
+ * Publica o evento no `dataLayer` com nome próprio.
+ *
+ * O gtag usa o `dataLayer` para o que é dele, mas não deixa nada que sirva de
+ * gatilho no Google Tag Manager. Quem monta as tags pelo GTM — o caso comum de
+ * agência — não tinha em que se pendurar. O prefixo `altflow_` evita colidir
+ * com eventos de outras ferramentas no mesmo dataLayer.
+ */
+export function pushDataLayer(event: string, payload?: Record<string, unknown>) {
+  if (typeof window === 'undefined') return;
+  window.dataLayer = window.dataLayer ?? [];
+  window.dataLayer.push({ event: `altflow_${event}`, ...(payload ?? {}) });
 }
 
 function readCookie(name: string): string | undefined {
