@@ -28,6 +28,19 @@ function spanStyle(span: RichSpan): CSSProperties | undefined {
 
 function renderSpans(spans: RichSpan[], scope: VariableScope | undefined, keyPrefix: string): ReactNode[] {
   return spans.map((span, i) => {
+    if (span.img) {
+      return (
+        <img
+          key={`${keyPrefix}-${i}`}
+          src={span.img}
+          alt={span.text || ''}
+          // `inline-block` + `max-width` pra imagem colada no meio do texto não
+          // estourar a coluna do quiz, que é estreita de propósito.
+          className="inline-block max-w-full align-middle"
+          style={{ borderRadius: '0.25em' }}
+        />
+      );
+    }
     const text = scope ? interpolateText(span.text, scope) : span.text;
     // A quebra manual (Shift+Enter) vira <br> de verdade, não "\n" invisível.
     const parts = text.split('\n');
@@ -43,6 +56,8 @@ function renderSpans(spans: RichSpan[], scope: VariableScope | undefined, keyPre
     if (marks.includes('italic')) node = <em>{node}</em>;
     if (marks.includes('underline')) node = <u>{node}</u>;
     if (marks.includes('strike')) node = <s>{node}</s>;
+    if (marks.includes('sup')) node = <sup>{node}</sup>;
+    if (marks.includes('sub')) node = <sub>{node}</sub>;
 
     const style = spanStyle(span);
 
@@ -103,6 +118,14 @@ export function RichText({ doc, scope, className, style, fallback }: Props) {
                 <li key={j}>{renderSpans(item, scope, `${key}-${j}`)}</li>
               ))}
             </ListTag>
+          );
+        }
+
+        if (node.type === 'code') {
+          return (
+            <pre key={key} style={style} className="quiz-rich-code">
+              <code>{renderSpans(node.spans ?? [], scope, key)}</code>
+            </pre>
           );
         }
 

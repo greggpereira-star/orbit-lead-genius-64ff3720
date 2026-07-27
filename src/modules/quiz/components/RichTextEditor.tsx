@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, Link2, Undo2, Redo2, Baseline, Highlighter, Variable,
+  Superscript, Subscript, ImagePlus, Code2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ export function RichTextEditor({
   const ref = useRef<HTMLDivElement>(null);
   const [backdrop, setBackdrop] = useState<Backdrop>('padrao');
   const [linkUrl, setLinkUrl] = useState('');
+  const [imgUrl, setImgUrl] = useState('');
   const savedRange = useRef<Range | null>(null);
 
   /* O conteúdo inicial é escrito UMA vez. Reescrever a cada render mataria o
@@ -120,6 +122,18 @@ export function RichTextEditor({
     emit();
   };
 
+  const insertImage = () => {
+    const url = imgUrl.trim();
+    // Só http(s): a mesma regra da leitura do documento. Rejeitar aqui evita o
+    // usuário inserir algo que sumiria silenciosamente no próximo salvamento.
+    if (!/^https?:\/\//i.test(url)) return;
+    ref.current?.focus();
+    restoreSelection();
+    exec('insertImage', url);
+    emit();
+    setImgUrl('');
+  };
+
   const applyLink = () => {
     const url = linkUrl.trim();
     if (!url) return;
@@ -161,6 +175,8 @@ export function RichTextEditor({
           <ToolButton onClick={() => run('italic')} label="Itálico"><Italic className="h-3.5 w-3.5" /></ToolButton>
           <ToolButton onClick={() => run('underline')} label="Sublinhado"><Underline className="h-3.5 w-3.5" /></ToolButton>
           <ToolButton onClick={() => run('strikeThrough')} label="Tachado"><Strikethrough className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run('superscript')} label="Sobrescrito"><Superscript className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run('subscript')} label="Subscrito"><Subscript className="h-3.5 w-3.5" /></ToolButton>
           <Divider />
 
           <SwatchPicker
@@ -181,6 +197,7 @@ export function RichTextEditor({
 
           <ToolButton onClick={() => run('insertUnorderedList')} label="Lista com marcadores"><List className="h-3.5 w-3.5" /></ToolButton>
           <ToolButton onClick={() => run('insertOrderedList')} label="Lista numerada"><ListOrdered className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run('formatBlock', '<pre>')} label="Bloco de código"><Code2 className="h-3.5 w-3.5" /></ToolButton>
           <Divider />
 
           <ToolButton onClick={() => run('justifyLeft')} label="Alinhar à esquerda"><AlignLeft className="h-3.5 w-3.5" /></ToolButton>
@@ -205,6 +222,29 @@ export function RichTextEditor({
                   className="h-8 text-xs"
                 />
                 <Button size="sm" className="h-8" onClick={applyLink}>Aplicar</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Popover onOpenChange={(o) => o && rememberSelection()}>
+            <PopoverTrigger asChild>
+              <button type="button" title="Imagem no meio do texto" aria-label="Inserir imagem" className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <ImagePlus className="h-3.5 w-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 space-y-2 p-2" align="start">
+              <p className="text-[11px] text-muted-foreground">
+                Cole o endereço da imagem. Ela entra na posição do cursor.
+              </p>
+              <div className="flex gap-1.5">
+                <Input
+                  value={imgUrl}
+                  onChange={(e) => setImgUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); insertImage(); } }}
+                  placeholder="https://..."
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" className="h-8" onClick={insertImage}>Inserir</Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -352,10 +392,16 @@ function SwatchPicker({
 
 /** Documento -> DOM inicial da área de edição (só na montagem). */
 function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unknown; items?: unknown }): HTMLElement {
-  const spans = (node.spans ?? []) as { text: string; marks?: string[]; color?: string; highlight?: string; href?: string }[];
+  const spans = (node.spans ?? []) as { text: string; marks?: string[]; color?: string; highlight?: string; href?: string; img?: string }[];
   const items = (node.items ?? []) as (typeof spans)[];
 
   const spanToNode = (s: (typeof spans)[number]): Node => {
+    if (s.img) {
+      const img = document.createElement('img');
+      img.src = s.img;
+      img.alt = s.text || '';
+      return img;
+    }
     let inner: Node = document.createTextNode(s.text);
     const wrap = (tag: string) => {
       const w = document.createElement(tag);
@@ -366,6 +412,8 @@ function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unkno
     if (s.marks?.includes('italic')) wrap('i');
     if (s.marks?.includes('underline')) wrap('u');
     if (s.marks?.includes('strike')) wrap('s');
+    if (s.marks?.includes('sup')) wrap('sup');
+    if (s.marks?.includes('sub')) wrap('sub');
     if (s.color || s.highlight) {
       const w = document.createElement('span');
       if (s.color) w.style.color = s.color;
@@ -393,7 +441,8 @@ function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unkno
     return list;
   }
 
-  const el = document.createElement(node.type);
+  // 'code' é o nome no documento; no DOM do editor ele é um <pre>.
+  const el = document.createElement(node.type === 'code' ? 'pre' : node.type);
   if (node.align) el.style.textAlign = node.align;
   spans.forEach((s) => el.appendChild(spanToNode(s)));
   return el;

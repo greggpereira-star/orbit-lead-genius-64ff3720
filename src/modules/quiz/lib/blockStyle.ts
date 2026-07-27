@@ -30,7 +30,24 @@ export interface BlockStyle {
   borderColor?: string;
   /** Cantos, em px. */
   radius?: number;
+  /**
+   * Tipografia do bloco. Ausente = herda a fonte do tema do quiz — que é o que
+   * mantém o funil coerente. Trocar aqui é para o caso pontual (um selo, uma
+   * citação), não para redefinir o quiz inteiro bloco a bloco.
+   */
+  fontFamily?: string;
+  /** Tamanho base, em px. Os títulos internos escalam a partir dele (em em). */
+  fontSize?: number;
 }
+
+/** Fontes já carregadas globalmente pelo app — não adianta oferecer outras. */
+export const BLOCK_FONTS = [
+  'Inter',
+  'Space Grotesk',
+  'Playfair Display',
+  'Fraunces',
+  'Fredoka',
+] as const;
 
 /** Há algo configurado? Serve pra não criar um <div> de embrulho à toa. */
 export function hasBlockStyle(block: QuizBlock): boolean {
@@ -73,6 +90,9 @@ export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
     style.borderColor = s.borderColor || 'currentColor';
   }
   if (s.radius !== undefined) style.borderRadius = s.radius;
+
+  if (s.fontFamily) style.fontFamily = s.fontFamily;
+  if (s.fontSize) style.fontSize = s.fontSize;
 
   return Object.keys(style).length ? style : undefined;
 }

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import { BLOCK_FONTS } from '../lib/blockStyle';
 import type { BlockStyle } from '../lib/blockStyle';
 import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import { GripVertical, Copy } from 'lucide-react';
 import { Rows3, AlignCenter as AlignCenterIcon } from 'lucide-react';
+import { Baseline } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks, Eye, CornerDownRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
@@ -916,6 +918,27 @@ function AparenciaTab({ block, onChange }: { block: QuizBlock; onChange: (p: Par
             Voltar às cores do tema
           </Button>
         )}
+      </Section>
+
+      <Section title="Tipografia" icon={Baseline}>
+        <Field label="Fonte">
+          <Select
+            value={s.fontFamily ?? '__tema__'}
+            onValueChange={(v) => onChange(patchStyle(block, { fontFamily: v === '__tema__' ? undefined : v }))}
+          >
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__tema__">Do tema do quiz</SelectItem>
+              {BLOCK_FONTS.map((f) => (
+                <SelectItem key={f} value={f} style={{ fontFamily: f }}>{f}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            Trocar aqui vale só neste bloco. Para o quiz inteiro, use o painel de Design.
+          </p>
+        </Field>
+        <PxField label="Tamanho do texto" value={s.fontSize} onChange={(v) => onChange(patchStyle(block, { fontSize: v }))} placeholder="do tema" max={72} />
       </Section>
 
       <Section title="Borda" icon={SlidersHorizontal}>

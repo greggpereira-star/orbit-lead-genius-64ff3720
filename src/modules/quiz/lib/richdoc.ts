@@ -20,7 +20,7 @@
  * visitante vê.
  */
 
-export type RichMark = 'bold' | 'italic' | 'underline' | 'strike';
+export type RichMark = 'bold' | 'italic' | 'underline' | 'strike' | 'sup' | 'sub';
 
 export interface RichSpan {
   text: string;
@@ -31,9 +31,15 @@ export interface RichSpan {
   highlight?: string;
   /** Link — só http(s) e mailto sobrevivem à leitura. */
   href?: string;
+  /**
+   * Imagem no meio do texto. Quando presente, este trecho É a imagem — `text`
+   * vira o texto alternativo. Só http(s) sobrevive à leitura, pela mesma razão
+   * do link: `src` é um vetor tão bom quanto `href` pra injeção.
+   */
+  img?: string;
 }
 
-export type RichNodeType = 'p' | 'h1' | 'h2' | 'h3' | 'ul' | 'ol';
+export type RichNodeType = 'p' | 'h1' | 'h2' | 'h3' | 'ul' | 'ol' | 'code';
 export type RichAlign = 'left' | 'center' | 'right';
 
 export interface RichNode {
@@ -56,12 +62,14 @@ const MARK_BY_TAG: Record<string, RichMark> = {
   I: 'italic', EM: 'italic',
   U: 'underline',
   S: 'strike', STRIKE: 'strike', DEL: 'strike',
+  SUP: 'sup', SUB: 'sub',
 };
 
 const BLOCK_BY_TAG: Record<string, RichNodeType> = {
   P: 'p', DIV: 'p',
   H1: 'h1', H2: 'h2', H3: 'h3',
   UL: 'ul', OL: 'ol',
+  PRE: 'code',
 };
 
 /** Só http(s) e mailto. Qualquer outro esquema (javascript:, data:) é descartado. */
@@ -72,6 +80,16 @@ function safeHref(raw: string | null): string | undefined {
   // Link relativo do próprio funil também serve, desde que não vire protocolo.
   if (url.startsWith('/') && !url.startsWith('//')) return url;
   return undefined;
+}
+
+/**
+ * Só http(s) para `src` de imagem. `data:` fica de fora de propósito: além de
+ * inflar o schema, é o caminho clássico de embutir SVG com script dentro.
+ */
+function safeImgSrc(raw: string | null): string | undefined {
+  if (!raw) return undefined;
+  const url = raw.trim();
+  return /^https?:\/\//i.test(url) ? url : undefined;
 }
 
 /** Normaliza cor para #rrggbb; devolve undefined para qualquer coisa fora disso. */
@@ -115,6 +133,13 @@ function readInline(node: Node, state: InlineState, out: RichSpan[]): void {
     out.push({ text: '\n' });
     return;
   }
+  if (el.tagName === 'IMG') {
+    const src = safeImgSrc(el.getAttribute('src'));
+    // Sem src válido a imagem simplesmente não existe no documento — não vale
+    // guardar um <img> quebrado só porque alguém colou de um lugar estranho.
+    if (src) out.push({ text: el.getAttribute('alt') || '', img: src, href: state.href });
+    return;
+  }
 
   const next: InlineState = {
     marks: new Set(state.marks),
@@ -148,10 +173,13 @@ function readInline(node: Node, state: InlineState, out: RichSpan[]): void {
 function mergeSpans(spans: RichSpan[]): RichSpan[] {
   const out: RichSpan[] = [];
   for (const s of spans) {
+    // Imagem é um trecho por si: não tem texto pra fundir e `text` nela é o alt.
+    if (s.img) { out.push({ ...s }); continue; }
     if (!s.text) continue;
     const prev = out[out.length - 1];
     const same =
       prev &&
+      !prev.img &&
       prev.color === s.color &&
       prev.highlight === s.highlight &&
       prev.href === s.href &&

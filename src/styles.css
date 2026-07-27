@@ -230,3 +230,16 @@
 .quiz-rich p + p, .quiz-rich p + ul, .quiz-rich p + ol,
 .quiz-rich h1 + p, .quiz-rich h2 + p, .quiz-rich h3 + p { margin-top: .4em; }
 .quiz-rich ul, .quiz-rich ol { text-align: left; }
+
+/* Bloco de código dentro do texto rico (editor e quiz). */
+.rich-editor pre, .quiz-rich-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .85em;
+  background: rgba(120,120,120,.12);
+  padding: .6em .8em;
+  border-radius: .4em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  margin: 0 0 .35rem;
+}
+.quiz-rich-code { text-align: left; }
