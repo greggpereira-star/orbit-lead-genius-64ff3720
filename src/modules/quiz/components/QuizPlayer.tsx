@@ -10,6 +10,7 @@ import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
+import { resolveBlockStyle } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
@@ -481,8 +482,10 @@ function PlayerRunner({
                   );
                 }
                 return (
+                  // Mesmo embrulho de estilo do canvas — um resolvedor só, para
+                  // o que é ajustado no Builder ser o que o visitante vê.
+                  <div key={b.id} style={resolveBlockStyle(b)}>
                   <BlockView
-                    key={b.id}
                     block={b}
                     design={design}
                     scope={scope}
@@ -498,6 +501,7 @@ function PlayerRunner({
                       if (isTerminal) void advanceStep({ ...draftResponses.current });
                     }}
                   />
+                  </div>
                 );
               })
             )}

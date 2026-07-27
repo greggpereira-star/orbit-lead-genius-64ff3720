@@ -8,6 +8,7 @@ import { getContrastText } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
 import { evaluatePercent } from '../lib/variables';
+import { resolveBlockStyle } from '../lib/blockStyle';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
@@ -237,7 +238,13 @@ export function QuizPreview({
                                       <Eye className="h-2.5 w-2.5" /> condicional
                                     </div>
                                   )}
-                                  <BlockRenderer block={b} design={design} allBlocks={blocks} device={device} />
+                                  {/* Estilo do bloco (abas Layout/Aparência) num
+                                      embrulho: sem ele cada bloco teria que
+                                      aplicar margem e cor por conta própria, e
+                                      37 tipos divergiriam em uma semana. */}
+                                  <div style={resolveBlockStyle(b)}>
+                                    <BlockRenderer block={b} design={design} allBlocks={blocks} device={device} />
+                                  </div>
                                 </div>
                               )}
                             </Draggable>

@@ -1,5 +1,7 @@
 import type { RichDoc } from './lib/richdoc';
+import type { BlockStyle } from './lib/blockStyle';
 export type { RichDoc };
+export type { BlockStyle };
 
 export type QuizStatus = 'draft' | 'published' | 'archived';
 export type QuizLayoutMode = 'fullscreen' | 'card' | 'split' | 'story' | 'inline' | 'modal';
@@ -239,6 +241,13 @@ export interface QuizBlock {
   // campo ausente herda em cascata (Desktop herda de Tablet, que herda de Mobile).
   containerTablet?: ContainerBreakpointLayout;
   containerDesktop?: ContainerBreakpointLayout;
+  /**
+   * Estilo próprio do bloco (abas Layout e Aparência).
+   *
+   * Ausente = renderiza como sempre renderizou. Nenhum valor padrão é gravado
+   * no schema de propósito: default gravado é o que trava troca de tema depois.
+   */
+  blockStyle?: BlockStyle;
   // Layout — Espaçamento: bloco "vazio" que só ocupa altura vertical.
   spacerHeight?: number; // px
 }

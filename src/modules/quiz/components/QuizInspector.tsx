@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import type { BlockStyle } from '../lib/blockStyle';
 import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import { GripVertical, Copy } from 'lucide-react';
+import { Rows3, AlignCenter as AlignCenterIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Plus, FlaskConical, LayoutGrid, Image as ImageIcon, ListChecks, Eye, CornerDownRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { DESIGN_PRESETS } from '../design-presets';
@@ -158,6 +160,32 @@ function BlockInspector({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Abas por bloco. Antes tudo era uma lista só: espaçamento e cor ficavam
+          soterrados embaixo de conteúdo, opções e lógica, e na prática ninguém
+          rolava até lá. */}
+      <Tabs defaultValue="conteudo">
+        <TabsList className="w-full">
+          <TabsTrigger value="conteudo" className="flex-1 gap-1.5 text-xs">
+            <LayoutGrid className="h-3.5 w-3.5" />Conteúdo
+          </TabsTrigger>
+          <TabsTrigger value="layout" className="flex-1 gap-1.5 text-xs">
+            <Rows3 className="h-3.5 w-3.5" />Layout
+          </TabsTrigger>
+          <TabsTrigger value="aparencia" className="flex-1 gap-1.5 text-xs">
+            <Palette className="h-3.5 w-3.5" />Aparência
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="layout" className="space-y-5 pt-4">
+          <LayoutTab block={block} onChange={onChange} />
+        </TabsContent>
+
+        <TabsContent value="aparencia" className="space-y-5 pt-4">
+          <AparenciaTab block={block} onChange={onChange} />
+        </TabsContent>
+
+        <TabsContent value="conteudo" className="space-y-5 pt-4">
 
       <Section title="Conteúdo" icon={LayoutGrid} first>
         {block.type === 'result' ? (
@@ -777,7 +805,132 @@ function BlockInspector({
       {block.type !== 'result' && (
         <AbTestSection quizId={quizId} block={block} onChange={onChange} />
       )}
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+/** Patch parcial do estilo do bloco, preservando o que já estava configurado. */
+function patchStyle(block: QuizBlock, patch: Partial<BlockStyle>): Partial<QuizBlock> {
+  return { blockStyle: { ...(block.blockStyle ?? {}), ...patch } };
+}
+
+/** Campo numérico em px que aceita ficar VAZIO — vazio = "não mexe nisso". */
+function PxField({
+  label, value, onChange, placeholder = 'automático', max = 400,
+}: {
+  label: string;
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  placeholder?: string;
+  max?: number;
+}) {
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-1.5">
+        <Input
+          type="number"
+          min={0}
+          max={max}
+          value={value ?? ''}
+          placeholder={placeholder}
+          onChange={(e) => {
+            const raw = e.target.value;
+            // String vazia vira `undefined`, não 0: são coisas diferentes —
+            // "sem margem definida" herda o layout, "margem 0" força colado.
+            onChange(raw === '' ? undefined : Math.max(0, Math.min(max, Number(raw))));
+          }}
+          className="h-8"
+        />
+        <span className="shrink-0 text-[11px] text-muted-foreground">px</span>
+      </div>
+    </Field>
+  );
+}
+
+function LayoutTab({ block, onChange }: { block: QuizBlock; onChange: (p: Partial<QuizBlock>) => void }) {
+  const s = block.blockStyle ?? {};
+  return (
+    <>
+      <Section title="Espaçamento" icon={Rows3} first>
+        <div className="grid grid-cols-2 gap-2.5">
+          <PxField label="Acima" value={s.marginTop} onChange={(v) => onChange(patchStyle(block, { marginTop: v }))} placeholder="0" />
+          <PxField label="Abaixo" value={s.marginBottom} onChange={(v) => onChange(patchStyle(block, { marginBottom: v }))} placeholder="0" />
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <PxField label="Interno lateral" value={s.paddingX} onChange={(v) => onChange(patchStyle(block, { paddingX: v }))} placeholder="0" max={120} />
+          <PxField label="Interno vertical" value={s.paddingY} onChange={(v) => onChange(patchStyle(block, { paddingY: v }))} placeholder="0" max={120} />
+        </div>
+      </Section>
+
+      <Section title="Largura e alinhamento" icon={AlignCenterIcon}>
+        <PxField
+          label="Largura máxima"
+          value={s.maxWidth}
+          onChange={(v) => onChange(patchStyle(block, { maxWidth: v }))}
+          placeholder="ocupa tudo"
+          max={1200}
+        />
+        <Field label="Alinhamento">
+          <div className="grid grid-cols-3 gap-1.5">
+            {(['left', 'center', 'right'] as const).map((a) => (
+              <Button
+                key={a}
+                size="sm"
+                variant={s.align === a ? 'secondary' : 'outline'}
+                className="h-8 text-xs"
+                onClick={() => onChange(patchStyle(block, { align: s.align === a ? undefined : a }))}
+              >
+                {a === 'left' ? 'Esquerda' : a === 'center' ? 'Centro' : 'Direita'}
+              </Button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            Alinha o conteúdo. Para mover o bloco em si, defina também uma largura máxima.
+          </p>
+        </Field>
+      </Section>
+    </>
+  );
+}
+
+function AparenciaTab({ block, onChange }: { block: QuizBlock; onChange: (p: Partial<QuizBlock>) => void }) {
+  const s = block.blockStyle ?? {};
+  const limpar = (campo: keyof BlockStyle) => onChange(patchStyle(block, { [campo]: undefined }));
+
+  return (
+    <>
+      <Section title="Cores" icon={Palette} first>
+        <ColorField label="Fundo do bloco" value={s.background ?? '#ffffff'} onChange={(v) => onChange(patchStyle(block, { background: v }))} />
+        <ColorField label="Cor do texto" value={s.textColor ?? '#111827'} onChange={(v) => onChange(patchStyle(block, { textColor: v }))} />
+        {/* Sem isto não há volta: escolher uma cor uma vez prenderia o bloco a
+            ela pra sempre, mesmo trocando o tema do quiz. */}
+        {(s.background || s.textColor) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-full text-xs text-muted-foreground"
+            onClick={() => onChange(patchStyle(block, { background: undefined, textColor: undefined }))}
+          >
+            Voltar às cores do tema
+          </Button>
+        )}
+      </Section>
+
+      <Section title="Borda" icon={SlidersHorizontal}>
+        <PxField label="Espessura" value={s.borderWidth} onChange={(v) => onChange(patchStyle(block, { borderWidth: v }))} placeholder="sem borda" max={12} />
+        {!!s.borderWidth && (
+          <ColorField label="Cor da borda" value={s.borderColor ?? '#e5e7eb'} onChange={(v) => onChange(patchStyle(block, { borderColor: v }))} />
+        )}
+        <PxField label="Cantos arredondados" value={s.radius} onChange={(v) => onChange(patchStyle(block, { radius: v }))} placeholder="do tema" max={64} />
+        {s.borderWidth !== undefined && (
+          <Button size="sm" variant="ghost" className="h-7 w-full text-xs text-muted-foreground" onClick={() => limpar('borderWidth')}>
+            Remover borda
+          </Button>
+        )}
+      </Section>
+    </>
   );
 }
 
