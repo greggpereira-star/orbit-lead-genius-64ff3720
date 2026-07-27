@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
-import { quizService } from '../services/quizService';
+import { quizService, captureQuizLead } from '../services/quizService';
 import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
@@ -194,6 +194,11 @@ function PlayerRunner({
 }) {
   const [state, setState] = useState<QuizRunState>(createInitialState);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  /* Identidade da RESPOSTA, não da pessoa: é o que amarra a captura
+     antecipada à conclusão para não virarem dois leads. Vive só nesta aba. */
+  const sessionId = useRef<string>(crypto.randomUUID());
+  /* Contato já enviado — evita repetir a mesma chamada a cada etapa. */
+  const capturedContact = useRef<string | null>(null);
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [stepValidity, setStepValidity] = useState<Record<string, boolean>>({});
@@ -371,6 +376,30 @@ function PlayerRunner({
       tags: [...state.tags, ...tags],
       history: [...state.history, ...flatAnswerableBlocks.map((b) => b.id)],
     };
+    // Captura antecipada: assim que existe contato, o lead é gravado — mesmo
+    // que a pessoa feche a página no meio. É exatamente esse visitante que
+    // vale recuperar por e-mail depois.
+    if (!preview) {
+      const emailNow = extract(nextResponses, blocks, 'email');
+      const phoneNow = extract(nextResponses, blocks, 'phone');
+      const chave = `${emailNow ?? ''}|${phoneNow ?? ''}`;
+      if ((emailNow || phoneNow) && capturedContact.current !== chave) {
+        capturedContact.current = chave;
+        // Fire-and-forget: nunca segurar o avanço da etapa por causa disto.
+        captureQuizLead({
+          quizId,
+          sessionId: sessionId.current,
+          email: emailNow,
+          phone: phoneNow,
+          name: extract(nextResponses, blocks, 'short-text'),
+          score: nextState.score,
+          tracking,
+          responses: nextResponses,
+          completed: false,
+        }).catch(() => {});
+      }
+    }
+
     if (isLastStep) {
       await finish(nextState);
       return;
@@ -419,6 +448,7 @@ function PlayerRunner({
         phone,
         name,
         tracking: enrichedTracking,
+        sessionId: sessionId.current,
       });
       setSubmissionId(id);
       await quizService

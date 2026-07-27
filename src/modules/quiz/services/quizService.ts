@@ -46,6 +46,55 @@ async function findUniqueSlug(companyId: string, baseSlug: string, excludeId?: s
   return finalSlug;
 }
 
+/**
+ * Grava (ou completa) o lead de uma sessão do quiz.
+ *
+ * Chamada duas vezes na vida de um respondente: quando o contato aparece — é
+ * o que salva quem abandona depois de digitar o e-mail — e de novo ao
+ * concluir. A chave é `sessionId`: a segunda chamada completa o mesmo lead em
+ * vez de criar outro.
+ *
+ * Passa por RPC porque o respondente é anônimo. Deixar um cliente anônimo dar
+ * UPDATE em `leads` exigiria uma política que liberaria atualizar qualquer
+ * lead da base — a função faz o oposto: deriva a empresa do próprio quiz e só
+ * acrescenta dados.
+ */
+export async function captureQuizLead(params: {
+  quizId: string;
+  sessionId: string;
+  email?: string;
+  phone?: string;
+  name?: string;
+  score?: number;
+  temperature?: 'hot' | 'warm' | 'cold';
+  tracking?: Record<string, string>;
+  responses?: Record<string, unknown>;
+  submissionId?: string | null;
+  completed?: boolean;
+}): Promise<string | null> {
+  if (!params.email && !params.phone) return null;
+  const { data, error } = await (supabase as any).rpc('quiz_capture_lead', {
+    p_quiz_id: params.quizId,
+    p_session_id: params.sessionId,
+    p_email: params.email ?? null,
+    p_phone: params.phone ?? null,
+    p_name: params.name ?? null,
+    p_score: params.score ?? 0,
+    p_temperature: params.temperature ?? 'cold',
+    p_tracking: params.tracking ?? {},
+    p_responses: params.responses ?? {},
+    p_submission_id: params.submissionId ?? null,
+    p_completed: params.completed ?? false,
+  });
+  if (error) {
+    // Sem log, uma falha aqui volta a ser invisível — foi assim que nenhum
+    // lead de quiz entrou na base por meses.
+    console.error('Falha ao capturar lead do quiz', error);
+    return null;
+  }
+  return (data as string | null) ?? null;
+}
+
 export const quizService = {
   async list(companyId: string): Promise<QuizFunnel[]> {
     const { data, error } = await supabase
@@ -542,6 +591,8 @@ export const quizService = {
     phone?: string;
     name?: string;
     tracking?: Record<string, string>;
+    /** Mesma sessão da captura antecipada — é a chave que evita lead duplicado. */
+    sessionId: string;
   }): Promise<string | null> {
     const tracking = params.tracking ?? {};
     const answers = {
@@ -611,52 +662,29 @@ export const quizService = {
     // Auto-create lead + trigger CV.CRM sync when contact info was captured
     if (params.email || params.phone) {
       try {
-        const leadId = crypto.randomUUID();
-
-        // Etapa de entrada configurada neste funil (aba Geral das configurações
-        // do quiz). Via RPC, não lendo `stages`: o visitante do quiz é anônimo
-        // e não tem permissão nessa tabela — ler dali lançava e derrubava a
-        // criação do lead junto.
-        const entryStageId = await resolveEntryStageId(params.companyId, defaultStageId);
-
-        const { error: leadError } = await supabase
-          .from('leads')
-          .insert({
-            id: leadId,
-            company_id: params.companyId,
-            quiz_id: params.quizId,
-            name: params.name ?? null,
-            email: params.email ?? null,
-            phone: params.phone ?? null,
-            source: 'Alt Quiz',
-            status: 'new',
-            stage_id: entryStageId,
-            stage_entered_at: new Date().toISOString(),
-            board_order: newLeadBoardOrder(),
-            score: params.score,
-            temperature: params.temperature,
-            // `tags` não é coluna de `leads` — as etiquetas moram na tabela
-            // `lead_tags`. Mandar a chave aqui fazia o insert inteiro falhar
-            // com 42703, e como o erro nunca era logado, o quiz mostrava
-            // "obrigado" e o lead simplesmente não existia. Nenhum lead de
-            // quiz jamais entrou neste banco por causa disso.
-            utm_source: tracking.utm_source ?? null,
-            utm_medium: tracking.utm_medium ?? null,
-            utm_campaign: tracking.utm_campaign ?? null,
-            utm_content: tracking.utm_content ?? null,
-            utm_term: tracking.utm_term ?? null,
-            metadata: {
-              quiz_id: params.quizId,
-              submission_id: submissionId,
-              responses: params.responses,
-            },
-          } as never);
-
-        // Sem este log, uma falha de insert sumia sem deixar rastro: o quiz
-        // mostrava "obrigado", a submissão era gravada e o lead simplesmente
-        // não existia. Foi assim que a regressão da etapa passou despercebida.
-        if (leadError) {
-          console.error('Falha ao criar lead do quiz', leadError);
+        // MESMA função da captura antecipada, com `completed: true`. Se o
+        // visitante já tinha sido capturado ao preencher o e-mail, isto
+        // COMPLETA aquele lead em vez de criar um segundo — a chave é a
+        // sessão. Escrever pela função também tira o insert direto em `leads`
+        // das mãos de um cliente anônimo.
+        const leadId = await captureQuizLead({
+          quizId: params.quizId,
+          sessionId: params.sessionId,
+          email: params.email,
+          phone: params.phone,
+          name: params.name,
+          score: params.score,
+          temperature: params.temperature,
+          tracking,
+          responses: params.responses,
+          submissionId,
+          completed: true,
+        });
+        // `!leadId` cobre os dois casos de uma vez: falha na função (que já
+        // logou o motivo) e quiz sem contato nenhum, onde não existe lead a
+        // criar. Também é o que estreita o tipo para o resto do bloco.
+        if (!leadId) {
+          console.warn('Quiz concluído sem lead — sem contato ou captura falhou');
         } else {
           if (submissionId) {
             await supabase.from('quiz_submissions').update({ lead_id: leadId } as never).eq('id', submissionId);
