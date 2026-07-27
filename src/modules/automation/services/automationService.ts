@@ -1,7 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
-import { googleAdsService } from '@/modules/google/services/googleAds';
-import { metaCapiService } from '@/modules/meta/services/capi';
 
 export interface AutomationTrigger {
   type: 'lead_created' | 'stage_changed' | 'score_threshold';
@@ -62,19 +60,17 @@ export const automationService = {
         });
         break;
       
-      case 'google_conversion':
-        if (data.gclid) {
-          await googleAdsService.uploadConversion(automation.company_id, {
-            gclid: data.gclid,
-            conversion_name: config?.conversion_name || 'Lead',
-            conversion_time: new Date().toISOString()
-          });
-        }
-        break;
-
-      case 'meta_capi':
-        await metaCapiService.sendLeadEvent(automation.company_id, data);
-        break;
+      // Aqui existiam as ações 'google_conversion' e 'meta_capi'.
+      //
+      // A primeira não enviava nada ao Google: dava console.log e gravava um
+      // lead_events dizendo "Conversion uploaded to Google Ads", retornando
+      // sucesso. Quem lesse a ficha do lead acreditaria numa conversão que
+      // nunca saiu. A segunda rodava no navegador e buscaria o access token da
+      // Conversions API para dentro da página.
+      //
+      // As duas foram substituídas pela medição de verdade: pixel e conversão
+      // disparam nas páginas públicas (`usePixelTracking`) no momento em que o
+      // contato é capturado, com espelho server-side em `/api/public/pixel-event`.
 
       case 'slack_notification':
         console.log('Sending Slack notification...', config?.webhook_url);

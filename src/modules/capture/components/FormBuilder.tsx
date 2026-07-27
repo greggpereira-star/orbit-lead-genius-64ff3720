@@ -858,6 +858,43 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                       </p>
                     </div>
 
+                    {/* Pixel próprio deste formulário. Campo vazio herda o da
+                        empresa — tratar vazio como "sem medição" faria todo
+                        formulário novo nascer invisível para as campanhas. */}
+                    <div className="space-y-2 pt-4 border-t">
+                      <Label className="text-xs">Medição só deste formulário</Label>
+                      {([
+                        ['meta_pixel_id', 'ID do Pixel do Meta'],
+                        ['google_conversion_id', 'ID de conversão do Google Ads'],
+                        ['google_lead_label', 'Rótulo da conversão'],
+                      ] as const).map(([key, label]) => (
+                        <div key={key} className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">{label}</Label>
+                          <Input
+                            value={((formConfig.settings as Record<string, unknown> | undefined)?.[key] as string) ?? ''}
+                            placeholder="Herda o da empresa"
+                            onChange={(e) => setFormConfig(prev => {
+                              const currentSettings = prev.settings || {
+                                submit_label: 'Submit',
+                                success_message: 'Thank you!',
+                                theme: 'premium-light',
+                                cv_crm_integration: false,
+                                capture_utms: true
+                              };
+                              const next = { ...currentSettings } as Record<string, unknown>;
+                              const value = e.target.value.trim();
+                              if (value) next[key] = value;
+                              else delete next[key];
+                              return { ...prev, settings: next as typeof currentSettings };
+                            })}
+                          />
+                        </div>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground">
+                        O pixel da empresa fica em Configurações → Integrações e vale para todos os funis.
+                      </p>
+                    </div>
+
                     <div className="space-y-4 pt-4 border-t">
                       <Label className="text-[10px] uppercase font-bold tracking-widest opacity-70">Post-Submission</Label>
                       <div className="space-y-2">

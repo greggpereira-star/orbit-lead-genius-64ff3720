@@ -19,6 +19,10 @@ export interface Form {
     capture_utms: boolean;
     /** Etapa do pipeline onde o lead entra. Ausente = etapa padrão do funil. */
     default_stage_id?: string;
+    /* Medição só deste formulário. Ausente = herda o pixel da empresa. */
+    meta_pixel_id?: string;
+    google_conversion_id?: string;
+    google_lead_label?: string;
   };
   created_at: string;
   updated_at: string;

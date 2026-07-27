@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService, captureQuizLead } from '../services/quizService';
+import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
 import type { QuizBlock, QuizSchema, AccessRules } from '../types';
 import { getSteps } from '../lib/steps';
 import { getContrastText } from '../lib/color';
@@ -199,6 +200,23 @@ function PlayerRunner({
   const sessionId = useRef<string>(crypto.randomUUID());
   /* Contato já enviado — evita repetir a mesma chamada a cada etapa. */
   const capturedContact = useRef<string | null>(null);
+
+  const funnelPixels = useMemo(
+    () => ({
+      metaPixelId: settings?.meta_pixel_id as string | undefined,
+      googleConversionId: settings?.google_conversion_id as string | undefined,
+      googleLeadLabel: settings?.google_lead_label as string | undefined,
+      googleCompleteLabel: settings?.google_complete_label as string | undefined,
+    }),
+    [settings],
+  );
+  const { trackStep, trackLead, trackComplete } = usePixelTracking({
+    companyId,
+    quizId,
+    overrides: funnelPixels,
+    tracking,
+    enabled: !preview,
+  });
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [stepValidity, setStepValidity] = useState<Record<string, boolean>>({});
@@ -299,6 +317,15 @@ function PlayerRunner({
     quizService.trackEvent({ quizId, companyId, eventType: 'start' }).catch(() => {});
   }, [quizId, companyId, preview]);
 
+  // Cada etapa vista vira um ViewContent. Junto com o Lead e a conclusão, é o
+  // que dá ao Meta material para otimizar por quem chega ao fim, e não só por
+  // quem clica no anúncio.
+  useEffect(() => {
+    if (!currentStep) return;
+    trackStep(state.currentStepIndex, currentStep.name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep?.id]);
+
   useEffect(() => {
     if (preview) return;
     for (const b of stepBlocks) {
@@ -385,6 +412,9 @@ function PlayerRunner({
       const chave = `${emailNow ?? ''}|${phoneNow ?? ''}`;
       if ((emailNow || phoneNow) && capturedContact.current !== chave) {
         capturedContact.current = chave;
+        // Mesmo instante em que o lead nasce no CRM. Antes disso o Meta não
+        // tem contato para casar; depois, o visitante já pode ter fechado.
+        trackLead({ email: emailNow, phone: phoneNow }, { content_name: 'quiz_contato' });
         // Fire-and-forget: nunca segurar o avanço da etapa por causa disto.
         captureQuizLead({
           quizId,
@@ -460,6 +490,11 @@ function PlayerRunner({
           metadata: { score: finalState.score, temperature },
         })
         .catch(() => {});
+      trackComplete({ email, phone }, {
+        content_name: 'quiz_concluido',
+        quiz_score: finalState.score,
+        lead_temperature: temperature,
+      });
       setState(finalState);
       setDone(true);
     } finally {

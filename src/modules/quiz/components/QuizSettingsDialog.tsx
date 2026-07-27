@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2, Globe, Webhook, Search, Code, Sparkles, Timer, Plus, Trash2,
-  CheckCircle2, Gift, Users, Star, Flame, Bell, Columns3,
+  CheckCircle2, Gift, Users, Star, Flame, Bell, Columns3, Target,
 } from 'lucide-react';
 import { StageSelect } from '@/modules/crm/components/StageSelect';
 import { quizService } from '../services/quizService';
@@ -60,6 +60,10 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
   const [urgencyBar, setUrgencyBar] = useState<UrgencyBarSettings>(DEFAULT_URGENCY_BAR);
   const [companySubdomain, setCompanySubdomain] = useState<string | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string | null>(null);
+  const [metaPixelId, setMetaPixelId] = useState('');
+  const [googleConversionId, setGoogleConversionId] = useState('');
+  const [googleLeadLabel, setGoogleLeadLabel] = useState('');
+  const [googleCompleteLabel, setGoogleCompleteLabel] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -90,6 +94,10 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         setSocialProof({ ...DEFAULT_SOCIAL_PROOF, ...(settings.social_proof as Partial<SocialProofSettings> | undefined) });
         setUrgencyBar({ ...DEFAULT_URGENCY_BAR, ...(settings.urgency_bar as Partial<UrgencyBarSettings> | undefined) });
         setDefaultStageId((settings.default_stage_id as string | undefined) ?? null);
+        setMetaPixelId((settings.meta_pixel_id as string) ?? '');
+        setGoogleConversionId((settings.google_conversion_id as string) ?? '');
+        setGoogleLeadLabel((settings.google_lead_label as string) ?? '');
+        setGoogleCompleteLabel((settings.google_complete_label as string) ?? '');
       })
       .catch((e: unknown) => {
         toast.error('Erro ao carregar configurações: ' + (e instanceof Error ? e.message : String(e)));
@@ -123,6 +131,10 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         socialProof,
         urgencyBar,
         defaultStageId,
+        metaPixelId,
+        googleConversionId,
+        googleLeadLabel,
+        googleCompleteLabel,
       });
       setSlug(updated.slug);
       setPublicSlug(updated.slug);
@@ -351,6 +363,58 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                 <p className="text-xs text-muted-foreground">
                   Dispara um POST com os dados da resposta sempre que alguém completar este quiz. Enviado diretamente do navegador do visitante — o endpoint precisa aceitar requisições CORS.
                 </p>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t">
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Target className="h-3.5 w-3.5" /> Medição só deste funil
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Campo em branco herda o pixel da empresa, configurado em Configurações →
+                    Integrações. Preencha apenas quando este funil precisar de um pixel diferente.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quiz-settings-meta-pixel" className="text-xs">ID do Pixel do Meta</Label>
+                    <Input
+                      id="quiz-settings-meta-pixel"
+                      inputMode="numeric"
+                      value={metaPixelId}
+                      onChange={(e) => setMetaPixelId(e.target.value)}
+                      placeholder="Herda o da empresa"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quiz-settings-google-id" className="text-xs">ID de conversão do Google Ads</Label>
+                    <Input
+                      id="quiz-settings-google-id"
+                      value={googleConversionId}
+                      onChange={(e) => setGoogleConversionId(e.target.value)}
+                      placeholder="Herda o da empresa"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quiz-settings-google-lead" className="text-xs">Rótulo — contato capturado</Label>
+                    <Input
+                      id="quiz-settings-google-lead"
+                      value={googleLeadLabel}
+                      onChange={(e) => setGoogleLeadLabel(e.target.value)}
+                      placeholder="Herda o da empresa"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="quiz-settings-google-complete" className="text-xs">Rótulo — quiz concluído</Label>
+                    <Input
+                      id="quiz-settings-google-complete"
+                      value={googleCompleteLabel}
+                      onChange={(e) => setGoogleCompleteLabel(e.target.value)}
+                      placeholder="Herda o da empresa"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5 pt-2 border-t">

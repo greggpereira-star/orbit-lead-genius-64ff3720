@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Database, Code, Copy, CheckCircle2, Zap } from 'lucide-react';
 import { MetaIntegration } from '@/modules/integrations/components/MetaIntegration';
 import { GoogleIntegration } from '@/modules/integrations/components/GoogleIntegration';
+import { PixelSettingsCard } from '@/modules/integrations/components/PixelSettingsCard';
 import { 
   Dialog, 
   DialogContent, 
@@ -87,17 +88,14 @@ function IntegrationsSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Aqui existia um card "Tracking Pixel & attribution" que entregava ao
-          cliente um <script> para instalar no site dele. Era inteiramente
-          falso: carregava de cdn.lovable.app (CDN de terceiro, do editor em
-          que o projeto nasceu), com um id fixo TRK-LEAD-8293 igual para todo
-          mundo, e exibia "Verified on 3 domains" e "Real-time CAPI Enabled"
-          como texto cravado. Instalar aquilo não rastreava nada.
+      {/* Ocupa o lugar do antigo card "Tracking Pixel & attribution", que
+          entregava um <script> vindo de cdn.lovable.app com um id fixo igual
+          para todos os clientes e dizia "Verified on 3 domains" em texto
+          cravado. Instalar aquilo não rastreava nada.
 
-          O rastreio real do produto já acontece por outro caminho — UTMs
-          capturadas no quiz e no formulário, e a CAPI do Meta. Um pixel
-          próprio, se um dia fizer sentido, precisa de id por empresa e de um
-          endpoint nosso. */}
+          Este card é o pixel de verdade: id por empresa, disparo nas páginas
+          públicas do produto e Conversions API por um endpoint nosso. */}
+      {company && <PixelSettingsCard companyId={company.id} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {company && <MetaIntegration companyId={company.id} />}

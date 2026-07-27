@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { captureService } from '../services/captureService';
 import { tracker } from '@/core/tracking/tracker';
 import { partialSubmissionService } from '../services/partialSubmissionService';
+import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
 
 interface PublicFormRendererProps {
   slug: string;
@@ -43,6 +44,20 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   });
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue, getValues, trigger } = useForm();
+
+  /* Formulário tem um momento só: enviar É deixar o contato. Por isso aqui sai
+     `Lead` e não também `CompleteRegistration` — os dois no mesmo clique
+     contariam a mesma pessoa duas vezes no Gerenciador de Eventos. */
+  const { trackLead } = usePixelTracking({
+    companyId: form?.company_id,
+    formId: form?.id,
+    overrides: {
+      metaPixelId: form?.settings?.meta_pixel_id,
+      googleConversionId: form?.settings?.google_conversion_id,
+      googleLeadLabel: form?.settings?.google_lead_label,
+    },
+    enabled: !!form,
+  });
 
   // Iframe auto-resize notification
   useEffect(() => {
@@ -171,6 +186,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       }, trackingData);
 
        if (result.success) {
+         trackLead(
+           { email: values.email, phone: values.phone },
+           { content_name: form.name ?? 'formulario' },
+         );
+
          // Notify parent window for tracking
          if (window.parent) {
            window.parent.postMessage({

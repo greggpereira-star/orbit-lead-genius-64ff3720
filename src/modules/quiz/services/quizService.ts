@@ -185,6 +185,11 @@ export const quizService = {
     urgencyBar?: UrgencyBarSettings;
     /** Etapa do pipeline onde o lead deste quiz entra. `null` = padrão do funil. */
     defaultStageId?: string | null;
+    /* Medição só deste funil. Em branco = herda o pixel da empresa. */
+    metaPixelId?: string;
+    googleConversionId?: string;
+    googleLeadLabel?: string;
+    googleCompleteLabel?: string;
   }): Promise<QuizFunnel> {
     const patch: Record<string, unknown> = {};
 
@@ -206,6 +211,10 @@ export const quizService = {
       ['seoTitle', 'seo_title'],
       ['seoDescription', 'seo_description'],
       ['seoOgImage', 'seo_og_image'],
+      ['metaPixelId', 'meta_pixel_id'],
+      ['googleConversionId', 'google_conversion_id'],
+      ['googleLeadLabel', 'google_lead_label'],
+      ['googleCompleteLabel', 'google_complete_label'],
     ];
     const touchedSettings =
       settingsFields.some(([key]) => params[key] !== undefined) ||
