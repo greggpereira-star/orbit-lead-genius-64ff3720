@@ -33,14 +33,30 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
      }
  
       const startAuth = performance.now();
+      // `apikey` sozinho passa pelo Kong mas não define o papel no PostgREST.
+      // O cliente do Supabase manda os dois em toda requisição; a sonda tem
+      // que mandar também, senão não está medindo o mesmo caminho que o app usa.
+      const headers = {
+        apikey: config.supabaseAnonKey,
+        Authorization: `Bearer ${config.supabaseAnonKey}`,
+      };
        const [authRes, dbRes] = await Promise.all([
         fetch(`${config.supabaseUrl}/auth/v1/health`, {
-          headers: { apikey: config.supabaseAnonKey },
+          headers,
           signal: AbortSignal.timeout(5000)
         }).catch(err => ({ ok: false, status: 0, error: err.message })),
-         fetch(`${config.supabaseUrl}/rest/v1/companies?select=id&limit=1`, {
+         // `quiz_funnels`, não `companies`.
+         //
+         // O papel `anon` não tem privilégio em `companies` — e não deve ter:
+         // é a tabela dos assinantes. A sonda antiga levava 401 (Postgres
+         // 42501) em toda carga de página, o que deixava `database: false`
+         // permanentemente. O sistema ficava pendurado num único check vivo, e
+         // qualquer soluço dele derrubava o app inteiro para `unhealthy`.
+         // `quiz_funnels` é o que o visitante realmente lê, então responder
+         // 200 aqui significa que o caminho que importa está de pé.
+         fetch(`${config.supabaseUrl}/rest/v1/quiz_funnels?select=id&limit=1`, {
           method: 'GET',
-           headers: { apikey: config.supabaseAnonKey },
+           headers,
           signal: AbortSignal.timeout(5000)
         }).catch(err => ({ ok: false, status: 0, error: err.message }))
       ]);

@@ -6,6 +6,16 @@
  import { getRuntimeConfig } from '@/core/config/runtime-config';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Superfícies que o visitante anônimo abre — quiz, formulário e os embeds.
+ *
+ * Estava faltando `/q/` aqui: só `/f/` era liberado, então uma falha do
+ * healthcheck derrubava justamente a página de quiz para onde o anúncio
+ * aponta, com uma tela de diagnóstico de infraestrutura no lugar do funil.
+ * Rota pública nova precisa entrar nesta lista.
+ */
+const PREFIXOS_PUBLICOS = ['/q/', '/f/', '/embed-form/', '/chat-embed/'];
+
  export const InfrastructureGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
    const [state, setState] = useState<BootstrapState>(BootstrapEngine.getState());
    const routerState = useRouterState();
@@ -18,24 +28,35 @@ import { Button } from '@/components/ui/button';
  
     const isBypassPath = useMemo(() => {
       const path = routerState.location.pathname;
-       const bypassList = ['/', '/auth', '/login', '/signup', '/integrations/meta/callback', '/oauth-callback', '/meta-oauth-callback', '/functions/v1/oauth-callback'];
-      if (bypassList.includes(path)) return true;
-      if (path.startsWith('/f/')) return true; // Public forms bypass
-      return false;
+      const exatos = ['/', '/auth', '/login', '/signup', '/integrations/meta/callback', '/oauth-callback', '/meta-oauth-callback', '/functions/v1/oauth-callback'];
+      if (exatos.includes(path)) return true;
+      return PREFIXOS_PUBLICOS.some((p) => path.startsWith(p));
     }, [routerState.location.pathname]);
- 
+
     const isChecking = state.status !== 'ready' && state.status !== 'failed' && state.status !== 'idle';
-    
+
     // Pass through immediately if workspace is already ready in cache
     const hasWorkspaceCache = useMemo(() => {
       if (typeof window === 'undefined') return false;
       return !!localStorage.getItem('workspace_readiness_snapshot');
     }, []);
- 
+
+    // Página pública sai na frente de tudo.
+    //
+    // Quem abre um quiz veio de anúncio e não tem contexto nenhum sobre a
+    // nossa infraestrutura. Antes, um visitante sem cache via o texto
+    // "Validating Infrastructure Integrity" em inglês na frente do quiz
+    // enquanto o healthcheck rodava, e via a tela de diagnóstico inteira se o
+    // healthcheck falhasse. Diagnóstico é assunto de quem opera o sistema; o
+    // funil de quem paga tráfego não pode depender disso.
+    if (isBypassPath) {
+      return <>{children}</>;
+    }
+
     if (hasWorkspaceCache && state.status !== 'failed') {
       return <>{children}</>;
     }
- 
+
    if (isChecking) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-background space-y-4">
@@ -156,10 +177,14 @@ import { Button } from '@/components/ui/button';
              
              <div className="p-4 bg-muted rounded-lg border text-[11px] space-y-2">
                <p className="font-bold uppercase">Como resolver:</p>
+               {/* As instruções antigas mandavam conferir o saldo no Lovable Cloud e a
+                   integração Supabase no painel — sobra de onde o projeto nasceu. O
+                   Supabase é self-hosted na nossa VPS há tempos; seguir aquilo levaria
+                   quem está resolvendo o problema para um lugar que não existe mais. */}
                <ul className="list-disc pl-4 space-y-1 opacity-80">
-                 <li>Verifique se o seu saldo no Lovable Cloud não expirou.</li>
-                 <li>Certifique-se de que a integração Supabase está habilitada no painel.</li>
-                 <li>Se estiver usando um projeto próprio, configure as chaves <code className="bg-background px-1">VITE_SUPABASE_URL</code> e <code className="bg-background px-1">VITE_SUPABASE_ANON_KEY</code>.</li>
+                 <li>Confira se a API responde: <code className="bg-background px-1">supabase-api.altleadflow.com.br</code>.</li>
+                 <li>Na VPS, veja os contêineres <code className="bg-background px-1">altleadflow-db</code> e o Kong da API.</li>
+                 <li>Se o erro for de configuração, confira <code className="bg-background px-1">VITE_SUPABASE_URL</code> e <code className="bg-background px-1">VITE_SUPABASE_ANON_KEY</code> no build.</li>
                </ul>
              </div>
              
