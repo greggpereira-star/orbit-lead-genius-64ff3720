@@ -13,6 +13,39 @@ export interface HealthReport {
    latency: Record<string, number>;
  }
 
+interface RespostaSonda { ok: boolean; status: number; error?: string }
+
+/**
+ * Uma sonda com direito a segunda chance.
+ *
+ * A primeira versão declarava o app inteiro fora do ar na primeira falha, e o
+ * estado ficava travado — só o botão "Tentar reconectar" saía de lá. O caso
+ * comum não era queda de infraestrutura: era aba em segundo plano. O navegador
+ * suspende a aba, o `AbortSignal.timeout` continua contando o tempo parado, e
+ * as duas sondas abortam juntas no retorno. Do lado de fora, isso é
+ * indistinguível de um servidor morto — e o usuário voltava para uma tela de
+ * diagnóstico com o CRM funcionando perfeitamente atrás dela.
+ *
+ * Uma repetição resolve isso sem mascarar problema de verdade: se a API está
+ * mesmo fora, as duas tentativas falham e o relatório continua honesto. O
+ * limite subiu para 8s porque 5s é apertado para uma conexão móvel fria.
+ */
+async function sondar(url: string, headers: Record<string, string>): Promise<RespostaSonda> {
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    try {
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+      return { ok: res.ok, status: res.status };
+    } catch (err) {
+      // Resposta do servidor, mesmo que de erro, já é sinal de que ele está de
+      // pé; só repetimos quando não houve resposta nenhuma.
+      if (tentativa === 1) {
+        return { ok: false, status: 0, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  }
+  return { ok: false, status: 0, error: 'inalcançável' };
+}
+
 export const runInfrastructureCheck = async (): Promise<HealthReport> => {
   const report: HealthReport = {
     status: 'healthy',
@@ -41,10 +74,7 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
         Authorization: `Bearer ${config.supabaseAnonKey}`,
       };
        const [authRes, dbRes] = await Promise.all([
-        fetch(`${config.supabaseUrl}/auth/v1/health`, {
-          headers,
-          signal: AbortSignal.timeout(5000)
-        }).catch(err => ({ ok: false, status: 0, error: err.message })),
+        sondar(`${config.supabaseUrl}/auth/v1/health`, headers),
          // `quiz_funnels`, não `companies`.
          //
          // O papel `anon` não tem privilégio em `companies` — e não deve ter:
@@ -54,11 +84,7 @@ export const runInfrastructureCheck = async (): Promise<HealthReport> => {
          // qualquer soluço dele derrubava o app inteiro para `unhealthy`.
          // `quiz_funnels` é o que o visitante realmente lê, então responder
          // 200 aqui significa que o caminho que importa está de pé.
-         fetch(`${config.supabaseUrl}/rest/v1/quiz_funnels?select=id&limit=1`, {
-          method: 'GET',
-           headers,
-          signal: AbortSignal.timeout(5000)
-        }).catch(err => ({ ok: false, status: 0, error: err.message }))
+         sondar(`${config.supabaseUrl}/rest/v1/quiz_funnels?select=id&limit=1`, headers),
       ]);
 
       report.latency.auth = Math.round(performance.now() - startAuth);
