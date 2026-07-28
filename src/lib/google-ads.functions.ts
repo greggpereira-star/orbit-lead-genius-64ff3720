@@ -61,6 +61,107 @@ export const salvarConversaoGoogle = createServerFn({ method: 'POST' })
   });
 
 /**
+ * Grava o valor da venda e, se o lead já está ganho, manda a conversão.
+ *
+ * A ordem em que as duas coisas acontecem no mundo real é imprevisível: às
+ * vezes o valor é preenchido antes de fechar, às vezes depois. Se fosse só um
+ * update, quem move para "Venda fechada" e só então digita o valor teria a
+ * conversão enviada sem valor — e nada avisaria. Aqui o disparo acompanha a
+ * gravação, e o `orderId` no envio impede que uma segunda passagem vire uma
+ * segunda conversão.
+ */
+export const salvarValorDaVenda = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        leadId: z.string().uuid(),
+        valor: z.number().nonnegative().nullable(),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+
+    const { error } = await supabaseAdmin
+      .from('leads')
+      .update({ deal_value: data.valor } as never)
+      .eq('id', data.leadId);
+    if (error) throw new Error(error.message);
+
+    // Só interessa quem já está em etapa de ganho.
+    const { data: lead } = await supabaseAdmin
+      .from('leads')
+      .select('stage_id, stages!inner(kind)' as never)
+      .eq('id', data.leadId)
+      .maybeSingle();
+
+    const kind = (lead as { stages?: { kind?: string } } | null)?.stages?.kind;
+    if (kind !== 'won') return { salvo: true as const, conversao: null };
+
+    const r = await despacharConversaoVenda(data.leadId);
+    return { salvo: true as const, conversao: r.status };
+  });
+
+/**
+ * Monta e envia a conversão de venda de um lead.
+ *
+ * Fora das server functions porque as duas precisam dela — a que dispara na
+ * mudança de etapa e a que dispara ao gravar o valor depois do fechamento.
+ */
+async function despacharConversaoVenda(
+  leadId: string,
+): Promise<{ status: string; detalhe: string | null }> {
+  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+  const { data: lead } = await supabaseAdmin
+    .from('leads')
+    // `deal_value`/`deal_currency` são novas e ainda não estão no `types.ts`
+    // gerado; regerar exige rodar o CLI do Supabase contra o banco.
+    .select('id, company_id, gclid, email, phone, deal_value, deal_currency' as never)
+    .eq('id', leadId)
+    .maybeSingle();
+
+  if (!lead) return { status: 'sem_lead', detalhe: null };
+
+  const l = lead as unknown as {
+    company_id: string;
+    gclid: string | null;
+    email: string | null;
+    phone: string | null;
+    deal_value: number | string | null;
+    deal_currency: string | null;
+  };
+
+  const { enviarConversaoGoogle } = await import('./google-ads.server');
+  const r = await enviarConversaoGoogle({
+    companyId: l.company_id,
+    tipo: 'sale',
+    leadId,
+    gclid: l.gclid,
+    email: l.email,
+    phone: l.phone,
+    // `numeric` volta como string do PostgREST — mandar assim faria o Google
+    // recusar o valor sem dizer o motivo.
+    valor: l.deal_value == null ? null : Number(l.deal_value),
+    moeda: l.deal_currency,
+  });
+
+  // Registrado na ficha: é o histórico que responde "essa venda foi para o
+  // Google?" sem precisar abrir log de servidor.
+  await supabaseAdmin.from('lead_events').insert({
+    lead_id: leadId,
+    event_type: 'google_conversion',
+    description:
+      r.status === 'enviada'
+        ? 'Conversão de venda enviada ao Google Ads'
+        : `Conversão de venda não enviada: ${r.detalhe ?? r.status}`,
+    metadata: { status: r.status, detalhe: r.detalhe ?? null },
+  } as never);
+
+  return { status: r.status, detalhe: r.detalhe ?? null };
+}
+
+/**
  * Conversão de VENDA, disparada quando o lead entra numa etapa de ganho.
  *
  * Diferente da conversão de lead, esta acontece dias ou semanas depois do
@@ -70,53 +171,4 @@ export const salvarConversaoGoogle = createServerFn({ method: 'POST' })
 export const enviarConversaoVenda = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => z.object({ leadId: z.string().uuid() }).parse(raw))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-    const { data: lead } = await supabaseAdmin
-      .from('leads')
-      // `deal_value` e `deal_currency` são novas e ainda não estão no
-      // `types.ts` gerado — daí o `as any` na seleção. Regerar os tipos exige
-      // rodar o CLI do Supabase contra o banco, o que não cabe neste caminho.
-      .select('id, company_id, gclid, email, phone, deal_value, deal_currency' as any)
-      .eq('id', data.leadId)
-      .maybeSingle();
-
-    if (!lead) return { status: 'sem_lead' as const };
-
-    const l = lead as unknown as {
-      company_id: string;
-      gclid: string | null;
-      email: string | null;
-      phone: string | null;
-      deal_value: number | string | null;
-      deal_currency: string | null;
-    };
-
-    const { enviarConversaoGoogle } = await import('./google-ads.server');
-    const r = await enviarConversaoGoogle({
-      companyId: l.company_id,
-      tipo: 'sale',
-      leadId: data.leadId,
-      gclid: l.gclid,
-      email: l.email,
-      phone: l.phone,
-      // `numeric` volta como string do PostgREST — mandar assim faria o Google
-      // recusar o valor sem dizer o motivo.
-      valor: l.deal_value == null ? null : Number(l.deal_value),
-      moeda: l.deal_currency,
-    });
-
-    // Registrado na ficha do lead: é o histórico que responde "essa venda foi
-    // para o Google?" sem precisar abrir log de servidor.
-    await supabaseAdmin.from('lead_events').insert({
-      lead_id: data.leadId,
-      event_type: 'google_conversion',
-      description:
-        r.status === 'enviada'
-          ? 'Conversão de venda enviada ao Google Ads'
-          : `Conversão de venda não enviada: ${r.detalhe ?? r.status}`,
-      metadata: { status: r.status, detalhe: r.detalhe ?? null },
-    } as never);
-
-    return { status: r.status, detalhe: r.detalhe ?? null };
-  });
+  .handler(async ({ data }) => despacharConversaoVenda(data.leadId));

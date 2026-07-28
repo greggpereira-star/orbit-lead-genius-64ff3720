@@ -14,6 +14,7 @@ import {
   ChevronDown, AlertTriangle, Sparkles, DollarSign, BarChart3, Home, CircleDot,
   PencilLine, MessagesSquare,
   type LucideIcon,
+  CircleDollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { salvarValorDaVenda } from "@/lib/google-ads.functions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -906,6 +908,32 @@ export function LeadDetailDialog({
   /* Corrige dado de contato digitado errado na origem — telefone sem o nono
      dígito, e-mail com typo. Antes a ficha era só leitura e não havia como
      arrumar sem ir no banco. */
+  /**
+   * Valor da venda tem caminho próprio: além de gravar, dispara a conversão
+   * no Google Ads quando o lead já está em etapa de ganho. Passar pelo
+   * `editMutation` genérico gravaria o número e perderia a conversão.
+   */
+  const salvarValor = async (texto: string) => {
+    const limpo = texto.trim().replace(/[R$\s]/g, '');
+    const valor = limpo ? Number(limpo.replace(/\./g, '').replace(',', '.')) : null;
+    if (valor !== null && (!Number.isFinite(valor) || valor < 0)) {
+      toast.error('Valor inválido', { description: 'Use apenas números, por exemplo 12.500,00' });
+      return;
+    }
+    try {
+      const r = await salvarValorDaVenda({ data: { leadId, valor } });
+      qc.invalidateQueries({ queryKey: ['lead-detail', leadId] });
+      qc.invalidateQueries({ queryKey: ['leads'] });
+      if (r.conversao === 'enviada') toast.success('Valor salvo e conversão enviada ao Google Ads');
+      else if (r.conversao) toast.warning('Valor salvo, conversão não enviada', { description: r.conversao });
+      else toast.success('Valor da venda salvo');
+    } catch (e) {
+      toast.error('Não deu para salvar o valor', {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
+  };
+
   const editMutation = useMutation({
     mutationFn: (patch: Partial<EditableLeadFields>) =>
       updateLead({ leadId: leadId, companyId: lead?.company_id ?? '', patch }),
@@ -1155,6 +1183,33 @@ export function LeadDetailDialog({
                 icon={<Radio className="h-4 w-4" />}
                 label="Canal"
                 value={channelLabel(lead.source ?? lead.utm_source) || null}
+              />
+            </Section>
+
+            <Separator />
+
+            {/* Valor do negócio.
+                Fica aqui, na coluna de contexto, e não numa aba: é o número
+                que decide prioridade de atendimento, e escondê-lo atrás de um
+                clique faria com que ninguém preenchesse. */}
+            <Section title="Negócio">
+              <Field
+                icon={<CircleDollarSign className="h-4 w-4" />}
+                label="Valor da venda"
+                value={(() => {
+                  // `deal_value`/`deal_currency` são novas e ainda não estão
+                  // no `types.ts` gerado do Supabase.
+                  const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
+                  return l.deal_value == null
+                    ? null
+                    : Number(l.deal_value).toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: l.deal_currency ?? 'BRL',
+                      });
+                })()}
+                placeholder="Sem valor"
+                emphasis
+                onSave={(texto) => salvarValor(texto)}
               />
             </Section>
 

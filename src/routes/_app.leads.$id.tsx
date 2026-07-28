@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
+import { DealValueCard } from '@/modules/crm/components/DealValueCard';
 import {
   Activity,
   Archive,
@@ -175,6 +176,12 @@ function LeadDetailsPage() {
               <ContactRow icon={<Calendar className="h-4 w-4" />} label="Criado" value={formatDateTime(lead.created_at)} />
             </CardContent>
           </Card>
+
+          <DealValueCard
+            leadId={lead.id}
+            valorAtual={(lead as unknown as { deal_value?: number | string | null }).deal_value}
+            moeda={(lead as unknown as { deal_currency?: string }).deal_currency ?? 'BRL'}
+          />
 
           <Card>
             <CardHeader>
