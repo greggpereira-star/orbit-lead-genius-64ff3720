@@ -15,6 +15,10 @@ export interface CompanyPixelSettings {
   metaTestEventCode: string;
   /** O token nunca volta do servidor — só a informação de que já foi salvo. */
   metaTokenConfigured: boolean;
+  /** Primeiras e últimas letras com o miolo coberto: identifica sem entregar. */
+  metaTokenPreview: string;
+  /** Comprimento real — é o que denuncia um token truncado na colagem. */
+  metaTokenLength: number;
   googleConversionId: string;
   googleLeadLabel: string;
   googleCompleteLabel: string;
@@ -24,6 +28,8 @@ const EMPTY: CompanyPixelSettings = {
   metaPixelId: '',
   metaTestEventCode: '',
   metaTokenConfigured: false,
+  metaTokenPreview: '',
+  metaTokenLength: 0,
   googleConversionId: '',
   googleLeadLabel: '',
   googleCompleteLabel: '',

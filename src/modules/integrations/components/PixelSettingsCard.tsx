@@ -20,6 +20,9 @@ export function PixelSettingsCard({ companyId }: { companyId: string }) {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanyPixelSettings | null>(null);
   const [metaToken, setMetaToken] = useState('');
+  /* Enquanto falso, o campo mostra a máscara do token guardado e não aceita
+     digitação. Trocar um token é decisão deliberada, não deslize de teclado. */
+  const [trocandoToken, setTrocandoToken] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -50,11 +53,13 @@ export function PixelSettingsCard({ companyId }: { companyId: string }) {
       toast.error('Não foi possível salvar', { description: result.error });
       return;
     }
-    // O token não volta do servidor; limpar o campo evita a impressão de que o
-    // que está escrito ali é o valor gravado.
+    // Relê para pegar a máscara do token recém-gravado — assim o campo volta
+    // mostrando o que está valendo, em vez de ficar vazio.
     if (metaToken.trim()) {
       setMetaToken('');
-      patch({ metaTokenConfigured: true });
+      setTrocandoToken(false);
+      const fresco = await pixelService.getCompanySettings(companyId);
+      setSettings(fresco);
     }
     toast.success('Configuração de medição salva');
   };
@@ -127,22 +132,59 @@ export function PixelSettingsCard({ companyId }: { companyId: string }) {
                 <Label htmlFor="pixel-meta-token" className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Token da Conversions API
-                  {settings.metaTokenConfigured && (
-                    <span className="text-xs font-normal text-emerald-600">• já configurado</span>
+                  {settings.metaTokenConfigured && !trocandoToken && (
+                    <span className="text-xs font-normal text-emerald-600">
+                      • salvo, {settings.metaTokenLength} caracteres
+                    </span>
                   )}
                 </Label>
-                <Input
-                  id="pixel-meta-token"
-                  type="password"
-                  autoComplete="off"
-                  value={metaToken}
-                  onChange={(e) => setMetaToken(e.target.value)}
-                  placeholder={settings.metaTokenConfigured ? 'Deixe em branco para manter o token atual' : 'EAAG…'}
-                />
+
+                {settings.metaTokenConfigured && !trocandoToken ? (
+                  <div className="flex gap-2">
+                    <Input
+                      id="pixel-meta-token"
+                      readOnly
+                      value={settings.metaTokenPreview}
+                      className="font-mono tracking-wider text-muted-foreground"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => { setTrocandoToken(true); setMetaToken(''); }}
+                    >
+                      Trocar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      id="pixel-meta-token"
+                      type="password"
+                      autoComplete="off"
+                      value={metaToken}
+                      onChange={(e) => setMetaToken(e.target.value)}
+                      placeholder="EAAG…"
+                    />
+                    {settings.metaTokenConfigured && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="shrink-0"
+                        onClick={() => { setTrocandoToken(false); setMetaToken(''); }}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-xs text-muted-foreground">
                   Com o token, os eventos também saem pelo nosso servidor — é o que salva a
-                  medição de quem usa bloqueador de anúncio. O token fica só no servidor e nunca
-                  é devolvido para esta tela.
+                  medição de quem usa bloqueador de anúncio.{' '}
+                  {settings.metaTokenConfigured && !trocandoToken
+                    ? 'O que aparece acima é só o começo e o fim do token, o suficiente para você reconhecer qual está valendo. O valor completo fica no servidor e não é devolvido para esta tela.'
+                    : 'O token fica só no servidor e não é devolvido para esta tela depois de salvo.'}
                 </p>
               </div>
             </section>
