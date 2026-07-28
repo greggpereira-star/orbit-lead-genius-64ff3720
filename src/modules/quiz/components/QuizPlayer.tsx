@@ -490,6 +490,24 @@ function PlayerRunner({
           metadata: { score: finalState.score, temperature },
         })
         .catch(() => {});
+      // Classificação por faixa e WhatsApp da faixa. Fire-and-forget: a tela de
+      // resultado não espera pelo servidor de mensagens.
+      void fetch('/api/public/quiz-completed', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          quizId,
+          sessionId: sessionId.current,
+          score: finalState.score,
+          nome: name,
+          telefone: phone,
+          variaveis: Object.fromEntries(
+            Object.entries(resolveScope(blocks, finalState.responses)).map(([k, v]) => [k, String(v ?? '')]),
+          ),
+        }),
+      }).catch(() => {});
+
       trackComplete({ email, phone }, {
         content_name: 'quiz_concluido',
         quiz_score: finalState.score,

@@ -24,7 +24,7 @@ import { StageSelect } from '@/modules/crm/components/StageSelect';
 import { quizService } from '../services/quizService';
 import { companyService } from '@/modules/company/services/companyService';
 import { ROOT_DOMAIN } from '../lib/tenant';
-import type { QuizFunnel, SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
+import type { QuizFunnel, SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings, ScoreTier } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
 
 const SOCIAL_PROOF_ICONS: { value: SocialProofIcon; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -60,6 +60,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
   const [urgencyBar, setUrgencyBar] = useState<UrgencyBarSettings>(DEFAULT_URGENCY_BAR);
   const [companySubdomain, setCompanySubdomain] = useState<string | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string | null>(null);
+  const [tiers, setTiers] = useState<ScoreTier[]>([]);
   const [metaPixelId, setMetaPixelId] = useState('');
   const [googleConversionId, setGoogleConversionId] = useState('');
   const [googleLeadLabel, setGoogleLeadLabel] = useState('');
@@ -94,6 +95,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         setSocialProof({ ...DEFAULT_SOCIAL_PROOF, ...(settings.social_proof as Partial<SocialProofSettings> | undefined) });
         setUrgencyBar({ ...DEFAULT_URGENCY_BAR, ...(settings.urgency_bar as Partial<UrgencyBarSettings> | undefined) });
         setDefaultStageId((settings.default_stage_id as string | undefined) ?? null);
+        setTiers((settings.score_tiers as ScoreTier[] | undefined) ?? []);
         setMetaPixelId((settings.meta_pixel_id as string) ?? '');
         setGoogleConversionId((settings.google_conversion_id as string) ?? '');
         setGoogleLeadLabel((settings.google_lead_label as string) ?? '');
@@ -131,6 +133,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         socialProof,
         urgencyBar,
         defaultStageId,
+        scoreTiers: tiers,
         metaPixelId,
         googleConversionId,
         googleLeadLabel,
@@ -362,6 +365,59 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                 />
                 <p className="text-xs text-muted-foreground">
                   Dispara um POST com os dados da resposta sempre que alguém completar este quiz. Enviado diretamente do navegador do visitante — o endpoint precisa aceitar requisições CORS.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t">
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Columns3 className="h-3.5 w-3.5" /> Classificação por pontuação
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O corte é percentual da pontuação máxima do quiz, não pontos fixos. Assim,
+                    remover ou acrescentar uma pergunta pontuada não desloca as faixas em silêncio.
+                    Deixe a mensagem em branco para classificar sem enviar WhatsApp.
+                  </p>
+                </div>
+
+                {tiers.map((t, i) => (
+                  <div key={t.id} className="rounded-lg border p-2.5 space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        className="flex-1"
+                        value={t.label}
+                        placeholder="Lead A"
+                        onChange={(e) => setTiers((v) => v.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                      />
+                      <div className="relative w-28 shrink-0">
+                        <Input
+                          type="number" min={0} max={100}
+                          value={t.minPercent}
+                          onChange={(e) => setTiers((v) => v.map((x, j) => j === i ? { ...x, minPercent: Number(e.target.value) } : x))}
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">% ou +</span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="shrink-0"
+                        onClick={() => setTiers((v) => v.filter((_, j) => j !== i))} aria-label="Remover faixa">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      rows={3} className="text-xs"
+                      value={t.whatsappTemplate ?? ''}
+                      placeholder="Olá, {{nome}}. Recebemos seu diagnóstico…"
+                      onChange={(e) => setTiers((v) => v.map((x, j) => j === i ? { ...x, whatsappTemplate: e.target.value } : x))}
+                    />
+                  </div>
+                ))}
+
+                <Button variant="outline" size="sm" className="gap-1.5"
+                  onClick={() => setTiers((v) => [...v, { id: `t${Date.now()}`, label: '', minPercent: 0, whatsappTemplate: '' }])}>
+                  <Plus className="h-3.5 w-3.5" /> Adicionar faixa
+                </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  Na mensagem valem <code>{'{{nome}}'}</code>, <code>{'{{faixa}}'}</code> e qualquer
+                  variável que os blocos exportem.
                 </p>
               </div>
 

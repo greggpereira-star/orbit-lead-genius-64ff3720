@@ -186,6 +186,7 @@ export const quizService = {
     /** Etapa do pipeline onde o lead deste quiz entra. `null` = padrão do funil. */
     defaultStageId?: string | null;
     /* Medição só deste funil. Em branco = herda o pixel da empresa. */
+    scoreTiers?: import('../types').ScoreTier[];
     metaPixelId?: string;
     googleConversionId?: string;
     googleLeadLabel?: string;
@@ -211,6 +212,7 @@ export const quizService = {
       ['seoTitle', 'seo_title'],
       ['seoDescription', 'seo_description'],
       ['seoOgImage', 'seo_og_image'],
+      ['scoreTiers', 'score_tiers'],
       ['metaPixelId', 'meta_pixel_id'],
       ['googleConversionId', 'google_conversion_id'],
       ['googleLeadLabel', 'google_lead_label'],

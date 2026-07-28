@@ -172,3 +172,20 @@ export function maxPossibleScore(schema: QuizSchema): number {
   }
   return max;
 }
+
+/**
+ * Faixa em que o lead caiu, pelas regras definidas no quiz.
+ *
+ * Devolve `null` quando o quiz não define faixas — nesse caso quem manda
+ * continua sendo `classifyTemperature`, e nada no comportamento antigo muda.
+ */
+export function classifyTier(
+  score: number,
+  max: number,
+  tiers: import('./types').ScoreTier[] | undefined,
+): import('./types').ScoreTier | null {
+  if (!tiers?.length || max <= 0) return null;
+  const pct = (score / max) * 100;
+  // Da faixa mais alta para a mais baixa: a primeira que o lead alcança é a dele.
+  return [...tiers].sort((a, b) => b.minPercent - a.minPercent).find((t) => pct >= t.minPercent) ?? null;
+}

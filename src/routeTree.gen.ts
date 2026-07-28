@@ -53,6 +53,7 @@ import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.
 import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.widgets'
 import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
 import { Route as ApiPublicPixelEventRouteImport } from './routes/api/public/pixel-event'
+import { Route as ApiPublicQuizCompletedRouteImport } from './routes/api/public/quiz-completed'
 import { Route as ApiPublicWhatsappCapiRetryRouteImport } from './routes/api/public/whatsapp-capi-retry'
 import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp-webhook'
@@ -285,6 +286,11 @@ const ApiPublicPixelEventRoute = ApiPublicPixelEventRouteImport.update({
   path: '/api/public/pixel-event',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicQuizCompletedRoute = ApiPublicQuizCompletedRouteImport.update({
+  id: '/api/public/quiz-completed',
+  path: '/api/public/quiz-completed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWhatsappCapiRetryRoute =
   ApiPublicWhatsappCapiRetryRouteImport.update({
     id: '/api/public/whatsapp-capi-retry',
@@ -392,6 +398,7 @@ export interface FileRoutesByFullPath {
   '/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
+  '/api/public/quiz-completed': typeof ApiPublicQuizCompletedRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
+  '/api/public/quiz-completed': typeof ApiPublicQuizCompletedRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -506,6 +514,7 @@ export interface FileRoutesById {
   '/_app/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
+  '/api/public/quiz-completed': typeof ApiPublicQuizCompletedRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -564,6 +573,7 @@ export interface FileRouteTypes {
     | '/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/pixel-event'
+    | '/api/public/quiz-completed'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/api/public/whatsapp-webhook'
@@ -619,6 +629,7 @@ export interface FileRouteTypes {
     | '/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/pixel-event'
+    | '/api/public/quiz-completed'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/api/public/whatsapp-webhook'
@@ -677,6 +688,7 @@ export interface FileRouteTypes {
     | '/_app/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/pixel-event'
+    | '/api/public/quiz-completed'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/api/public/whatsapp-webhook'
@@ -706,6 +718,7 @@ export interface RootRouteChildren {
   QSlugRoute: typeof QSlugRoute
   ApiPublicMetaWebhookRoute: typeof ApiPublicMetaWebhookRoute
   ApiPublicPixelEventRoute: typeof ApiPublicPixelEventRoute
+  ApiPublicQuizCompletedRoute: typeof ApiPublicQuizCompletedRoute
   ApiPublicWhatsappCapiRetryRoute: typeof ApiPublicWhatsappCapiRetryRoute
   ApiPublicWhatsappClickRoute: typeof ApiPublicWhatsappClickRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
@@ -1024,6 +1037,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPixelEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/quiz-completed': {
+      id: '/api/public/quiz-completed'
+      path: '/api/public/quiz-completed'
+      fullPath: '/api/public/quiz-completed'
+      preLoaderRoute: typeof ApiPublicQuizCompletedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/whatsapp-capi-retry': {
       id: '/api/public/whatsapp-capi-retry'
       path: '/api/public/whatsapp-capi-retry'
@@ -1245,6 +1265,7 @@ const rootRouteChildren: RootRouteChildren = {
   QSlugRoute: QSlugRoute,
   ApiPublicMetaWebhookRoute: ApiPublicMetaWebhookRoute,
   ApiPublicPixelEventRoute: ApiPublicPixelEventRoute,
+  ApiPublicQuizCompletedRoute: ApiPublicQuizCompletedRoute,
   ApiPublicWhatsappCapiRetryRoute: ApiPublicWhatsappCapiRetryRoute,
   ApiPublicWhatsappClickRoute: ApiPublicWhatsappClickRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,

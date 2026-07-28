@@ -308,6 +308,24 @@ export interface QuizStep {
   isGoal?: boolean; // marcada como meta de conversão (destaque visual no fluxograma)
 }
 
+/**
+ * Faixa de classificação do lead pela pontuação do quiz.
+ *
+ * `minPercent` é percentual do MÁXIMO POSSÍVEL, não pontos absolutos. Parece
+ * detalhe e não é: com corte absoluto, o dia em que alguém remove uma pergunta
+ * pontuada o teto cai e a mesma resposta passa a cair noutra faixa — sem erro,
+ * sem aviso, sem ninguém perceber. Em percentual, as faixas se reajustam.
+ */
+export interface ScoreTier {
+  id: string;
+  label: string;
+  /** 0-100. A faixa vale para quem atingir este percentual ou mais. */
+  minPercent: number;
+  color?: string;
+  /** Mensagem de WhatsApp disparada ao concluir. Vazia = não envia nada. */
+  whatsappTemplate?: string;
+}
+
 export interface QuizSchema {
   blocks: QuizBlock[];
   steps?: QuizStep[]; // ausente = cada bloco é sua própria etapa (compatibilidade retroativa)
