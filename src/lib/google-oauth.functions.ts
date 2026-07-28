@@ -1,0 +1,286 @@
+/**
+ * OAuth do Google Ads.
+ *
+ * Espelha o fluxo do Meta em `meta-oauth.functions.ts` de propósito: mesma
+ * forma de `state` assinado, mesma separação entre o que o navegador vê e o
+ * que só o servidor conhece.
+ *
+ * O que existia antes era `oauthService.getAuthUrl`, que montava a URL no
+ * navegador e mandava o retorno para `/functions/v1/oauth-callback` — uma Edge
+ * Function do Supabase que nunca foi implantada na VPS e responde 500. Ou
+ * seja: o botão "Connect Google Ads" levava a lugar nenhum.
+ *
+ * `client_secret` e `developer-token` nunca saem daqui. O navegador recebe
+ * apenas a URL de consentimento, que é pública por natureza.
+ */
+import { createServerFn } from '@tanstack/react-start';
+import { z } from 'zod';
+import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
+
+const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const DEFAULT_PUBLIC_ORIGIN = 'https://altleadflow.com.br';
+
+/**
+ * `adwords` é o escopo da API do Google Ads. Pedimos só ele: quanto menor o
+ * consentimento, menos a tela assusta quem autoriza — e menos temos a perder
+ * se o refresh token vazar.
+ */
+const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/adwords'].join(' ');
+
+/** Precisa estar cadastrada em "URIs de redirecionamento autorizados" no Google Cloud. */
+export const GOOGLE_REDIRECT_PATH = '/google-oauth-callback';
+
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim().replace(/^['"]|['"]$/g, '');
+  return value || undefined;
+}
+
+function getPublicUrl(): string {
+  return (readEnv('PUBLIC_APP_URL') ?? DEFAULT_PUBLIC_ORIGIN).replace(/\/+$/, '');
+}
+
+function redirectUri(): string {
+  return `${getPublicUrl()}${GOOGLE_REDIRECT_PATH}`;
+}
+
+async function hmacHex(secret: string, payload: string): Promise<string> {
+  const { createHmac } = await import('node:crypto');
+  return createHmac('sha256', secret).update(payload).digest('hex');
+}
+
+/**
+ * O `state` carrega a empresa e vai assinado.
+ *
+ * Sem assinatura, bastaria alterar o parâmetro no meio do caminho para
+ * conectar a conta de anúncios de alguém ao Google Ads de outro assinante.
+ * O carimbo de tempo limita a janela em que um `state` capturado ainda serve.
+ */
+async function signState(companyId: string): Promise<string> {
+  const secret = readEnv('GOOGLE_OAUTH_STATE_SECRET');
+  if (!secret) throw new Error('GOOGLE_OAUTH_STATE_SECRET ausente no servidor.');
+  const payload = JSON.stringify({ companyId, ts: Date.now() });
+  const sig = await hmacHex(secret, payload);
+  return Buffer.from(`${payload}.${sig}`).toString('base64url');
+}
+
+async function verifyState(state: string): Promise<{ companyId: string }> {
+  const secret = readEnv('GOOGLE_OAUTH_STATE_SECRET');
+  if (!secret) throw new Error('GOOGLE_OAUTH_STATE_SECRET ausente no servidor.');
+
+  const decoded = Buffer.from(state, 'base64url').toString('utf8');
+  const corte = decoded.lastIndexOf('.');
+  if (corte < 0) throw new Error('State malformado.');
+
+  const payload = decoded.slice(0, corte);
+  const sig = decoded.slice(corte + 1);
+  if ((await hmacHex(secret, payload)) !== sig) throw new Error('Assinatura de state inválida.');
+
+  const dados = JSON.parse(payload) as { companyId?: string; ts?: number };
+  if (!dados.companyId) throw new Error('State sem empresa.');
+  if (!dados.ts || Date.now() - dados.ts > 15 * 60_000) {
+    throw new Error('Autorização expirou. Comece de novo.');
+  }
+  return { companyId: dados.companyId };
+}
+
+/** Monta a URL de consentimento. O navegador só recebe isto. */
+export const getGoogleAdsAuthUrl = createServerFn({ method: 'GET' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ companyId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data }) => {
+    const clientId = readEnv('GOOGLE_CLIENT_ID');
+    if (!clientId) throw new Error('GOOGLE_CLIENT_ID não configurado no servidor.');
+
+    const url = new URL(GOOGLE_AUTH_URL);
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('redirect_uri', redirectUri());
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', GOOGLE_SCOPES);
+    // `offline` + `consent` são o que garantem o refresh_token. Sem os dois, o
+    // Google devolve refresh token só na primeira autorização da vida daquele
+    // usuário — e numa reconexão vem sem, deixando a integração morta em uma
+    // hora, quando o access token expira.
+    url.searchParams.set('access_type', 'offline');
+    url.searchParams.set('prompt', 'consent');
+    url.searchParams.set('include_granted_scopes', 'true');
+    url.searchParams.set('state', await signState(data.companyId));
+
+    return { url: url.toString(), redirectUri: redirectUri() };
+  });
+
+/** Troca o `code` pelo refresh token e guarda no servidor. */
+export const exchangeGoogleAdsCode = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ code: z.string().min(1), state: z.string().min(1) }).parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const clientId = readEnv('GOOGLE_CLIENT_ID');
+    const clientSecret = readEnv('GOOGLE_CLIENT_SECRET');
+    if (!clientId || !clientSecret) throw new Error('Credenciais Google ausentes no servidor.');
+
+    const { companyId } = await verifyState(data.state);
+
+    const res = await fetch(GOOGLE_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: data.code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri(),
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const corpo = (await res.json().catch(() => ({}))) as {
+      refresh_token?: string;
+      access_token?: string;
+      expires_in?: number;
+      error?: string;
+      error_description?: string;
+    };
+
+    if (!res.ok || !corpo.refresh_token) {
+      // `error_description` do Google costuma ser específico ("redirect_uri
+      // mismatch", "invalid_client") — repassar ajuda a resolver sem adivinhar.
+      const detalhe = corpo.error_description ?? corpo.error ?? `HTTP ${res.status}`;
+      throw new Error(
+        corpo.refresh_token === undefined && res.ok
+          ? 'O Google não devolveu refresh token. Remova o acesso do app na conta Google e autorize de novo.'
+          : `Falha ao trocar o código: ${detalhe}`,
+      );
+    }
+
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    const { data: atual } = await supabaseAdmin
+      .from('integrations')
+      .select('config')
+      .eq('company_id', companyId)
+      .eq('provider', 'google_ads')
+      .maybeSingle();
+
+    // Preserva o que a tela de pixel já gravou (conversion_id e rótulos): a
+    // conexão OAuth e a configuração de conversão convivem na mesma linha.
+    const config = {
+      ...(((atual?.config as Record<string, unknown>) ?? {}) as Record<string, unknown>),
+      refresh_token: corpo.refresh_token,
+      connected_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabaseAdmin
+      .from('integrations')
+      .upsert(
+        { company_id: companyId, provider: 'google_ads', config, status: 'connected' } as never,
+        { onConflict: 'company_id,provider' },
+      );
+    if (error) throw new Error(`Não foi possível guardar a conexão: ${error.message}`);
+
+    return { ok: true as const, companyId };
+  });
+
+/** Se esta empresa já autorizou, e quando. Nunca devolve o refresh token. */
+export const getGoogleAdsStatus = createServerFn({ method: 'GET' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ companyId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    const { data: linha } = await supabaseAdmin
+      .from('integrations')
+      .select('config, status')
+      .eq('company_id', data.companyId)
+      .eq('provider', 'google_ads')
+      .maybeSingle();
+
+    const config = (linha?.config ?? {}) as { refresh_token?: string; connected_at?: string };
+    return {
+      conectado: !!config.refresh_token,
+      conectadoEm: config.connected_at ?? null,
+      redirectUri: redirectUri(),
+    };
+  });
+
+/**
+ * Access token de curta duração a partir do refresh token guardado.
+ * Não é exposto como server function: só o servidor chama, nunca a tela.
+ */
+async function getAccessToken(companyId: string): Promise<string> {
+  const clientId = readEnv('GOOGLE_CLIENT_ID');
+  const clientSecret = readEnv('GOOGLE_CLIENT_SECRET');
+  if (!clientId || !clientSecret) throw new Error('Credenciais Google ausentes no servidor.');
+
+  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+  const { data } = await supabaseAdmin
+    .from('integrations')
+    .select('config')
+    .eq('company_id', companyId)
+    .eq('provider', 'google_ads')
+    .maybeSingle();
+
+  const refresh = (data?.config as { refresh_token?: string } | null)?.refresh_token;
+  if (!refresh) throw new Error('Google Ads não conectado nesta empresa.');
+
+  const res = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refresh,
+      grant_type: 'refresh_token',
+    }),
+  });
+  const corpo = (await res.json().catch(() => ({}))) as { access_token?: string; error_description?: string };
+  if (!res.ok || !corpo.access_token) {
+    throw new Error(`Não foi possível renovar o acesso: ${corpo.error_description ?? res.status}`);
+  }
+  return corpo.access_token;
+}
+
+/**
+ * Contas de anúncio que este login enxerga.
+ *
+ * Esta é também a primeira chamada real à API do Google Ads, e é ela que
+ * revela o nível de acesso do developer token: um token ainda em "Test
+ * Account" responde `DEVELOPER_TOKEN_NOT_APPROVED` ao tocar numa conta de
+ * produção. Melhor descobrir isso aqui, num clique de teste, do que depois —
+ * com conversões sendo silenciosamente recusadas.
+ */
+export const listGoogleAdsAccounts = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ companyId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data }) => {
+    const devToken = readEnv('GOOGLE_ADS_DEVELOPER_TOKEN');
+    if (!devToken) throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN não configurado no servidor.');
+
+    const accessToken = await getAccessToken(data.companyId);
+
+    const res = await fetch('https://googleads.googleapis.com/v18/customers:listAccessibleCustomers', {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'developer-token': devToken,
+      },
+    });
+
+    const corpo = (await res.json().catch(() => ({}))) as {
+      resourceNames?: string[];
+      error?: { message?: string; status?: string; details?: unknown };
+    };
+
+    if (!res.ok) {
+      const msg = corpo.error?.message ?? `HTTP ${res.status}`;
+      return {
+        ok: false as const,
+        httpStatus: res.status,
+        erro: msg,
+        // O texto do Google é a informação útil aqui: distingue "token não
+        // aprovado" de "conta sem permissão" de "escopo faltando".
+        detalhe: JSON.stringify(corpo.error ?? {}).slice(0, 600),
+      };
+    }
+
+    // `customers/1234567890` → `1234567890`
+    const contas = (corpo.resourceNames ?? []).map((r) => r.split('/').pop() ?? r);
+    return { ok: true as const, contas };
+  });

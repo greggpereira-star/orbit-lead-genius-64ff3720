@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
+import { Route as GoogleOauthCallbackRouteImport } from './routes/google-oauth-callback'
 import { Route as MetaOauthCallbackRouteImport } from './routes/meta-oauth-callback'
 import { Route as OauthCallbackRouteImport } from './routes/oauth-callback'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
@@ -81,6 +82,11 @@ const AuthRoute = AuthRouteImport.update({
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
   path: '/diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoogleOauthCallbackRoute = GoogleOauthCallbackRouteImport.update({
+  id: '/google-oauth-callback',
+  path: '/google-oauth-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MetaOauthCallbackRoute = MetaOauthCallbackRouteImport.update({
@@ -347,6 +353,7 @@ const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/google-oauth-callback': typeof GoogleOauthCallbackRoute
   '/meta-oauth-callback': typeof MetaOauthCallbackRoute
   '/oauth-callback': typeof OauthCallbackRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
@@ -402,6 +409,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/diagnostics': typeof DiagnosticsRoute
+  '/google-oauth-callback': typeof GoogleOauthCallbackRoute
   '/meta-oauth-callback': typeof MetaOauthCallbackRoute
   '/oauth-callback': typeof OauthCallbackRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/diagnostics': typeof DiagnosticsRoute
+  '/google-oauth-callback': typeof GoogleOauthCallbackRoute
   '/meta-oauth-callback': typeof MetaOauthCallbackRoute
   '/oauth-callback': typeof OauthCallbackRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
@@ -516,6 +525,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/diagnostics'
+    | '/google-oauth-callback'
     | '/meta-oauth-callback'
     | '/oauth-callback'
     | '/analytics'
@@ -571,6 +581,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/diagnostics'
+    | '/google-oauth-callback'
     | '/meta-oauth-callback'
     | '/oauth-callback'
     | '/analytics'
@@ -627,6 +638,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_auth'
     | '/diagnostics'
+    | '/google-oauth-callback'
     | '/meta-oauth-callback'
     | '/oauth-callback'
     | '/_app/analytics'
@@ -685,6 +697,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DiagnosticsRoute: typeof DiagnosticsRoute
+  GoogleOauthCallbackRoute: typeof GoogleOauthCallbackRoute
   MetaOauthCallbackRoute: typeof MetaOauthCallbackRoute
   OauthCallbackRoute: typeof OauthCallbackRoute
   ChatEmbedCompanyIdRoute: typeof ChatEmbedCompanyIdRoute
@@ -729,6 +742,13 @@ declare module '@tanstack/react-router' {
       path: '/diagnostics'
       fullPath: '/diagnostics'
       preLoaderRoute: typeof DiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/google-oauth-callback': {
+      id: '/google-oauth-callback'
+      path: '/google-oauth-callback'
+      fullPath: '/google-oauth-callback'
+      preLoaderRoute: typeof GoogleOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/meta-oauth-callback': {
@@ -1216,6 +1236,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DiagnosticsRoute: DiagnosticsRoute,
+  GoogleOauthCallbackRoute: GoogleOauthCallbackRoute,
   MetaOauthCallbackRoute: MetaOauthCallbackRoute,
   OauthCallbackRoute: OauthCallbackRoute,
   ChatEmbedCompanyIdRoute: ChatEmbedCompanyIdRoute,

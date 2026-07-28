@@ -1,161 +1,183 @@
-import { useIntegration } from '../hooks/useIntegration';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
-import { Globe, RefreshCcw, AlertCircle } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
-  DialogFooter
-} from '@/components/ui/dialog';
+import { Globe, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  getGoogleAdsAuthUrl,
+  getGoogleAdsStatus,
+  listGoogleAdsAccounts,
+} from '@/lib/google-oauth.functions';
 
+/**
+ * Conexão com o Google Ads.
+ *
+ * A versão anterior montava a URL de consentimento no navegador e mandava o
+ * retorno para `/functions/v1/oauth-callback`, uma Edge Function do Supabase
+ * que nunca foi implantada na VPS e responde 500 — o botão levava a lugar
+ * nenhum. As abas de contas e conversões liam `google_assets`, alimentada por
+ * outra Edge Function igualmente inexistente, e por isso viviam vazias.
+ *
+ * Agora a URL vem assinada do servidor e o retorno cai numa rota nossa.
+ *
+ * O botão "Verificar contas" existe por um motivo específico: é a primeira
+ * chamada real à API do Google Ads, e é ela que revela se o developer token já
+ * foi aprovado para contas de produção. Sem esse teste, o problema só
+ * apareceria adiante, com conversões recusadas em silêncio.
+ */
 export function GoogleIntegration({ companyId }: { companyId: string }) {
-   const { connection, assets, isLoading, connect, discover, toggleAsset } = useIntegration(companyId, 'google');
-   const adAccounts = assets.filter(a => a.asset_type === 'ad_account');
-   const conversionActions = assets.filter(a => a.asset_type === 'conversion_action');
+  const [carregando, setCarregando] = useState(true);
+  const [conectado, setConectado] = useState(false);
+  const [conectadoEm, setConectadoEm] = useState<string | null>(null);
+  const [redirectUri, setRedirectUri] = useState('');
+  const [indoParaGoogle, setIndoParaGoogle] = useState(false);
+  const [verificando, setVerificando] = useState(false);
+  const [contas, setContas] = useState<string[] | null>(null);
+  const [erroApi, setErroApi] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    getGoogleAdsStatus({ data: { companyId } })
+      .then((s) => {
+        if (!vivo) return;
+        setConectado(s.conectado);
+        setConectadoEm(s.conectadoEm);
+        setRedirectUri(s.redirectUri);
+      })
+      .catch(() => {})
+      .finally(() => { if (vivo) setCarregando(false); });
+    return () => { vivo = false; };
+  }, [companyId]);
+
+  const conectar = async () => {
+    setIndoParaGoogle(true);
+    try {
+      const { url } = await getGoogleAdsAuthUrl({ data: { companyId } });
+      window.location.href = url;
+    } catch (e) {
+      setIndoParaGoogle(false);
+      toast.error('Não foi possível iniciar a autorização', {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
+  };
+
+  const verificar = async () => {
+    setVerificando(true);
+    setErroApi(null);
+    setContas(null);
+    try {
+      const r = await listGoogleAdsAccounts({ data: { companyId } });
+      if (r.ok) {
+        setContas(r.contas);
+        toast.success(`${r.contas.length} conta(s) de anúncio acessível(is)`);
+      } else {
+        setErroApi(r.erro);
+      }
+    } catch (e) {
+      setErroApi(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVerificando(false);
+    }
+  };
 
   return (
     <Card className="border shadow-none hover:border-primary/20 transition-colors">
-      <CardContent className="p-6 flex flex-col h-full">
-        <div className="flex items-start justify-between mb-4">
+      <CardContent className="p-6 flex flex-col h-full gap-4">
+        <div className="flex items-start justify-between">
           <div className="h-12 w-12 rounded-xl bg-[#EA4335] flex items-center justify-center text-white shadow-lg">
             <Globe className="h-6 w-6" />
           </div>
-          {connection ? (
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">Connected</Badge>
+          {carregando ? (
+            <Badge variant="outline" className="text-muted-foreground">Verificando…</Badge>
+          ) : conectado ? (
+            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">Conectado</Badge>
           ) : (
-            <Badge variant="outline" className="text-muted-foreground">Disconnected</Badge>
+            <Badge variant="outline" className="text-muted-foreground">Desconectado</Badge>
           )}
         </div>
-        
-        <h4 className="font-bold text-base mb-1">Google Ads</h4>
-        <p className="text-xs text-muted-foreground mb-6 line-clamp-2">Enterprise offline conversion tracking and enhanced attribution.</p>
-        
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant={connection ? 'outline' : 'default'} className="w-full text-xs h-10 font-bold">
-              {connection ? 'Manage Accounts' : 'Connect Google Ads'}
+
+        <div>
+          <h4 className="font-bold text-base mb-1">Google Ads</h4>
+          <p className="text-xs text-muted-foreground">
+            Autoriza o Alt Flow Lead a ler suas contas de anúncio e, quando o token estiver
+            aprovado, a enviar as conversões de volta.
+          </p>
+          {conectado && conectadoEm && (
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Autorizado em {new Date(conectadoEm).toLocaleString('pt-BR')}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-auto space-y-2">
+          <Button
+            variant={conectado ? 'outline' : 'default'}
+            className="w-full text-xs h-10 font-bold"
+            onClick={conectar}
+            disabled={indoParaGoogle || carregando}
+          >
+            {indoParaGoogle
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : conectado ? 'Reconectar' : 'Conectar Google Ads'}
+          </Button>
+
+          {conectado && (
+            <Button
+              variant="ghost"
+              className="w-full text-xs h-9"
+              onClick={verificar}
+              disabled={verificando}
+            >
+              {verificando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verificar contas'}
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                <Globe className="h-6 w-6 p-1 rounded bg-[#EA4335] text-white" />
-                Google Ads Enterprise Integration
-              </DialogTitle>
-              <DialogDescription>
-                Authorizing via OAuth 2.0. Select your Google Ads accounts below.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {!connection ? (
-              <div className="py-12 text-center">
-                <Button onClick={connect} size="lg" variant="outline" className="gap-2 font-bold border-muted-foreground/20">
-                  <Globe className="h-5 w-5 text-[#EA4335]" />
-                  Sign in with Google
-                </Button>
-                <p className="text-[10px] text-muted-foreground mt-4 uppercase font-black tracking-widest text-center">Enterprise API Scopes</p>
-              </div>
+          )}
+        </div>
+
+        {contas && (
+          <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+            <p className="font-bold flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              Contas acessíveis
+            </p>
+            {contas.length === 0 ? (
+              <p className="text-muted-foreground">
+                Nenhuma. A conta Google autorizada não enxerga nenhuma conta de anúncio.
+              </p>
             ) : (
-              <div className="space-y-6 py-4">
-                <div className="flex items-center justify-between border-b pb-4">
-                  <div>
-                    <p className="text-sm font-bold">Connected Google Account</p>
-                    <p className="text-xs text-muted-foreground">Status: Active</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={discover} disabled={isLoading} className="gap-2 font-bold">
-                    <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    Sync Accounts
-                  </Button>
-                </div>
-
-                 <Tabs defaultValue="accounts" className="w-full">
-                   <TabsList className="grid w-full grid-cols-2">
-                     <TabsTrigger value="accounts" className="text-[10px] font-bold uppercase">Accounts</TabsTrigger>
-                     <TabsTrigger value="conversions" className="text-[10px] font-bold uppercase">Conversions</TabsTrigger>
-                   </TabsList>
-
-                   <TabsContent value="accounts" className="space-y-4 mt-4">
-                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ad Accounts</Label>
-                     {adAccounts.length === 0 ? (
-                        <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
-                          <p className="text-sm text-muted-foreground">No Google Ads accounts found.</p>
-                          <Button variant="link" onClick={discover} className="text-xs font-bold text-primary">Sync with Google API</Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {adAccounts.map(asset => (
-                            <div key={asset.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                              <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="text-[9px] uppercase font-bold">Account</Badge>
-                                <div>
-                                  <p className="text-sm font-bold">{asset.name}</p>
-                                  <p className="text-[10px] font-mono text-muted-foreground">{asset.external_id}</p>
-                                </div>
-                              </div>
-                              <Switch 
-                                checked={asset.is_active} 
-                                onCheckedChange={(checked) => toggleAsset(asset.id, checked)}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                   </TabsContent>
-
-                   <TabsContent value="conversions" className="space-y-4 mt-4">
-                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Conversion Mapping</Label>
-                     {conversionActions.length === 0 ? (
-                        <div className="p-8 text-center border-2 border-dashed rounded-xl bg-muted/10">
-                          <p className="text-sm text-muted-foreground">No conversion actions found.</p>
-                        </div>
-                     ) : (
-                        <div className="space-y-2">
-                          {conversionActions.map(action => (
-                            <div key={action.id} className="p-3 rounded-lg border bg-muted/20 flex flex-col gap-2">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-bold">{action.name}</p>
-                                  <p className="text-[9px] text-muted-foreground uppercase">{action.metadata?.type}</p>
-                                </div>
-                                <Switch 
-                                  checked={action.is_active} 
-                                  onCheckedChange={(checked) => toggleAsset(action.id, checked)}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                     )}
-                   </TabsContent>
-                 </Tabs>
-
-                <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-primary shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-primary">Offline Conversions</p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-                      LeadFlow will upload conversions (GCLID) automatically to the active accounts above when leads reach selected stages.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ul className="font-mono text-muted-foreground">
+                {contas.map((c) => <li key={c}>{c}</li>)}
+              </ul>
             )}
-            
-            <DialogFooter>
-               {connection && (
-                 <Button variant="ghost" className="text-rose-600 font-bold text-xs hover:bg-rose-50">Revoke Access</Button>
-               )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
+
+        {erroApi && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs space-y-1">
+            <p className="font-bold flex items-center gap-1.5 text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              O Google recusou
+            </p>
+            <p className="text-muted-foreground break-words">{erroApi}</p>
+            {/* Erro mais provável numa primeira configuração. Explicado aqui
+                porque a mensagem do Google não diz o que fazer a respeito. */}
+            {/DEVELOPER_TOKEN_NOT_APPROVED|not approved/i.test(erroApi) && (
+              <p className="text-muted-foreground">
+                O developer token ainda está no nível de teste, que só funciona em contas de
+                teste. Peça acesso básico no API Center do Google Ads — a aprovação libera o uso
+                na conta real.
+              </p>
+            )}
+          </div>
+        )}
+
+        {!carregando && !conectado && redirectUri && (
+          <p className="text-[11px] text-muted-foreground">
+            Cadastre este endereço em "URIs de redirecionamento autorizados" no Google Cloud:{' '}
+            <code className="bg-muted px-1 rounded break-all">{redirectUri}</code>
+          </p>
+        )}
       </CardContent>
     </Card>
   );

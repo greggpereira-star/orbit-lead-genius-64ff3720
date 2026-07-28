@@ -30,3 +30,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Segredo nenhum entra no repositório.
+#
+# O `.env` versionado guarda só valor público (URL do Supabase e chave
+# anônima, que já vão no bundle do navegador de qualquer jeito). Client
+# secret, service role key e developer token vivem apenas no
+# /opt/altleadflow-app/.env da VPS, lido pelo systemd em tempo de execução.
+#
+# Se precisar de segredo na sua máquina, use .env.local — ignorado aqui.
+.env.local
+.env.*.local
