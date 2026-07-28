@@ -31,6 +31,51 @@ const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/adwords'].join(' ');
 /** Precisa estar cadastrada em "URIs de redirecionamento autorizados" no Google Cloud. */
 export const GOOGLE_REDIRECT_PATH = '/google-oauth-callback';
 
+/**
+ * Versões da API do Google Ads, da preferida para as alternativas.
+ *
+ * O Google aposenta versão a cada poucos meses, e uma versão morta responde
+ * 404 — sem dizer que morreu. Foi assim que a primeira tentativa falhou: o
+ * código pedia `v18`, que já tinha sido descontinuada, e o card mostrava
+ * "HTTP 404" sem nenhuma pista do motivo.
+ *
+ * Em vez de cravar um número que vai expirar de novo, tentamos em ordem e
+ * seguimos para a próxima quando o Google devolve 404. Qualquer outra resposta
+ * — inclusive erro — significa que a versão existe e o problema é outro, então
+ * ela é devolvida como está.
+ *
+ * `GOOGLE_ADS_API_VERSION` no ambiente força uma versão específica sem
+ * recompilar, para o dia em que uma delas mudar de comportamento.
+ */
+const VERSOES_ADS_CONHECIDAS = ['v21', 'v22', 'v23', 'v24', 'v20'];
+
+function versoesAds(): string[] {
+  const preferida = readEnv('GOOGLE_ADS_API_VERSION');
+  if (!preferida) return VERSOES_ADS_CONHECIDAS;
+  return [preferida, ...VERSOES_ADS_CONHECIDAS.filter((v) => v !== preferida)];
+}
+
+/** Chama a API do Google Ads pulando versões descontinuadas. */
+async function chamarAdsApi(
+  caminho: string,
+  accessToken: string,
+  devToken: string,
+): Promise<{ res: Response; versao: string } | { erro: string }> {
+  for (const versao of versoesAds()) {
+    const res = await fetch(`https://googleads.googleapis.com/${versao}/${caminho}`, {
+      headers: { authorization: `Bearer ${accessToken}`, 'developer-token': devToken },
+    });
+    if (res.status === 404) continue;
+    return { res, versao };
+  }
+  return {
+    erro:
+      `Nenhuma das versões testadas da API do Google Ads respondeu ` +
+      `(${versoesAds().join(', ')}). Provavelmente todas foram descontinuadas — ` +
+      `defina GOOGLE_ADS_API_VERSION no servidor com uma versão atual.`,
+  };
+}
+
 function readEnv(name: string): string | undefined {
   const value = process.env[name]?.trim().replace(/^['"]|['"]$/g, '');
   return value || undefined;
@@ -256,13 +301,12 @@ export const listGoogleAdsAccounts = createServerFn({ method: 'POST' })
 
     const accessToken = await getAccessToken(data.companyId);
 
-    const res = await fetch('https://googleads.googleapis.com/v18/customers:listAccessibleCustomers', {
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        'developer-token': devToken,
-      },
-    });
+    const chamada = await chamarAdsApi('customers:listAccessibleCustomers', accessToken, devToken);
+    if ('erro' in chamada) {
+      return { ok: false as const, httpStatus: 404, erro: chamada.erro, detalhe: '' };
+    }
 
+    const { res, versao } = chamada;
     const corpo = (await res.json().catch(() => ({}))) as {
       resourceNames?: string[];
       error?: { message?: string; status?: string; details?: unknown };
@@ -282,5 +326,5 @@ export const listGoogleAdsAccounts = createServerFn({ method: 'POST' })
 
     // `customers/1234567890` → `1234567890`
     const contas = (corpo.resourceNames ?? []).map((r) => r.split('/').pop() ?? r);
-    return { ok: true as const, contas };
+    return { ok: true as const, contas, versao };
   });
