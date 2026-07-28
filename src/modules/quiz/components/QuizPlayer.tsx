@@ -3,9 +3,9 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService, captureQuizLead } from '../services/quizService';
 import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
-import type { QuizBlock, QuizSchema, AccessRules } from '../types';
+import type { QuizBlock, QuizSchema, AccessRules, QuizDesign, BlockOption } from '../types';
 import { getSteps } from '../lib/steps';
-import { getContrastText } from '../lib/color';
+import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
@@ -24,7 +24,7 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
-import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX } from 'lucide-react';
+import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
 
@@ -525,7 +525,7 @@ function PlayerRunner({
       className="min-h-screen w-full flex justify-center"
       style={{ background: design.background, color: design.text, fontFamily: design.fontBody }}
     >
-      <div className="w-full flex flex-col" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
+      <div className="w-full flex flex-col sm:my-auto" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
         {!done && <UrgencyBar quizId={quizId} settings={urgencyBar} design={design} />}
         <div className="flex-1 flex flex-col" style={{ padding: '24px 16px' }}>
           <ProgressBar
@@ -805,8 +805,8 @@ function ProgressBar({
 
   return (
     <div
-      className="h-1.5 rounded-full overflow-hidden"
-      style={{ background: design.surface }}
+      className="h-2 rounded-full overflow-hidden"
+      style={{ background: design.surface, boxShadow: 'inset 0 1px 2px rgb(0 0 0 / 0.06)' }}
       {...a11yProps}
     >
       <div
@@ -1070,6 +1070,84 @@ function ContainerView({
   );
 }
 
+/**
+ * Cartão de opção — único, para escolha simples e múltipla.
+ *
+ * Antes eram dois blocos de JSX quase iguais, e "quase" era o problema: o
+ * polimento entrou só no de múltipla, e a escolha simples — a mais usada —
+ * ficou sem altura mínima e sem anel de foco.
+ *
+ * O indicador não é enfeite. Sem ele, o cartão só muda de contorno ao ser
+ * marcado, e nada na tela conta que dá para escolher mais de uma antes de a
+ * pessoa tentar. Círculo diz "uma"; quadrado diz "várias" — é a convenção que
+ * todo formulário usa, e quem responde no celular não lê instrução.
+ */
+function OptionCard({
+  design,
+  option,
+  active,
+  multiple,
+  disabled,
+  onClick,
+}: {
+  design: QuizDesign;
+  option: BlockOption;
+  active: boolean;
+  multiple: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      {...(multiple
+        ? { 'aria-pressed': active, 'aria-disabled': disabled }
+        : { role: 'radio' as const, 'aria-checked': active })}
+      className={`w-full flex items-center gap-3.5 text-left px-4 py-3.5 min-h-[3.5rem] border transition-all duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${
+        disabled ? ' opacity-40 cursor-not-allowed' : ' hover:-translate-y-px active:translate-y-0 active:scale-[0.99]'
+      }`}
+      style={{
+        borderRadius: design.radius,
+        outlineColor: design.primary,
+        // Marcado ganha contorno cheio e um fundo levemente tingido: só a borda
+        // de 2px é fraca demais num cartão claro, principalmente no sol.
+        borderColor: active ? design.primary : withAlpha(design.text, 0.12),
+        borderWidth: active ? 2 : 1,
+        background: active ? withAlpha(design.primary, 0.06) : design.surface,
+        color: design.text,
+        // Sombra de sussurro: separa o cartão do fundo creme sem virar caixa.
+        boxShadow: active ? `0 0 0 1px ${withAlpha(design.primary, 0.25)}` : '0 1px 2px rgb(0 0 0 / 0.04)',
+      }}
+    >
+      <span
+        aria-hidden
+        className="shrink-0 grid place-items-center transition-all duration-200 motion-reduce:transition-none"
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: multiple ? 6 : 999,
+          border: `2px solid ${active ? design.primary : withAlpha(design.text, 0.25)}`,
+          background: active ? design.primary : 'transparent',
+        }}
+      >
+        {active &&
+          (multiple ? (
+            <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: getContrastText(design.primary) }} />
+          ) : (
+            <span className="block" style={{ width: 8, height: 8, borderRadius: 999, background: getContrastText(design.primary) }} />
+          ))}
+      </span>
+      {option.imageUrl ? (
+        <img src={option.imageUrl} alt="" className="h-10 w-10 rounded-md object-cover shrink-0" />
+      ) : option.emoji ? (
+        <span className="shrink-0">{option.emoji}</span>
+      ) : null}
+      <span className="min-w-0 flex-1">{parseRichText(option.label)}</span>
+    </button>
+  );
+}
+
 function BlockView({
   block,
   design,
@@ -1172,13 +1250,13 @@ function BlockView({
      simples de sempre. Os dois passam pelo MESMO <RichText> que o Preview usa —
      é isso que garante que o que foi formatado é o que o visitante vê. */
   const heading = (
-    <div className="space-y-3 mb-6">
+    <div className="space-y-2.5 mb-7 pt-1">
       {(block.titleRich || title) && (
         <RichText
           doc={block.titleRich}
           fallback={title}
           scope={scope}
-          className="quiz-rich text-2xl sm:text-3xl font-bold leading-tight"
+          className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
           style={{ fontFamily: design.fontHeading }}
         />
       )}
@@ -1187,7 +1265,7 @@ function BlockView({
           doc={block.subtitleRich}
           fallback={subtitle}
           scope={scope}
-          className="quiz-rich text-base opacity-80"
+          className="quiz-rich text-[0.9375rem] leading-relaxed max-w-[42ch] text-pretty"
           style={{ color: design.muted }}
         />
       )}
@@ -1209,7 +1287,7 @@ function BlockView({
             doc={block.titleRich}
             fallback={title}
             scope={scope}
-            className="quiz-rich text-4xl font-bold"
+            className="quiz-rich text-[1.75rem] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-4xl sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto"
             style={{ fontFamily: design.fontHeading }}
           />
           {(block.subtitleRich || subtitle) && (
@@ -1217,7 +1295,7 @@ function BlockView({
               doc={block.subtitleRich}
               fallback={subtitle}
               scope={scope}
-              className="quiz-rich text-lg max-w-md mx-auto"
+              className="quiz-rich text-[1.0625rem] leading-relaxed max-w-[38ch] mx-auto text-pretty"
               style={{ color: design.muted }}
             />
           )}
@@ -1232,42 +1310,27 @@ function BlockView({
         <div>
           {heading}
           <div className="space-y-2.5" role="radiogroup" aria-label={block.title || 'Opções'}>
-            {(block.options ?? []).map((o) => {
-              const active = value === o.id;
-              return (
-                <button
-                  key={o.id}
-                  onClick={() => {
-                    // Ação por opção (Funilix parity): uma URL externa navega na hora,
-                    // sem passar pelo fluxo normal de avançar etapa.
-                    if (o.actionUrl) {
-                      window.location.href = o.actionUrl;
-                      return;
-                    }
-                    setValue(o.id);
-                    // Ausente = avança (comportamento de sempre). Só quem
-                    // desliga o Autoavançar ganha o botão de continuar abaixo.
-                    if (terminal && block.autoAdvance !== false) onSubmit(o.id);
-                  }}
-                  role="radio"
-                  aria-checked={active}
-                  className="w-full flex items-center gap-3 text-left px-5 py-4 border-2 transition-all hover:scale-[1.01] active:scale-[0.99] motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
-                  style={{
-                    borderRadius: design.radius,
-                    borderColor: active ? design.primary : design.surface,
-                    background: design.surface,
-                    color: design.text,
-                  }}
-                >
-                  {o.imageUrl ? (
-                    <img src={o.imageUrl} alt="" className="h-10 w-10 rounded-md object-cover shrink-0" />
-                  ) : o.emoji ? (
-                    <span className="shrink-0">{o.emoji}</span>
-                  ) : null}
-                  <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
-                </button>
-              );
-            })}
+            {(block.options ?? []).map((o) => (
+              <OptionCard
+                key={o.id}
+                design={design}
+                option={o}
+                active={value === o.id}
+                multiple={false}
+                onClick={() => {
+                  // Ação por opção (Funilix parity): uma URL externa navega na hora,
+                  // sem passar pelo fluxo normal de avançar etapa.
+                  if (o.actionUrl) {
+                    window.location.href = o.actionUrl;
+                    return;
+                  }
+                  setValue(o.id);
+                  // Ausente = avança (comportamento de sempre). Só quem
+                  // desliga o Autoavançar ganha o botão de continuar abaixo.
+                  if (terminal && block.autoAdvance !== false) onSubmit(o.id);
+                }}
+              />
+            ))}
           </div>
           {/* Com o Autoavançar desligado, a escolha precisa de confirmação —
               sem este botão a etapa viraria um beco sem saída. */}
@@ -1290,8 +1353,12 @@ function BlockView({
       return (
         <div>
           {heading}
-          {(block.maxSelections ?? 0) > 0 && (
-            <p className="text-sm mb-3 text-center" style={{ color: design.muted }}>
+          {/* Só aparece depois da primeira marcação. Com zero selecionadas o
+              contador repetia o que o subtítulo já diz ("Escolha até três") e
+              ainda ficava centralizado no meio de uma tela alinhada à esquerda.
+              Como retorno da ação ele é útil; como instrução, é ruído. */}
+          {(block.maxSelections ?? 0) > 0 && multi.length > 0 && (
+            <p className="text-sm mb-3" aria-live="polite" style={{ color: design.muted }}>
               {multi.length} de {block.maxSelections} selecionadas
             </p>
           )}
@@ -1299,38 +1366,24 @@ function BlockView({
             {(block.options ?? []).map((o) => {
               const active = multi.includes(o.id);
               const limite = block.maxSelections ?? 0;
-              const noLimite = limite > 0 && !active && multi.length >= limite;
               return (
-                <button
+                <OptionCard
                   key={o.id}
+                  design={design}
+                  option={o}
+                  active={active}
+                  multiple
+                  disabled={limite > 0 && !active && multi.length >= limite}
                   onClick={() =>
                     setMulti((m) => {
                       if (m.includes(o.id)) return m.filter((x) => x !== o.id);
                       // No limite, marcar mais é ignorado — a opção já aparece
                       // desabilitada, então isto só protege teclado e toque duplo.
-                      const limite = block.maxSelections ?? 0;
                       if (limite > 0 && m.length >= limite) return m;
                       return [...m, o.id];
                     })
                   }
-                  disabled={noLimite}
-                  aria-pressed={active}
-                  aria-disabled={noLimite}
-                  className={`w-full flex items-center gap-3 text-left px-5 py-4 border-2 transition-all${noLimite ? ' opacity-40 cursor-not-allowed' : ''}`}
-                  style={{
-                    borderRadius: design.radius,
-                    borderColor: active ? design.primary : design.surface,
-                    background: design.surface,
-                    color: design.text,
-                  }}
-                >
-                  {o.imageUrl ? (
-                    <img src={o.imageUrl} alt="" className="h-10 w-10 rounded-md object-cover shrink-0" />
-                  ) : o.emoji ? (
-                    <span className="shrink-0">{o.emoji}</span>
-                  ) : null}
-                  <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
-                </button>
+                />
               );
             })}
           </div>
@@ -1392,7 +1445,7 @@ function BlockView({
               borderRadius: design.radius,
               background: design.surface,
               color: design.text,
-              border: `1px solid ${design.surface}`,
+              border: `1px solid ${withAlpha(design.text, 0.14)}`,
               outlineColor: design.primary,
             }}
           />
@@ -1418,6 +1471,7 @@ function BlockView({
               borderRadius: design.radius,
               background: design.surface,
               color: design.text,
+              border: `1px solid ${withAlpha(design.text, 0.14)}`,
               outlineColor: design.primary,
             }}
           />
@@ -1440,8 +1494,23 @@ function BlockView({
       return (
         <div>
           {heading}
-          <div className="relative w-full aspect-video overflow-hidden bg-black mb-6" style={{ borderRadius: design.radius }}>
-            {isMp4 ? (
+          {/* Sem URL, um <iframe src=""> desenhava um retângulo preto sólido —
+              a tela ficava com cara de quebrada justamente na hora em que o
+              dono do funil confere o rascunho antes de subir os vídeos. */}
+          <div
+            className="relative w-full aspect-video overflow-hidden mb-6 grid place-items-center"
+            style={{
+              borderRadius: design.radius,
+              background: url ? '#000' : withAlpha(design.text, 0.05),
+              border: url ? undefined : `1px dashed ${withAlpha(design.text, 0.18)}`,
+            }}
+          >
+            {!url ? (
+              <div className="flex flex-col items-center gap-2 px-6 text-center">
+                <PlayCircle className="h-8 w-8" style={{ color: withAlpha(design.text, 0.35) }} />
+                <span className="text-sm" style={{ color: design.muted }}>Vídeo ainda não adicionado</span>
+              </div>
+            ) : isMp4 ? (
               <video src={src} controls className="w-full h-full" />
             ) : (
               <iframe src={src} className="w-full h-full" allowFullScreen title="video" />
@@ -1503,29 +1572,45 @@ function BlockView({
     case 'testimonial':
       return (
         <div>
-          <div
-            className="p-6 space-y-4 mb-6"
-            style={{ background: design.surface, borderRadius: design.radius }}
+          <figure
+            className="relative px-5 py-5 sm:px-6 space-y-4 mb-6"
+            style={{
+              background: design.surface,
+              borderRadius: design.radius,
+              border: `1px solid ${withAlpha(design.text, 0.08)}`,
+              boxShadow: '0 1px 2px rgb(0 0 0 / 0.04)',
+            }}
           >
-            <p className="text-xl italic leading-relaxed">{title}</p>
-            <div className="flex items-center gap-3">
+            <span
+              aria-hidden
+              className="absolute left-4 top-1 select-none leading-none font-serif"
+              style={{ fontSize: '3rem', color: withAlpha(design.primary, 0.16) }}
+            >
+              &ldquo;
+            </span>
+            <blockquote className="relative text-[1.0625rem] sm:text-lg italic leading-relaxed text-pretty">
+              {title}
+            </blockquote>
+            <figcaption className="flex items-center gap-3">
               {block.testimonialAvatar && (
                 <img
                   src={block.testimonialAvatar}
-                  alt={block.testimonialAuthor || 'Depoimento'}
+                  alt=""
                   className="h-10 w-10 rounded-full object-cover"
                 />
               )}
               <div>
-                <div className="text-sm font-semibold">{block.testimonialAuthor}</div>
+                <div className="text-sm font-medium" style={{ color: design.muted }}>
+                  {block.testimonialAuthor}
+                </div>
                 {block.testimonialRole && (
                   <div className="text-xs" style={{ color: design.muted }}>
                     {block.testimonialRole}
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </figcaption>
+          </figure>
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
@@ -1581,16 +1666,47 @@ function BlockView({
       );
 
     case 'argument':
+      // Narração entre perguntas, não uma segunda pergunta. Antes usava o
+      // heading cheio ao lado de um ícone de 48px: em 375px sobravam ~280px
+      // para serifada de 1.375rem, o texto virava seis linhas estreitas e
+      // disputava atenção com a pergunta logo abaixo. Agora é um aviso — painel
+      // discreto, ícone empilhado no celular, texto em escala de leitura.
       return (
         <div className="space-y-6">
-          <div className="flex gap-4 items-start">
+          <div
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-start px-4 py-4 sm:px-5"
+            style={{
+              borderRadius: design.radius,
+              background: withAlpha(design.primary, 0.05),
+              border: `1px solid ${withAlpha(design.primary, 0.14)}`,
+            }}
+          >
             <div
-              className="h-12 w-12 shrink-0 rounded-full flex items-center justify-center"
-              style={{ background: design.primary + '22' }}
+              className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center"
+              style={{ background: withAlpha(design.primary, 0.14) }}
             >
-              <Sparkles className="h-5 w-5" style={{ color: design.primary }} />
+              <Sparkles className="h-4 w-4" style={{ color: design.primary }} />
             </div>
-            {heading}
+            <div className="space-y-1.5 min-w-0">
+              {(block.titleRich || title) && (
+                <RichText
+                  doc={block.titleRich}
+                  fallback={title}
+                  scope={scope}
+                  className="quiz-rich text-[1.0625rem] leading-snug font-semibold text-pretty sm:text-lg"
+                  style={{ fontFamily: design.fontHeading }}
+                />
+              )}
+              {(block.subtitleRich || subtitle) && (
+                <RichText
+                  doc={block.subtitleRich}
+                  fallback={subtitle}
+                  scope={scope}
+                  className="quiz-rich text-[0.9375rem] leading-relaxed text-pretty"
+                  style={{ color: design.muted }}
+                />
+              )}
+            </div>
           </div>
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
@@ -1722,7 +1838,7 @@ function BlockView({
                   value={formValue.name}
                   onChange={(e) => setFormValue((f) => ({ ...f, name: e.target.value }))}
                   className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
-                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${withAlpha(design.text, 0.14)}`, outlineColor: design.primary }}
                 />
               </>
             )}
@@ -1736,7 +1852,7 @@ function BlockView({
                   value={formValue.email}
                   onChange={(e) => setFormValue((f) => ({ ...f, email: e.target.value }))}
                   className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
-                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${withAlpha(design.text, 0.14)}`, outlineColor: design.primary }}
                 />
               </>
             )}
@@ -1750,7 +1866,7 @@ function BlockView({
                   value={formValue.phone}
                   onChange={(e) => setFormValue((f) => ({ ...f, phone: e.target.value }))}
                   className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
-                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${design.surface}`, outlineColor: design.primary }}
+                  style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${withAlpha(design.text, 0.14)}`, outlineColor: design.primary }}
                 />
               </>
             )}
@@ -1834,17 +1950,19 @@ function BlockView({
       return (
         <div className="text-center space-y-5">
           {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-semibold" style={{ fontFamily: design.fontHeading }} />)}
-          <div className="flex items-end justify-center gap-2">
-            <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice ?? 'R$ 0'}</span>
-            <span className="text-base opacity-70">{block.pricingPeriod}</span>
-          </div>
+          {block.pricingPrice?.trim() && (
+            <div className="flex items-end justify-center gap-2">
+              <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice}</span>
+              {block.pricingPeriod && <span className="text-base opacity-70">{block.pricingPeriod}</span>}
+            </div>
+          )}
           {block.pricingOriginalPrice && (
             <div className="text-sm line-through opacity-50">{block.pricingOriginalPrice}</div>
           )}
           <div className="space-y-2 text-left max-w-xs mx-auto">
             {(block.pricingFeatures ?? []).map((f, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: design.primary }} />
+              <div key={i} className="flex items-start gap-2 text-sm leading-snug">
+                <CheckCircle2 className="h-4 w-4 shrink-0 mt-px" style={{ color: design.primary }} />
                 {f}
               </div>
             ))}
@@ -1933,45 +2051,65 @@ function BlockView({
         </div>
       );
 
-    case 'carousel':
+    case 'carousel': {
+      const imagens = block.carouselImages ?? [];
       return (
         <div>
           {heading}
-          <div className="flex gap-3 overflow-x-auto mb-6 -mx-1 px-1">
-            {(block.carouselImages ?? []).map((url, i) => (
-              <img
-                key={i}
-                src={url}
-                alt={block.title ? `${block.title} — imagem ${i + 1}` : `Imagem ${i + 1}`}
-                className="h-56 w-72 shrink-0 object-cover"
-                style={{ borderRadius: design.radius }}
-              />
-            ))}
-          </div>
+          {imagens.length === 0 ? (
+            // Sem imagens o bloco sumia da tela: no rascunho a etapa parecia um
+            // título solto com um botão, e não dava pra saber que faltava algo.
+            <div
+              className="mb-6 h-40 grid place-items-center"
+              style={{
+                borderRadius: design.radius,
+                background: withAlpha(design.text, 0.05),
+                border: `1px dashed ${withAlpha(design.text, 0.18)}`,
+              }}
+            >
+              <div className="flex flex-col items-center gap-2 px-6 text-center">
+                <ImageIcon className="h-7 w-7" style={{ color: withAlpha(design.text, 0.35) }} />
+                <span className="text-sm" style={{ color: design.muted }}>Imagens ainda não adicionadas</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto mb-6 -mx-1 px-1 snap-x snap-mandatory">
+              {imagens.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt={block.title ? `${block.title} — imagem ${i + 1}` : `Imagem ${i + 1}`}
+                  className="h-56 w-72 shrink-0 object-cover snap-start"
+                  style={{ borderRadius: design.radius }}
+                />
+              ))}
+            </div>
+          )}
           <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
       );
+    }
 
     case 'comparison':
       return (
         <div>
           {heading}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="p-4 rounded-lg space-y-2" style={{ background: design.surface }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+            <div className="p-4 rounded-lg space-y-2.5" style={{ background: design.surface }}>
               <div className="text-xs font-semibold uppercase tracking-wide opacity-60">{block.comparisonLeftLabel}</div>
               {(block.comparisonLeftItems ?? []).map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm">
-                  <X className="h-4 w-4 shrink-0 text-red-400" /> {item}
+                <div key={i} className="flex items-start gap-2 text-sm leading-snug">
+                  <X className="h-4 w-4 shrink-0 mt-px text-red-400" /> {item}
                 </div>
               ))}
             </div>
-            <div className="p-4 rounded-lg space-y-2" style={{ background: design.primary + '15' }}>
+            <div className="p-4 rounded-lg space-y-2.5" style={{ background: design.primary + '15' }}>
               <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: design.primary }}>{block.comparisonRightLabel}</div>
               {(block.comparisonRightItems ?? []).map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: design.primary }} /> {item}
+                <div key={i} className="flex items-start gap-2 text-sm leading-snug">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 mt-px" style={{ color: design.primary }} /> {item}
                 </div>
               ))}
             </div>

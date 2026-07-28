@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye, PhoneCall, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GripVertical, Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Eye, PhoneCall, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import type { QuizBlock, QuizDesign, QuizSchema } from '../types';
 import { getSteps } from '../lib/steps';
 import { RichText } from './RichText';
-import { getContrastText } from '../lib/color';
+import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
 import { evaluatePercent } from '../lib/variables';
@@ -357,7 +357,7 @@ export function BlockRenderer({
           <RichText
             doc={block.titleRich}
             fallback={title}
-            className="quiz-rich text-4xl font-bold"
+            className="quiz-rich text-[1.75rem] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-4xl sm:leading-[1.1] max-w-[18ch] mx-auto"
             style={{ color: design.text, fontFamily: design.fontHeading }}
           />
           {(block.subtitleRich || sub) && (
@@ -377,25 +377,51 @@ export function BlockRenderer({
         <div className="space-y-5">
           {heading}
           <div className="space-y-2">
-            {opts.map((o) => (
-              <button
-                key={o.id}
-                className="w-full flex items-center gap-2.5 text-left px-4 py-3 border-2 transition-all hover:scale-[1.01]"
-                style={{
-                  borderRadius: design.radius,
-                  borderColor: o.preselected ? design.primary : design.surface,
-                  color: design.text,
-                  background: design.surface,
-                }}
-              >
-                {o.imageUrl ? (
-                  <img src={o.imageUrl} alt="" className="h-8 w-8 rounded object-cover shrink-0" />
-                ) : o.emoji ? (
-                  <span className="shrink-0">{o.emoji}</span>
-                ) : null}
-                <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
-              </button>
-            ))}
+            {opts.map((o) => {
+              // Espelha o OptionCard do player: contorno fino, indicador de
+              // forma (círculo = uma, quadrado = várias) e realce ao marcar.
+              const marcado = !!o.preselected;
+              const varias = block.type === 'multi-choice';
+              return (
+                <button
+                  key={o.id}
+                  className="w-full flex items-center gap-3 text-left px-4 py-3 border transition-all hover:-translate-y-px"
+                  style={{
+                    borderRadius: design.radius,
+                    borderColor: marcado ? design.primary : withAlpha(design.text, 0.12),
+                    borderWidth: marcado ? 2 : 1,
+                    color: design.text,
+                    background: marcado ? withAlpha(design.primary, 0.06) : design.surface,
+                    boxShadow: marcado ? `0 0 0 1px ${withAlpha(design.primary, 0.25)}` : '0 1px 2px rgb(0 0 0 / 0.04)',
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    className="shrink-0 grid place-items-center"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: varias ? 6 : 999,
+                      border: `2px solid ${marcado ? design.primary : withAlpha(design.text, 0.25)}`,
+                      background: marcado ? design.primary : 'transparent',
+                    }}
+                  >
+                    {marcado &&
+                      (varias ? (
+                        <Check className="h-3 w-3" strokeWidth={3} style={{ color: getContrastText(design.primary) }} />
+                      ) : (
+                        <span className="block" style={{ width: 7, height: 7, borderRadius: 999, background: getContrastText(design.primary) }} />
+                      ))}
+                  </span>
+                  {o.imageUrl ? (
+                    <img src={o.imageUrl} alt="" className="h-8 w-8 rounded object-cover shrink-0" />
+                  ) : o.emoji ? (
+                    <span className="shrink-0">{o.emoji}</span>
+                  ) : null}
+                  <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
+                </button>
+              );
+            })}
             {opts.length === 0 && <p className="text-xs opacity-60" style={{ color: design.muted }}>Nenhuma opção — adicione no inspetor.</p>}
           </div>
           {/* Espelha o player: sem autoavançar, a escolha só segue pelo botão. */}
@@ -419,7 +445,7 @@ export function BlockRenderer({
               borderRadius: design.radius,
               background: design.surface,
               color: design.text,
-              border: `1px solid ${design.surface}`,
+              border: `1px solid ${withAlpha(design.text, 0.14)}`,
             }}
           />
           <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
@@ -595,15 +621,33 @@ export function BlockRenderer({
     }
 
     case 'argument':
+      // Espelha o player: aviso discreto, não uma segunda pergunta.
       return (
-        <div className="flex gap-4 items-start">
+        <div
+          className="flex gap-3.5 items-start px-4 py-4"
+          style={{
+            borderRadius: design.radius,
+            background: withAlpha(design.primary, 0.05),
+            border: `1px solid ${withAlpha(design.primary, 0.14)}`,
+          }}
+        >
           <div
-            className="h-11 w-11 shrink-0 rounded-full flex items-center justify-center"
-            style={{ background: design.primary + '22' }}
+            className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center"
+            style={{ background: withAlpha(design.primary, 0.14) }}
           >
-            <Sparkles className="h-5 w-5" style={{ color: design.primary }} />
+            <Sparkles className="h-4 w-4" style={{ color: design.primary }} />
           </div>
-          {heading}
+          <div className="space-y-1.5 min-w-0">
+            <RichText
+              doc={block.titleRich}
+              fallback={title}
+              className="quiz-rich text-base font-semibold leading-snug"
+              style={{ color: design.text, fontFamily: design.fontHeading }}
+            />
+            {(block.subtitleRich || sub) && (
+              <RichText doc={block.subtitleRich} fallback={sub} className="quiz-rich text-sm" style={{ color: design.muted }} />
+            )}
+          </div>
         </div>
       );
 
@@ -895,7 +939,7 @@ function FormFieldPreview({ design, label, suffix }: { design: QuizDesign; label
   return (
     <div
       className="w-full px-4 py-3 flex items-center justify-between text-sm"
-      style={{ borderRadius: design.radius, background: design.surface, color: design.muted, border: `1px solid ${design.surface}` }}
+      style={{ borderRadius: design.radius, background: design.surface, color: design.muted, border: `1px solid ${withAlpha(design.text, 0.14)}` }}
     >
       {label}
       {suffix && <span className="text-xs">{suffix}</span>}

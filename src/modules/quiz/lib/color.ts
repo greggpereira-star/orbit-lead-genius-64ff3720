@@ -49,3 +49,16 @@ function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }): nu
   });
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 }
+
+/**
+ * `hex` com transparência, em `rgb(r g b / a)`.
+ *
+ * O tema do quiz é hex puro, mas contorno e realce precisam de uma tinta que
+ * acompanhe a cor escolhida sem virar mais um campo de configuração. Uma cinza
+ * fixa brigaria com temas escuros ou coloridos; a mesma cor diluída, não.
+ */
+export function withAlpha(hex: string, alpha: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  return `rgb(${rgb.r} ${rgb.g} ${rgb.b} / ${alpha})`;
+}

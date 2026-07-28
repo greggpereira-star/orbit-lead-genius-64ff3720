@@ -14,6 +14,16 @@ import { interpolateText, type VariableScope } from '../lib/variables';
 
 const HEADING_TAG: Record<string, string> = { h1: 'h1', h2: 'h2', h3: 'h3', p: 'p' };
 
+/** Quebra manual vira <br>. O HTML colapsa "\n"; sem isso o texto simples perde o ritmo que a pessoa escreveu. */
+function comQuebras(texto: string): ReactNode[] {
+  return texto.split('\n').map((linha, i) => (
+    <Fragment key={i}>
+      {i > 0 && <br />}
+      {linha}
+    </Fragment>
+  ));
+}
+
 function spanStyle(span: RichSpan): CSSProperties | undefined {
   const style: CSSProperties = {};
   if (span.color) style.color = span.color;
@@ -43,13 +53,7 @@ function renderSpans(spans: RichSpan[], scope: VariableScope | undefined, keyPre
     }
     const text = scope ? interpolateText(span.text, scope) : span.text;
     // A quebra manual (Shift+Enter) vira <br> de verdade, não "\n" invisível.
-    const parts = text.split('\n');
-    let node: ReactNode = parts.map((p, j) => (
-      <Fragment key={j}>
-        {j > 0 && <br />}
-        {p}
-      </Fragment>
-    ));
+    let node: ReactNode = comQuebras(text);
 
     const marks = span.marks ?? [];
     if (marks.includes('bold')) node = <strong>{node}</strong>;
@@ -98,7 +102,7 @@ export function RichText({ doc, scope, className, style, fallback }: Props) {
   if (!doc?.nodes?.length) {
     if (!fallback) return null;
     const text = scope ? interpolateText(fallback, scope) : fallback;
-    return <p className={className} style={style}>{text}</p>;
+    return <p className={className} style={style}>{comQuebras(text)}</p>;
   }
 
   return (
