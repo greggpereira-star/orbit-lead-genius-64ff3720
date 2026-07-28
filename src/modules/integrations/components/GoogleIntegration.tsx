@@ -10,6 +10,7 @@ import {
   listGoogleAdsAccounts,
   listGoogleAdsConversionActions,
 } from '@/lib/google-oauth.functions';
+import { salvarConversaoGoogle } from '@/lib/google-ads.functions';
 
 /**
  * Conexão com o Google Ads.
@@ -78,14 +79,31 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
     }
   };
 
-  const copiar = async (texto: string) => {
+  /**
+   * Guarda a conversão escolhida. O mesmo clique resolve os dois lados: o
+   * `AW-123/rótulo` que o gtag usa no navegador e o nome do recurso que a API
+   * usa no servidor — que são identificadores diferentes da mesma conversão.
+   */
+  const escolher = async (c: ContaAds, a: AcaoConversao, tipo: 'lead' | 'sale') => {
     try {
-      await navigator.clipboard.writeText(texto);
-      toast.success('Copiado', { description: texto });
-    } catch {
-      // Área de transferência bloqueada acontece — mostrar o valor ainda
-      // resolve, porque dá para selecionar na tela.
-      toast.info(texto);
+      await salvarConversaoGoogle({
+        data: {
+          companyId,
+          customerId: c.id,
+          conversionActionId: a.id,
+          tipo,
+          conversionId: a.conversionId,
+          rotulo: a.rotulo,
+        },
+      });
+      toast.success(
+        tipo === 'lead' ? 'Conversão de lead definida' : 'Conversão de venda definida',
+        { description: `${c.nome} · ${a.nome}` },
+      );
+    } catch (e) {
+      toast.error('Não deu para salvar a escolha', {
+        description: e instanceof Error ? e.message : String(e),
+      });
     }
   };
 
@@ -249,16 +267,24 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
                                       : 'sem snippet de gtag'}
                                   </p>
                                 </div>
-                                {a.conversionId && a.rotulo && (
+                                <div className="flex shrink-0 gap-1">
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-7 shrink-0 text-[10px]"
-                                    onClick={() => copiar(`${a.conversionId}/${a.rotulo}`)}
+                                    className="h-7 text-[10px]"
+                                    onClick={() => escolher(c, a, 'lead')}
                                   >
-                                    Copiar
+                                    Usar p/ lead
                                   </Button>
-                                )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-[10px]"
+                                    onClick={() => escolher(c, a, 'sale')}
+                                  >
+                                    Usar p/ venda
+                                  </Button>
+                                </div>
                               </div>
                             ))
                           )}

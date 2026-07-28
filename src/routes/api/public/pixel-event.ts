@@ -110,6 +110,38 @@ export const Route = createFileRoute('/api/public/pixel-event')({
           customData: body.customData ?? null,
         });
 
+        // Conversão de LEAD no Google Ads, no mesmo instante do `Lead` do Meta.
+        //
+        // Vai daqui, e não de um cron, porque é aqui que o `gclid` da URL ainda
+        // existe: ele chega no `tracking` do navegador. Fire-and-forget — o
+        // visitante não espera pelo Google Ads.
+        if (eventName === 'Lead') {
+          void (async () => {
+            try {
+              const { enviarConversaoGoogle } = await import('@/lib/google-ads.server');
+              const r = await enviarConversaoGoogle({
+                companyId,
+                tipo: 'lead',
+                leadId: body.eventId!,
+                gclid: body.tracking?.gclid ?? null,
+                email: body.email ?? null,
+                phone: body.phone ?? null,
+              });
+              if (r.status === 'falhou') {
+                console.error(JSON.stringify({
+                  scope: 'pixel-event', msg: 'google_conversao_falhou',
+                  company_id: companyId, detalhe: r.detalhe,
+                }));
+              }
+            } catch (err) {
+              console.error(JSON.stringify({
+                scope: 'pixel-event', msg: 'google_conversao_excecao',
+                erro: err instanceof Error ? err.message : String(err),
+              }));
+            }
+          })();
+        }
+
         if (result.status === 'failed') {
           // Logado, não devolvido: a resposta do Meta pode citar o pixel e a
           // conta, e quem chama é uma página pública.

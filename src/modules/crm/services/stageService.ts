@@ -161,6 +161,18 @@ export async function moveLeadToStage(input: MoveLeadInput): Promise<void> {
       metadata: { to_stage_id: input.stageId },
     });
   }
+
+  // Lead ganho vira conversão de venda no Google Ads.
+  //
+  // Aqui, e não num cron, porque este é o único ponto de escrita de etapa no
+  // app inteiro — qualquer caminho que ganhe um lead passa por esta função.
+  // Fire-and-forget: o card já se moveu na tela, e uma falha de mídia não pode
+  // desfazer um movimento de pipeline.
+  if (stage.kind === 'won') {
+    void import('@/lib/google-ads.functions')
+      .then(({ enviarConversaoVenda }) => enviarConversaoVenda({ data: { leadId: input.leadId } }))
+      .catch((err) => console.error('Falha ao enviar conversão de venda', err));
+  }
 }
 
 /**
