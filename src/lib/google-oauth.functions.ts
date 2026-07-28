@@ -375,6 +375,74 @@ export const listGoogleAdsAccounts = createServerFn({ method: 'POST' })
     return { ok: true as const, contas, versao };
   });
 
+/**
+ * Ações de conversão de uma conta, já traduzidas para o que a tela de pixel
+ * precisa.
+ *
+ * O pulo do gato é `tag_snippets`: o Google devolve ali o próprio trecho de
+ * gtag que ele mandaria colar no site, e dentro dele está o
+ * `send_to: 'AW-123/rótulo'`. É de onde saem o ID de conversão e o rótulo sem
+ * ninguém precisar copiar do painel — que é justamente onde se erra um
+ * caractere e a conversão nunca aparece.
+ */
+export const listGoogleAdsConversionActions = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        companyId: z.string().uuid(),
+        customerId: z.string().min(1),
+        loginCustomerId: z.string().optional(),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const devToken = readEnv('GOOGLE_ADS_DEVELOPER_TOKEN');
+    if (!devToken) throw new Error('GOOGLE_ADS_DEVELOPER_TOKEN não configurado no servidor.');
+    const accessToken = await getAccessToken(data.companyId);
+
+    const r = await consultarGaql(
+      data.customerId,
+      `SELECT conversion_action.id,
+              conversion_action.name,
+              conversion_action.type,
+              conversion_action.category,
+              conversion_action.status,
+              conversion_action.tag_snippets
+         FROM conversion_action
+        WHERE conversion_action.status = 'ENABLED'`,
+      accessToken,
+      devToken,
+      data.loginCustomerId,
+    );
+    if (r.erro) return { ok: false as const, erro: r.erro };
+
+    const acoes = (r.linhas ?? []).map((linha) => {
+      const ca = (linha.conversionAction ?? {}) as {
+        id?: string;
+        name?: string;
+        type?: string;
+        category?: string;
+        tagSnippets?: Array<{ eventSnippet?: string; globalSiteTag?: string }>;
+      };
+      const snippets = (ca.tagSnippets ?? [])
+        .map((s) => s.eventSnippet ?? '')
+        .join('\n');
+      // `send_to: 'AW-123456789/AbCdEf-gh12'`
+      const casado = snippets.match(/['"](AW-\d+)\/([\w-]+)['"]/);
+      return {
+        id: ca.id ?? '',
+        nome: ca.name ?? '(sem nome)',
+        tipo: ca.type ?? null,
+        categoria: ca.category ?? null,
+        conversionId: casado?.[1] ?? null,
+        rotulo: casado?.[2] ?? null,
+      };
+    });
+
+    return { ok: true as const, acoes };
+  });
+
 /** Executa uma consulta GAQL numa conta e devolve as linhas cruas. */
 async function consultarGaql(
   customerId: string,

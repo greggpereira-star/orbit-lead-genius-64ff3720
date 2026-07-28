@@ -8,6 +8,7 @@ import {
   getGoogleAdsAuthUrl,
   getGoogleAdsStatus,
   listGoogleAdsAccounts,
+  listGoogleAdsConversionActions,
 } from '@/lib/google-oauth.functions';
 
 /**
@@ -26,6 +27,15 @@ import {
  * foi aprovado para contas de produção. Sem esse teste, o problema só
  * apareceria adiante, com conversões recusadas em silêncio.
  */
+interface AcaoConversao {
+  id: string;
+  nome: string;
+  tipo: string | null;
+  categoria: string | null;
+  conversionId: string | null;
+  rotulo: string | null;
+}
+
 interface ContaAds {
   id: string;
   nome: string;
@@ -43,6 +53,41 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
   const [verificando, setVerificando] = useState(false);
   const [contas, setContas] = useState<ContaAds[] | null>(null);
   const [erroApi, setErroApi] = useState<string | null>(null);
+  const [contaAberta, setContaAberta] = useState<string | null>(null);
+  const [buscandoAcoes, setBuscandoAcoes] = useState(false);
+  const [acoes, setAcoes] = useState<AcaoConversao[] | null>(null);
+
+  const abrirConversoes = async (c: ContaAds) => {
+    if (contaAberta === c.id) { setContaAberta(null); setAcoes(null); return; }
+    setContaAberta(c.id);
+    setAcoes(null);
+    setBuscandoAcoes(true);
+    try {
+      const r = await listGoogleAdsConversionActions({
+        data: { companyId, customerId: c.id },
+      });
+      if (r.ok) setAcoes(r.acoes);
+      else { setAcoes([]); toast.error('Não deu para ler as conversões', { description: r.erro }); }
+    } catch (e) {
+      setAcoes([]);
+      toast.error('Não deu para ler as conversões', {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setBuscandoAcoes(false);
+    }
+  };
+
+  const copiar = async (texto: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast.success('Copiado', { description: texto });
+    } catch {
+      // Área de transferência bloqueada acontece — mostrar o valor ainda
+      // resolve, porque dá para selecionar na tela.
+      toast.info(texto);
+    }
+  };
 
   useEffect(() => {
     let vivo = true;
@@ -154,26 +199,74 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
                 Nenhuma. A conta Google autorizada não enxerga nenhuma conta de anúncio.
               </p>
             ) : (
-              <ul className="space-y-1.5">
-                {contas.map((c) => (
-                  <li key={c.id} className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{c.nome}</p>
-                      <p className="font-mono text-[10px] text-muted-foreground">
-                        {c.id}
-                        {c.moeda ? ` · ${c.moeda}` : ''}
-                        {c.erro ? ` · ${c.erro}` : ''}
-                      </p>
-                    </div>
-                    {/* Gerenciadora não tem conversão própria — só contas-filhas.
-                        Marcar aqui evita escolher a conta errada mais adiante. */}
-                    {c.ehGerenciadora && (
-                      <Badge variant="outline" className="shrink-0 text-[9px] uppercase">
-                        Gerenciadora
-                      </Badge>
-                    )}
-                  </li>
-                ))}
+              <ul className="space-y-1">
+                {contas.map((c) => {
+                  // Gerenciadora não tem conversão própria e conta desativada
+                  // não responde. Deixar as duas clicáveis só levaria a um erro
+                  // depois do clique.
+                  const selecionavel = !c.ehGerenciadora && !c.erro;
+                  const ativa = contaAberta === c.id;
+                  return (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        disabled={!selecionavel}
+                        onClick={() => abrirConversoes(c)}
+                        className={`w-full flex items-start justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${
+                          selecionavel ? 'hover:bg-background' : 'cursor-default opacity-60'
+                        } ${ativa ? 'bg-background ring-1 ring-primary/30' : ''}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">{c.nome}</p>
+                          <p className="font-mono text-[10px] text-muted-foreground">
+                            {c.id}
+                            {c.moeda ? ` · ${c.moeda}` : ''}
+                            {c.erro ? ` · ${c.erro}` : ''}
+                          </p>
+                        </div>
+                        {c.ehGerenciadora && (
+                          <Badge variant="outline" className="shrink-0 text-[9px] uppercase">
+                            Gerenciadora
+                          </Badge>
+                        )}
+                        {ativa && buscandoAcoes && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />}
+                      </button>
+
+                      {ativa && acoes && (
+                        <div className="ml-2 mt-1 space-y-1 border-l pl-3">
+                          {acoes.length === 0 ? (
+                            <p className="text-muted-foreground">
+                              Nenhuma conversão ativa nesta conta.
+                            </p>
+                          ) : (
+                            acoes.map((a) => (
+                              <div key={a.id} className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="truncate">{a.nome}</p>
+                                  <p className="font-mono text-[10px] text-muted-foreground">
+                                    {a.conversionId && a.rotulo
+                                      ? `${a.conversionId}/${a.rotulo}`
+                                      : 'sem snippet de gtag'}
+                                  </p>
+                                </div>
+                                {a.conversionId && a.rotulo && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 shrink-0 text-[10px]"
+                                    onClick={() => copiar(`${a.conversionId}/${a.rotulo}`)}
+                                  >
+                                    Copiar
+                                  </Button>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
