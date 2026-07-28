@@ -70,13 +70,17 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
           .eq('id', q.published_version_id ?? '')
           .maybeSingle();
 
-        const schema = (versao as { schema?: { blocks?: Array<Record<string, unknown>> } } | null)?.schema;
-        const max = (schema?.blocks ?? []).reduce((soma, b) => {
-          const opts = (b.options as Array<{ score?: number }> | undefined) ?? [];
-          const notas = opts.map((o) => o.score ?? 0);
-          if (!notas.some(Boolean)) return soma;
-          return soma + Math.max(...notas);
-        }, 0);
+        // A MESMA função que o quiz usa no navegador para pontuar.
+        //
+        // Tinha um cálculo próprio aqui, e ele estava errado: pegava só a maior
+        // opção de cada bloco, inclusive nos de MÚLTIPLA escolha, onde o
+        // respondente marca várias. O teto saía menor que o real, todo mundo
+        // ficava com percentual inflado e subia de faixa indevidamente — um
+        // lead de 34% aparecia como 57%. Duas implementações da mesma regra é
+        // como isso acontece; agora existe uma só.
+        const { maxPossibleScore } = await import('@/modules/quiz/engine');
+        const schema = (versao as { schema?: unknown } | null)?.schema;
+        const max = schema ? maxPossibleScore(schema as never) : 0;
         if (max <= 0) return json({ status: 'sem_pontuacao' });
 
         const pct = ((body.score ?? 0) / max) * 100;
