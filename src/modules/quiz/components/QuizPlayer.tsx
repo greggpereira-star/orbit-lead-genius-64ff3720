@@ -1290,17 +1290,33 @@ function BlockView({
       return (
         <div>
           {heading}
+          {(block.maxSelections ?? 0) > 0 && (
+            <p className="text-sm mb-3 text-center" style={{ color: design.muted }}>
+              {multi.length} de {block.maxSelections} selecionadas
+            </p>
+          )}
           <div className="space-y-2.5 mb-6" role="group" aria-label={block.title || 'Opções'}>
             {(block.options ?? []).map((o) => {
               const active = multi.includes(o.id);
+              const limite = block.maxSelections ?? 0;
+              const noLimite = limite > 0 && !active && multi.length >= limite;
               return (
                 <button
                   key={o.id}
                   onClick={() =>
-                    setMulti((m) => (m.includes(o.id) ? m.filter((x) => x !== o.id) : [...m, o.id]))
+                    setMulti((m) => {
+                      if (m.includes(o.id)) return m.filter((x) => x !== o.id);
+                      // No limite, marcar mais é ignorado — a opção já aparece
+                      // desabilitada, então isto só protege teclado e toque duplo.
+                      const limite = block.maxSelections ?? 0;
+                      if (limite > 0 && m.length >= limite) return m;
+                      return [...m, o.id];
+                    })
                   }
+                  disabled={noLimite}
                   aria-pressed={active}
-                  className="w-full flex items-center gap-3 text-left px-5 py-4 border-2 transition-all"
+                  aria-disabled={noLimite}
+                  className={`w-full flex items-center gap-3 text-left px-5 py-4 border-2 transition-all${noLimite ? ' opacity-40 cursor-not-allowed' : ''}`}
                   style={{
                     borderRadius: design.radius,
                     borderColor: active ? design.primary : design.surface,

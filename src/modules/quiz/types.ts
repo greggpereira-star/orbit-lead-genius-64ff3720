@@ -148,6 +148,15 @@ export interface QuizBlock {
   ctaLabel?: string;
   imageUrl?: string;
   maxRating?: number;
+  /**
+   * Máximo de opções marcáveis num bloco de múltipla escolha.
+   *
+   * Ausente = sem limite. Existe porque "escolha até três" escrito no
+   * subtítulo não impedia nada: a tela prometia um limite que o quiz não
+   * cumpria, e cada marcação extra ainda somava pontos, inflando a
+   * classificação de quem só clicou em tudo.
+   */
+  maxSelections?: number;
   // Régua de peso/altura (Funilix parity): substitui o campo numérico simples por
   // um slider de arrastar, com faixa configurável e troca de unidade (kg/lb, cm/pol).
   sliderMin?: number;

@@ -338,6 +338,22 @@ function BlockInspector({
           </>
         )}
 
+        {block.type === 'multi-choice' && (
+          <Field label={`Máximo de escolhas: ${block.maxSelections ? block.maxSelections : 'sem limite'}`}>
+            <Slider
+              min={0}
+              max={Math.max(3, (block.options ?? []).length)}
+              step={1}
+              value={[block.maxSelections ?? 0]}
+              onValueChange={([v]) => onChange({ maxSelections: v || undefined })}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              Zero deixa sem limite. Com limite, as opções restantes ficam desabilitadas e o
+              quiz mostra quantas faltam — em vez de só prometer no texto.
+            </p>
+          </Field>
+        )}
+
         {block.type === 'rating' && (
           <Field label={`Escala máxima: ${block.maxRating ?? 5}`}>
             <Slider
