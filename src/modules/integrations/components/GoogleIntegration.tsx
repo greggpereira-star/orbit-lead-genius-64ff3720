@@ -26,6 +26,14 @@ import {
  * foi aprovado para contas de produção. Sem esse teste, o problema só
  * apareceria adiante, com conversões recusadas em silêncio.
  */
+interface ContaAds {
+  id: string;
+  nome: string;
+  ehGerenciadora: boolean;
+  moeda: string | null;
+  erro: string | null;
+}
+
 export function GoogleIntegration({ companyId }: { companyId: string }) {
   const [carregando, setCarregando] = useState(true);
   const [conectado, setConectado] = useState(false);
@@ -33,7 +41,7 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
   const [redirectUri, setRedirectUri] = useState('');
   const [indoParaGoogle, setIndoParaGoogle] = useState(false);
   const [verificando, setVerificando] = useState(false);
-  const [contas, setContas] = useState<string[] | null>(null);
+  const [contas, setContas] = useState<ContaAds[] | null>(null);
   const [erroApi, setErroApi] = useState<string | null>(null);
 
   useEffect(() => {
@@ -146,8 +154,26 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
                 Nenhuma. A conta Google autorizada não enxerga nenhuma conta de anúncio.
               </p>
             ) : (
-              <ul className="font-mono text-muted-foreground">
-                {contas.map((c) => <li key={c}>{c}</li>)}
+              <ul className="space-y-1.5">
+                {contas.map((c) => (
+                  <li key={c.id} className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{c.nome}</p>
+                      <p className="font-mono text-[10px] text-muted-foreground">
+                        {c.id}
+                        {c.moeda ? ` · ${c.moeda}` : ''}
+                        {c.erro ? ` · ${c.erro}` : ''}
+                      </p>
+                    </div>
+                    {/* Gerenciadora não tem conversão própria — só contas-filhas.
+                        Marcar aqui evita escolher a conta errada mais adiante. */}
+                    {c.ehGerenciadora && (
+                      <Badge variant="outline" className="shrink-0 text-[9px] uppercase">
+                        Gerenciadora
+                      </Badge>
+                    )}
+                  </li>
+                ))}
               </ul>
             )}
           </div>

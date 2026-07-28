@@ -60,10 +60,29 @@ async function chamarAdsApi(
   caminho: string,
   accessToken: string,
   devToken: string,
+  opcoes?: {
+    body?: unknown;
+    /**
+     * Conta gerenciadora pela qual o acesso está sendo feito. O Google exige
+     * este cabeçalho quando se consulta uma conta-filha através da MCC —
+     * sem ele a resposta é `USER_PERMISSION_DENIED`, que parece falta de
+     * permissão quando na verdade é falta de contexto.
+     */
+    loginCustomerId?: string;
+  },
 ): Promise<{ res: Response; versao: string } | { erro: string }> {
   for (const versao of versoesAds()) {
+    const headers: Record<string, string> = {
+      authorization: `Bearer ${accessToken}`,
+      'developer-token': devToken,
+    };
+    if (opcoes?.loginCustomerId) headers['login-customer-id'] = opcoes.loginCustomerId;
+    if (opcoes?.body !== undefined) headers['content-type'] = 'application/json';
+
     const res = await fetch(`https://googleads.googleapis.com/${versao}/${caminho}`, {
-      headers: { authorization: `Bearer ${accessToken}`, 'developer-token': devToken },
+      method: opcoes?.body !== undefined ? 'POST' : 'GET',
+      headers,
+      body: opcoes?.body !== undefined ? JSON.stringify(opcoes.body) : undefined,
     });
     if (res.status === 404) continue;
     return { res, versao };
@@ -325,6 +344,84 @@ export const listGoogleAdsAccounts = createServerFn({ method: 'POST' })
     }
 
     // `customers/1234567890` → `1234567890`
-    const contas = (corpo.resourceNames ?? []).map((r) => r.split('/').pop() ?? r);
+    const ids = (corpo.resourceNames ?? []).map((r) => r.split('/').pop() ?? r);
+
+    // Um ID de dez dígitos não diz nada a quem vai escolher a conta. Cada uma
+    // é consultada para virar nome, e para sabermos se é gerenciadora — uma
+    // MCC não tem conversões próprias, só contas-filhas.
+    const contas = await Promise.all(
+      ids.map(async (id) => {
+        const detalhe = await consultarGaql(
+          id,
+          'SELECT customer.id, customer.descriptive_name, customer.manager, customer.currency_code FROM customer LIMIT 1',
+          accessToken,
+          devToken,
+        );
+        const c = detalhe.linhas?.[0]?.customer as
+          | { descriptiveName?: string; manager?: boolean; currencyCode?: string }
+          | undefined;
+        return {
+          id,
+          nome: c?.descriptiveName ?? `Conta ${id}`,
+          ehGerenciadora: c?.manager === true,
+          moeda: c?.currencyCode ?? null,
+          // Conta que não respondeu não vira erro da tela inteira: aparece na
+          // lista com o motivo, para não sumir em silêncio.
+          erro: detalhe.erro ?? null,
+        };
+      }),
+    );
+
     return { ok: true as const, contas, versao };
   });
+
+/** Executa uma consulta GAQL numa conta e devolve as linhas cruas. */
+async function consultarGaql(
+  customerId: string,
+  query: string,
+  accessToken: string,
+  devToken: string,
+  loginCustomerId?: string,
+): Promise<{ linhas?: Record<string, unknown>[]; erro?: string }> {
+  const chamada = await chamarAdsApi(
+    `customers/${customerId}/googleAds:search`,
+    accessToken,
+    devToken,
+    // Só `query`, sem `pageSize`. Mandar os dois com um `LIMIT` na própria
+    // consulta faz o Google recusar com "Request contains an invalid
+    // argument" — mensagem que não diz qual argumento, e custou uma sessão
+    // inteira de depuração. O limite mora na GAQL.
+    { body: { query }, loginCustomerId },
+  );
+  if ('erro' in chamada) return { erro: chamada.erro };
+
+  const corpo = (await chamada.res.json().catch(() => ({}))) as {
+    results?: Record<string, unknown>[];
+    error?: {
+      message?: string;
+      details?: Array<{ errors?: Array<{ message?: string; errorCode?: Record<string, string> }> }>;
+    };
+  };
+  if (!chamada.res.ok) {
+    return { erro: extrairErroGoogle(corpo.error, chamada.res.status) };
+  }
+  return { linhas: corpo.results ?? [] };
+}
+
+/**
+ * O `message` de topo do Google é quase sempre genérico ("Request contains an
+ * invalid argument"). O que serve para agir está em `details[].errors[]`, com
+ * o código do erro. Puxar isso à tona é a diferença entre um bug de dez
+ * minutos e um de uma hora.
+ */
+function extrairErroGoogle(
+  erro: { message?: string; details?: Array<{ errors?: Array<{ message?: string; errorCode?: Record<string, string> }> }> } | undefined,
+  status: number,
+): string {
+  const interno = erro?.details?.[0]?.errors?.[0];
+  if (interno?.message) {
+    const codigo = interno.errorCode ? Object.values(interno.errorCode)[0] : undefined;
+    return codigo ? `${interno.message} (${codigo})` : interno.message;
+  }
+  return erro?.message ?? `HTTP ${status}`;
+}
