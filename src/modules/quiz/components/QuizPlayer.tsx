@@ -11,7 +11,7 @@ import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
-import { resolveBlockStyle } from '../lib/blockStyle';
+import { resolveBlockStyle, resolveTextStyle } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
@@ -937,12 +937,15 @@ function PrimaryBtn({
   onClick,
   disabled,
   hidden,
+  textStyle,
 }: {
   design: QuizSchema['design'];
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   hidden?: boolean;
+  /** Tipografia do slot "Botão" — depois do estilo do tema, para vencê-lo. */
+  textStyle?: React.CSSProperties;
 }) {
   if (hidden) return null;
   const { style, className } = getButtonStyle(design);
@@ -951,7 +954,7 @@ function PrimaryBtn({
       onClick={onClick}
       disabled={disabled}
       className={`w-full sm:w-auto px-8 py-3.5 font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${className ? ` ${className}` : ''}`}
-      style={{ ...style, outlineColor: design.primary }}
+      style={{ ...style, outlineColor: design.primary, ...textStyle }}
     >
       {children}
     </button>
@@ -1037,6 +1040,8 @@ function ContainerView({
         justifyContent: CONTAINER_JUSTIFY_CSS[layout.justify],
       };
 
+  const btnText = resolveTextStyle(block, 'button');
+
   return (
     <div className="space-y-6">
       <div style={layoutStyle}>
@@ -1063,7 +1068,7 @@ function ContainerView({
           </div>
         ))}
       </div>
-      <PrimaryBtn design={design} hidden={!terminal} onClick={onContainerSubmit}>
+      <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={onContainerSubmit}>
         {block.ctaLabel || 'Continuar'}
       </PrimaryBtn>
     </div>
@@ -1089,6 +1094,7 @@ function OptionCard({
   multiple,
   disabled,
   onClick,
+  textStyle,
 }: {
   design: QuizDesign;
   option: BlockOption;
@@ -1096,6 +1102,8 @@ function OptionCard({
   multiple: boolean;
   disabled?: boolean;
   onClick: () => void;
+  /** Tipografia do slot "Opções". */
+  textStyle?: React.CSSProperties;
 }) {
   return (
     <button
@@ -1143,7 +1151,7 @@ function OptionCard({
       ) : option.emoji ? (
         <span className="shrink-0">{option.emoji}</span>
       ) : null}
-      <span className="min-w-0 flex-1">{parseRichText(option.label)}</span>
+      <span className="min-w-0 flex-1" style={textStyle}>{parseRichText(option.label)}</span>
     </button>
   );
 }
@@ -1249,6 +1257,11 @@ function BlockView({
   /* Quando o bloco tem texto rico, ele manda; sem documento, cai no texto
      simples de sempre. Os dois passam pelo MESMO <RichText> que o Preview usa —
      é isso que garante que o que foi formatado é o que o visitante vê. */
+  // Resolvidos uma vez por bloco: o tema entra como padrão e o que o usuário
+  // configurou no elemento vence.
+  const btnText = resolveTextStyle(block, 'button');
+  const optText = resolveTextStyle(block, 'options');
+
   const heading = (
     <div className="space-y-2.5 mb-7 pt-1">
       {(block.titleRich || title) && (
@@ -1257,7 +1270,7 @@ function BlockView({
           fallback={title}
           scope={scope}
           className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
-          style={{ fontFamily: design.fontHeading }}
+          style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
         />
       )}
       {(block.subtitleRich || subtitle) && (
@@ -1266,7 +1279,7 @@ function BlockView({
           fallback={subtitle}
           scope={scope}
           className="quiz-rich text-[0.9375rem] leading-relaxed max-w-[42ch] text-pretty"
-          style={{ color: design.muted }}
+          style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
         />
       )}
     </div>
@@ -1288,7 +1301,7 @@ function BlockView({
             fallback={title}
             scope={scope}
             className="quiz-rich text-[1.75rem] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-4xl sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto"
-            style={{ fontFamily: design.fontHeading }}
+            style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
           />
           {(block.subtitleRich || subtitle) && (
             <RichText
@@ -1296,10 +1309,10 @@ function BlockView({
               fallback={subtitle}
               scope={scope}
               className="quiz-rich text-[1.0625rem] leading-relaxed max-w-[38ch] mx-auto text-pretty"
-              style={{ color: design.muted }}
+              style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
             />
           )}
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Começar'}
           </PrimaryBtn>
         </div>
@@ -1315,6 +1328,7 @@ function BlockView({
                 key={o.id}
                 design={design}
                 option={o}
+                textStyle={optText}
                 active={value === o.id}
                 multiple={false}
                 onClick={() => {
@@ -1338,6 +1352,7 @@ function BlockView({
             <div className="mt-6">
               <PrimaryBtn
                 design={design}
+                textStyle={btnText}
                 hidden={!terminal}
                 disabled={!value || saving}
                 onClick={() => onSubmit(value)}
@@ -1371,6 +1386,7 @@ function BlockView({
                   key={o.id}
                   design={design}
                   option={o}
+                  textStyle={optText}
                   active={active}
                   multiple
                   disabled={limite > 0 && !active && multi.length >= limite}
@@ -1387,7 +1403,7 @@ function BlockView({
               );
             })}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(multi)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(multi)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1420,7 +1436,7 @@ function BlockView({
               );
             })}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1449,7 +1465,7 @@ function BlockView({
               outlineColor: design.primary,
             }}
           />
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1475,7 +1491,7 @@ function BlockView({
               outlineColor: design.primary,
             }}
           />
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1516,7 +1532,7 @@ function BlockView({
               <iframe src={src} className="w-full h-full" allowFullScreen title="video" />
             )}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1528,7 +1544,7 @@ function BlockView({
         <div>
           {heading}
           {block.mediaUrl && <audio src={block.mediaUrl} controls className="w-full mb-6" />}
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1546,7 +1562,7 @@ function BlockView({
               style={{ borderRadius: design.radius }}
             />
           )}
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1563,7 +1579,7 @@ function BlockView({
               radius={design.radius}
             />
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1611,7 +1627,7 @@ function BlockView({
               </div>
             </figcaption>
           </figure>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1628,7 +1644,7 @@ function BlockView({
               color={design.primary}
             />
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1638,7 +1654,7 @@ function BlockView({
       return (
         <div className="py-6">
           <div className="h-px w-full mb-6" style={{ background: design.surface }} />
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             Continuar
           </PrimaryBtn>
         </div>
@@ -1648,7 +1664,7 @@ function BlockView({
       return (
         <div>
           <div style={{ height: block.spacerHeight ?? 32 }} />
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             Continuar
           </PrimaryBtn>
         </div>
@@ -1659,7 +1675,7 @@ function BlockView({
       return (
         <div className="text-center py-6 space-y-4">
           {heading}
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1694,7 +1710,7 @@ function BlockView({
                   fallback={title}
                   scope={scope}
                   className="quiz-rich text-[1.0625rem] leading-snug font-semibold text-pretty sm:text-lg"
-                  style={{ fontFamily: design.fontHeading }}
+                  style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
                 />
               )}
               {(block.subtitleRich || subtitle) && (
@@ -1708,7 +1724,7 @@ function BlockView({
               )}
             </div>
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1722,7 +1738,7 @@ function BlockView({
           <div className="h-2.5 rounded-full overflow-hidden mb-6" style={{ background: design.surface }}>
             <div className="h-full transition-all duration-700 motion-reduce:transition-none" style={{ width: `${pct}%`, background: design.primary }} />
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1764,7 +1780,7 @@ function BlockView({
             </div>
           )}
           <div className="mb-6" />
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1799,7 +1815,7 @@ function BlockView({
             </div>
             {heading}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1817,7 +1833,7 @@ function BlockView({
               </details>
             ))}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1871,7 +1887,7 @@ function BlockView({
               </>
             )}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(formValue)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(formValue)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Enviar'}
           </PrimaryBtn>
         </div>
@@ -1939,7 +1955,7 @@ function BlockView({
               onChange={(next) => setValue(Math.round(toMetric(next)))}
             />
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(metricValue)} disabled={!canSubmit || !stepValid || saving}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(metricValue)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -1949,7 +1965,7 @@ function BlockView({
     case 'pricing':
       return (
         <div className="text-center space-y-5">
-          {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-semibold" style={{ fontFamily: design.fontHeading }} />)}
+          {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-semibold" style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })} />)}
           {block.pricingPrice?.trim() && (
             <div className="flex items-end justify-center gap-2">
               <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice}</span>
@@ -1967,7 +1983,7 @@ function BlockView({
               </div>
             ))}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Quero essa oferta'}
           </PrimaryBtn>
         </div>
@@ -1993,7 +2009,7 @@ function BlockView({
             </button>
           )}
           {revealed && (
-            <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+            <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
               {block.ctaLabel || 'Continuar'}
             </PrimaryBtn>
           )}
@@ -2016,7 +2032,7 @@ function BlockView({
               {subtitle && <div className="text-sm opacity-70">{subtitle}</div>}
             </div>
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -2037,14 +2053,14 @@ function BlockView({
             )}
           </div>
           <div>
-            <div className="text-xl font-bold" style={{ fontFamily: design.fontHeading }}>{title}</div>
+            <div className="text-xl font-bold" style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}>{title}</div>
             <div className="mt-1 text-sm opacity-60">{subtitle || 'Chamada de voz'} · {block.audioCallDuration ?? '00:00'}</div>
           </div>
           <div className="flex items-center justify-center gap-6">
             <div aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full opacity-40" style={{ background: design.surface }}>
               <VolumeX className="h-5 w-5" style={{ color: design.text }} />
             </div>
-            <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+            <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
               <span className="inline-flex items-center gap-2"><Mic className="h-4 w-4" />{block.ctaLabel || 'Atender'}</span>
             </PrimaryBtn>
           </div>
@@ -2085,7 +2101,7 @@ function BlockView({
               ))}
             </div>
           )}
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -2114,7 +2130,7 @@ function BlockView({
               ))}
             </div>
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -2138,7 +2154,7 @@ function BlockView({
               </div>
             ))}
           </div>
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
@@ -2149,7 +2165,7 @@ function BlockView({
       return (
         <div>
           <div dangerouslySetInnerHTML={{ __html: block.customHtml ?? '' }} className="mb-6" />
-          <PrimaryBtn design={design} hidden={!terminal} onClick={() => onSubmit(true)}>
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             Continuar
           </PrimaryBtn>
         </div>
@@ -2191,10 +2207,13 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
       >
         {badgeText}
       </div>
-      <h2 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: design.fontHeading }}>
+      <h2 className="text-3xl sm:text-4xl font-bold" style={resultBlock ? resolveTextStyle(resultBlock, 'title', { fontFamily: design.fontHeading }) : { fontFamily: design.fontHeading }}>
         {resultTitle || 'Seu resultado está pronto'}
       </h2>
-      <p className="text-base max-w-md mx-auto" style={{ color: design.muted }}>
+      <p
+        className="text-base max-w-md mx-auto"
+        style={resultBlock ? resolveTextStyle(resultBlock, 'subtitle', { color: design.muted }) : { color: design.muted }}
+      >
         {resultBody || 'Obrigado por completar o quiz.'}
       </p>
       <div className="text-5xl font-bold pt-4" style={{ color: design.primary, fontFamily: design.fontHeading }}>
@@ -2203,6 +2222,7 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
       {resultBlock?.ctaLabel && (
         <PrimaryBtn
           design={design}
+          textStyle={resultBlock ? resolveTextStyle(resultBlock, 'button') : undefined}
           onClick={resultBlock.ctaUrl ? () => { window.location.href = resultBlock.ctaUrl!; } : undefined}
         >
           {resultBlock.ctaLabel}

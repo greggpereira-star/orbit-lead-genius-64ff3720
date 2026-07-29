@@ -8,7 +8,7 @@ import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { parseRichText } from '../lib/richtext';
 import { evaluatePercent } from '../lib/variables';
-import { resolveBlockStyle } from '../lib/blockStyle';
+import { resolveBlockStyle, resolveTextStyle } from '../lib/blockStyle';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
@@ -301,9 +301,9 @@ export function ProgressBar({ design, value }: { design: QuizDesign; value: numb
   );
 }
 
-function Btn({ design, children }: { design: QuizDesign; children: React.ReactNode }) {
+function Btn({ design, children, textStyle }: { design: QuizDesign; children: React.ReactNode; textStyle?: React.CSSProperties }) {
   const { style, className } = getButtonStyle(design);
-  return <button className={`px-6 py-3 font-semibold transition-all text-sm${className ? ` ${className}` : ''}`} style={style}>{children}</button>;
+  return <button className={`px-6 py-3 font-semibold transition-all text-sm${className ? ` ${className}` : ''}`} style={{ ...style, ...textStyle }}>{children}</button>;
 }
 
 export function BlockRenderer({
@@ -328,14 +328,14 @@ export function BlockRenderer({
         doc={block.titleRich}
         fallback={title}
         className="quiz-rich text-2xl font-bold leading-tight"
-        style={{ color: design.text, fontFamily: design.fontHeading }}
+        style={resolveTextStyle(block, 'title', { color: design.text, fontFamily: design.fontHeading })}
       />
       {(block.subtitleRich || sub) && (
         <RichText
           doc={block.subtitleRich}
           fallback={sub}
           className="quiz-rich text-sm"
-          style={{ color: design.muted }}
+          style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
         />
       )}
     </div>
@@ -357,18 +357,18 @@ export function BlockRenderer({
           <RichText
             doc={block.titleRich}
             fallback={title}
-            className="quiz-rich text-[1.75rem] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-4xl sm:leading-[1.1] max-w-[18ch] mx-auto"
-            style={{ color: design.text, fontFamily: design.fontHeading }}
+            className="quiz-rich text-[1.75rem] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-4xl sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto"
+            style={resolveTextStyle(block, 'title', { color: design.text, fontFamily: design.fontHeading })}
           />
           {(block.subtitleRich || sub) && (
             <RichText
               doc={block.subtitleRich}
               fallback={sub}
-              className="quiz-rich text-base max-w-md mx-auto"
-              style={{ color: design.muted }}
+              className="quiz-rich text-[1.0625rem] leading-relaxed max-w-[38ch] mx-auto text-pretty"
+              style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
             />
           )}
-          <Btn design={design}>{block.ctaLabel || 'Começar'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Começar'}</Btn>
         </div>
       );
     case 'single-choice':
@@ -418,7 +418,7 @@ export function BlockRenderer({
                   ) : o.emoji ? (
                     <span className="shrink-0">{o.emoji}</span>
                   ) : null}
-                  <span className="min-w-0 flex-1">{parseRichText(o.label)}</span>
+                  <span className="min-w-0 flex-1" style={resolveTextStyle(block, 'options')}>{parseRichText(o.label)}</span>
                 </button>
               );
             })}
@@ -427,7 +427,7 @@ export function BlockRenderer({
           {/* Espelha o player: sem autoavançar, a escolha só segue pelo botão. */}
           {block.autoAdvance === false && (
             <div className="mt-5">
-              <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
+              <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Continuar'}</Btn>
             </div>
           )}
         </div>
@@ -448,7 +448,7 @@ export function BlockRenderer({
               border: `1px solid ${withAlpha(design.text, 0.14)}`,
             }}
           />
-          <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Continuar'}</Btn>
         </div>
       );
     case 'long-text':
@@ -461,7 +461,7 @@ export function BlockRenderer({
             className="w-full px-4 py-3 outline-none resize-none"
             style={{ borderRadius: design.radius, background: design.surface, color: design.text }}
           />
-          <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Continuar'}</Btn>
         </div>
       );
     case 'rating': {
@@ -487,7 +487,7 @@ export function BlockRenderer({
       return (
         <div className="text-center space-y-4 py-6">
           {heading}
-          <Btn design={design}>{block.ctaLabel || 'Quero saber mais'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Quero saber mais'}</Btn>
         </div>
       );
     case 'result':
@@ -501,7 +501,7 @@ export function BlockRenderer({
           </div>
           <h2 className="text-3xl font-bold" style={{ color: design.text, fontFamily: design.fontHeading }}>{block.resultTitle || title}</h2>
           <p className="text-sm max-w-md mx-auto" style={{ color: design.muted }}>{block.resultBody || sub || 'Personalize este resultado no inspetor.'}</p>
-          <Btn design={design}>{block.ctaLabel || 'Continuar'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Continuar'}</Btn>
         </div>
       );
     case 'video': {
@@ -754,7 +754,7 @@ export function BlockRenderer({
           {ff.name && <FormFieldPreview design={design} label="Nome" />}
           {ff.email && <FormFieldPreview design={design} label="E-mail" />}
           {ff.phone && <FormFieldPreview design={design} label="Telefone" />}
-          <Btn design={design}>{block.ctaLabel || 'Enviar'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Enviar'}</Btn>
         </div>
       );
     }
@@ -804,7 +804,7 @@ export function BlockRenderer({
               </div>
             ))}
           </div>
-          <Btn design={design}>{block.ctaLabel || 'Quero essa oferta'}</Btn>
+          <Btn design={design} textStyle={resolveTextStyle(block, 'button')}>{block.ctaLabel || 'Quero essa oferta'}</Btn>
         </div>
       );
 

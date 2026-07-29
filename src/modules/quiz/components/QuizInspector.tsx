@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
-import { BLOCK_FONTS } from '../lib/blockStyle';
-import type { BlockStyle } from '../lib/blockStyle';
+import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from '../lib/blockStyle';
+import type { BlockStyle, TextStyle, TextSlot } from '../lib/blockStyle';
 import { getSteps } from '../lib/steps';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -834,6 +834,112 @@ function patchStyle(block: QuizBlock, patch: Partial<BlockStyle>): Partial<QuizB
   return { blockStyle: { ...(block.blockStyle ?? {}), ...patch } };
 }
 
+/**
+ * Tipografia de UM elemento do bloco (título, subtítulo, opções, botão).
+ *
+ * Recolhido por padrão: são quatro grupos, e deixá-los abertos empurraria
+ * Borda e Espaçamento para fora da vista. O ponto colorido no cabeçalho conta
+ * quais têm ajuste sem precisar abrir um por um.
+ */
+function TextSlotFields({
+  block,
+  slot,
+  label,
+  onChange,
+}: {
+  block: QuizBlock;
+  slot: TextSlot;
+  label: string;
+  onChange: (patch: Partial<QuizBlock>) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const atual: TextStyle = block.blockStyle?.[slot] ?? {};
+  const configurado = hasTextStyle(block, slot);
+
+  const patch = (p: Partial<TextStyle>) => {
+    const proximo = { ...atual, ...p };
+    // Chave sem valor sai do objeto: um `undefined` gravado no schema vira
+    // "definido como nada" e trava a herança do tema depois.
+    for (const k of Object.keys(proximo) as (keyof TextStyle)[]) {
+      if (proximo[k] === undefined || proximo[k] === '') delete proximo[k];
+    }
+    onChange(patchStyle(block, { [slot]: Object.keys(proximo).length ? proximo : undefined }));
+  };
+
+  return (
+    <div className="rounded-md border">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full items-center gap-2 px-2.5 py-2 text-left"
+      >
+        {aberto ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+        <span className="text-xs font-medium">{label}</span>
+        {configurado && <span aria-label="tem ajuste próprio" className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
+      </button>
+
+      {aberto && (
+        <div className="space-y-3 border-t px-2.5 py-3">
+          <Field label="Fonte">
+            <Select
+              value={atual.fontFamily ?? '__herda__'}
+              onValueChange={(v) => patch({ fontFamily: v === '__herda__' ? undefined : v })}
+            >
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__herda__">Herdar do bloco</SelectItem>
+                {BLOCK_FONTS.map((f) => (
+                  <SelectItem key={f} value={f} style={{ fontFamily: f }}>{f}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <PxField label="Tamanho" value={atual.fontSize} onChange={(v) => patch({ fontSize: v })} placeholder="herda" max={96} />
+
+          <Field label="Peso">
+            <Select
+              value={atual.weight ? String(atual.weight) : '__herda__'}
+              onValueChange={(v) => patch({ weight: v === '__herda__' ? undefined : Number(v) })}
+            >
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__herda__">Herdar do bloco</SelectItem>
+                <SelectItem value="400">Normal</SelectItem>
+                <SelectItem value="500">Médio</SelectItem>
+                <SelectItem value="600">Semibold</SelectItem>
+                <SelectItem value="700">Bold</SelectItem>
+                <SelectItem value="800">Extra bold</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          {atual.color ? (
+            <ColorField label="Cor" value={atual.color} onChange={(v) => patch({ color: v })} />
+          ) : (
+            <Button size="sm" variant="outline" className="h-8 w-full text-xs" onClick={() => patch({ color: '#111827' })}>
+              Definir cor própria
+            </Button>
+          )}
+
+          {configurado && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-full text-xs text-muted-foreground"
+              onClick={() => onChange(patchStyle(block, { [slot]: undefined }))}
+            >
+              Voltar ao padrão
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Campo numérico em px que aceita ficar VAZIO — vazio = "não mexe nisso". */
 function PxField({
   label, value, onChange, placeholder = 'automático', max = 400,
@@ -951,10 +1057,25 @@ function AparenciaTab({ block, onChange }: { block: QuizBlock; onChange: (p: Par
             </SelectContent>
           </Select>
           <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-            Trocar aqui vale só neste bloco. Para o quiz inteiro, use o painel de Design.
+            Vale como padrão deste bloco. Para o quiz inteiro, use o painel de Design.
           </p>
         </Field>
         <PxField label="Tamanho do texto" value={s.fontSize} onChange={(v) => onChange(patchStyle(block, { fontSize: v }))} placeholder="do tema" max={72} />
+
+        <div className="space-y-2 pt-1">
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Ajuste elemento por elemento. O que estiver em branco segue o bloco.
+          </p>
+          {TEXT_SLOTS.map((slot) => (
+            <TextSlotFields
+              key={slot.key}
+              block={block}
+              slot={slot.key}
+              label={slot.label}
+              onChange={onChange}
+            />
+          ))}
+        </div>
       </Section>
 
       <Section title="Borda" icon={SlidersHorizontal}>

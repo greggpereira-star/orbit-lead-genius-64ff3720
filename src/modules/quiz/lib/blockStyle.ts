@@ -31,13 +31,90 @@ export interface BlockStyle {
   /** Cantos, em px. */
   radius?: number;
   /**
-   * Tipografia do bloco. Ausente = herda a fonte do tema do quiz — que é o que
-   * mantém o funil coerente. Trocar aqui é para o caso pontual (um selo, uma
-   * citação), não para redefinir o quiz inteiro bloco a bloco.
+   * Tipografia do bloco inteiro. Ausente = herda a fonte do tema do quiz — que
+   * é o que mantém o funil coerente. Vale como padrão do bloco; cada elemento
+   * abaixo pode sobrescrever.
    */
   fontFamily?: string;
-  /** Tamanho base, em px. Os títulos internos escalam a partir dele (em em). */
+  /** Tamanho base, em px. */
   fontSize?: number;
+
+  /**
+   * Tipografia por elemento.
+   *
+   * Existe porque o controle de bloco sozinho não alcançava o título: ele era
+   * escrito num <div> de embrulho e chegava aos filhos só por HERANÇA, que é a
+   * origem mais fraca do CSS. Qualquer elemento que declarasse a própria fonte
+   * — e o título declarava `design.fontHeading` inline — ganhava sempre. O
+   * resultado era um controle que funcionava em metade das propriedades e em
+   * metade dos elementos, sem nada na tela explicando por quê.
+   */
+  title?: TextStyle;
+  subtitle?: TextStyle;
+  options?: TextStyle;
+  button?: TextStyle;
+}
+
+/** Tipografia de um elemento. Tudo opcional: ausente = usa o nível de cima. */
+export interface TextStyle {
+  fontFamily?: string;
+  /** Em px. Vence a classe de tamanho do componente, que é o padrão do tema. */
+  fontSize?: number;
+  color?: string;
+  /** 400 normal … 800 extra-bold. */
+  weight?: number;
+}
+
+/** Os elementos que aceitam tipografia própria, na ordem em que aparecem na tela. */
+export const TEXT_SLOTS = [
+  { key: 'title', label: 'Título' },
+  { key: 'subtitle', label: 'Subtítulo' },
+  { key: 'options', label: 'Opções' },
+  { key: 'button', label: 'Botão' },
+] as const;
+
+export type TextSlot = (typeof TEXT_SLOTS)[number]['key'];
+
+/**
+ * Resolve a tipografia de um elemento na ordem elemento → bloco → tema.
+ *
+ * O `fallback` é o que o tema quer. Ele entra como PADRÃO, não como imposição:
+ * era exatamente essa inversão que fazia o seletor de fonte não ter efeito no
+ * título. Devolver `undefined` numa propriedade é intencional — assim o
+ * componente segue com a própria classe do Tailwind e o bloco não fica com um
+ * valor gravado que trava a troca de tema depois.
+ */
+export function resolveTextStyle(
+  block: QuizBlock,
+  slot: TextSlot,
+  fallback?: CSSProperties,
+): CSSProperties | undefined {
+  const s = block.blockStyle;
+  const el = s?.[slot];
+
+  const style: CSSProperties = { ...(fallback ?? {}) };
+
+  const fontFamily = el?.fontFamily ?? s?.fontFamily;
+  if (fontFamily) style.fontFamily = fontFamily;
+
+  const fontSize = el?.fontSize ?? s?.fontSize;
+  if (fontSize) style.fontSize = fontSize;
+
+  // A cor do bloco só desce para o elemento quando ele não tem a própria. O
+  // subtítulo é o caso que importa: ele nasce com a cor "muted" do tema, e sem
+  // isto a cor escolhida no bloco nunca chegava nele.
+  const color = el?.color ?? s?.textColor;
+  if (color) style.color = color;
+
+  if (el?.weight) style.fontWeight = el.weight;
+
+  return Object.keys(style).length ? style : undefined;
+}
+
+/** Algum elemento deste bloco tem tipografia própria? Usado pelo inspetor. */
+export function hasTextStyle(block: QuizBlock, slot: TextSlot): boolean {
+  const el = block.blockStyle?.[slot];
+  return !!el && Object.values(el).some((v) => v !== undefined && v !== '' && v !== null);
 }
 
 /** Fontes já carregadas globalmente pelo app — não adianta oferecer outras. */
