@@ -232,8 +232,18 @@ function MetaIntegrationsPage() {
 
   const syncFormsMutation = useMutation({
     mutationFn: (pageId: string) => syncForms({ data: { pageId } }),
-    onSuccess: (res) => {
-      toast.success(`${res.forms_synced} formulário(s) sincronizado(s)`);
+    onSuccess: (res, pageId) => {
+      // "Sincronizado" dizia só o total que existe no Facebook, e a tabela
+      // logo abaixo mostra só os ativos. Quem tinha 4 na página e 2 ligados
+      // lia "4 sincronizados" e concluía que a seleção não pegou. Sincronizar
+      // atualiza todos de propósito — é assim que dá pra ligar outro depois —
+      // então o que faltava era a frase separar as duas contagens.
+      const ativos = ((formsQuery.data?.forms ?? []) as Array<{ page_id: string; is_active: boolean }>)
+        .filter((f) => f.page_id === pageId && f.is_active).length;
+      toast.success(
+        `${res.forms_synced} formulário(s) na página`,
+        { description: `${ativos} ativo(s) recebendo leads. Os outros ficam disponíveis para ligar.` },
+      );
       qc.invalidateQueries({ queryKey: ["meta-forms"] });
     },
     onError: (err: Error) => toast.error(err.message),
