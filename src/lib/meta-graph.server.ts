@@ -201,7 +201,19 @@ export async function fetchAdAttribution(
       campaign_id: node.campaign?.id ?? null,
       campaign_name: node.campaign?.name ?? null,
     };
-  } catch {
+  } catch (err) {
+    // Devolver null mantém a ingestão do lead de pé — atribuição é enriquecimento,
+    // não pode derrubar a entrada do lead. Mas engolir calado foi o que escondeu
+    // a falta do escopo `ads_read` por semanas: a atribuição vinha vazia e nada
+    // no sistema dizia por quê.
+    console.warn(
+      JSON.stringify({
+        scope: "meta-graph",
+        msg: "atribuicao_de_anuncio_falhou",
+        ad_id: adId,
+        erro: err instanceof Error ? err.message : String(err),
+      }),
+    );
     return null;
   }
 }

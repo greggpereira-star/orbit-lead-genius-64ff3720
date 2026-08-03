@@ -15,6 +15,13 @@ const META_SCOPES = [
   "pages_manage_metadata",
   "pages_read_engagement",
   "leads_retrieval",
+  // Necessário para `fetchAdAttribution` ler o nó do anúncio (adset/campaign) e
+  // dizer de qual anúncio o lead veio. Já esteve aqui, mas só no arquivo do
+  // servidor — nunca chegou ao git, e um deploy por cópia sobrescreveu de volta
+  // pela versão do repositório. A conexão de 21/07 tinha o escopo; a de hoje
+  // não. Sem ele a atribuição volta nula sem erro, porque a chamada é engolida
+  // por um catch.
+  "ads_read",
 ].join(",");
 
 function getPublicUrl(): string {
