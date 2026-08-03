@@ -172,12 +172,7 @@ function MetaIntegrationsPage() {
   const [bulkStageId, setBulkStageId] = useState<string | null>(null);
   const [formToDelete, setFormToDelete] = useState<string | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
-  const [currentOrigin, setCurrentOrigin] = useState("https://altleadflow.com.br");
 
-
-  useEffect(() => {
-    setCurrentOrigin(window.location.origin);
-  }, []);
 
 
 
@@ -1150,37 +1145,6 @@ function MetaIntegrationsPage() {
 
         </>
       )}
-
-      {/* Configuração técnica: raramente consultada, então fica recolhida em vez
-          de ocupar um card inteiro. O painel decorativo anterior tinha um
-          "absolute inset-0" que, sem ancestral posicionado, se esticava por toda
-          a página e engolia os cliques de todos os botões acima. */}
-      <details className="group rounded-xl border bg-card">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
-          Configuração técnica do webhook
-          <span className="ml-auto hidden text-xs font-normal text-muted-foreground sm:inline">
-            Necessária só na primeira configuração do App
-          </span>
-        </summary>
-        <div className="space-y-3 border-t px-5 py-4 text-sm">
-          <p className="text-muted-foreground">
-            No Facebook Developers, aponte o webhook do seu App para o endereço abaixo.
-          </p>
-          <dl className="space-y-3 rounded-lg border bg-muted/40 p-4">
-            <div className="space-y-1">
-              <dt className="text-xs font-medium text-muted-foreground">Callback URL</dt>
-              <dd className="break-all font-mono text-xs">{currentOrigin}/api/public/meta-webhook</dd>
-            </div>
-            <div className="space-y-1">
-              <dt className="text-xs font-medium text-muted-foreground">Verify Token</dt>
-              <dd className="text-xs">
-                Definido pela variável <code className="font-mono">META_VERIFY_TOKEN</code> no servidor.
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </details>
 
       <MetaFormMappingDrawer
         open={drawerForm !== null}
