@@ -77,8 +77,12 @@ export const syncMetaLeadForms = createServerFn({ method: "POST" })
       const code = err instanceof MetaGraphError ? err.graph?.code : undefined;
 
       if (status === 401 || code === 190) {
+        // Registra a morte do token ANTES de subir o erro. Sem isto a tela
+        // continuava anunciando "Ativo" enquanto toda chamada falhava.
+        const { marcarConexaoRevogada, motivoDaRevogacao } = await import("@/lib/meta-token-state.server");
+        await marcarConexaoRevogada(supabaseAdmin, companyId, err);
         throw new Error(
-          "Token do Facebook expirado ou revogado. Reconecte a integração Meta.",
+          `${motivoDaRevogacao(err)} Reconecte a integração Meta.`,
         );
       }
       if (status === 403 || code === 200 || code === 10) {
@@ -570,11 +574,14 @@ export const importMetaFormLeads = createServerFn({ method: "POST" })
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const { MetaGraphError } = await import("@/lib/meta-graph.server");
-      const graphError = err instanceof MetaGraphError ? err.graph : undefined;
-      const safeMessage = graphError?.code === 190
-        ? "Token do Facebook expirado ou revogado. Reconecte a integração Meta."
-        : message;
+      const { tokenMorreu, motivoDaRevogacao, marcarConexaoRevogada } = await import(
+        "@/lib/meta-token-state.server"
+      );
+      let safeMessage = message;
+      if (tokenMorreu(err)) {
+        await marcarConexaoRevogada(supabaseAdmin, companyId, err);
+        safeMessage = `${motivoDaRevogacao(err)} Reconecte a integração Meta.`;
+      }
 
       await supabaseAdmin
         .from("meta_lead_import_jobs")

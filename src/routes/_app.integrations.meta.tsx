@@ -209,7 +209,7 @@ function MetaIntegrationsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const disconnectMutation = useMutation({
+  const disstartMutation = useMutation({
     mutationFn: () => disconnect(),
     onSuccess: () => {
       toast.success("Conta Meta desconectada");
@@ -473,11 +473,11 @@ function MetaIntegrationsPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => disconnectMutation.mutate()}
-              disabled={disconnectMutation.isPending}
+              onClick={() => disstartMutation.mutate()}
+              disabled={disstartMutation.isPending}
               className="h-8 text-muted-foreground hover:text-destructive"
             >
-              {disconnectMutation.isPending ? (
+              {disstartMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
               ) : (
                 <PowerOff className="w-3.5 h-3.5 mr-1.5" />
@@ -487,6 +487,31 @@ function MetaIntegrationsPage() {
           </div>
         )}
       </motion.div>
+
+      {/* A tela dizia "Ativo" com o token morto havia treze dias. Enquanto a
+          conexão estiver revogada isto fica no topo, antes de qualquer número,
+          porque todo dado abaixo está congelado no momento em que o acesso caiu. */}
+      {connection?.status === "revoked" && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3"
+        >
+          <PowerOff className="h-5 w-5 shrink-0 text-destructive" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-destructive">Acesso ao Facebook perdido</p>
+            <p className="text-sm text-muted-foreground">
+              Nenhum lead novo está entrando. Reconecte para voltar a receber — os que falharam
+              enquanto isso são reprocessados sozinhos.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>
+            {startMutation.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : null}
+            Reconectar
+          </Button>
+        </div>
+      )}
 
 
       {isLoading ? (

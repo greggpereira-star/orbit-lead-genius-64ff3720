@@ -186,9 +186,16 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
     const me = await getMe(longLived.access_token);
     const pages = await listUserPages(longLived.access_token);
 
-    const expiresAt = longLived.expires_in
-      ? new Date(Date.now() + longLived.expires_in * 1000).toISOString()
-      : null;
+    // O Facebook nem sempre devolve `expires_in` na troca por longa duração.
+    // Quando não devolvia, isto gravava `null` — e o aviso preventivo da tela,
+    // que só aparece com data preenchida, virava código morto. Ficou treze dias
+    // sem avisar nada. Token de usuário de longa duração vale ~60 dias; sem a
+    // informação exata, assumir 60 faz o aviso disparar perto da hora certa, que
+    // é infinitamente melhor que não disparar nunca.
+    const SESSENTA_DIAS = 60 * 24 * 60 * 60;
+    const expiresAt = new Date(
+      Date.now() + (longLived.expires_in || SESSENTA_DIAS) * 1000,
+    ).toISOString();
 
     const { error: connErr } = await supabaseAdmin.from("meta_lead_connections").upsert(
       {
@@ -243,9 +250,25 @@ export const getMetaConnection = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!mem?.company_id) return { connection: null, pages: [], recentEvents: [] };
 
+    // Colunas explícitas, NUNCA `select("*")`.
+    //
+    // O `*` arrastava `access_token` e `page_access_token` para o payload que o
+    // TanStack serializa e entrega ao navegador. São tokens com leads_retrieval
+    // e ads_read: quem lesse a resposta dessa página passava a conseguir ler os
+    // leads e os dados de anúncio do cliente. Listar coluna a coluna é o que
+    // impede uma coluna sensível nova de vazar sozinha no dia em que alguém a
+    // adicionar na tabela.
     const [connRes, pagesRes, eventsRes] = await Promise.all([
-      supabaseAdmin.from("meta_lead_connections").select("*").eq("company_id", mem.company_id).maybeSingle(),
-      supabaseAdmin.from("meta_lead_pages").select("*").eq("company_id", mem.company_id).order("page_name"),
+      supabaseAdmin
+        .from("meta_lead_connections")
+        .select("id, company_id, meta_user_id, meta_user_name, token_expires_at, granted_scopes, status, connected_by, created_at, updated_at")
+        .eq("company_id", mem.company_id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("meta_lead_pages")
+        .select("id, company_id, connection_id, page_id, page_name, category, subscribed, subscribed_at, created_at, updated_at")
+        .eq("company_id", mem.company_id)
+        .order("page_name"),
       supabaseAdmin
         .from("meta_lead_events")
         .select("id, leadgen_id, page_id, form_id, status, received_at, error_message, lead_id")
