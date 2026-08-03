@@ -645,3 +645,94 @@ export const retryMetaImportJob = createServerFn({ method: "POST" })
     };
   });
 
+
+// --------- REPROCESSAR EVENTOS FALHADOS ---------
+
+/**
+ * Reprocessa os leads do webhook que falharam.
+ *
+ * A tela dizia que eles "serão reprocessados automaticamente". Não eram: o
+ * único cron de retry cuida de `meta_lead_import_jobs` — importações manuais —
+ * e nunca olhou para `meta_lead_events`. Dezesseis leads ficaram parados cinco
+ * dias esperando algo que não existia, enquanto a interface afirmava que estava
+ * resolvido.
+ *
+ * A causa mais comum é o token ter caído: enquanto ele está morto todo lead que
+ * chega falha, e depois de reconectar não há nada que os traga de volta. Daí
+ * fazer sentido ser um botão e não um cron — quem reconectou sabe a hora, e um
+ * cron de dez em dez minutos ficaria batendo à toa contra um token quebrado.
+ *
+ * Reprocessar é seguro: `processMetaLeadEvent` verifica idempotência pelo
+ * `leadgen_id` e devolve `skipped` se o lead já entrou. Rodar duas vezes não
+ * duplica ninguém.
+ */
+export const reprocessarLeadsFalhados = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+
+    const { data: eventos, error } = await supabaseAdmin
+      .from("meta_lead_events")
+      .select("id, leadgen_id, page_id, form_id, ad_id, raw_payload, received_at")
+      .eq("company_id", companyId)
+      .eq("status", "failed")
+      .order("received_at", { ascending: true })
+      // Teto por execução: o Graph tem limite de chamadas, e travar o pedido do
+      // navegador por centenas de leads daria timeout no meio. Quem tiver mais
+      // que isso clica de novo — o contador na tela mostra o que sobrou.
+      .limit(100);
+
+    if (error) throw new Error(`Não foi possível ler os eventos com falha: ${error.message}`);
+    if (!eventos?.length) {
+      return { total: 0, recuperados: 0, ignorados: 0, falharam: 0, erros: [] as string[] };
+    }
+
+    const { processMetaLeadEvent } = await import("@/lib/meta-lead-processor.server");
+
+    let recuperados = 0;
+    let ignorados = 0;
+    let falharam = 0;
+    const erros: string[] = [];
+
+    for (const ev of eventos as Array<{
+      id: string; leadgen_id: string; page_id: string;
+      form_id: string | null; ad_id: string | null; raw_payload: unknown;
+    }>) {
+      try {
+        const r = await processMetaLeadEvent(supabaseAdmin, {
+          leadgenId: ev.leadgen_id,
+          pageId: ev.page_id,
+          formId: ev.form_id ?? undefined,
+          adId: ev.ad_id ?? undefined,
+          rawPayload: ev.raw_payload,
+        });
+        if (r.status === "processed") recuperados += 1;
+        else if (r.status === "skipped") ignorados += 1;
+        else {
+          falharam += 1;
+          if (r.error && erros.length < 3) erros.push(r.error);
+        }
+      } catch (err) {
+        falharam += 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        // Só as três primeiras mensagens sobem para a tela. Dezesseis falhas
+        // pela mesma causa são uma causa, não dezesseis — e a lista inteira
+        // esconderia isso.
+        if (erros.length < 3) erros.push(msg);
+      }
+    }
+
+    console.info(
+      JSON.stringify({
+        scope: "meta-reprocess",
+        company_id: companyId,
+        total: eventos.length,
+        recuperados,
+        ignorados,
+        falharam,
+      }),
+    );
+
+    return { total: eventos.length, recuperados, ignorados, falharam, erros };
+  });

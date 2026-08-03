@@ -25,7 +25,8 @@ import {
   bulkDeactivateMetaForms,
   reactivateMetaForm,
   bulkReactivateMetaForms,
-  bulkSetMetaFormStage
+  bulkSetMetaFormStage,
+  reprocessarLeadsFalhados
 } from "@/lib/meta-forms.functions";
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { StageSelect } from "@/modules/crm/components/StageSelect";
@@ -149,6 +150,7 @@ function MetaIntegrationsPage() {
   const setSub = useServerFn(setPageSubscription);
   const disconnect = useServerFn(disconnectMeta);
   const syncForms = useServerFn(syncMetaLeadForms);
+  const reprocessLeads = useServerFn(reprocessarLeadsFalhados);
   const listForms = useServerFn(listMetaForms);
   const importLeads = useServerFn(importMetaFormLeads);
   const listImportJobs = useServerFn(listMetaImportJobs);
@@ -223,6 +225,28 @@ function MetaIntegrationsPage() {
     queryKey: ["meta-import-jobs"],
     queryFn: () => listImportJobs(),
     staleTime: 15_000,
+  });
+
+  const reprocessMutation = useMutation({
+    mutationFn: () => reprocessLeads(),
+    onSuccess: (r) => {
+      if (r.total === 0) {
+        toast.success("Nenhum lead com falha para recuperar");
+      } else if (r.falharam === 0) {
+        toast.success(`${r.recuperados} lead(s) recuperado(s)`, {
+          description: r.ignorados ? `${r.ignorados} já estavam no pipeline.` : undefined,
+        });
+      } else {
+        // Sucesso parcial dito como sucesso parcial. Um "pronto!" com metade
+        // falhando é o tipo de mensagem que fez esses leads ficarem esquecidos.
+        toast.warning(`${r.recuperados} recuperado(s), ${r.falharam} ainda com falha`, {
+          description: r.erros[0] ?? "Veja os eventos recentes para o motivo.",
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["meta-connection"] });
+      qc.invalidateQueries({ queryKey: ["meta-jobs"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const syncFormsMutation = useMutation({
@@ -676,9 +700,25 @@ function MetaIntegrationsPage() {
                   <span className="font-medium">
                     {syncSummary.failedEvents + syncSummary.failedJobs} com falha
                   </span>
-                  <span className="text-muted-foreground">
-                    — serão reprocessados automaticamente
-                  </span>
+                  {/* Dizia "serão reprocessados automaticamente". Não eram: o
+                      cron de retry cuida das importações manuais e nunca olhou
+                      para os eventos do webhook. Ficaram cinco dias parados com
+                      a tela afirmando que estava resolvido. Agora a frase diz o
+                      que é, e o botão faz o que ela prometia. */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => reprocessMutation.mutate()}
+                    disabled={reprocessMutation.isPending}
+                  >
+                    {reprocessMutation.isPending ? (
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1.5 h-3 w-3" />
+                    )}
+                    Tentar de novo
+                  </Button>
                 </span>
               )}
             </div>
