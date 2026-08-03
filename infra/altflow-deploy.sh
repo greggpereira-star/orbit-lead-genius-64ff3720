@@ -41,7 +41,15 @@ if ! grep -q "SUPABASE_SERVICE_ROLE_KEY" .env; then
   exit 1
 fi
 
-npm ci --silent
+# --legacy-peer-deps é obrigatório: @tremor/react pede React 18 e o projeto usa
+# 19. Sem a flag o npm ci aborta.
+#
+# E nada de --silent aqui. A primeira versão deste script silenciava o npm; ele
+# falhou exatamente nesse conflito, o set -e matou tudo sem imprimir uma linha,
+# e o deploy "passou" deixando o build antigo no ar. Silenciar o comando que
+# mais falha é como tirar a bateria do alarme de incêndio.
+npm ci --legacy-peer-deps
+
 rm -rf .output
 NITRO_PRESET=node-server npm run build
 
@@ -70,6 +78,14 @@ if [ "$CODIGO" != "200" ]; then
   rm -rf "${APP}/.output"
   mv "${APP}/.output.old" "${APP}/.output"
   systemctl restart altleadflow-app
+  exit 1
+fi
+
+# Conferência de que o que subiu é REALMENTE o build novo. Sem isto, um build
+# que não rodou passa despercebido: o serviço responde 200 com o bundle velho e
+# tudo parece bem.
+if [ ! -d "${APP}/.output" ] || [ "${APP}/.output" -ot "${BUILD}/package.json" ]; then
+  echo "!!! .output publicado parece mais antigo que o código — verifique" >&2
   exit 1
 fi
 
