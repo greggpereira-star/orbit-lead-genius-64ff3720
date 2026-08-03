@@ -6,7 +6,7 @@
  * Kanban/List não trocavam de visão. Foram removidos em vez de mantidos
  * inertes — um controle que não responde ensina o usuário a desconfiar da tela.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { CheckSquare, Search, SlidersHorizontal } from 'lucide-react';
@@ -17,6 +17,8 @@ import { StageManagerDialog } from '@/modules/crm/components/StageManagerDialog'
 import { ErrorBoundary } from '@/components/error/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getLeadOrigin } from '@/modules/crm/lib/leadFields';
 import { listLeads } from '@/modules/crm/services/leadService';
 
 export const Route = createFileRoute('/_app/pipeline')({
@@ -29,6 +31,7 @@ function PipelinePage() {
   const [search, setSearch] = useState('');
   const [managing, setManaging] = useState(false);
   const [selecting, setSelecting] = useState(false);
+  const [origin, setOrigin] = useState('');
 
   // Mesma chave do board: o React Query serve as duas do mesmo cache, então o
   // contador não custa uma requisição a mais.
@@ -38,6 +41,18 @@ function PipelinePage() {
     enabled: Boolean(companyId),
   });
   const total = leadsQuery.data?.length ?? 0;
+
+  // As origens saem dos leads que já estão em memória. Uma lista fixa de
+  // empreendimentos exigiria cadastro e sairia do ar no dia em que o cliente
+  // subisse uma campanha nova sem avisar ninguém.
+  const origens = useMemo(() => {
+    const vistas = new Set<string>();
+    for (const l of leadsQuery.data ?? []) {
+      const o = getLeadOrigin(l);
+      if (o) vistas.add(o);
+    }
+    return [...vistas].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [leadsQuery.data]);
 
   return (
     /* Altura presa ao viewport, e não `h-full`.
@@ -61,6 +76,21 @@ function PipelinePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Só aparece quando há mais de uma origem: com uma só, o seletor
+              seria um controle que não muda nada. */}
+          {origens.length > 1 && (
+            <Select value={origin || '__todos__'} onValueChange={(v) => setOrigin(v === '__todos__' ? '' : v)}>
+              <SelectTrigger className="h-9 w-52" aria-label="Filtrar por empreendimento">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__todos__">Todos os empreendimentos</SelectItem>
+                {origens.map((o) => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -94,6 +124,8 @@ function PipelinePage() {
         <ErrorBoundary name="KanbanBoard">
           <KanbanBoard
             search={search}
+            origin={origin}
+            originLabel="Empreendimento"
             selecting={selecting}
             onExitSelection={() => setSelecting(false)}
           />

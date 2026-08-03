@@ -98,6 +98,16 @@ interface Props {
   originLabel?: string;
   search?: string;
   /**
+   * Mostra só os leads de uma origem — o empreendimento, na imobiliária.
+   *
+   * Filtro em vez de etapas separadas: as etapas medem em que ponto da
+   * negociação o lead está, e usar uma para dizer de qual produto ele é
+   * misturaria dois eixos. A separação sumiria no instante em que o lead
+   * avançasse de coluna, e cada empreendimento novo viraria mais uma coluna
+   * permanente no quadro.
+   */
+  origin?: string;
+  /**
    * Modo seleção: o card ganha caixa e para de arrastar.
    *
    * Quem liga o modo é a página (o botão fica na barra junto de "Gerenciar
@@ -156,7 +166,7 @@ function timeInStage(lead: LeadRow): string {
 }
 
 export function KanbanBoard({
-  quizId, originLabel = 'Origem', search = '', selecting = false, onExitSelection,
+  quizId, originLabel = 'Origem', search = '', origin = '', selecting = false, onExitSelection,
   leadingColumn,
 }: Props) {
   const { company } = useAuth();
@@ -192,6 +202,7 @@ export function KanbanBoard({
 
     const visible = all.filter((l) => {
       if (quizId && (l as { quiz_id?: string | null }).quiz_id !== quizId) return false;
+      if (origin && getLeadOrigin(l) !== origin) return false;
       if (!term) return true;
       const haystack = [l.name, l.email, l.phone, getLeadOrigin(l)]
         .filter(Boolean).join(' ').toLowerCase();
@@ -221,7 +232,7 @@ export function KanbanBoard({
     return orphans.length
       ? [{ id: NO_STAGE, title: 'Sem etapa', color: '#94a3b8', leads: orphans }, ...real]
       : real;
-  }, [leadsQuery.data, stages, quizId, search]);
+  }, [leadsQuery.data, stages, quizId, search, origin]);
 
   const moveMutation = useMutation({
     mutationFn: (v: {
