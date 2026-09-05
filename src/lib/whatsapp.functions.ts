@@ -148,7 +148,22 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
         : undefined;
 
     const created = await createInstance(instanceName, webhookUrl);
-    if (!created.ok) throw new Error(created.error ?? "Falha ao criar instância.");
+    if (!created.ok) {
+      // Guarda a causa antes de subir o erro. Sem isto o motivo vivia só no
+      // toast: bastava o usuário fechar a aba para a informação sumir, e a
+      // investigação seguinte começava de uma captura de tela.
+      await (supabaseAdmin as any).from("whatsapp_instances").upsert(
+        {
+          company_id: companyId,
+          instance_name: instanceName,
+          status: "error",
+          last_error: (created.error ?? "Falha ao criar instância.").slice(0, 500),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "company_id" },
+      );
+      throw new Error(created.error ?? "Falha ao criar instância.");
+    }
 
     let qr = created.data?.qrCodeBase64 ?? null;
     if (!qr) {

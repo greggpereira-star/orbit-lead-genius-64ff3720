@@ -244,6 +244,19 @@ function WhatsAppPage() {
         </div>
       ) : null}
 
+      {/* A última falha de conexão, vinda do banco. O motivo antes vivia só no
+          toast e sumia ao trocar de tela — quem fosse investigar depois não
+          tinha por onde começar. */}
+      {data?.instance?.last_error ? (
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          <div className="space-y-1">
+            <p className="font-medium">A última tentativa de conectar falhou</p>
+            <p className="text-muted-foreground">{data.instance.last_error}</p>
+          </div>
+        </div>
+      ) : null}
+
       {/* ---------------- Conexão ---------------- */}
       <Card>
         <CardHeader className="pb-4">

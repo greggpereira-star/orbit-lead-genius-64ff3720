@@ -62,6 +62,21 @@ export interface EvolutionResult<T> {
   error?: string;
 }
 
+/**
+ * Traduz o status para a causa provável.
+ *
+ * "Evolution 403" não diz a ninguém o que fazer. O status importa para quem lê
+ * log; para quem está na tela, o que importa é se o problema é a chave, o
+ * endereço, ou uma instância que não existe mais.
+ */
+function explicarStatus(status: number): string {
+  if (status === 401) return "A Evolution recusou a chave de acesso (EVOLUTION_API_KEY).";
+  if (status === 403) return "Alguma coisa entre o app e a Evolution bloqueou a chamada — confira se EVOLUTION_API_URL aponta para a Evolution e não para um proxy.";
+  if (status === 404) return "A instância não existe mais na Evolution.";
+  if (status === 502 || status === 503 || status === 504) return "A Evolution está fora do ar ou reiniciando.";
+  return "A Evolution recusou a chamada.";
+}
+
 async function call<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},
@@ -97,7 +112,31 @@ async function call<T>(
         parsed && typeof parsed === "object"
           ? ((parsed as any).message ?? (parsed as any).error ?? JSON.stringify(parsed))
           : String(parsed ?? "");
-      return { ok: false, error: `Evolution ${res.status}: ${String(detail).slice(0, 300)}` };
+
+      // Registrar a falha é o ponto todo desta mudança.
+      //
+      // Um "Evolution 403: Forbidden" apareceu na tela do usuário e não foi
+      // possível descobrir de onde veio: o cliente não gravava nada, nem no
+      // journal nem no last_error da instância. Sobrou reproduzir à mão cada
+      // chamada — e nenhuma reproduziu, porque a Evolution devolve 200, 401 ou
+      // 404, nunca 403. Sem registro, a única pista era uma captura de tela.
+      //
+      // Guarda o caminho e o status, nunca a apikey. `BASE_URL` entra porque a
+      // hipótese mais difícil de descartar foi justamente estar apontando para
+      // outro lugar que não a Evolution.
+      console.error(
+        JSON.stringify({
+          scope: "evolution",
+          msg: "chamada_falhou",
+          method: init.method ?? "GET",
+          path,
+          base: BASE_URL,
+          status: res.status,
+          detail: String(detail).slice(0, 200),
+        }),
+      );
+
+      return { ok: false, error: `${explicarStatus(res.status)} (Evolution ${res.status}: ${String(detail).slice(0, 200)})` };
     }
 
     return { ok: true, data: parsed as T };
