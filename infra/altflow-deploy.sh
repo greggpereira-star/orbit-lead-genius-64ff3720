@@ -27,6 +27,19 @@ PRESERVADO="$(mktemp)"
 trap 'rm -f "$PRESERVADO"' EXIT
 cp -a .env "$PRESERVADO"
 
+# Alteração local em arquivo versionado significa que alguém publicou por cópia
+# e o commit ainda não chegou ao origin. O reset abaixo apagaria esse trabalho
+# em silêncio — foi exatamente assim que o escopo ads_read sumiu por semanas.
+# Parar e avisar é melhor que apagar sem contar.
+SUJOS="$(git status --porcelain -- . ':(exclude).env' | grep -v '^?? ' || true)"
+if [ -n "$SUJOS" ]; then
+  echo "!!! Alteração local não versionada em ${BUILD}:" >&2
+  echo "$SUJOS" >&2
+  echo "!!! O reset apagaria isso. Faça o push do commit e rode de novo," >&2
+  echo "!!! ou descarte com: git -C ${BUILD} checkout -- <arquivo>" >&2
+  exit 1
+fi
+
 git fetch --quiet origin "$BRANCH"
 ANTES="$(git rev-parse --short HEAD)"
 git reset --hard --quiet "origin/${BRANCH}"
