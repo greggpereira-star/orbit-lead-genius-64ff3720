@@ -36,6 +36,7 @@ import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email
 import { Route as ChatEmbedCompanyIdRouteImport } from './routes/chat-embed.$companyId'
 import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
+import { Route as IrSlugRouteImport } from './routes/ir.$slug'
 import { Route as QSlugRouteImport } from './routes/q.$slug'
 import { Route as AppAnalyticsTvRouteImport } from './routes/_app.analytics.tv'
 import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrations.meta'
@@ -199,6 +200,11 @@ const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
 const FSlugRoute = FSlugRouteImport.update({
   id: '/f/$slug',
   path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IrSlugRoute = IrSlugRouteImport.update({
+  id: '/ir/$slug',
+  path: '/ir/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const QSlugRoute = QSlugRouteImport.update({
@@ -389,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/ir/$slug': typeof IrSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/integrations/meta': typeof AppIntegrationsMetaRoute
@@ -446,6 +453,7 @@ export interface FileRoutesByTo {
   '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/ir/$slug': typeof IrSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/analytics/tv': typeof AppAnalyticsTvRoute
   '/integrations/meta': typeof AppIntegrationsMetaRoute
@@ -507,6 +515,7 @@ export interface FileRoutesById {
   '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
+  '/ir/$slug': typeof IrSlugRoute
   '/q/$slug': typeof QSlugRoute
   '/_app/analytics/tv': typeof AppAnalyticsTvRoute
   '/_app/integrations/meta': typeof AppIntegrationsMetaRoute
@@ -567,6 +576,7 @@ export interface FileRouteTypes {
     | '/chat-embed/$companyId'
     | '/embed-form/$id'
     | '/f/$slug'
+    | '/ir/$slug'
     | '/q/$slug'
     | '/analytics/tv'
     | '/integrations/meta'
@@ -624,6 +634,7 @@ export interface FileRouteTypes {
     | '/chat-embed/$companyId'
     | '/embed-form/$id'
     | '/f/$slug'
+    | '/ir/$slug'
     | '/q/$slug'
     | '/analytics/tv'
     | '/integrations/meta'
@@ -684,6 +695,7 @@ export interface FileRouteTypes {
     | '/chat-embed/$companyId'
     | '/embed-form/$id'
     | '/f/$slug'
+    | '/ir/$slug'
     | '/q/$slug'
     | '/_app/analytics/tv'
     | '/_app/integrations/meta'
@@ -728,6 +740,7 @@ export interface RootRouteChildren {
   ChatEmbedCompanyIdRoute: typeof ChatEmbedCompanyIdRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
+  IrSlugRoute: typeof IrSlugRoute
   QSlugRoute: typeof QSlugRoute
   ApiPublicMetaWebhookRoute: typeof ApiPublicMetaWebhookRoute
   ApiPublicPixelEventRoute: typeof ApiPublicPixelEventRoute
@@ -930,6 +943,13 @@ declare module '@tanstack/react-router' {
       path: '/f/$slug'
       fullPath: '/f/$slug'
       preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ir/$slug': {
+      id: '/ir/$slug'
+      path: '/ir/$slug'
+      fullPath: '/ir/$slug'
+      preLoaderRoute: typeof IrSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/q/$slug': {
@@ -1283,6 +1303,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatEmbedCompanyIdRoute: ChatEmbedCompanyIdRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
+  IrSlugRoute: IrSlugRoute,
   QSlugRoute: QSlugRoute,
   ApiPublicMetaWebhookRoute: ApiPublicMetaWebhookRoute,
   ApiPublicPixelEventRoute: ApiPublicPixelEventRoute,

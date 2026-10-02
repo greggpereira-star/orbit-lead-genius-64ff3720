@@ -11,7 +11,7 @@
  * endpoint recusa tudo — melhor mudo que aberto.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio } from "@/lib/ctwa.server";
+import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio, casarCodigoDoRedirect } from "@/lib/ctwa.server";
 import { moverLeadPelaEtiqueta } from "@/lib/etiqueta-para-etapa.server";
 
 function log(level: "info" | "warn" | "error", traceId: string, msg: string, extra?: Record<string, unknown>) {
@@ -207,7 +207,15 @@ export const Route = createFileRoute("/api/public/whatsapp-webhook")({
                   ? item.messageTimestamp
                   : null,
               });
-            } else if (leadId) {
+            } else if (body) {
+              // Caminho do Google: sem `ctwa_clid`, a amarração vem do código
+              // curto que o redirect pôs na mensagem.
+              await casarCodigoDoRedirect(admin, {
+                companyId, phone, leadId, texto: body,
+              });
+            }
+
+            if (!clique && leadId) {
               // Lead que já existia e voltou a falar: se houver clique órfão
               // gravado antes do lead nascer, amarra agora.
               await admin

@@ -152,3 +152,52 @@ export async function registrarCliqueDeAnuncio(
     );
   }
 }
+
+
+/** Mesmo alfabeto do redirect: sem 0/O e 1/I/L. */
+const PADRAO_CODIGO = /\[([ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4,8})\]/;
+
+/**
+ * Casa a primeira mensagem com o clique que a originou, pelo código curto.
+ *
+ * É o caminho do Google, que não tem `ctwa_clid`. O código vai entre colchetes
+ * na mensagem pré-digitada — delimitador explícito, e não "as últimas 5 letras",
+ * porque a pessoa frequentemente escreve antes ou depois do texto sugerido.
+ *
+ * Só casa clique que ainda não tem telefone: um código reaproveitado por engano
+ * não pode sequestrar a atribuição de outra conversa.
+ */
+export async function casarCodigoDoRedirect(
+  admin: { from: (t: string) => any },
+  entrada: { companyId: string; phone: string; leadId: string | null; texto: string },
+): Promise<{ casou: boolean; codigo?: string }> {
+  const achado = PADRAO_CODIGO.exec(entrada.texto ?? "");
+  if (!achado) return { casou: false };
+  const codigo = achado[1];
+
+  const { data: clique } = await admin
+    .from("whatsapp_ad_clicks")
+    .select("id, phone")
+    .eq("company_id", entrada.companyId)
+    .eq("short_code", codigo)
+    .maybeSingle();
+
+  if (!clique?.id) return { casou: false, codigo };
+  if (clique.phone) return { casou: false, codigo };
+
+  await admin
+    .from("whatsapp_ad_clicks")
+    .update({ phone: entrada.phone, lead_id: entrada.leadId })
+    .eq("id", clique.id);
+
+  console.info(
+    JSON.stringify({
+      scope: "ctwa",
+      msg: "codigo_do_redirect_casado",
+      company_id: entrada.companyId,
+      codigo,
+      ligado_a_lead: Boolean(entrada.leadId),
+    }),
+  );
+  return { casou: true, codigo };
+}
