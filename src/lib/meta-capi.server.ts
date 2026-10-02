@@ -15,7 +15,13 @@ export interface CapiTracking {
   gclid?: string; gbraid?: string; wbraid?: string;
 }
 
-export type CapiEventName = 'PageView' | 'ViewContent' | 'Lead' | 'CompleteRegistration' | 'Contact';
+export type CapiEventName =
+  | 'PageView' | 'ViewContent' | 'Lead' | 'CompleteRegistration' | 'Contact'
+  // Mensageria tem nomes próprios: a Meta RECUSA `Lead` quando
+  // `action_source` é `business_messaging`. E o nicho pode usar um evento
+  // personalizado, por isso `string` entra na união — o nome é configuração.
+  | 'LeadSubmitted' | 'QualifiedLead' | 'Purchase' | 'Schedule'
+  | (string & {});
 
 export interface MetaCapiInput {
   companyId: string;
@@ -30,6 +36,21 @@ export interface MetaCapiInput {
   pageUrl?: string | null;
   tracking?: CapiTracking | null;
   customData?: Record<string, unknown> | null;
+
+  /**
+   * Conversa de WhatsApp vinda de anúncio.
+   *
+   * Quando presente, o evento sai como `business_messaging` em vez de
+   * `website` — que é o caminho oficial da Meta para mensageria e o único que
+   * aceita o `ctwa_clid`. Medido em 02/10 no tráfego da agência: 83 de 84
+   * mensagens de anúncio trazem esse identificador.
+   */
+  messaging?: {
+    /** Cru, NÃO hasheado. A Meta recusa o evento se vier com hash. */
+    ctwaClid: string;
+    /** A página do Facebook dona da conversa. */
+    pageId?: string | null;
+  } | null;
 }
 
 export interface MetaCapiResult {
@@ -85,14 +106,30 @@ export async function sendMetaCapiEvent(input: MetaCapiInput): Promise<MetaCapiR
   // Só dígitos: o Meta descarta o telefone se vier com parênteses ou traço.
   if (input.phone) userData.ph = [await sha256Hex(input.phone.replace(/\D+/g, ''))];
 
+  // O `ctwa_clid` vai CRU. É a única chave aqui que não é hasheada — ela já é um
+  // identificador opaco da Meta, e hashear faria o evento ser recusado.
+  const mensageria = input.messaging ?? null;
+  if (mensageria) {
+    userData.ctwa_clid = mensageria.ctwaClid;
+    if (mensageria.pageId) userData.page_id = mensageria.pageId;
+    // Num evento de mensageria não existe navegador: mandar user agent ou IP
+    // inventado só piora a correspondência.
+    delete userData.client_user_agent;
+    delete userData.client_ip_address;
+    delete userData.fbc;
+    delete userData.fbp;
+  }
+
   const payload = {
     data: [
       {
         event_name: input.eventName,
         event_time: input.eventTime ?? Math.floor(Date.now() / 1000),
         event_id: input.eventId,
-        action_source: 'website',
-        event_source_url: input.pageUrl ?? undefined,
+        action_source: mensageria ? 'business_messaging' : 'website',
+        ...(mensageria ? { messaging_channel: 'whatsapp' } : {}),
+        // URL de página não existe em conversa de WhatsApp.
+        event_source_url: mensageria ? undefined : (input.pageUrl ?? undefined),
         user_data: userData,
         custom_data: {
           ...(input.customData ?? {}),

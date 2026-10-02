@@ -65,6 +65,7 @@ import { Route as AppQuizzesIdLeadsRouteImport } from './routes/_app.quizzes_.$i
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
+import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 
 const IndexRoute = IndexRouteImport.update({
@@ -350,6 +351,12 @@ const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
   path: '/quizzes/$id/publish',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicCronConversionDispatchRoute =
+  ApiPublicCronConversionDispatchRouteImport.update({
+    id: '/api/public/cron/conversion-dispatch',
+    path: '/api/public/cron/conversion-dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
   id: '/api/public/cron/meta-retry',
   path: '/api/public/cron/meta-retry',
@@ -411,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRoutesByTo {
@@ -467,6 +475,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRoutesById {
@@ -527,6 +536,7 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRouteTypes {
@@ -586,6 +596,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-retry'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -642,6 +653,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-retry'
   id:
     | '__root__'
@@ -701,6 +713,7 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/performance'
     | '/_app/quizzes_/$id/preview'
     | '/_app/quizzes_/$id/publish'
+    | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-retry'
   fileRoutesById: FileRoutesById
 }
@@ -724,6 +737,7 @@ export interface RootRouteChildren {
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
+  ApiPublicCronConversionDispatchRoute: typeof ApiPublicCronConversionDispatchRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
 }
 
@@ -1121,6 +1135,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/cron/conversion-dispatch': {
+      id: '/api/public/cron/conversion-dispatch'
+      path: '/api/public/cron/conversion-dispatch'
+      fullPath: '/api/public/cron/conversion-dispatch'
+      preLoaderRoute: typeof ApiPublicCronConversionDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/meta-retry': {
       id: '/api/public/cron/meta-retry'
       path: '/api/public/cron/meta-retry'
@@ -1271,6 +1292,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
+  ApiPublicCronConversionDispatchRoute: ApiPublicCronConversionDispatchRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
 }
 export const routeTree = rootRouteImport
