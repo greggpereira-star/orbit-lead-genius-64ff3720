@@ -207,7 +207,10 @@ export async function createInstance(
       url: webhookUrl,
       byEvents: false,
       base64: false,
-      events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE"],
+      // LABELS_ASSOCIATION é o caminho de volta do espelhamento: sem assinar,
+      // etiquetar no aparelho nunca moveria o card, e o sintoma seria "não
+      // funciona" sem nenhum erro em lugar nenhum.
+      events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "LABELS_ASSOCIATION"],
     };
   }
 
@@ -274,6 +277,28 @@ export async function sendText(
   return { ok: true, data: { messageId: res.data?.key?.id ?? null } };
 }
 
+
+/**
+ * Reassina os eventos de uma instância que JÁ existe.
+ *
+ * Instância criada antes de `LABELS_ASSOCIATION` entrar na lista continua sem
+ * receber o evento, e o sintoma é "etiquetar não move o card" sem erro nenhum
+ * em lugar algum. Reconectar resolveria, mas obriga a reler o QR — isto conserta
+ * sem derrubar a sessão.
+ *
+ * A rota foi confirmada por sondagem: `/webhook/set/{instancia}` responde 404 de
+ * INSTÂNCIA inexistente, enquanto uma rota inventada responde "Cannot POST".
+ */
+export async function reassinarEventos(
+  instanceName: string,
+  webhookUrl: string,
+  events: string[],
+): Promise<EvolutionResult<unknown>> {
+  return call<unknown>(`/webhook/set/${encodeURIComponent(instanceName)}`, {
+    method: "POST",
+    body: { webhook: { enabled: true, url: webhookUrl, byEvents: false, base64: false, events } },
+  });
+}
 
 // --------- ETIQUETAS ---------
 

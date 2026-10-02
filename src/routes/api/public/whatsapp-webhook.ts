@@ -12,6 +12,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio } from "@/lib/ctwa.server";
+import { moverLeadPelaEtiqueta } from "@/lib/etiqueta-para-etapa.server";
 
 function log(level: "info" | "warn" | "error", traceId: string, msg: string, extra?: Record<string, unknown>) {
   console.log(
@@ -132,6 +133,27 @@ export const Route = createFileRoute("/api/public/whatsapp-webhook")({
         }
 
         // ---- Mensagem recebida -------------------------------------------
+        // Etiqueta aplicada no aparelho → move o card. É o caminho de volta do
+        // espelhamento: etiqueta e etapa são o mesmo estado, visto de dois
+        // lugares, e o evento de conversão dispara na transição — então as duas
+        // portas levam a um evento só.
+        if (event === "LABELS_ASSOCIATION") {
+          const d = payload?.data ?? {};
+          const r = await moverLeadPelaEtiqueta(admin, {
+            companyId,
+            instanceName: String(payload?.instance ?? d?.instance ?? ""),
+            chatId: String(d?.chatId ?? ""),
+            labelId: String(d?.labelId ?? ""),
+            tipo: String(d?.type ?? ""),
+          });
+          // Sempre 200: a Evolution reentrega o que falha, e etiqueta que não
+          // corresponde a etapa nenhuma é uso legítimo do WhatsApp, não erro.
+          log(r.movido ? "info" : "info", traceId, r.movido ? "etiqueta_moveu_lead" : "etiqueta_ignorada", {
+            motivo: r.motivo ?? null,
+          });
+          return new Response("ok", { status: 200 });
+        }
+
         if (event === "MESSAGES_UPSERT") {
           // A Evolution manda ora um objeto, ora uma lista.
           const raw = payload?.data;
