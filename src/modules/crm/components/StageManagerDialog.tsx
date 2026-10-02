@@ -7,6 +7,8 @@
  * o funil precisa ser do cliente.
  */
 import { useEffect, useState } from 'react';
+import { StageConversionRow } from '@/modules/crm/components/StageConversionRow';
+import { listConversionMappings } from '@/modules/crm/services/conversionMappingService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
@@ -50,6 +52,13 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
   /* Cópia local para o arrastar responder na hora: reordenar são N updates, e
      esperar todos antes de redesenhar faria a lista "pular" de volta. */
   const [order, setOrder] = useState<Stage[]>([]);
+
+  // Mesma condição da lista de etapas: só busca com o diálogo aberto.
+  const mappingsQuery = useQuery({
+    queryKey: ['conversion-mappings', companyId],
+    queryFn: () => listConversionMappings(companyId),
+    enabled: Boolean(companyId) && open,
+  });
 
   const stagesQuery = useQuery({
     queryKey: ['stages', companyId],
@@ -147,10 +156,11 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
                         <div
                           ref={dp.innerRef}
                           {...dp.draggableProps}
-                          className={`flex items-center gap-2 rounded-lg border bg-card p-2.5 ${
+                          className={`rounded-lg border bg-card p-2.5 ${
                             snap.isDragging ? 'shadow-lg ring-2 ring-primary/30' : ''
                           }`}
                         >
+                          <div className="flex items-center gap-2">
                           <span
                             {...dp.dragHandleProps}
                             aria-label={`Reordenar ${stage.name}`}
@@ -236,6 +246,19 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Excluir etapa {stage.name}</span>
                           </Button>
+                          </div>
+
+                          {/* A conversão fica colada na etapa, e não numa tela
+                              de integrações, porque é da etapa que se trata:
+                              quem monta o funil é quem sabe qual degrau
+                              significa "esse lead presta". Separar obrigaria a
+                              decorar o nome da etapa e configurar no escuro. */}
+                          <StageConversionRow
+                            companyId={companyId}
+                            stageId={stage.id}
+                            stageName={stage.name}
+                            mapping={(mappingsQuery.data ?? []).find((m) => m.stage_id === stage.id)}
+                          />
                         </div>
                       )}
                     </Draggable>
