@@ -273,3 +273,72 @@ export async function sendText(
 
   return { ok: true, data: { messageId: res.data?.key?.id ?? null } };
 }
+
+
+// --------- ETIQUETAS ---------
+
+export interface EtiquetaWhatsApp {
+  id: string;
+  name: string;
+  color?: number | string;
+}
+
+/**
+ * Etiquetas existentes na conta.
+ *
+ * Só o canal Baileys tem isto: no Cloud API e no Evolution Channel o método
+ * lança "Method not available". A instância do CRM é Baileys (medido), mas um
+ * cliente que migrar para o oficial perde a função — daí o erro ser devolvido
+ * em vez de lançado.
+ */
+export async function listarEtiquetas(
+  instanceName: string,
+): Promise<EvolutionResult<EtiquetaWhatsApp[]>> {
+  const res = await call<any>(`/label/findLabels/${encodeURIComponent(instanceName)}`);
+  if (!res.ok) return { ok: false, error: res.error };
+  const lista = Array.isArray(res.data) ? res.data : (res.data?.labels ?? []);
+  return {
+    ok: true,
+    data: (lista as Array<Record<string, unknown>>).map((l) => ({
+      id: String(l.id ?? l.labelId ?? ''),
+      name: String(l.name ?? ''),
+      color: (l.color as number | string | undefined),
+    })),
+  };
+}
+
+/**
+ * Aplica (ou tira) uma etiqueta numa conversa.
+ *
+ * A Evolution pede o `labelId`, não o nome — e o nome é o que o usuário
+ * configura na tela. A tradução acontece aqui, e falhar em achar devolve erro
+ * explicando, em vez de aplicar a etiqueta errada em silêncio.
+ */
+export async function aplicarEtiquetaPorNome(
+  instanceName: string,
+  phone: string,
+  nomeDaEtiqueta: string,
+  acao: "add" | "remove" = "add",
+): Promise<EvolutionResult<{ labelId: string }>> {
+  const etiquetas = await listarEtiquetas(instanceName);
+  if (!etiquetas.ok) return { ok: false, error: etiquetas.error };
+
+  const alvo = (etiquetas.data ?? []).find(
+    (e) => e.name.trim().toLowerCase() === nomeDaEtiqueta.trim().toLowerCase(),
+  );
+  if (!alvo?.id) {
+    // A Evolution não cria etiqueta: ela só associa uma que já existe. Dizer
+    // isso é melhor que um "falhou" que manda o usuário procurar bug no CRM.
+    return {
+      ok: false,
+      error: `A etiqueta "${nomeDaEtiqueta}" não existe no WhatsApp. Crie no aparelho primeiro — a API só aplica etiquetas já existentes.`,
+    };
+  }
+
+  const res = await call<unknown>(`/label/handleLabel/${encodeURIComponent(instanceName)}`, {
+    method: "POST",
+    body: { number: phone.replace(/\D+/g, ""), labelId: alvo.id, action: acao },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, data: { labelId: alvo.id } };
+}

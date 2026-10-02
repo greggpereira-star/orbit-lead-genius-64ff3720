@@ -45,7 +45,7 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
           try {
             const [{ data: mapa }, { data: lead }] = await Promise.all([
               admin.from('stage_conversion_mappings')
-                .select('meta_event_name, google_conversion_action, send_deal_value')
+                .select('meta_event_name, google_conversion_action, send_deal_value, whatsapp_label')
                 .eq('company_id', d.company_id).eq('stage_id', d.stage_id)
                 .eq('is_active', true).maybeSingle(),
               admin.from('leads')
@@ -117,10 +117,45 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               if (r.ok) enviados++; else falhas++;
             }
 
+            // Espelha a etapa como etiqueta no WhatsApp.
+            //
+            // É o mesmo estado visto do outro lado: o time comercial abre o
+            // aparelho e vê em que pé está o lead, sem precisar do CRM. Roda
+            // aqui, junto do envio, porque já temos o lead e o mapeamento — e
+            // porque aplicar etiqueta é chamada de rede, que não pode acontecer
+            // dentro da transação que move o card.
+            let etiquetaResultado: unknown = null;
+            if (mapa.whatsapp_label && lead?.phone) {
+              const { data: instancia } = await admin
+                .from('whatsapp_instances')
+                .select('instance_name, status')
+                .eq('company_id', d.company_id)
+                .maybeSingle();
+
+              if (!instancia?.instance_name) {
+                etiquetaResultado = { status: 'pulado', motivo: 'empresa sem instância de WhatsApp' };
+              } else {
+                const { aplicarEtiquetaPorNome } = await import('@/lib/evolution.server');
+                const r = await aplicarEtiquetaPorNome(
+                  instancia.instance_name,
+                  lead.phone,
+                  mapa.whatsapp_label,
+                );
+                etiquetaResultado = r.ok
+                  ? { status: 'aplicada', etiqueta: mapa.whatsapp_label }
+                  : { status: 'falhou', erro: r.error };
+              }
+            }
+
+            // A etiqueta NÃO entra no critério de sucesso do despacho. Ela é
+            // conveniência operacional; a conversão é o que não pode se perder.
+            // Marcar o despacho como falho porque a etiqueta não colou faria o
+            // evento ser reenviado para a Meta — e evento duplicado ensina errado.
             const ok = !mapa.meta_event_name || (metaResultado as any)?.status === 'sent';
             await admin.from('conversion_dispatches').update({
               status: ok ? 'sent' : 'failed',
               meta_result: metaResultado,
+              label_result: etiquetaResultado,
               attempts: (d.attempts ?? 0) + 1,
               dispatched_at: new Date().toISOString(),
               last_error: ok ? null : String((metaResultado as any)?.erro ?? 'falha no envio'),
@@ -131,6 +166,7 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               company_id: d.company_id, evento: mapa.meta_event_name,
               com_ctwa_clid: Boolean(clique?.ctwa_clid),
               com_page_id: Boolean(pagina?.page_id),
+              etiqueta: (etiquetaResultado as any)?.status ?? null,
             }));
           } catch (err) {
             falhas++;
