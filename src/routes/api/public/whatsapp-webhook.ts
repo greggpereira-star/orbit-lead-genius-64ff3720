@@ -11,6 +11,7 @@
  * endpoint recusa tudo — melhor mudo que aberto.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio } from "@/lib/ctwa.server";
 
 function log(level: "info" | "warn" | "error", traceId: string, msg: string, extra?: Record<string, unknown>) {
   console.log(
@@ -168,6 +169,31 @@ export const Route = createFileRoute("/api/public/whatsapp-webhook")({
                 leadId = lead.id;
                 break;
               }
+            }
+
+            // Atribuição de anúncio: só a PRIMEIRA mensagem de uma conversa vinda
+            // de CTWA traz o `externalAdReply`. Se não for lido aqui, some — não
+            // dá para recuperar depois a partir do texto.
+            const clique = acharCliqueDeAnuncio(item.message);
+            if (clique) {
+              await registrarCliqueDeAnuncio(admin, {
+                companyId,
+                leadId,
+                phone,
+                clique,
+                messageTimestamp: typeof item.messageTimestamp === "number"
+                  ? item.messageTimestamp
+                  : null,
+              });
+            } else if (leadId) {
+              // Lead que já existia e voltou a falar: se houver clique órfão
+              // gravado antes do lead nascer, amarra agora.
+              await admin
+                .from("whatsapp_ad_clicks")
+                .update({ lead_id: leadId })
+                .eq("company_id", companyId)
+                .eq("phone", phone)
+                .is("lead_id", null);
             }
 
             await admin.from("whatsapp_messages").insert({
