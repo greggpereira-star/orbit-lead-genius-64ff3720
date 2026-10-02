@@ -60,6 +60,19 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               pulados++; continue;
             }
 
+            // A página do Facebook dona da conversa.
+            //
+            // A Meta EXIGE `page_id` ou `whatsapp_business_account_id` em
+            // `user_data` quando a fonte é `business_messaging` — sem um dos
+            // dois o evento volta 400 com subcódigo 2804116. Descoberto no
+            // teste ponta a ponta, não em produção.
+            const { data: pagina } = await admin
+              .from('meta_lead_pages')
+              .select('page_id')
+              .eq('company_id', d.company_id)
+              .order('created_at', { ascending: true })
+              .limit(1).maybeSingle();
+
             // O clique de anúncio mais recente desse lead. É ele que carrega o
             // `ctwa_clid` e transforma a correspondência de probabilística em
             // determinística.
@@ -82,7 +95,12 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 eventTime: Math.floor(new Date(d.occurred_at).getTime() / 1000),
                 email: lead?.email ?? null,
                 phone: lead?.phone ?? null,
-                messaging: clique?.ctwa_clid ? { ctwaClid: clique.ctwa_clid } : null,
+                // Mensageria só quando há as DUAS coisas. Com clid mas sem
+                // página, a Meta recusa; melhor cair no caminho de site, que
+                // ainda casa por telefone, do que perder o evento inteiro.
+                messaging: clique?.ctwa_clid && pagina?.page_id
+                  ? { ctwaClid: clique.ctwa_clid, pageId: pagina.page_id }
+                  : null,
                 customData: mapa.send_deal_value && lead?.deal_value
                   ? { value: Number(lead.deal_value), currency: lead.deal_currency || 'BRL' }
                   : null,
@@ -112,6 +130,7 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               scope: 'conversion-dispatch', msg: ok ? 'enviado' : 'falhou',
               company_id: d.company_id, evento: mapa.meta_event_name,
               com_ctwa_clid: Boolean(clique?.ctwa_clid),
+              com_page_id: Boolean(pagina?.page_id),
             }));
           } catch (err) {
             falhas++;
