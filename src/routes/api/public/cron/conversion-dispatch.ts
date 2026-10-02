@@ -87,7 +87,15 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                   ? { value: Number(lead.deal_value), currency: lead.deal_currency || 'BRL' }
                   : null,
               });
-              metaResultado = { status: r.status, http: r.httpStatus, erro: r.error ?? null };
+              // Guarda a RESPOSTA da Meta, não só o código. Um "meta_http_400"
+              // sozinho não diz se o problema é o evento, o identificador ou o
+              // dataset — e sem o corpo a investigação vira adivinhação.
+              metaResultado = {
+                status: r.status,
+                http: r.httpStatus,
+                erro: r.error ?? null,
+                resposta: r.response ?? null,
+              };
               if (r.ok) enviados++; else falhas++;
             }
 
