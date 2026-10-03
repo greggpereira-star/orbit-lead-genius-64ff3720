@@ -138,8 +138,11 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             última coluna — era o interruptor de valor que sumia na borda. E com
             altura limitada ao viewport, senão sete etapas mais as explicações
             estouram a tela em notebook. */}
-        <DialogContent className="max-h-[90dvh] max-w-5xl overflow-y-auto">
-          <DialogHeader>
+        {/* Só o corpo rola. Antes o diálogo inteiro rolava, e o título e as
+            abas saíam de cena assim que a lista passava da altura — a pessoa
+            perdia de vista em qual aba estava e como voltar. */}
+        <DialogContent className="flex max-h-[90dvh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-4 text-left">
             <DialogTitle>Etapas do funil</DialogTitle>
             <DialogDescription>
               Arraste para reordenar. A etapa de entrada é onde o lead cai quando a
@@ -147,15 +150,15 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="etapas">
-            <TabsList className="mb-3">
+          <Tabs defaultValue="etapas" className="flex min-h-0 flex-1 flex-col gap-0">
+            <TabsList className="mx-6 mt-4 shrink-0 self-start">
               <TabsTrigger value="etapas">Etapas</TabsTrigger>
               {/* Separado porque são duas perguntas diferentes: "quais são os
                   degraus" e "o que cada degrau significa". Misturar obrigava a
                   expandir etapa por etapa para enxergar o funil inteiro. */}
               <TabsTrigger value="conversoes">Conversões</TabsTrigger>
             </TabsList>
-            <TabsContent value="etapas" className="space-y-3">
+            <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
 
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="stages">
@@ -303,7 +306,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </Button>
           </div>
             </TabsContent>
-            <TabsContent value="conversoes">
+            <TabsContent value="conversoes" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <ConversionSettingsTable companyId={companyId} />
             </TabsContent>
           </Tabs>

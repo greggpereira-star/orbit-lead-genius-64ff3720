@@ -34,62 +34,66 @@ export const EVENTO_PERSONALIZADO = '__personalizado__';
  * `Lead` NÃO está aqui de propósito: a Meta recusa esse nome quando a origem é
  * conversa de WhatsApp (`business_messaging`). `LeadSubmitted` é o equivalente
  * aceito.
+ *
+ * A POSIÇÃO de cada item é a profundidade no funil, e a tela usa isso: uma etapa
+ * posterior apontando para um evento mais raso que o de uma etapa anterior é
+ * quase sempre engano de configuração.
  */
 export const EVENTOS_META = [
   {
     valor: 'Contact',
     rotulo: 'Contato iniciado',
-    explica: 'Envia Contact. A conversa começou — o degrau mais raso.',
+    explica: 'A conversa começou — o degrau mais raso.',
   },
   {
     valor: 'LeadSubmitted',
     rotulo: 'Lead registrado',
-    explica: 'Envia LeadSubmitted. Entrou no funil, ainda sem filtro.',
+    explica: 'Entrou no funil, ainda sem filtro.',
   },
   {
     valor: 'CompleteRegistration',
     rotulo: 'Cadastro completo',
-    explica: 'Envia CompleteRegistration. Preencheu os dados que você precisa.',
+    explica: 'Preencheu os dados que você precisa.',
   },
   {
     valor: 'QualifiedLead',
     rotulo: 'Lead qualificado',
-    explica: 'Envia QualifiedLead. O degrau em que você sabe que a pessoa tem perfil — costuma ser o que mais melhora a entrega.',
+    explica: 'O degrau em que você sabe que a pessoa tem perfil — costuma ser o que mais melhora a entrega.',
   },
   {
     valor: 'Schedule',
     rotulo: 'Agendamento',
-    explica: 'Envia Schedule. Marcou visita, avaliação ou reunião.',
+    explica: 'Marcou visita, avaliação ou reunião.',
   },
   {
     valor: 'SubmitApplication',
     rotulo: 'Proposta ou inscrição enviada',
-    explica: 'Envia SubmitApplication. Mandou proposta, ficha, cadastro de crédito.',
+    explica: 'Mandou proposta, ficha, cadastro de crédito.',
   },
   {
     valor: 'InitiateCheckout',
     rotulo: 'Começou a fechar',
-    explica: 'Envia InitiateCheckout. O passo antes da venda: contrato enviado, negociação aberta, carrinho iniciado.',
+    explica: 'O passo antes da venda: contrato enviado, negociação aberta, carrinho iniciado.',
   },
   {
     valor: 'AddPaymentInfo',
     rotulo: 'Dados de pagamento',
-    explica: 'Envia AddPaymentInfo. Informou como vai pagar.',
+    explica: 'Informou como vai pagar.',
   },
   {
     valor: 'StartTrial',
     rotulo: 'Teste iniciado',
-    explica: 'Envia StartTrial. Começou período de experiência.',
+    explica: 'Começou período de experiência.',
   },
   {
     valor: 'Subscribe',
     rotulo: 'Assinatura',
-    explica: 'Envia Subscribe. Virou recorrência.',
+    explica: 'Virou recorrência.',
   },
   {
     valor: 'Purchase',
     rotulo: 'Venda',
-    explica: 'Envia Purchase. Ligue o valor ao lado para a Meta aprender com receita, não com volume.',
+    explica: 'Ligue o valor ao lado para a Meta aprender com receita, não com volume.',
   },
 ] as const;
 
@@ -186,4 +190,10 @@ export async function salvarModoEnsaio(companyId: string, ligado: boolean): Prom
     .update({ conversion_dry_run: ligado })
     .eq('id', companyId);
   if (error) throw error;
+}
+
+/** Profundidade do evento no funil: a posição dele em EVENTOS_META. -1 = fora da lista. */
+export function profundidadeDoEvento(valor: string | null): number {
+  if (!valor) return -1;
+  return EVENTOS_META.findIndex((e) => e.valor === valor);
 }
