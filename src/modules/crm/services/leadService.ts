@@ -441,3 +441,47 @@ async function createLeadEvent(
     metadata,
   });
 }
+/**
+ * O caminho que o lead percorreu, do mais antigo ao mais recente.
+ *
+ * Vem do gatilho no banco, não da tela: o registro que a tela fazia só cobria o
+ * arrastar no Kanban, então lead movido por etiqueta do WhatsApp ou por
+ * automação sumia do histórico. Nome e posição da etapa são os do momento do
+ * movimento — renomear ou reordenar o funil depois não reescreve o passado.
+ */
+export interface MovimentoDeEtapa {
+  from_stage_name: string | null;
+  from_order_index: number | null;
+  to_stage_name: string | null;
+  to_order_index: number | null;
+  moved_at: string;
+  moved_by: string | null;
+  origem: string | null;
+}
+
+export async function listarCaminhoDoLead(leadId: string): Promise<MovimentoDeEtapa[]> {
+  const { data, error } = await supabase
+    .from('lead_stage_history')
+    .select('from_stage_name, from_order_index, to_stage_name, to_order_index, moved_at, moved_by, origem')
+    .eq('lead_id', leadId)
+    .order('moved_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MovimentoDeEtapa[];
+}
+
+/**
+ * Até onde o lead chegou — a posição mais funda que ele alcançou, mesmo que
+ * tenha voltado depois. É o número que dá sentido a público de lead perdido:
+ * quem caiu em "Proposta enviada" não é o mesmo que caiu em "Primeiro contato".
+ *
+ * Lê o histórico E a etapa atual, porque o histórico começa agora: um lead
+ * parado desde julho não tem movimento registrado, e olhar só o histórico diria
+ * que ele nunca saiu do lugar.
+ */
+export async function profundidadeMaximaDoLead(leadId: string): Promise<number> {
+  const { data, error } = await (supabase as any).rpc('profundidade_maxima_do_lead', {
+    p_lead_id: leadId,
+  });
+  if (error) throw error;
+  return typeof data === 'number' ? data : -1;
+}

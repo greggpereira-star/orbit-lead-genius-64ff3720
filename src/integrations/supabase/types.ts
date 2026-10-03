@@ -1881,6 +1881,51 @@ export type Database = {
           },
         ]
       }
+      lead_stage_history: {
+        Row: {
+          company_id: string
+          from_order_index: number | null
+          from_stage_id: string | null
+          from_stage_name: string | null
+          id: string
+          lead_id: string
+          moved_at: string
+          moved_by: string | null
+          origem: string | null
+          to_order_index: number | null
+          to_stage_id: string | null
+          to_stage_name: string | null
+        }
+        Insert: {
+          company_id: string
+          from_order_index?: number | null
+          from_stage_id?: string | null
+          from_stage_name?: string | null
+          id?: string
+          lead_id: string
+          moved_at?: string
+          moved_by?: string | null
+          origem?: string | null
+          to_order_index?: number | null
+          to_stage_id?: string | null
+          to_stage_name?: string | null
+        }
+        Update: {
+          company_id?: string
+          from_order_index?: number | null
+          from_stage_id?: string | null
+          from_stage_name?: string | null
+          id?: string
+          lead_id?: string
+          moved_at?: string
+          moved_by?: string | null
+          origem?: string | null
+          to_order_index?: number | null
+          to_stage_id?: string | null
+          to_stage_name?: string | null
+        }
+        Relationships: []
+      }
       lead_events: {
         Row: {
           created_at: string | null
