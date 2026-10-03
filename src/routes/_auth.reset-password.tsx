@@ -75,10 +75,10 @@ function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await clientRef.current.auth.updateUser({ password });
       if (error) throw error;
       toast.success('Senha atualizada! Faça login com a nova senha.');
-      await supabase.auth.signOut();
+      await clientRef.current.auth.signOut();
       navigate({ to: '/login' });
     } catch (error: any) {
       console.error(error);
