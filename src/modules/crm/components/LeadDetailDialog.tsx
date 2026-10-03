@@ -8,6 +8,7 @@
 import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Clock,
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
   MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
@@ -54,6 +55,8 @@ import { LossReasonDialog } from "@/modules/crm/components/LossReasonDialog";
 import { LossReasonPanel } from "@/modules/crm/components/LossReasonPanel";
 import { OwnerPicker } from "@/modules/crm/components/OwnerPicker";
 import { LeadJourney } from "@/modules/crm/components/LeadJourney";
+import { LeadInsights } from "@/modules/crm/components/LeadInsights";
+import { NextActions } from "@/modules/crm/components/NextActions";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
@@ -428,7 +431,14 @@ function Field({
  * registro, o que muda é ter prazo. Os compromissos pendentes sobem pro topo
  * porque é neles que o corretor precisa agir.
  */
-function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) {
+function NotesTab({
+  leadId, companyId, compacto,
+}: {
+  leadId: string;
+  companyId: string;
+  /** Na visão geral a lista fica nas três mais recentes. */
+  compacto?: boolean;
+}) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [body, setBody] = useState("");
@@ -479,7 +489,10 @@ function NotesTab({ leadId, companyId }: { leadId: string; companyId: string }) 
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const notes = notesQuery.data ?? [];
+  const todasAsNotas = notesQuery.data ?? [];
+  // Na visão geral cabem três; a aba mostra todas. Cortar aqui, e não só
+  // esconder por CSS, evita montar uma lista de cem itens fora de vista.
+  const notes = compacto ? todasAsNotas.slice(0, 3) : todasAsNotas;
   const pending = notes.filter((n) => n.scheduled_for && !n.done);
   const rest = notes.filter((n) => !n.scheduled_for || n.done);
 
@@ -907,7 +920,7 @@ export function LeadDetailDialog({
 }: Props) {
   const isWide = useIsWide();
   const qc = useQueryClient();
-  const [tab, setTab] = useState("respostas");
+  const [tab, setTab] = useState("visao-geral");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -1179,12 +1192,178 @@ export function LeadDetailDialog({
             e-mail como "melquisedec.a…". Truncar o dado que se usa para AGIR é
             o pior corte possível numa ficha de lead — obriga a clicar para ler
             o que deveria estar à vista. */}
-        <div className="grid max-h-[80vh] grid-cols-1 overflow-y-auto md:grid-cols-[300px_1fr] md:overflow-y-hidden xl:grid-cols-[300px_1fr_320px]">
-          {/* ---------- Contexto ----------
-              Antes era uma lista achatada de seis campos onde telefone
-              (acionável) tinha o mesmo peso de etapa (estado interno). Agora
-              vem agrupado por natureza da informação. */}
-          <aside className="space-y-6 border-b bg-muted/20 p-6 md:overflow-y-auto md:border-b-0 md:border-r">
+        <div className="flex max-h-[82vh] flex-col overflow-hidden">
+          <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+            {/* Seis abas agrupam por pergunta: quem é, como falo, o que quer,
+                por onde passou, o que combinei, o que anexei. O layout
+                anterior empilhava tudo em três colunas fixas e obrigava a
+                rolar duas delas ao mesmo tempo. */}
+            <TabsList className="h-auto w-full shrink-0 justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent px-6 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <TabsTrigger value="visao-geral" className="gap-2"><Home className="h-4 w-4" />Visão geral</TabsTrigger>
+              <TabsTrigger value="contato" className="gap-2"><User className="h-4 w-4" />Contato</TabsTrigger>
+              <TabsTrigger value="qualificacao" className="gap-2">
+                <ClipboardList className="h-4 w-4" />Qualificação
+                {answers.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{answers.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="gap-2"><Clock className="h-4 w-4" />Histórico</TabsTrigger>
+              <TabsTrigger value="anotacoes" className="gap-2">
+                <StickyNote className="h-4 w-4" />Anotações
+                {noteCount ? (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{noteCount}</Badge>
+                ) : null}
+              </TabsTrigger>
+              <TabsTrigger value="arquivos" className="gap-2"><Paperclip className="h-4 w-4" />Arquivos e Etiquetas</TabsTrigger>
+            </TabsList>
+
+            <ScrollArea className="min-h-0 flex-1">
+              <TabsContent value="visao-geral" className="m-0 p-6">
+  {/* Três colunas: esquerda para o que caracteriza o lead, centro para o que
+      se lê, direita para o que se faz. É a leitura natural de quem abre a
+      ficha — "quem é / o que sei / qual o próximo passo". */}
+  <div className="grid gap-5 xl:grid-cols-[17rem_minmax(0,1fr)_19rem]">
+    <div className="space-y-4">
+      {estaPerdido && (
+        <LossReasonPanel
+          leadId={lead.id}
+          companyId={lead.company_id}
+          motivoAtualId={lead.loss_reason_id ?? null}
+          observacaoAtual={lead.lost_notes ?? null}
+        />
+      )}
+
+      <CartaoResumo titulo="Contato" aoEditar={() => setTab('contato')}>
+        <LinhaResumo icone={<Phone className="h-3.5 w-3.5" />} valor={lead.phone} copiavel rotulo="Telefone" />
+        <LinhaResumo icone={<Mail className="h-3.5 w-3.5" />} valor={lead.email} copiavel rotulo="E-mail" />
+        <LinhaResumo icone={<MapPin className="h-3.5 w-3.5" />} valor={city ? String(city) : null} rotulo="Cidade" />
+      </CartaoResumo>
+
+      <CartaoResumo titulo="Captação" aoEditar={() => setTab('historico')}>
+        <LinhaResumo icone={<ClipboardList className="h-3.5 w-3.5" />} valor={origin} rotulo={originLabel} />
+        <LinhaResumo icone={<Radio className="h-3.5 w-3.5" />} valor={channelLabel(lead.source ?? lead.utm_source) || null} rotulo="Canal" />
+      </CartaoResumo>
+
+      <CartaoResumo titulo="Negócio" aoEditar={() => setTab('contato')}>
+        <LinhaResumo
+          icone={<CircleDollarSign className="h-3.5 w-3.5" />}
+          rotulo="Valor da venda"
+          valor={(() => {
+            const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
+            return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
+              style: 'currency', currency: l.deal_currency ?? 'BRL',
+            });
+          })()}
+          vazio="Sem valor"
+        />
+      </CartaoResumo>
+
+      <div className="rounded-xl border p-4">
+        <p className="mb-3 text-sm font-semibold">Atendimento</p>
+        <OwnerPicker
+          leadId={lead.id}
+          companyId={lead.company_id}
+          responsavelAtual={lead.assigned_to ?? null}
+        />
+      </div>
+    </div>
+
+    <div className="min-w-0 space-y-4">
+      <div className="rounded-xl border bg-primary/[0.04] p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-1.5">
+            <p className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <Sparkles className="h-4 w-4" />
+              Resumo do perfil
+            </p>
+            {/* Montado por template a partir das respostas — não há IA no
+                projeto, e uma frase "gerada" que ninguém audita seria pior
+                que não ter resumo. */}
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {summary || 'Este lead não trouxe respostas de formulário.'}
+            </p>
+          </div>
+          <CompletenessMeter data={completeness} />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Fato icone={<CalendarClock className="h-4 w-4" />} rotulo="Primeiro contato" valor={created} nota={ago} />
+        <Fato icone={<ClipboardList className="h-4 w-4" />} rotulo="Respostas" valor={`${answers.length} campos`} />
+        <Fato icone={<StickyNote className="h-4 w-4" />} rotulo="Anotações" valor={noteCount === null ? '—' : String(noteCount)} />
+        <Fato icone={<Paperclip className="h-4 w-4" />} rotulo="Arquivos" valor={attachmentCount === null ? '—' : String(attachmentCount)} />
+      </div>
+
+      {answers.length > 0 && (
+        <section className="rounded-xl border p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Principais respostas</h3>
+            <button
+              type="button"
+              onClick={() => setTab('qualificacao')}
+              className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              Ver todas →
+            </button>
+          </div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {answers.slice(0, 4).map((a) => {
+              const k = ANSWER_KIND_STYLE[a.kind];
+              const Icon = k.icon;
+              return (
+                <div key={a.key} className="flex items-start gap-3 rounded-lg border p-3">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${k.tone}`} aria-hidden="true">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <dt className="truncate text-[11px] uppercase tracking-wide text-muted-foreground" title={a.label}>{a.short}</dt>
+                    <dd className="truncate text-sm font-semibold" title={a.value}>{a.value}</dd>
+                  </div>
+                </div>
+              );
+            })}
+          </dl>
+        </section>
+      )}
+
+      <div className="space-y-2">
+        <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} compacto />
+        <button
+          type="button"
+          onClick={() => setTab('historico')}
+          className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          Ver histórico completo →
+        </button>
+      </div>
+
+      <LeadInsights lead={lead} etapaAtual={null} />
+    </div>
+
+    <div className="space-y-4">
+      <section className="rounded-xl border p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Anotações</h3>
+          <button
+            type="button"
+            onClick={() => setTab('anotacoes')}
+            className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            Abrir →
+          </button>
+        </div>
+        <NotesTab leadId={lead.id} companyId={lead.company_id} compacto />
+      </section>
+
+      <NextActions leadId={lead.id} companyId={lead.company_id} />
+    </div>
+  </div>
+</TabsContent>
+
+
+              <TabsContent value="contato" className="m-0 p-6">
+  <div className="mx-auto max-w-xl space-y-6">
+<div className="space-y-6">
             {/* Primeiro de tudo quando o lead está perdido: é a informação que
                 muda o que fazer com ele, e sem ela a perda não vira nada. */}
             {estaPerdido && (
@@ -1303,48 +1482,11 @@ export function LeadDetailDialog({
                 </div>
               )}
             </Section>
-          </aside>
+          </div>
+  </div>
+</TabsContent>
 
-          {/* ---------- Conteúdo ---------- */}
-          <div className="min-w-0">
-            <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col">
-              {/* Com 5 abas o rótulo da última era cortado na largura do modal.
-                  Rolagem horizontal resolve em qualquer largura sem abreviar
-                  nome de aba, que é o que deixaria a navegação adivinhada. */}
-              <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent px-6 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <TabsTrigger value="respostas" className="gap-2">
-                  <ClipboardList className="h-4 w-4" />
-                  Respostas
-                  {answers.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                      {answers.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="rastreamento" className="gap-2">
-                  <Radio className="h-4 w-4" />
-                  Rastreamento
-                </TabsTrigger>
-                {/* Em telas estreitas não há espaço pra coluna fixa, então as
-                    anotações voltam a ser aba — só aí. */}
-                {!isWide && (
-                  <TabsTrigger value="anotacoes" className="gap-2">
-                    <StickyNote className="h-4 w-4" />
-                    Anotações
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="anexos" className="gap-2">
-                  <Paperclip className="h-4 w-4" />
-                  Anexos
-                </TabsTrigger>
-                <TabsTrigger value="tags" className="gap-2">
-                  <TagIcon className="h-4 w-4" />
-                  Etiquetas
-                </TabsTrigger>
-              </TabsList>
-
-              <ScrollArea className="flex-1 md:max-h-[62vh]">
-                <TabsContent value="respostas" className="m-0 space-y-4 p-6">
+              <TabsContent value="qualificacao" className="m-0 space-y-4 p-6">
                   {answers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Este lead não trouxe respostas de formulário.
@@ -1406,30 +1548,11 @@ export function LeadDetailDialog({
                     </>
                   )}
 
-                  {/* Fatos verificáveis sobre o cadastro. Antes o "há 1h" só
-                      existia no topo, então quem rolava as respostas perdia a
-                      noção de quão quente o contato ainda está. */}
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border bg-muted/25 px-4 py-3">
-                    <FactItem icon={<CalendarClock className="h-4 w-4" />} label="Primeiro contato">
-                      {created}
-                      {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
-                    </FactItem>
-                    <FactItem icon={<StickyNote className="h-4 w-4" />} label="Anotações">
-                      {noteCount === null ? "—" : noteCount}
-                    </FactItem>
-                    <FactItem icon={<Paperclip className="h-4 w-4" />} label="Anexos">
-                      {attachmentCount === null ? "—" : attachmentCount}
-                    </FactItem>
-                  </div>
+                  </TabsContent>
 
-                  {/* A coluna do meio tinha espaço sobrando embaixo enquanto a
-                      da esquerda estava espremida. O caminho no funil ocupa esse
-                      espaço com o dado que a ficha não respondia: até onde o
-                      lead chegou e quanto tempo levou em cada degrau. */}
-                  <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} />
-                </TabsContent>
-
-                <TabsContent value="rastreamento" className="m-0 space-y-6 p-6">
+              <TabsContent value="historico" className="m-0 space-y-6 p-6">
+  <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} />
+<div className="space-y-6">
                   {tracking.length === 0 && metaInfo.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Sem dados de rastreamento.</p>
                   ) : (
@@ -1466,39 +1589,25 @@ export function LeadDetailDialog({
                       )}
                     </>
                   )}
-                </TabsContent>
+                </div>
+</TabsContent>
 
-                {!isWide && (
-                  <TabsContent value="anotacoes" className="m-0 p-6">
-                    <NotesTab leadId={lead.id} companyId={lead.company_id} />
-                  </TabsContent>
-                )}
-
-                <TabsContent value="anexos" className="m-0 p-6">
-                  <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
-                </TabsContent>
-
-                <TabsContent value="tags" className="m-0 p-6">
-                  <TagsTab leadId={lead.id} companyId={lead.company_id} />
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
-          </div>
-
-          {/* ---------- Anotações (coluna fixa) ---------- */}
-          {isWide && (
-            <aside className="flex flex-col border-l bg-muted/20">
-              <div className="flex items-center gap-2 border-b px-5 py-3.5">
-                <StickyNote className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold tracking-tight">Anotações</h3>
-              </div>
-              <ScrollArea className="flex-1 md:max-h-[62vh]">
-                <div className="p-5">
+              <TabsContent value="anotacoes" className="m-0 p-6">
+                <div className="mx-auto max-w-2xl">
                   <NotesTab leadId={lead.id} companyId={lead.company_id} />
                 </div>
-              </ScrollArea>
-            </aside>
-          )}
+              </TabsContent>
+
+              <TabsContent value="arquivos" className="m-0 space-y-8 p-6">
+<div>
+                  <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
+                </div>
+<div>
+                  <TagsTab leadId={lead.id} companyId={lead.company_id} />
+                </div>
+</TabsContent>
+            </ScrollArea>
+          </Tabs>
         </div>
       </DialogContent>
 
@@ -1527,5 +1636,69 @@ export function LeadDetailDialog({
         </AlertDialogContent>
       </AlertDialog>
     </Dialog>
+  );
+}
+
+/** Cartão de resumo da coluna da esquerda, com atalho para a aba que edita. */
+function CartaoResumo({
+  titulo, aoEditar, children,
+}: { titulo: string; aoEditar: () => void; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border p-4">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">{titulo}</h3>
+        {/* "Editar" leva para a aba que de fato edita, em vez de abrir um
+            segundo lugar de edição com as mesmas regras — dois caminhos de
+            escrita acabam divergindo. */}
+        <button
+          type="button"
+          onClick={aoEditar}
+          className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          Editar
+        </button>
+      </div>
+      <div className="space-y-1.5">{children}</div>
+    </section>
+  );
+}
+
+/** Uma linha do cartão de resumo: ícone, valor e o botão de copiar. */
+function LinhaResumo({
+  icone, valor, rotulo, copiavel, vazio,
+}: {
+  icone: React.ReactNode;
+  valor: string | null;
+  rotulo: string;
+  copiavel?: boolean;
+  vazio?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="shrink-0 text-muted-foreground/70">{icone}</span>
+      <span
+        className={`min-w-0 flex-1 truncate text-sm ${valor ? "" : "text-muted-foreground"}`}
+        title={valor ? `${rotulo}: ${valor}` : rotulo}
+      >
+        {valor || vazio || `Sem ${rotulo.toLowerCase()}`}
+      </span>
+      {copiavel && valor && <CopyButton value={valor} label={rotulo} />}
+    </div>
+  );
+}
+
+/** Número verificável do cadastro, na faixa de fatos da visão geral. */
+function Fato({
+  icone, rotulo, valor, nota,
+}: { icone: React.ReactNode; rotulo: string; valor: string; nota?: string | null }) {
+  return (
+    <div className="rounded-xl border p-3">
+      <span className="mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        {icone}
+      </span>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{rotulo}</p>
+      <p className="truncate text-sm font-semibold" title={valor}>{valor}</p>
+      {nota && <p className="truncate text-[11px] text-muted-foreground">{nota}</p>}
+    </div>
   );
 }

@@ -29,7 +29,14 @@ const DATA = new Intl.DateTimeFormat('pt-BR', {
  * não tem linha nenhuma — e a tela diz isso, em vez de desenhar um caminho
  * que ninguém mediu.
  */
-export function LeadJourney({ leadId, criadoEm }: { leadId: string; criadoEm: string | null }) {
+export function LeadJourney({
+  leadId, criadoEm, compacto,
+}: {
+  leadId: string;
+  criadoEm: string | null;
+  /** Na visão geral só os três últimos passos cabem — o resto fica na aba. */
+  compacto?: boolean;
+}) {
   const caminho = useQuery({
     queryKey: ['caminho-do-lead', leadId],
     queryFn: () => listarCaminhoDoLead(leadId),
@@ -44,7 +51,8 @@ export function LeadJourney({ leadId, criadoEm }: { leadId: string; criadoEm: st
     );
   }
 
-  const passos = caminho.data ?? [];
+  const todos = caminho.data ?? [];
+  const passos = compacto ? todos.slice(-3) : todos;
 
   return (
     <section className="rounded-xl border p-4">
