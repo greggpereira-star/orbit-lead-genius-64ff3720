@@ -1027,9 +1027,10 @@ export function LeadDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* A largura segue o conteúdo, não o contrário. Com uma coluna de 42rem,
-          80rem deixaria dois vazios laterais do tamanho da própria coluna. */}
-      <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0">
+      {/* 54rem: a coluna de leitura tem 40rem e as seis abas somam 752px, que
+          não cabiam nos 720 de um modal de 48rem — a barra rolava e a última
+          aba ficava cortada. O que sobra nas laterais é respiro, não vão. */}
+      <DialogContent className="max-w-[54rem] gap-0 overflow-hidden p-0">
         {/* Cabeçalho: identidade + etapa + a ação principal, tudo na primeira
             linha de leitura. Antes o topo era só o nome e uma data, e a ação
             mais usada (WhatsApp) ficava enterrada abaixo de seis campos. */}
@@ -1179,7 +1180,7 @@ export function LeadDetailDialog({
                 ) : null}
               </TabsTrigger>
               <TabsTrigger value="arquivos" className="gap-2">
-                <Paperclip className="h-4 w-4" />Arquivos e Etiquetas
+                <Paperclip className="h-4 w-4" />Arquivos
                 {/* A contagem existia na faixa de fatos do layout antigo e se
                     perdeu na reorganização: ficou sendo calculada e nunca
                     exibida. Na aba ela diz se vale abrir antes de abrir. */}
@@ -1195,7 +1196,7 @@ export function LeadDetailDialog({
       A ficha é uma narrativa: por que terminou assim, quem é, de onde veio,
       como chegou até aqui, o que fazer agora. Em três colunas essa ordem se
       perdia e o olho tinha de escolher por onde começar. */}
-  <div className="mx-auto max-w-2xl space-y-8 px-6 py-7">
+  <div className="mx-auto max-w-[40rem] space-y-10 px-8 py-8">
     {estaPerdido && (
       <LossReasonPanel
         leadId={lead.id}
@@ -1206,7 +1207,10 @@ export function LeadDetailDialog({
     )}
 
     {summary && (
-      <section className="flex items-start justify-between gap-6">
+      /* Abre a leitura: é a frase que diz quem é a pessoa, e vem antes de
+         qualquer lista de campos. O medidor fica ao lado porque responde a
+         pergunta seguinte — "o quanto disso eu sei?". */
+      <section className="flex items-start justify-between gap-8">
         <p className="min-w-0 text-[15px] leading-relaxed">{summary}</p>
         <CompletenessMeter data={completeness} />
       </section>
@@ -1224,7 +1228,6 @@ export function LeadDetailDialog({
         </button>
       }
     >
-      <div>
         <LinhaFicha rotulo="Responsável">
           <OwnerPicker
             leadId={lead.id}
@@ -1248,11 +1251,9 @@ export function LeadDetailDialog({
         <LinhaFicha rotulo="Cidade">
           <ValorOuVazio valor={city ? String(city) : null} vazio="Sem cidade" />
         </LinhaFicha>
-      </div>
     </SecaoFicha>
 
     <SecaoFicha rotulo="Origem">
-      <div>
         <LinhaFicha
           rotulo={originLabel}
           acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
@@ -1279,7 +1280,6 @@ export function LeadDetailDialog({
             vazio="Sem valor"
           />
         </LinhaFicha>
-      </div>
     </SecaoFicha>
 
     {answers.length > 0 && (
@@ -1295,13 +1295,11 @@ export function LeadDetailDialog({
           </button>
         }
       >
-        <div>
-          {answers.slice(0, 4).map((a) => (
-            <LinhaFicha key={a.key} rotulo={a.short}>
-              <span className="block truncate" title={a.value}>{a.value}</span>
-            </LinhaFicha>
-          ))}
-        </div>
+        {answers.slice(0, 4).map((a) => (
+          <LinhaFicha key={a.key} rotulo={a.short}>
+            <span className="block truncate" title={a.value}>{a.value}</span>
+          </LinhaFicha>
+        ))}
       </SecaoFicha>
     )}
 
@@ -1353,7 +1351,7 @@ export function LeadDetailDialog({
 
 
               <TabsContent value="contato" className="m-0">
-  <div className="mx-auto max-w-2xl space-y-8 px-6 py-7">
+  <div className="mx-auto max-w-[40rem] space-y-10 px-8 py-8">
     <SecaoFicha rotulo="Quem cuida">
       <OwnerPicker
         leadId={lead.id}
@@ -1403,7 +1401,6 @@ export function LeadDetailDialog({
     </SecaoFicha>
 
     <SecaoFicha rotulo="De onde veio">
-      <div>
         <LinhaFicha
           rotulo={originLabel}
           acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
@@ -1419,7 +1416,6 @@ export function LeadDetailDialog({
             {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
           </span>
         </LinhaFicha>
-      </div>
     </SecaoFicha>
 
     <SecaoFicha rotulo="Negócio">
@@ -1442,7 +1438,7 @@ export function LeadDetailDialog({
   </div>
 </TabsContent>
 
-              <TabsContent value="qualificacao" className="m-0"><div className="mx-auto max-w-2xl space-y-4 px-6 py-7">
+              <TabsContent value="qualificacao" className="m-0"><div className="mx-auto max-w-[40rem] space-y-4 px-8 py-8">
                   {answers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Este lead não trouxe respostas de formulário.
@@ -1507,7 +1503,7 @@ export function LeadDetailDialog({
                   </div>
             </TabsContent>
 
-              <TabsContent value="historico" className="m-0"><div className="mx-auto max-w-2xl space-y-6 px-6 py-7">
+              <TabsContent value="historico" className="m-0"><div className="mx-auto max-w-[40rem] space-y-6 px-8 py-8">
   <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} />
 <div className="space-y-6">
                   {tracking.length === 0 && metaInfo.length === 0 ? (
@@ -1551,12 +1547,12 @@ export function LeadDetailDialog({
             </TabsContent>
 
               <TabsContent value="anotacoes" className="m-0">
-                <div className="mx-auto max-w-2xl px-6 py-7">
+                <div className="mx-auto max-w-[40rem] px-8 py-8">
                   <NotesTab leadId={lead.id} companyId={lead.company_id} />
                 </div>
               </TabsContent>
 
-              <TabsContent value="arquivos" className="m-0"><div className="mx-auto max-w-2xl space-y-8 px-6 py-7">
+              <TabsContent value="arquivos" className="m-0"><div className="mx-auto max-w-[40rem] space-y-10 px-8 py-8">
 <div>
                   <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
                 </div>
