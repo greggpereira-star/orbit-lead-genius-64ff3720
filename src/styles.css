@@ -95,6 +95,20 @@
     --sidebar-accent-foreground: oklch(0.12 0.03 264);
     --sidebar-border: oklch(0.91 0.01 255);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* --- Sistema de superfície "quiet luxury" ---------------------------------
+     A inversão que faz a profundidade existir: a PÁGINA é tonal e o CARTÃO é
+     branco. O caminho inverso — cartão quase branco sobre fundo branco — dá
+     contraste perto de zero e deixa uma borda de 1px fazendo todo o trabalho,
+     que é o que lê como chapado.
+     Criado para a ficha do lead e pensado para ir às demais telas aos poucos. */
+  --superficie-tonal: oklch(0.975 0.008 255);   /* #F6F8FC */
+  --superficie-cartao: oklch(1 0 0);            /* #FFFFFF */
+  --linha-sutil: oklch(0.928 0.011 255);        /* #E6EBF3 */
+  --linha-firme: oklch(0.887 0.015 255);        /* #D8E0EC */
+  --poco: oklch(0.984 0.006 255);        /* #F8FAFD — recesso DENTRO do cartão */
+  --elevacao-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px rgb(15 23 42 / 0.04);
+  --elevacao-2: 0 8px 24px rgb(15 23 42 / 0.08), 0 2px 6px rgb(15 23 42 / 0.04);
+
 }
 
  .dark {
@@ -141,6 +155,17 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+  /* No escuro a inversão continua valendo, com os papéis trocados: a página é
+     mais FUNDA que o cartão. Sombra quase não existe aqui — quem separa é a
+     diferença de luminância. */
+  --superficie-tonal: oklch(0.19 0.015 258);
+  --superficie-cartao: oklch(0.235 0.016 258);
+  --linha-sutil: oklch(0.30 0.018 258);
+  --linha-firme: oklch(0.36 0.02 258);
+  --poco: oklch(0.175 0.014 258);
+  --elevacao-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevacao-2: 0 10px 30px rgb(0 0 0 / 0.45);
+
 }
 
 /* ============ Galeria de estilos de botão do Quiz (Funilix parity) ============ */
@@ -243,3 +268,45 @@
   margin: 0 0 .35rem;
 }
 .quiz-rich-code { text-align: left; }
+
+/* ===========================================================================
+   Sistema da ficha — superfície, cartão e disco de assunto
+   ---------------------------------------------------------------------------
+   Classes em vez de utilitários soltos porque este sistema vai ser reaproveitado
+   em outras telas: mudar o raio ou a sombra precisa ser uma edição, não trinta.
+   =========================================================================== */
+
+.sup-tonal { background: var(--superficie-tonal); }
+
+.cartao {
+  background: var(--superficie-cartao);
+  border: 1px solid var(--linha-sutil);
+  border-radius: 16px;
+  box-shadow: var(--elevacao-1);
+  padding: 1rem 1.125rem 1.125rem;
+}
+
+/* O disco atrás do ícone dá assunto a cada bloco: quem varre a tela reconhece
+   "origem" ou "desfecho" pela cor antes de ler o título. A cor é semântica —
+   não há disco decorativo. */
+.disco {
+  width: 2rem; height: 2rem; border-radius: 10px;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.disco-rosa   { background: color-mix(in oklch, var(--destructive) 12%, transparent); color: var(--destructive); }
+.disco-verde  { background: rgb(5 150 105 / 0.12);  color: rgb(5 150 105); }
+.disco-ambar  { background: rgb(180 83 9 / 0.12);   color: rgb(180 83 9); }
+.disco-violeta{ background: rgb(124 58 237 / 0.12); color: rgb(124 58 237); }
+.dark .disco-verde  { color: rgb(52 211 153); }
+.dark .disco-ambar  { color: rgb(251 191 36); }
+.dark .disco-violeta{ color: rgb(167 139 250); }
+
+/* Caixa interna — resposta de formulário, anotação, tarefa. Um degrau ABAIXO
+   do cartão, não acima: é conteúdo contido, não elemento elevado. */
+.caixa-interna {
+  background: var(--poco);
+  border: 1px solid var(--linha-sutil);
+  border-radius: 10px;
+}

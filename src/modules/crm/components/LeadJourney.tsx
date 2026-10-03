@@ -78,7 +78,7 @@ export function LeadJourney({
             const anterior = i === 0 ? criadoEm : passos[i - 1].moved_at;
             return (
               <li key={`${p.moved_at}-${i}`} className="relative flex gap-3">
-                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary ring-4 ring-background" />
+                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary ring-4 ring-[var(--superficie-cartao)]" />
                 <div className="min-w-0 flex-1 text-xs">
                   <p className="font-medium">
                     {p.from_stage_name ? `${p.from_stage_name} → ` : 'Entrou em '}

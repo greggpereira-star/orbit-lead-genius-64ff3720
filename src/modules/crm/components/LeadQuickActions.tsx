@@ -46,15 +46,15 @@ export function LeadQuickActions({
     onError: (e: Error) => toast.error('Não deu para agendar', { description: e.message }),
   });
 
-  /* Em coluna única cada botão recebe 308px — os 180px do layout de três
-     colunas eram o que fazia "Chamar no WhatsApp" escapar pela borda, já que o
-     botão base é `whitespace-nowrap` e não tinha como quebrar. Com espaço
-     sobrando, o tamanho volta ao normal; `min-w-0` e `truncate` ficam como
-     rede, para que um rótulo mais longo encurte em vez de vazar. */
-  const estilo = 'h-10 min-w-0 justify-start px-4';
+  /* Empilhados, não lado a lado. Na coluna de propriedades de 336px dois
+     botões por linha dão 146px cada, e "Chamar no WhatsApp" pede 182 — foi o
+     que truncou. Encolher a fonte foi o remendo da vez passada; a resposta
+     certa numa coluna estreita é uma ação por linha. `min-w-0` e `truncate`
+     ficam como rede para rótulos futuros. */
+  const estilo = 'h-10 w-full min-w-0 justify-start px-3.5';
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className="grid gap-2">
       {/* `disabled` não existe em <a>: a versão anterior marcava o botão como
           desabilitado e o link seguia clicável, navegando para `undefined` —
           ou seja, recarregando a própria página. Sem destino, vira um botão
