@@ -64,7 +64,18 @@
 :root {
   --radius: 0.625rem;
     --background: oklch(1 0 0); /* #FFFFFF */
-    --foreground: oklch(0.12 0.03 264); /* #0F172A - Text Primary */
+    /* Quase-preto TINGIDO, não cinza neutro.
+     Medido nas duas referências que o cliente mandou: o Fynix usa #062F28 —
+     verde muito escuro — como "preto", e o QorTrade faz o mesmo com a cor
+     dele. Texto com temperatura própria é o que separa marca de padrão de
+     biblioteca, e custa uma linha. A luminância não muda (0.12), então o
+     Dois achados ao medir, e o segundo é um defeito antigo: o comentário
+     dizia `#0F172A` mas o valor era `oklch(0.12 0.03 264)`, que renderiza
+     `#020511` — quase preto puro, bem mais escuro que o documentado. A
+     luminância correta para `#0F172A` é 0.208, não 0.12. Corrigido junto, com
+     o croma subindo de 0.03 para 0.045 na direção do azul da marca.
+     Contraste sobre branco: 15.5:1, bem acima do 7:1 que a AAA pede. */
+  --foreground: oklch(0.208 0.045 265); /* #0F172A com tinta de marca */
     --card: oklch(0.99 0.005 255); /* #F8FAFC - Surface 1 */
     --card-foreground: oklch(0.12 0.03 264); /* #0F172A */
     --popover: oklch(1 0 0);

@@ -85,25 +85,26 @@ independente que rodei em 03/10 chegou à mesma conclusão sem ver as referênci
 
 Cada item é independente e pode ir sozinho.
 
-| # | Mudança | Alcance | Risco |
+| # | Mudança | Alcance | Estado |
 |---|---|---|---|
-| 1 | Quase-preto tingido no lugar do slate genérico | token, todas as telas | baixo |
-| 2 | Cartão sem borda, raio 20px, sombra mais suave | `.cartao`, todas as telas | baixo |
-| 3 | Número herói: valor grande com acessório recuado | valor da venda, fatos, relatórios | baixo |
+| 1 | Quase-preto tingido no lugar do slate genérico | token, todas as telas | **feito em 03/10** |
+| 2 | Cartão sem borda, raio 20px, sombra mais suave | `Card` do shadcn + `<main>`, todas as telas | **feito em 03/10** |
+| 3 | Número herói: valor grande com acessório recuado | `NumeroHeroi`, Analytics e Dashboard | **feito em 03/10** |
 | 4 | Disco monocromático no lugar dos cinco matizes | ficha do lead | **depende de decisão** |
 | 5 | Ícone de ação em círculo neutro | cabeçalho da ficha, board | médio |
 | 6 | Acento só na coisa mais importante de cada tela | todas | médio |
 
-### 3.1 Item 1 — o quase-preto
+### 3.1 Item 1 — o quase-preto · FEITO
 
-Hoje: `--foreground: oklch(0.12 0.03 264)` → `#0F172A`, slate azulado padrão do
-shadcn.
+Achado ao medir: **o comentário no arquivo estava errado desde sempre.** Ele
+dizia `#0F172A`, mas o valor era `oklch(0.12 0.03 264)`, que renderiza
+`#020511` — quase preto puro. A luminância de `#0F172A` é **0.208**, não 0.12.
 
-Proposta: manter a luminância e aumentar levemente o croma na direção da marca,
-de modo que o texto tenha temperatura própria sem virar colorido. A escolha do
-matiz é decisão de marca, não minha.
+Corrigido para `oklch(0.208 0.045 265)` = `#0E172C`: a luminância que o
+comentário sempre prometeu, mais croma na direção do azul da marca. Contraste
+sobre branco 17,8:1, bem acima do 7:1 da AAA.
 
-### 3.2 Item 2 — o cartão
+### 3.2 Item 2 — o cartão · FEITO
 
 ```css
 .cartao {
@@ -116,7 +117,7 @@ matiz é decisão de marca, não minha.
 No escuro a borda **volta**, porque sem diferença de luminância suficiente a
 sombra não separa nada — é a mesma regra que já está no arquivo.
 
-### 3.3 Item 3 — número herói
+### 3.3 Item 3 — número herói · FEITO
 
 Padrão: valor em `text-[22px] font-semibold tracking-[-0.02em] tabular-nums`, e
 o acessório (centavos, moeda, unidade, variação) em

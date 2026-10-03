@@ -6,7 +6,17 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("rounded-xl border border-border/80 bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow", className)}
+      className={cn(
+        // Branco sobre a superfície tonal da página, sem borda, raio 20.
+        // Antes era `bg-card` (#F8FAFC) sobre página BRANCA: contraste perto de
+        // zero, e a borda de 1px fazendo todo o trabalho sozinha — a mesma
+        // inversão que deixava a ficha do lead chapada. No escuro a borda
+        // VOLTA, porque lá não há sombra que separe.
+        "rounded-[20px] bg-[var(--superficie-cartao)] text-card-foreground",
+        "shadow-[var(--elevacao-1)] transition-shadow hover:shadow-[0_2px_4px_rgb(15_23_42/0.05),0_12px_28px_-14px_rgb(15_23_42/0.18)]",
+        "dark:border dark:border-border",
+        className,
+      )}
       {...props}
     />
   ),

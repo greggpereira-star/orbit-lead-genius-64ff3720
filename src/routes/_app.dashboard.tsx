@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -342,29 +343,28 @@ interface KpiCardProps {
   tone?: 'default' | 'success' | 'warning' | 'danger';
 }
 
-function KpiCard({ title, value, delta, icon: Icon, hint, tone = 'default' }: KpiCardProps) {
-  const toneClass = {
-    default: 'text-primary',
-    success: 'text-emerald-500',
-    warning: 'text-amber-500',
-    danger: 'text-red-500',
-  }[tone];
-
+function KpiCard({ title, value, delta, hint }: KpiCardProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={cn('h-4 w-4', toneClass)} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value === null ? <Skeleton className="h-7 w-16" /> : value}</div>
-        {typeof delta === 'number' && (
-          <p className={cn('text-xs mt-1 flex items-center gap-1', delta >= 0 ? 'text-emerald-500' : 'text-red-500')}>
-            {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-            {delta >= 0 ? '+' : ''}{delta.toFixed(1)}% vs período anterior
-          </p>
-        )}
-        {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+      {/* O ícone sai do cabeçalho e some: ele repetia o que o rótulo já diz, e
+          com um por cartão viravam cinco manchas de cor disputando com os
+          próprios números. A cor fica na variação, que é onde carrega estado. */}
+      <CardContent className="p-5">
+        <NumeroHeroi
+          rotulo={title}
+          valor={value === null ? <Skeleton className="h-8 w-20" /> : value}
+          nota={
+            <>
+              {typeof delta === 'number' && (
+                <span className={cn('flex items-center gap-1', delta >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                  {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {delta >= 0 ? '+' : ''}{delta.toFixed(1)}% vs período anterior
+                </span>
+              )}
+              {hint && <span className="block">{hint}</span>}
+            </>
+          }
+        />
       </CardContent>
     </Card>
   );

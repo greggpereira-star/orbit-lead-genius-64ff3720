@@ -16,6 +16,7 @@ import { Users, Target, TrendingUp, DollarSign, Radar, Loader2, AlertCircle } fr
 
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenceCard';
@@ -116,12 +117,11 @@ function AnalyticsPage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {indicadores.map((i) => (
           <Card key={i.titulo}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <i.icone className="h-3.5 w-3.5" />
-                {i.titulo}
-              </div>
-              <div className="mt-1.5 text-2xl font-bold tabular-nums">{i.valor}</div>
+            <CardContent className="p-5">
+              <NumeroHeroi
+                rotulo={<><i.icone className="h-3.5 w-3.5" />{i.titulo}</>}
+                valor={i.valor}
+              />
             </CardContent>
           </Card>
         ))}

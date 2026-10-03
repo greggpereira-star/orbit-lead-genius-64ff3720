@@ -173,7 +173,7 @@ export function AppLayout() {
             `h-full` numa página passa a significar o que parece significar. */}
         <SidebarInset className="relative z-0 flex h-dvh flex-col overflow-hidden pointer-events-auto">
           <Topbar />
-          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background/50 p-4 md:p-6">
+          <main className="sup-tonal flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
             {/* A medida de 80rem serve texto, não um board de sete colunas de
                 20rem — num monitor grande ela escondia três etapas sem motivo.
                 Páginas que precisam da largura inteira se marcam com
