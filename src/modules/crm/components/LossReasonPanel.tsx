@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, Loader2, Plus } from 'lucide-react';
+import { AlertCircle, Loader2, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   listarMotivosDePerda, criarMotivoDePerda, definirMotivoDaPerda,
 } from '@/modules/crm/services/lossReasonService';
+
+/** Opção que revela o campo de escrever, em vez de um motivo salvo. */
+const NOVO = '__novo__';
 
 interface Props {
   leadId: string;
@@ -20,24 +26,32 @@ interface Props {
 }
 
 /**
- * O motivo da perda, editável depois do fato.
+ * O motivo da perda, em uma linha depois de decidido.
  *
- * O diálogo de perda só dispara na mudança de etapa, então quem não preencheu
- * na hora não tinha como voltar. Aconteceu no primeiro uso em produção: o lead
- * foi para Perdido sem motivo e a única saída seria tirá-lo da etapa e
- * recolocá-lo, sujando o histórico com um movimento que não existiu.
+ * A versão anterior mantinha a lista inteira aberta para sempre: cinco blocos
+ * empilhados ocupando meia coluna mesmo depois de a pessoa já ter escolhido —
+ * e o que estava escolhido disputava atenção com quatro opções que não
+ * interessavam mais. Decisão tomada vira afirmação, não formulário.
+ *
+ * Fechado é uma frase com o motivo. Aberto é um seletor, um campo de
+ * observação e Salvar. Sem motivo nenhum, é um convite curto a registrar.
  */
-export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAtual, semMoldura }: Props) {
+export function LossReasonPanel({
+  leadId, companyId, motivoAtualId, observacaoAtual, semMoldura,
+}: Props) {
   const qc = useQueryClient();
+  // Abre sozinho só quando não há nada registrado: aí a tela precisa pedir.
+  const [editando, setEditando] = useState(!motivoAtualId);
   const [escolhido, setEscolhido] = useState<string | null>(motivoAtualId);
   const [observacao, setObservacao] = useState(observacaoAtual ?? '');
   const [novo, setNovo] = useState('');
 
-  // A ficha é reaproveitada entre leads: sem isto, abrir o segundo lead
-  // mostraria o motivo do primeiro.
+  // A ficha é reaproveitada entre leads: sem isto, o segundo lead abriria com
+  // o motivo do primeiro já selecionado.
   useEffect(() => {
     setEscolhido(motivoAtualId);
     setObservacao(observacaoAtual ?? '');
+    setEditando(!motivoAtualId);
     setNovo('');
   }, [leadId, motivoAtualId, observacaoAtual]);
 
@@ -48,39 +62,61 @@ export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAt
   });
 
   const salvar = useMutation({
-    mutationFn: (v: { reasonId: string; notes: string | null }) =>
-      definirMotivoDaPerda(leadId, v.reasonId, v.notes),
+    mutationFn: async () => {
+      let id = escolhido;
+      // Motivo novo nasce e já é usado: separar em dois passos faria a pessoa
+      // escrever, salvar, e então procurá-lo numa lista para escolher.
+      if (id === NOVO || (!id && novo.trim())) {
+        await criarMotivoDePerda(companyId, novo);
+        const lista = await qc.fetchQuery({
+          queryKey: ['motivos-de-perda', companyId],
+          queryFn: () => listarMotivosDePerda(companyId),
+        });
+        id = lista.find((m) => m.label === novo.trim())?.id ?? null;
+      }
+      if (!id) throw new Error('Escolha ou escreva um motivo.');
+      await definirMotivoDaPerda(leadId, id, observacao.trim() || null);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leads'] });
+      setEditando(false);
+      setNovo('');
       toast.success('Motivo registrado');
     },
     onError: (e: Error) => toast.error('Não deu para salvar', { description: e.message }),
   });
 
-  const criar = useMutation({
-    mutationFn: (nome: string) => criarMotivoDePerda(companyId, nome),
-    onSuccess: async () => {
-      const lista = await qc.fetchQuery({
-        queryKey: ['motivos-de-perda', companyId],
-        queryFn: () => listarMotivosDePerda(companyId),
-      });
-      const criado = lista.find((m) => m.label === novo.trim());
-      setNovo('');
-      // Criar e já registrar: quem escreveu o motivo nesta tela quer usá-lo.
-      if (criado) { setEscolhido(criado.id); salvar.mutate({ reasonId: criado.id, notes: observacao.trim() || null }); }
-    },
-    onError: (e: Error) => toast.error('Não deu para criar', { description: e.message }),
-  });
-
   const lista = motivos.data ?? [];
-  const pendente = salvar.isPending || criar.isPending;
+  const atual = lista.find((m) => m.id === motivoAtualId) ?? null;
+
+  const moldura = semMoldura
+    ? ''
+    : 'rounded-lg border border-destructive/20 bg-destructive/[0.04] p-3';
+
+  if (!editando) {
+    return (
+      <div className={`flex items-start gap-2.5 ${moldura}`}>
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] text-muted-foreground">Motivo da perda</p>
+          <p className="text-sm font-medium">{atual?.label ?? 'Registrado'}</p>
+          {observacaoAtual && (
+            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{observacaoAtual}</p>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" className="h-7 shrink-0" onClick={() => setEditando(true)}>
+          Alterar
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className={semMoldura ? 'space-y-3' : 'space-y-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3'}>
+    <div className={`space-y-2 ${moldura}`}>
       {!semMoldura && (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
           <p className="text-sm font-medium">Por que perdeu</p>
-          {pendente && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         </div>
       )}
 
@@ -88,60 +124,44 @@ export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAt
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : (
         <>
-          {/* Lista empilhada, não pastilhas.
-              "Encontrou oportunidade melhor" e "Financiamento não aprovado"
-              quebravam em duas linhas dentro de um `rounded-full` de 200px — o
-              arredondado de pílula só funciona com texto de uma linha, e motivo
-              de perda é frase, não palavra. Em bloco cada item ocupa a largura
-              toda, lê numa linha e vira alvo de clique maior. */}
-          {lista.length > 0 && (
-            <div className="space-y-1">
-              {lista.map((m) => {
-                const ativo = escolhido === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    aria-pressed={ativo}
-                    disabled={pendente}
-                    onClick={() => {
-                      setEscolhido(m.id);
-                      salvar.mutate({ reasonId: m.id, notes: observacao.trim() || null });
-                    }}
-                    className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                      ativo
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-transparent bg-background hover:border-border hover:bg-muted'
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1">{m.label}</span>
-                    {ativo && <Check className="h-3.5 w-3.5 shrink-0" />}
-                  </button>
-                );
-              })}
+          <Select
+            value={escolhido ?? ''}
+            onValueChange={(v) => setEscolhido(v)}
+          >
+            <SelectTrigger className="h-9 w-full bg-background" aria-label="Motivo da perda">
+              <SelectValue placeholder={lista.length ? 'Selecione o motivo' : 'Escreva o primeiro motivo'} />
+            </SelectTrigger>
+            <SelectContent>
+              {lista.map((m) => (
+                <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+              ))}
+              <SelectItem value={NOVO}>Outro motivo…</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(escolhido === NOVO || lista.length === 0) && (
+            <div className="flex gap-2">
+              <Input
+                autoFocus
+                value={novo}
+                onChange={(e) => setNovo(e.target.value)}
+                placeholder="Ex.: Achou mais barato"
+                className="h-9 bg-background"
+                aria-label="Novo motivo de perda"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && novo.trim()) { e.preventDefault(); salvar.mutate(); }
+                }}
+              />
+              <Button
+                type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                disabled={!novo.trim() || salvar.isPending}
+                onClick={() => salvar.mutate()}
+                aria-label="Criar motivo e registrar"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           )}
-
-          <div className="flex gap-2">
-            <Input
-              value={novo}
-              onChange={(e) => setNovo(e.target.value)}
-              placeholder={lista.length ? 'Outro motivo' : 'Primeiro motivo da lista'}
-              className="h-8 bg-background text-xs"
-              aria-label="Novo motivo de perda"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && novo.trim()) { e.preventDefault(); criar.mutate(novo); }
-              }}
-            />
-            <Button
-              type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-              disabled={!novo.trim() || pendente}
-              onClick={() => criar.mutate(novo)}
-              aria-label="Adicionar motivo e registrar"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </div>
 
           <Textarea
             value={observacao}
@@ -150,17 +170,34 @@ export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAt
             rows={2}
             className="bg-background text-xs"
             aria-label="Observação sobre a perda"
-            onBlur={() => {
-              if (escolhido && (observacao.trim() || '') !== (observacaoAtual ?? '')) {
-                salvar.mutate({ reasonId: escolhido, notes: observacao.trim() || null });
-              }
-            }}
           />
 
-          {!escolhido && (
-            // Uma linha, não cinco. A versão anterior gastava um terço do
-            // painel explicando a consequência antes de a pessoa sequer ter
-            // escolhido — e empurrava os dados de contato para fora da vista.
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="h-8"
+              disabled={salvar.isPending || (!escolhido && !novo.trim()) || (escolhido === NOVO && !novo.trim())}
+              onClick={() => salvar.mutate()}
+            >
+              {salvar.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              Salvar
+            </Button>
+            {motivoAtualId && (
+              <Button
+                variant="ghost" size="sm" className="h-8"
+                onClick={() => {
+                  setEscolhido(motivoAtualId);
+                  setObservacao(observacaoAtual ?? '');
+                  setNovo('');
+                  setEditando(false);
+                }}
+              >
+                Cancelar
+              </Button>
+            )}
+          </div>
+
+          {!motivoAtualId && (
             <p className="text-[11px] leading-snug text-muted-foreground">
               Sem motivo, este lead só conta como perdido — não entra em público de
               reengajamento nem de exclusão.
