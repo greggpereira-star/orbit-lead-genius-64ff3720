@@ -70,3 +70,24 @@ export async function renomearMotivoDePerda(id: string, label: string): Promise<
     .from('loss_reasons').update({ label: nome }).eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Preenche o motivo de um lead que já está perdido.
+ *
+ * Passa por RPC em vez de um update direto porque são duas escritas que
+ * precisam andar juntas: a do lead e a de completar a linha do histórico. A
+ * função também recusa lead de outra empresa e lead que não está em etapa de
+ * perda — com SECURITY DEFINER a checagem tem que ser explícita.
+ */
+export async function definirMotivoDaPerda(
+  leadId: string,
+  reasonId: string,
+  notes: string | null,
+): Promise<void> {
+  const { error } = await (supabase as any).rpc('definir_motivo_da_perda', {
+    p_lead_id: leadId,
+    p_reason_id: reasonId,
+    p_notes: notes,
+  });
+  if (error) throw new Error(error.message);
+}

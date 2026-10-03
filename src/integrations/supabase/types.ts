@@ -2158,6 +2158,8 @@ export type Database = {
           gclid: string | null
           id: string
           landing_page: string | null
+          loss_reason_id: string | null
+          lost_notes: string | null
           last_sync_at: string | null
           lead_score: number | null
           lead_temperature: string | null
@@ -2191,6 +2193,8 @@ export type Database = {
           gclid?: string | null
           id?: string
           landing_page?: string | null
+          loss_reason_id?: string | null
+          lost_notes?: string | null
           last_sync_at?: string | null
           lead_score?: number | null
           lead_temperature?: string | null
@@ -2224,6 +2228,8 @@ export type Database = {
           gclid?: string | null
           id?: string
           landing_page?: string | null
+          loss_reason_id?: string | null
+          lost_notes?: string | null
           last_sync_at?: string | null
           lead_score?: number | null
           lead_temperature?: string | null

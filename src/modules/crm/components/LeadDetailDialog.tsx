@@ -51,6 +51,7 @@ import type { LeadRow } from "../services/leadService";
 import { getLeadDisplayName, updateLead, deleteLead, type EditableLeadFields } from "../services/leadService";
 import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
 import { LossReasonDialog } from "@/modules/crm/components/LossReasonDialog";
+import { LossReasonPanel } from "@/modules/crm/components/LossReasonPanel";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
@@ -932,6 +933,20 @@ export function LeadDetailDialog({
   const noteCount = notesCountQuery.data?.length ?? null;
   const attachmentCount = attachmentsCountQuery.data?.length ?? null;
 
+  /* A ficha precisa saber o TIPO da etapa, não só o nome: "Perdido" é a
+     convenção desta empresa, mas o funil é configurável e outra chamaria de
+     "Arquivado" ou "Sem resposta". Quem decide é o `kind`. Mesma chave de
+     cache do StagePicker, então não vira requisição a mais. */
+  const stagesDaFicha = useQuery({
+    queryKey: ["stages", lead?.company_id ?? ""],
+    queryFn: () => listStages(lead?.company_id ?? ""),
+    enabled: Boolean(lead?.company_id) && open,
+  });
+  const estaPerdido =
+    (stagesDaFicha.data ?? []).find(
+      (s) => s.id === (lead as { stage_id?: string | null } | null)?.stage_id,
+    )?.kind === "lost";
+
   /* Corrige dado de contato digitado errado na origem — telefone sem o nono
      dígito, e-mail com typo. Antes a ficha era só leitura e não havia como
      arrumar sem ir no banco. */
@@ -1164,6 +1179,17 @@ export function LeadDetailDialog({
               (acionável) tinha o mesmo peso de etapa (estado interno). Agora
               vem agrupado por natureza da informação. */}
           <aside className="space-y-6 border-b bg-muted/20 p-6 md:overflow-y-auto md:border-b-0 md:border-r">
+            {/* Primeiro de tudo quando o lead está perdido: é a informação que
+                muda o que fazer com ele, e sem ela a perda não vira nada. */}
+            {estaPerdido && (
+              <LossReasonPanel
+                leadId={lead.id}
+                companyId={lead.company_id}
+                motivoAtualId={lead.loss_reason_id ?? null}
+                observacaoAtual={lead.lost_notes ?? null}
+              />
+            )}
+
             <Section title="Contato">
               <Field
                 icon={<Phone className="h-4 w-4" />}
