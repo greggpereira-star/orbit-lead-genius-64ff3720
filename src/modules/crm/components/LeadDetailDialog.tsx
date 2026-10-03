@@ -94,19 +94,18 @@ function initials(name: string): string {
  * Cor derivada do nome: o mesmo lead tem sempre a mesma cor, então a lista
  * ganha um ponto de reconhecimento sem precisar de foto.
  */
-const AVATAR_TONES = [
-  "bg-blue-500/12 text-blue-700 dark:text-blue-300",
-  "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
-  "bg-violet-500/12 text-violet-700 dark:text-violet-300",
-  "bg-amber-500/12 text-amber-700 dark:text-amber-300",
-  "bg-rose-500/12 text-rose-700 dark:text-rose-300",
-  "bg-cyan-500/12 text-cyan-700 dark:text-cyan-300",
-];
+/**
+ * Tratamento único do avatar.
+ *
+ * Eram seis cores sorteadas pelo hash do nome — com os discos de seção e os
+ * das respostas, até quinze matizes na mesma tela. As referências que o
+ * cliente mandou usam um acento só, e quem identifica o lead aqui é o nome
+ * escrito ao lado, não a cor do disco.
+ */
+const AVATAR_TOM = "bg-[var(--superficie-tonal)] text-muted-foreground";
 
-function avatarTone(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_TONES[h % AVATAR_TONES.length];
+function avatarTone(_seed: string): string {
+  return AVATAR_TOM;
 }
 
 /**
@@ -228,17 +227,24 @@ function StagePicker({
  * violeta, o que se procura em azul, onde em âmbar. Quem usa a tela o dia
  * inteiro passa a achar o orçamento pela cor, sem ler rótulo.
  */
+/** Um tom só para todos os assuntos. Ver o comentário dentro do mapa. */
+const NEUTRO = "bg-[var(--superficie-tonal)] text-muted-foreground";
+
 const ANSWER_KIND_STYLE: Record<
   AnswerKind,
   { icon: LucideIcon; tone: string }
 > = {
-  money: { icon: DollarSign, tone: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400" },
-  budget: { icon: BarChart3, tone: "bg-violet-500/12 text-violet-600 dark:text-violet-400" },
-  property: { icon: Home, tone: "bg-blue-500/12 text-blue-600 dark:text-blue-400" },
-  place: { icon: MapPin, tone: "bg-amber-500/12 text-amber-600 dark:text-amber-400" },
-  time: { icon: CalendarClock, tone: "bg-cyan-500/12 text-cyan-600 dark:text-cyan-400" },
-  person: { icon: User, tone: "bg-rose-500/12 text-rose-600 dark:text-rose-400" },
-  other: { icon: CircleDot, tone: "bg-muted text-muted-foreground" },
+  // Seis matizes viraram um tom neutro só. O que distingue o assunto é a
+  // FORMA do ícone — cifrão, casa, calendário —, que já basta de relance e
+  // sobrevive ao daltonismo. Seis cores pastel competindo não distinguiam
+  // mais rápido; apenas enchiam a tela.
+  money: { icon: DollarSign, tone: NEUTRO },
+  budget: { icon: BarChart3, tone: NEUTRO },
+  property: { icon: Home, tone: NEUTRO },
+  place: { icon: MapPin, tone: NEUTRO },
+  time: { icon: CalendarClock, tone: NEUTRO },
+  person: { icon: User, tone: NEUTRO },
+  other: { icon: CircleDot, tone: NEUTRO },
 };
 
 /**
@@ -1204,6 +1210,7 @@ export function LeadDetailDialog({
       <CartaoFicha
         icone={<Sparkles className="h-4 w-4" />}
         titulo="Resumo do perfil"
+        assunto="acento"
         descricao="Montado a partir das respostas do formulário"
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1225,7 +1232,7 @@ export function LeadDetailDialog({
           icone={<TrendingUp className="h-4 w-4" />}
           titulo="O que ele quer"
           descricao="Respostas do formulário de captação"
-          assunto="verde"
+          
           acao={<LinkDoCartao aoClicar={() => setTab('qualificacao')}>Ver tudo</LinkDoCartao>}
         >
           <dl className="grid gap-2.5 sm:grid-cols-2">
@@ -1253,7 +1260,7 @@ export function LeadDetailDialog({
       <CartaoFicha
         icone={<Clock className="h-4 w-4" />}
         titulo="Caminho no funil"
-        assunto="ambar"
+        
         acao={<LinkDoCartao aoClicar={() => setTab('historico')}>Ver tudo</LinkDoCartao>}
       >
         <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} compacto semMoldura />
@@ -1278,7 +1285,7 @@ export function LeadDetailDialog({
           icone={<XCircle className="h-4 w-4" />}
           titulo="Desfecho"
           descricao="Por que parou aqui"
-          assunto="rosa"
+          assunto="alerta"
         >
           {/* `semMoldura`: o cartão já traz borda, título e disco. A moldura
               vermelha por dentro era caixa dentro de caixa, e o botão Alterar
@@ -1334,7 +1341,7 @@ export function LeadDetailDialog({
         icone={<Radio className="h-4 w-4" />}
         titulo="Origem"
         descricao="Como chegou até você"
-        assunto="violeta"
+        
       >
         <div className="space-y-2.5">
           <PropFicha
@@ -1445,7 +1452,7 @@ export function LeadDetailDialog({
       </div>
     </CartaoFicha>
 
-    <CartaoFicha icone={<Radio className="h-4 w-4" />} titulo="De onde veio" descricao="Vem da integração que trouxe o lead" assunto="violeta">
+    <CartaoFicha icone={<Radio className="h-4 w-4" />} titulo="De onde veio" descricao="Vem da integração que trouxe o lead" >
       {/* Leitura: origem e canal vêm da integração que trouxe o lead, e
           reescrevê-los à mão criaria um dado que não corresponde a nada. */}
       <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">

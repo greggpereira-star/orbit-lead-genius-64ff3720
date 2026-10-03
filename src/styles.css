@@ -286,22 +286,23 @@
   padding: 1rem 1.125rem 1.125rem;
 }
 
-/* O disco atrás do ícone dá assunto a cada bloco: quem varre a tela reconhece
-   "origem" ou "desfecho" pela cor antes de ler o título. A cor é semântica —
-   não há disco decorativo. */
+/* Disco do ícone — NEUTRO por padrão.
+   Os dois estudos de caso que o cliente mandou (QorTrade e Fynix) usam UM
+   acento em toda a interface: ícone monocromático em círculo neutro, e a cor
+   reservada para a coisa mais importante da tela. A versão anterior tinha
+   cinco matizes de disco mais quatro nas respostas mais seis no avatar — até
+   quinze numa tela só, que é o que lê como barulho em vez de marca.
+   Cor aqui só onde ela carrega ESTADO, não assunto. */
 .disco {
   width: 2rem; height: 2rem; border-radius: 10px;
   display: grid; place-items: center; flex-shrink: 0;
-  background: color-mix(in oklch, var(--primary) 12%, transparent);
-  color: var(--primary);
+  background: var(--superficie-tonal);
+  color: var(--muted-foreground);
 }
-.disco-rosa   { background: color-mix(in oklch, var(--destructive) 12%, transparent); color: var(--destructive); }
-.disco-verde  { background: rgb(5 150 105 / 0.12);  color: rgb(5 150 105); }
-.disco-ambar  { background: rgb(180 83 9 / 0.12);   color: rgb(180 83 9); }
-.disco-violeta{ background: rgb(124 58 237 / 0.12); color: rgb(124 58 237); }
-.dark .disco-verde  { color: rgb(52 211 153); }
-.dark .disco-ambar  { color: rgb(251 191 36); }
-.dark .disco-violeta{ color: rgb(167 139 250); }
+/* Perda é estado, não assunto: continua marcada. */
+.disco-alerta { background: color-mix(in oklch, var(--destructive) 10%, transparent); color: var(--destructive); }
+/* O acento, onde a tela quer que o olho pare primeiro. Um por tela. */
+.disco-acento { background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); }
 
 /* Caixa interna — resposta de formulário, anotação, tarefa. Um degrau ABAIXO
    do cartão, não acima: é conteúdo contido, não elemento elevado. */

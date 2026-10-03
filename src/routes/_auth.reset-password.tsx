@@ -50,7 +50,13 @@ function ResetPasswordPage() {
       }
 
       // Legacy PKCE link (only works in the same browser).
-      if (code) await supabase.auth.exchangeCodeForSession(code).catch(() => null);
+      //
+      // Só entra aqui quando o link TRAZ um `code`. Antes a espera pela sessão
+      // acontecia sempre, e aí um link expirado abria o formulário usando a
+      // sessão de quem já estivesse logado no navegador: o "redefinir senha"
+      // trocava a senha do usuário logado, não a do dono do link.
+      if (!code) { if (active) setLinkState('invalid'); return; }
+      await supabase.auth.exchangeCodeForSession(code).catch(() => null);
       for (let i = 0; i < 5 && active; i++) {
         const { data } = await supabase.auth.getSession();
         if (data.session) { clientRef.current = supabase; setLinkState('ready'); return; }

@@ -1,14 +1,19 @@
 import type { ReactNode } from 'react';
 
 /** Assunto do bloco. A cor do disco é semântica — não existe disco decorativo. */
-export type Assunto = 'azul' | 'rosa' | 'verde' | 'ambar' | 'violeta';
+/**
+ * Três tratamentos, não cinco cores.
+ *
+ * `neutro` é o padrão. `alerta` existe porque perda é ESTADO e estado merece
+ * cor. `acento` é o azul da marca, reservado para o bloco em que a tela quer
+ * que o olho pare primeiro — um por tela.
+ */
+export type Assunto = 'neutro' | 'alerta' | 'acento';
 
 const DISCO: Record<Assunto, string> = {
-  azul: 'disco',
-  rosa: 'disco disco-rosa',
-  verde: 'disco disco-verde',
-  ambar: 'disco disco-ambar',
-  violeta: 'disco disco-violeta',
+  neutro: 'disco',
+  alerta: 'disco disco-alerta',
+  acento: 'disco disco-acento',
 };
 
 /**
@@ -20,7 +25,7 @@ const DISCO: Record<Assunto, string> = {
  * mexesse nas colunas.
  */
 export function CartaoFicha({
-  icone, titulo, descricao, assunto = 'azul', acao, children,
+  icone, titulo, descricao, assunto = 'neutro', acao, children,
 }: {
   icone: ReactNode;
   titulo: string;
