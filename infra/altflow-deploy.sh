@@ -31,7 +31,11 @@ cp -a .env "$PRESERVADO"
 # e o commit ainda não chegou ao origin. O reset abaixo apagaria esse trabalho
 # em silêncio — foi exatamente assim que o escopo ads_read sumiu por semanas.
 # Parar e avisar é melhor que apagar sem contar.
-SUJOS="$(git status --porcelain -- . ':(exclude).env' | grep -v '^?? ' || true)"
+# `routeTree.gen.ts` é regerado pelo plugin do TanStack Router no próprio
+# build, então ele aparece sujo DEPOIS de todo deploy — o guarda travava a
+# subida seguinte com um falso alarme, e tratar falso alarme como rotina é o
+# caminho mais curto para alguém descartar trabalho de verdade sem olhar.
+SUJOS="$(git status --porcelain -- . ':(exclude).env' ':(exclude)src/routeTree.gen.ts' | grep -v '^?? ' || true)"
 if [ -n "$SUJOS" ]; then
   echo "!!! Alteração local não versionada em ${BUILD}:" >&2
   echo "$SUJOS" >&2
