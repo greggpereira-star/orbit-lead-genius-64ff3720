@@ -55,14 +55,12 @@ function PipelinePage() {
   }, [leadsQuery.data]);
 
   return (
-    /* Altura presa ao viewport, e não `h-full`.
-       O <main> do shell tem min-height:auto e cresce com o conteúdo, então
-       `h-full` aqui resolvia contra um pai que já havia esticado — as colunas
-       viravam uma lista de 11.000px e a rolagem horizontal ficava fora da
-       tela. Descontar só o padding do <main> (p-4 / md:p-6) deixa o cabeçalho
-       da página variar de altura sem quebrar nada, porque quem absorve é o
-       `flex-1 min-h-0` abaixo. */
-    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-5 overflow-hidden md:h-[calc(100dvh-3rem)]">
+    /* `flex-1 min-h-0` em vez de descontar altura na mão: o shell agora prende
+       a altura da janela, então esta página só precisa ocupar o que sobrou.
+       A versão anterior calculava `100dvh` menos o padding do <main> e
+       esquecia o Topbar — o documento ficava mais alto que a janela pela
+       altura dele, e aparecia uma segunda barra de rolagem. */
+    <div data-largura-total className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>

@@ -164,10 +164,21 @@ export function AppLayout() {
    return (
      <SidebarProvider>
        <AppSidebar />
-        <SidebarInset className="flex flex-col min-h-screen relative z-0 pointer-events-auto">
+        {/* O shell é dono da altura da janela, e quem rola é o <main>.
+            Antes era `min-h-screen` com o <main> crescendo livre, e cada página
+            que quisesse ocupar a tela inteira precisava adivinhar quanto
+            descontar. A do Pipeline descontava o padding e esquecia o Topbar,
+            então o documento ficava mais alto que a janela pela altura exata
+            dele — era a segunda barra de rolagem. Com a altura presa aqui,
+            `h-full` numa página passa a significar o que parece significar. */}
+        <SidebarInset className="relative z-0 flex h-dvh flex-col overflow-hidden pointer-events-auto">
           <Topbar />
-          <main className="flex-1 p-4 md:p-6 bg-background/50">
-            <div className="max-w-7xl mx-auto">
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background/50 p-4 md:p-6">
+            {/* A medida de 80rem serve texto, não um board de sete colunas de
+                20rem — num monitor grande ela escondia três etapas sem motivo.
+                Páginas que precisam da largura inteira se marcam com
+                `data-largura-total`, e só elas abrem mão do limite. */}
+            <div className="mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col has-[[data-largura-total]]:max-w-none">
               <Outlet />
             </div>
           </main>

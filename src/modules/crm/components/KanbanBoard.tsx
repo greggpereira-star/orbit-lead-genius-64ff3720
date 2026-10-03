@@ -6,13 +6,13 @@
  * tabela `stages` é a fonte da verdade e toda movimentação passa pelo
  * `stageService`, que grava etapa, ordem, carimbo de tempo e histórico juntos.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import {
   GripVertical, MessageCircle, MapPin, Radio, AlertCircle,
-  Inbox, RefreshCw, Loader2, Trash2,
+  Inbox, RefreshCw, Loader2, Trash2, ChevronLeft, ChevronRight, CornerUpRight, Check,
 } from 'lucide-react';
 
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -29,6 +29,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { deleteLeads, listLeads, type LeadRow } from '../services/leadService';
 import {
@@ -314,7 +318,106 @@ export function KanbanBoard({
     onError: (e: Error) => toast.error(e.message || 'Não foi possível excluir os leads.'),
   });
 
+  /* ---------- Navegação entre as colunas ----------
+     Sete etapas a 20rem não cabem em tela nenhuma, e a barra fina embaixo do
+     board é um alvo ruim: ela só aparece ao passar o mouse e fica longe de
+     onde a mão está. As setas dão um destino previsível — uma coluna por
+     clique — e o teclado alcança as duas. */
+  const trilho = useRef<HTMLDivElement | null>(null);
+  const [podeEsquerda, setPodeEsquerda] = useState(false);
+  const [podeDireita, setPodeDireita] = useState(false);
+
+  const medirTrilho = useCallback(() => {
+    const el = trilho.current;
+    if (!el) return;
+    setPodeEsquerda(el.scrollLeft > 4);
+    // 4px de folga: zoom de navegador deixa a conta com resto fracionário, e
+    // sem a folga a seta da direita nunca apaga no fim do board.
+    setPodeDireita(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = trilho.current;
+    if (!el) return;
+    medirTrilho();
+    el.addEventListener('scroll', medirTrilho, { passive: true });
+    const observador = new ResizeObserver(medirTrilho);
+    observador.observe(el);
+    return () => { el.removeEventListener('scroll', medirTrilho); observador.disconnect(); };
+  }, [medirTrilho, columns.length]);
+
+  /** Uma coluna por clique: 20rem do card mais 1rem do intervalo. */
+  const deslizar = (direcao: -1 | 1) =>
+    trilho.current?.scrollBy({ left: direcao * 21 * 16, behavior: 'smooth' });
+
+  /* Deslize automático ao arrastar.
+     A biblioteca rola sozinha quando o ponteiro chega à borda, mas a zona é
+     estreita e no board inteiro ela quase não é alcançada — era por isso que
+     levar um card até a última etapa não funcionava. Este laço escuta o
+     ponteiro durante o arraste e rola proporcional à proximidade da borda:
+     quanto mais perto, mais rápido. */
+  const arrastando = useRef(false);
+  useEffect(() => {
+    let quadro = 0;
+    let velocidade = 0;
+
+    const girar = () => {
+      if (velocidade !== 0) trilho.current?.scrollBy({ left: velocidade });
+      quadro = requestAnimationFrame(girar);
+    };
+
+    const aoMover = (e: PointerEvent) => {
+      const el = trilho.current;
+      if (!el || !arrastando.current) { velocidade = 0; return; }
+      const caixa = el.getBoundingClientRect();
+      const ZONA = 140;
+      const MAX = 22;
+      if (e.clientX < caixa.left + ZONA) {
+        velocidade = -MAX * ((caixa.left + ZONA - e.clientX) / ZONA);
+      } else if (e.clientX > caixa.right - ZONA) {
+        velocidade = MAX * ((e.clientX - (caixa.right - ZONA)) / ZONA);
+      } else {
+        velocidade = 0;
+      }
+    };
+
+    window.addEventListener('pointermove', aoMover);
+    quadro = requestAnimationFrame(girar);
+    return () => { window.removeEventListener('pointermove', aoMover); cancelAnimationFrame(quadro); };
+  }, []);
+
+  /**
+   * Muda a etapa pelo menu do card.
+   *
+   * Arrastar até a sétima coluna é um gesto longo e frágil — e impossível no
+   * celular. O menu é o mesmo destino por outro caminho, e passa pela MESMA
+   * regra: etapa de perda pergunta o motivo antes de gravar.
+   */
+  const moverPeloMenu = (lead: LeadRow, destino: Stage, origem: string) => {
+    if (destino.kind === 'lost') {
+      setPerguntandoMotivo({
+        leadId: lead.id,
+        leadName: (lead as { name?: string }).name || 'este lead',
+        stageId: destino.id,
+        // Topo da coluna: é onde um lead recém-mexido faz sentido estar, e o
+        // menu não conhece a posição entre os vizinhos.
+        boardOrder: 0,
+        fromStageName: origem,
+        toStageName: destino.name,
+      });
+      return;
+    }
+    moveMutation.mutate({
+      leadId: lead.id,
+      stageId: destino.id,
+      boardOrder: 0,
+      fromStageName: origem,
+      toStageName: destino.name,
+    });
+  };
+
   const onDragEnd = (result: DropResult) => {
+    arrastando.current = false;
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) {
@@ -429,13 +532,21 @@ export function KanbanBoard({
 
   return (
     <>
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DragDropContext onDragStart={() => { arrastando.current = true; }} onDragEnd={onDragEnd}>
         {/* `min-h-0` nos dois níveis é o que faz a coluna rolar em vez de
             esticar: sem ele o item flex assume min-height:auto, cresce até
             caber todos os cards e empurra o board pra fora da tela — era por
             isso que 108 cards vazavam pra baixo e a rolagem horizontal nunca
             aparecia. */}
-        <div className="scrollbar-slim flex h-full min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2">
+        {/* `relative` para as setas flutuarem sobre as bordas do trilho sem
+            roubar largura dele. */}
+        <div className="relative h-full min-h-0">
+        <SetaDoTrilho lado="esquerda" visivel={podeEsquerda} aoClicar={() => deslizar(-1)} />
+        <SetaDoTrilho lado="direita" visivel={podeDireita} aoClicar={() => deslizar(1)} />
+        <div
+          ref={trilho}
+          className="scrollbar-slim flex h-full min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2"
+        >
           {leadingColumn}
           {columns.map((column) => (
             <BoardColumn
@@ -571,6 +682,50 @@ export function KanbanBoard({
                                   )}
                                 </div>
 
+                                {/* Mover sem arrastar. Fica antes do WhatsApp
+                                    porque é ação sobre o funil, e some no modo
+                                    seleção, onde todo clique marca o card. */}
+                                {!selecting && stages.length > 1 && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                                        title="Mover para outra etapa"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <CornerUpRight className="h-3.5 w-3.5" />
+                                        <span className="sr-only">Mover {name} para outra etapa</span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56">
+                                      <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                                        Mover para
+                                      </DropdownMenuLabel>
+                                      <DropdownMenuSeparator />
+                                      {stages.map((destino) => {
+                                        const aqui = destino.id === column.id;
+                                        return (
+                                          <DropdownMenuItem
+                                            key={destino.id}
+                                            disabled={aqui}
+                                            onClick={() => moverPeloMenu(lead, destino, column.title)}
+                                            className="gap-2"
+                                          >
+                                            <span
+                                              className="h-2 w-2 shrink-0 rounded-full"
+                                              style={{ backgroundColor: destino.color }}
+                                            />
+                                            <span className="truncate">{destino.name}</span>
+                                            {aqui && <Check className="ml-auto h-3.5 w-3.5 shrink-0" />}
+                                          </DropdownMenuItem>
+                                        );
+                                      })}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+
                                 {wa && (
                                   <Button
                                     asChild
@@ -622,6 +777,7 @@ export function KanbanBoard({
               </Droppable>
             </BoardColumn>
           ))}
+        </div>
         </div>
       </DragDropContext>
 
@@ -711,5 +867,31 @@ export function KanbanBoard({
         />
       )}
     </>
+  );
+}
+
+/**
+ * Seta de navegação do board.
+ *
+ * Fica por cima da borda do trilho, não ao lado: ocupar largura própria tiraria
+ * espaço de uma tela que já não cabe sete colunas. Some quando não há para onde
+ * ir — seta que não leva a lugar nenhum é ruído.
+ */
+function SetaDoTrilho({
+  lado, visivel, aoClicar,
+}: { lado: 'esquerda' | 'direita'; visivel: boolean; aoClicar: () => void }) {
+  if (!visivel) return null;
+  const naEsquerda = lado === 'esquerda';
+  return (
+    <button
+      type="button"
+      onClick={aoClicar}
+      aria-label={naEsquerda ? 'Ver etapas anteriores' : 'Ver etapas seguintes'}
+      className={`absolute top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-background/95 shadow-md backdrop-blur transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+        naEsquerda ? 'left-1' : 'right-1'
+      }`}
+    >
+      {naEsquerda ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+    </button>
   );
 }
