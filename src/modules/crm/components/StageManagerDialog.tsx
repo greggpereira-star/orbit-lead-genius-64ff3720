@@ -6,7 +6,7 @@
  * enviada") não é o mesmo de uma clínica ("Avaliação", "Procedimento"), então
  * o funil precisa ser do cliente.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ConversionSettingsTable } from '@/modules/crm/components/ConversionSettingsTable';
 import { LossReasonsManager } from '@/modules/crm/components/LossReasonsManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,7 +14,7 @@ import { listConversionMappings } from '@/modules/crm/services/conversionMapping
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
-import { GripVertical, Plus, Trash2, Loader2, Flag, Check } from 'lucide-react';
+import { GripVertical, Plus, Trash2, Loader2, Flag, Check, Filter, Layers, Link2, DollarSign } from 'lucide-react';
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -54,6 +54,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
   /* Cópia local para o arrastar responder na hora: reordenar são N updates, e
      esperar todos antes de redesenhar faria a lista "pular" de volta. */
   const [order, setOrder] = useState<Stage[]>([]);
+  const [aba, setAba] = useState('etapas');
 
   // Mesma condição da lista de etapas: só busca com o diálogo aberto.
   const mappingsQuery = useQuery({
@@ -67,6 +68,18 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
     queryFn: () => listStages(companyId),
     enabled: Boolean(companyId) && open,
   });
+
+  /* Conta o que está GRAVADO. A tabela tem rascunho próprio, e espelhar o
+     rascunho aqui faria o número piscar a cada clique antes de valer. */
+  const resumo = useMemo(() => {
+    const mapas = mappingsQuery.data ?? [];
+    const ativos = mapas.filter((m) => m.is_active && m.meta_event_name);
+    return {
+      etapas: (stagesQuery.data ?? []).length,
+      eventos: ativos.length,
+      comValor: mapas.filter((m) => m.is_active && m.send_deal_value).length,
+    };
+  }, [mappingsQuery.data, stagesQuery.data]);
 
   useEffect(() => {
     if (stagesQuery.data) setOrder(stagesQuery.data);
@@ -142,17 +155,31 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
         {/* Só o corpo rola. Antes o diálogo inteiro rolava, e o título e as
             abas saíam de cena assim que a lista passava da altura — a pessoa
             perdia de vista em qual aba estava e como voltar. */}
-        <DialogContent className="flex max-h-[90dvh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b px-6 py-4 text-left">
-            <DialogTitle>Etapas do funil</DialogTitle>
-            <DialogDescription>
-              Arraste para reordenar. A etapa de entrada é onde o lead cai quando a
-              integração não escolhe outra.
-            </DialogDescription>
+        <DialogContent className="flex max-h-[92dvh] max-w-6xl flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b px-6 py-5 text-left">
+            <div className="flex items-start gap-3">
+              {/* O ícone não é enfeite: ele é o mesmo funil do Kanban, e dá
+                  ao diálogo a identidade da tela de onde ele veio. */}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Filter className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg">Etapas do funil</DialogTitle>
+                <DialogDescription>
+                  Arraste para reordenar. A etapa de entrada é onde o lead cai quando a
+                  integração não escolhe outra.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <Tabs defaultValue="etapas" className="flex min-h-0 flex-1 flex-col gap-0">
-            <TabsList className="mx-6 mt-4 shrink-0 self-start">
+          <Tabs
+            value={aba}
+            onValueChange={setAba}
+            className="flex min-h-0 flex-1 flex-col gap-0"
+          >
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-6 pt-4">
+            <TabsList className="shrink-0 self-start">
               <TabsTrigger value="etapas">Etapas</TabsTrigger>
               {/* Separado porque são duas perguntas diferentes: "quais são os
                   degraus" e "o que cada degrau significa". Misturar obrigava a
@@ -162,6 +189,23 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
                   próprio funil — inclusive a saída dele. */}
               <TabsTrigger value="perdas">Motivos de perda</TabsTrigger>
             </TabsList>
+
+            {/* Resumo do funil, só onde ele descreve o que está na tela. Nas
+                outras abas seria um número solto sem nada para explicá-lo. */}
+            {aba === 'conversoes' && (
+              <div className="flex flex-wrap gap-2">
+                <Resumo icone={<Layers className="h-4 w-4" />} numero={resumo.etapas} titulo="etapas" legenda="no funil" />
+                <Resumo icone={<Link2 className="h-4 w-4" />} numero={resumo.eventos} titulo="eventos" legenda="mapeados" />
+                <Resumo
+                  icone={<DollarSign className="h-4 w-4" />}
+                  numero={resumo.comValor}
+                  titulo={resumo.comValor === 1 ? 'conversão' : 'conversões'}
+                  legenda="com valor"
+                  destaque
+                />
+              </div>
+            )}
+            </div>
             <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
 
           <DragDropContext onDragEnd={onDragEnd}>
@@ -310,8 +354,10 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </Button>
           </div>
             </TabsContent>
-            <TabsContent value="conversoes" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              <ConversionSettingsTable companyId={companyId} />
+            {/* Sem overflow aqui: a tabela de conversões tem rodapé fixo e
+                cuida da própria rolagem. */}
+            <TabsContent value="conversoes" className="flex min-h-0 flex-1 flex-col px-6 py-4">
+              <ConversionSettingsTable companyId={companyId} onClose={() => onOpenChange(false)} />
             </TabsContent>
             <TabsContent value="perdas" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <LossReasonsManager companyId={companyId} />
@@ -380,5 +426,40 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+/**
+ * Um número do funil, com o que ele conta logo abaixo.
+ *
+ * Três cartões em vez de uma frase porque são grandezas diferentes — degraus,
+ * eventos, valor — e quem configura compara as três entre si: "sete etapas e
+ * só um evento" é a leitura que faz a pessoa voltar para a tabela.
+ */
+function Resumo({
+  icone, numero, titulo, legenda, destaque,
+}: {
+  icone: React.ReactNode;
+  numero: number;
+  titulo: string;
+  legenda: string;
+  destaque?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2">
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          destaque ? 'bg-emerald-600/10 text-emerald-600' : 'bg-primary/10 text-primary'
+        }`}
+      >
+        {icone}
+      </span>
+      <div className="leading-tight">
+        <p className="text-sm font-semibold">
+          {numero} <span className="font-medium text-muted-foreground">{titulo}</span>
+        </p>
+        <p className="text-xs text-muted-foreground">{legenda}</p>
+      </div>
+    </div>
   );
 }
