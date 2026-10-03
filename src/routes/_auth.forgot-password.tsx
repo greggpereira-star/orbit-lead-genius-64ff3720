@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import * as React from 'react';
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getRecoveryClient } from '@/lib/recovery-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +21,7 @@ function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await getRecoveryClient().auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/reset-password',
       });
       if (error) throw error;
