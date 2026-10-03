@@ -46,13 +46,12 @@ export function LeadQuickActions({
     onError: (e: Error) => toast.error('Não deu para agendar', { description: e.message }),
   });
 
-  /* `text-xs` e `px-3` em vez do tamanho padrão, e o rótulo podendo encolher.
-     A conta: o cartão tem 400px, cada botão fica com 180px, e "Chamar no
-     WhatsApp" a 14px pede 182. Como o botão base é `whitespace-nowrap`, não
-     havia quebra possível — o texto simplesmente saía pela borda. A 12px sobra
-     folga, e o `truncate` garante que qualquer rótulo futuro encurte em vez de
-     escapar. São ações secundárias: tamanho menor é adequado, não concessão. */
-  const estilo = 'h-9 min-w-0 justify-start px-3 text-xs';
+  /* Em coluna única cada botão recebe 308px — os 180px do layout de três
+     colunas eram o que fazia "Chamar no WhatsApp" escapar pela borda, já que o
+     botão base é `whitespace-nowrap` e não tinha como quebrar. Com espaço
+     sobrando, o tamanho volta ao normal; `min-w-0` e `truncate` ficam como
+     rede, para que um rótulo mais longo encurte em vez de vazar. */
+  const estilo = 'h-10 min-w-0 justify-start px-4';
 
   return (
     <div className="grid gap-2 sm:grid-cols-2">
@@ -63,14 +62,14 @@ export function LeadQuickActions({
       {email ? (
         <Button asChild variant="outline" className={estilo}>
           <a href={`mailto:${email}`}>
-            <Mail className="h-3.5 w-3.5 shrink-0" />
-            <span className="ml-1.5 truncate">Enviar e-mail</span>
+            <Mail className="h-4 w-4 shrink-0" />
+            <span className="ml-2 truncate">Enviar e-mail</span>
           </a>
         </Button>
       ) : (
         <Button variant="outline" className={estilo} disabled title="Este lead não tem e-mail">
-          <Mail className="h-3.5 w-3.5 shrink-0" />
-          <span className="ml-1.5 truncate">Enviar e-mail</span>
+          <Mail className="h-4 w-4 shrink-0" />
+          <span className="ml-2 truncate">Enviar e-mail</span>
         </Button>
       )}
 
@@ -81,14 +80,14 @@ export function LeadQuickActions({
           className={`${estilo} border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400`}
         >
           <a href={whatsapp} target="_blank" rel="noopener noreferrer">
-            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-            <span className="ml-1.5 truncate">Chamar no WhatsApp</span>
+            <MessageCircle className="h-4 w-4 shrink-0" />
+            <span className="ml-2 truncate">Chamar no WhatsApp</span>
           </a>
         </Button>
       ) : (
         <Button variant="outline" className={estilo} disabled title="Este lead não tem telefone">
-          <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-          <span className="ml-1.5 truncate">Chamar no WhatsApp</span>
+          <MessageCircle className="h-4 w-4 shrink-0" />
+          <span className="ml-2 truncate">Chamar no WhatsApp</span>
         </Button>
       )}
 
@@ -98,8 +97,8 @@ export function LeadQuickActions({
         disabled={agendar.isPending}
         onClick={() => agendar.mutate({ body: 'Reunião a combinar com o lead.', dias: 2 })}
       >
-        <CalendarPlus className="h-3.5 w-3.5 shrink-0" />
-        <span className="ml-1.5 truncate">Agendar reunião</span>
+        <CalendarPlus className="h-4 w-4 shrink-0" />
+        <span className="ml-2 truncate">Agendar reunião</span>
       </Button>
 
       <Button
@@ -108,8 +107,8 @@ export function LeadQuickActions({
         disabled={agendar.isPending}
         onClick={() => agendar.mutate({ body: 'Tarefa de acompanhamento.', dias: 1 })}
       >
-        <CheckSquare className="h-3.5 w-3.5 shrink-0" />
-        <span className="ml-1.5 truncate">Criar tarefa</span>
+        <CheckSquare className="h-4 w-4 shrink-0" />
+        <span className="ml-2 truncate">Criar tarefa</span>
       </Button>
     </div>
   );

@@ -28,11 +28,13 @@ function iniciais(nome: string): string {
  * que precisa convidar à ação.
  */
 export function OwnerPicker({
-  leadId, companyId, responsavelAtual,
+  leadId, companyId, responsavelAtual, compacto,
 }: {
   leadId: string;
   companyId: string;
   responsavelAtual: string | null;
+  /** Dentro de uma linha que já traz o rótulo "Responsável" à esquerda. */
+  compacto?: boolean;
 }) {
   const qc = useQueryClient();
 
@@ -57,12 +59,16 @@ export function OwnerPicker({
   const atual = lista.find((m) => m.userId === responsavelAtual) ?? null;
 
   return (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 shrink-0 text-muted-foreground/70"><UserRound className="h-4 w-4" /></span>
+    <div className={compacto ? '' : 'flex items-start gap-3'}>
+      {!compacto && (
+        <span className="mt-0.5 shrink-0 text-muted-foreground/70"><UserRound className="h-4 w-4" /></span>
+      )}
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
-          Responsável
-        </p>
+        {!compacto && (
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+            Responsável
+          </p>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
