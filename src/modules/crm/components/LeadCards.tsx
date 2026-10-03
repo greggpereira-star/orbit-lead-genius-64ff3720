@@ -36,10 +36,10 @@ export function CartaoFicha({
 }) {
   return (
     <section className="cartao">
-      <div className="mb-3.5 flex items-center gap-2.5">
+      <div className="cartao-topo">
         <span className={DISCO[assunto]} aria-hidden="true">{icone}</span>
         <div className="min-w-0">
-          <h3 className="truncate text-[13px] font-semibold leading-tight tracking-[-0.005em]">
+          <h3 className="truncate text-sm font-semibold leading-tight tracking-[-0.01em]">
             {titulo}
           </h3>
           {descricao && (
@@ -50,7 +50,7 @@ export function CartaoFicha({
         </div>
         {acao && <div className="ml-auto shrink-0">{acao}</div>}
       </div>
-      {children}
+      <div className="cartao-corpo">{children}</div>
     </section>
   );
 }

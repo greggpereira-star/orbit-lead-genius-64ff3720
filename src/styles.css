@@ -294,8 +294,21 @@
   border: 1px solid var(--linha-sutil);
   border-radius: 16px;
   box-shadow: var(--elevacao-1);
-  padding: 1rem 1.125rem 1.125rem;
+  overflow: hidden;            /* a faixa do cabeçalho precisa casar com o raio */
 }
+
+/* Cabeçalho em faixa tonal, separado do conteúdo por uma régua de ponta a ponta.
+   Antes o título vivia no mesmo plano do dado, separado só por espaço, e os dois
+   se misturavam. A faixa também repete, dentro do cartão, a mesma inversão que
+   rege a tela: o disco fica BRANCO e elevado sobre fundo tonal, como o cartão
+   sobre a página. */
+.cartao-topo {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.875rem 1.125rem;
+  background: var(--superficie-tonal);
+  border-bottom: 1px solid var(--linha-sutil);
+}
+.cartao-corpo { padding: 1rem 1.125rem 1.125rem; }
 
 /* Disco do ícone — NEUTRO por padrão.
    Os dois estudos de caso que o cliente mandou (QorTrade e Fynix) usam UM
@@ -307,13 +320,14 @@
 .disco {
   width: 2rem; height: 2rem; border-radius: 10px;
   display: grid; place-items: center; flex-shrink: 0;
-  background: var(--superficie-tonal);
+  background: var(--superficie-cartao);
   color: var(--muted-foreground);
+  box-shadow: var(--elevacao-1);
 }
 /* Perda é estado, não assunto: continua marcada. */
-.disco-alerta { background: color-mix(in oklch, var(--destructive) 10%, transparent); color: var(--destructive); }
+.disco-alerta { color: var(--destructive); }
 /* O acento, onde a tela quer que o olho pare primeiro. Um por tela. */
-.disco-acento { background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); }
+.disco-acento { color: var(--primary); }
 
 /* Caixa interna — resposta de formulário, anotação, tarefa. Um degrau ABAIXO
    do cartão, não acima: é conteúdo contido, não elemento elevado. */
