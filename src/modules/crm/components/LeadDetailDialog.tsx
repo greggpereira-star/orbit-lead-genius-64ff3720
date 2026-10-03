@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Clock,
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
-  MessageCircle, ClipboardList, User, Radio, TrendingUp, XCircle, Zap,
+  MessageCircle, ClipboardList, User, Radio, TrendingUp, XCircle, Zap, Tag as TagIcon,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
   ChevronDown, AlertTriangle, Sparkles, DollarSign, BarChart3, Home, CircleDot,
   PencilLine, MessagesSquare,
@@ -1480,129 +1480,156 @@ export function LeadDetailDialog({
   </div>
 </TabsContent>
 
-              <TabsContent value="qualificacao" className="m-0"><div className="mx-auto max-w-[48rem] space-y-4 px-8 py-8">
+              <TabsContent value="qualificacao" className="m-0 sup-tonal">
+                <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
                   {answers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Este lead não trouxe respostas de formulário.
-                    </p>
+                    <CartaoFicha
+                      icone={<ClipboardList className="h-4 w-4" />}
+                      titulo="Qualificação"
+                    >
+                      <p className="text-sm text-muted-foreground">
+                        Este lead não trouxe respostas de formulário. Quando trouxer, elas aparecem aqui.
+                      </p>
+                    </CartaoFicha>
                   ) : (
                     <>
-                      {/* Estas respostas são o motivo de ligar pra esta pessoa:
-                          orçamento, tipo de imóvel, prioridade. O ícone dá a
-                          cada cartão um assunto reconhecível de relance — sem
-                          ele, quatro cartões cinzas iguais obrigam a ler os
-                          quatro rótulos pra achar o orçamento. */}
-                      <dl className="grid gap-3 sm:grid-cols-2">
-                        {answers.map((a) => {
-                          const k = ANSWER_KIND_STYLE[a.kind];
-                          const Icon = k.icon;
-                          return (
-                            <div
-                              key={a.key}
-                              className="rounded-xl border bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:border-primary/30"
-                            >
-                              <span
-                                className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${k.tone}`}
-                                aria-hidden="true"
-                              >
-                                <Icon className="h-[18px] w-[18px]" />
-                              </span>
-                              <dt
-                                className="text-[11px] font-medium uppercase leading-tight tracking-wide text-muted-foreground"
-                                title={a.label}
-                              >
-                                {a.short}
-                              </dt>
-                              <dd className="mt-1 text-[15px] font-semibold leading-snug tracking-tight">
-                                {a.value}
-                              </dd>
-                            </div>
-                          );
-                        })}
-                      </dl>
-
                       {summary && (
-                        <div className="rounded-xl border bg-primary/[0.04] p-4">
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0 space-y-1.5">
-                              <p className="flex items-center gap-2 text-sm font-semibold text-primary">
-                                <Sparkles className="h-4 w-4" />
-                                Resumo do perfil
-                              </p>
-                              {/* Montado por template a partir das respostas
-                                  acima — não há IA no projeto e uma frase
-                                  "gerada" que ninguém pode auditar seria pior
-                                  que não ter resumo nenhum. */}
-                              <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
-                            </div>
+                        <CartaoFicha
+                          icone={<Sparkles className="h-4 w-4" />}
+                          titulo="Resumo do perfil"
+                          descricao="Montado a partir das respostas — não há IA no projeto"
+                          assunto="acento"
+                        >
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">{summary}</p>
                             <CompletenessMeter data={completeness} />
                           </div>
-                        </div>
+                        </CartaoFicha>
                       )}
+
+                      <CartaoFicha
+                        icone={<TrendingUp className="h-4 w-4" />}
+                        titulo="Respostas do formulário"
+                        descricao="O motivo de ligar para esta pessoa"
+                      >
+                        {/* Uma linha por resposta, não um cartão por resposta.
+                            Cartão dentro de cartão era a caixa-em-caixa que
+                            deixava a tela pesada; aqui o que separa é a régua
+                            e o ícone, que já dá o assunto de relance. */}
+                        <dl className="divide-y">
+                          {answers.map((a) => {
+                            const k = ANSWER_KIND_STYLE[a.kind];
+                            const Icon = k.icon;
+                            return (
+                              <div key={a.key} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                                <span
+                                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] ${k.tone}`}
+                                  aria-hidden="true"
+                                >
+                                  <Icon className="h-4 w-4" />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <dt className="truncate text-[11px] text-muted-foreground" title={a.label}>
+                                    {a.short}
+                                  </dt>
+                                  <dd className="truncate text-sm font-semibold" title={a.value}>{a.value}</dd>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </dl>
+                      </CartaoFicha>
                     </>
                   )}
-
-                  </div>
-            </TabsContent>
-
-              <TabsContent value="historico" className="m-0"><div className="mx-auto max-w-[48rem] space-y-6 px-8 py-8">
-  <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} />
-<div className="space-y-6">
-                  {tracking.length === 0 && metaInfo.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Sem dados de rastreamento.</p>
-                  ) : (
-                    <>
-                      {tracking.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            Campanha
-                          </p>
-                          <dl className="grid gap-3 sm:grid-cols-2">
-                            {tracking.map((t) => (
-                              <div key={t.label} className="min-w-0">
-                                <dt className="text-xs text-muted-foreground">{t.label}</dt>
-                                <dd className="break-words text-sm font-medium">{String(t.value)}</dd>
-                              </div>
-                            ))}
-                          </dl>
-                        </div>
-                      )}
-                      {metaInfo.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            Meta Lead Ads
-                          </p>
-                          <dl className="grid gap-3 sm:grid-cols-2">
-                            {metaInfo.map((t) => (
-                              <div key={t.label} className="min-w-0">
-                                <dt className="text-xs text-muted-foreground">{t.label}</dt>
-                                <dd className="break-words font-mono text-xs">{String(t.value)}</dd>
-                              </div>
-                            ))}
-                          </dl>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-</div>
-            </TabsContent>
-
-              <TabsContent value="anotacoes" className="m-0">
-                <div className="mx-auto max-w-[48rem] px-8 py-8">
-                  <NotesTab leadId={lead.id} companyId={lead.company_id} />
                 </div>
               </TabsContent>
 
-              <TabsContent value="arquivos" className="m-0"><div className="mx-auto max-w-[40rem] space-y-10 px-8 py-8">
-<div>
-                  <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
+              <TabsContent value="historico" className="m-0 sup-tonal">
+                <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
+                  <CartaoFicha
+                    icone={<Clock className="h-4 w-4" />}
+                    titulo="Caminho no funil"
+                    descricao="Gravado por gatilho desde 3 de outubro de 2026"
+                  >
+                    <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} semMoldura />
+                  </CartaoFicha>
+
+                  {tracking.length === 0 && metaInfo.length === 0 ? (
+                    <CartaoFicha icone={<Radio className="h-4 w-4" />} titulo="Rastreamento">
+                      <p className="text-sm text-muted-foreground">
+                        Este lead chegou sem parâmetros de campanha.
+                      </p>
+                    </CartaoFicha>
+                  ) : (
+                    <>
+                      {tracking.length > 0 && (
+                        <CartaoFicha
+                          icone={<Radio className="h-4 w-4" />}
+                          titulo="Campanha"
+                          descricao="Parâmetros que vieram com o lead"
+                        >
+                          <dl className="divide-y">
+                            {tracking.map((t) => (
+                              <div key={t.label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-3 py-2 first:pt-0 last:pb-0">
+                                <dt className="text-sm text-muted-foreground">{t.label}</dt>
+                                <dd className="min-w-0 break-words text-sm font-medium">{String(t.value)}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </CartaoFicha>
+                      )}
+                      {metaInfo.length > 0 && (
+                        <CartaoFicha
+                          icone={<ClipboardList className="h-4 w-4" />}
+                          titulo="Meta Lead Ads"
+                          descricao="Identificadores do formulário de origem"
+                        >
+                          <dl className="divide-y">
+                            {metaInfo.map((t) => (
+                              <div key={t.label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-3 py-2 first:pt-0 last:pb-0">
+                                <dt className="text-sm text-muted-foreground">{t.label}</dt>
+                                {/* Mono porque são identificadores literais, não rótulos. */}
+                                <dd className="min-w-0 break-words font-mono text-xs">{String(t.value)}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </CartaoFicha>
+                      )}
+                    </>
+                  )}
                 </div>
-<div>
-                  <TagsTab leadId={lead.id} companyId={lead.company_id} />
+              </TabsContent>
+
+              <TabsContent value="anotacoes" className="m-0 sup-tonal">
+                <div className="mx-auto max-w-[48rem] p-5">
+                  <CartaoFicha
+                    icone={<StickyNote className="h-4 w-4" />}
+                    titulo="Anotações"
+                    descricao="Anotação com data vira compromisso"
+                  >
+                    <NotesTab leadId={lead.id} companyId={lead.company_id} />
+                  </CartaoFicha>
                 </div>
-</div>
-            </TabsContent>
+              </TabsContent>
+
+              <TabsContent value="arquivos" className="m-0 sup-tonal">
+                <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
+                  <CartaoFicha
+                    icone={<Paperclip className="h-4 w-4" />}
+                    titulo="Arquivos"
+                    descricao="Documentos presos a este lead"
+                  >
+                    <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
+                  </CartaoFicha>
+                  <CartaoFicha
+                    icone={<TagIcon className="h-4 w-4" />}
+                    titulo="Etiquetas"
+                    descricao="Para organizar e segmentar"
+                  >
+                    <TagsTab leadId={lead.id} companyId={lead.company_id} />
+                  </CartaoFicha>
+                </div>
+              </TabsContent>
             </ScrollArea>
           </Tabs>
         </div>
