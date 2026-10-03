@@ -338,33 +338,27 @@ export type Database = {
       companies: {
         Row: {
           chat_allowed_domains: string[]
-          conversion_dry_run: boolean
           created_at: string
           created_by: string | null
           id: string
           name: string
           slug: string
-          subdomain: string | null
         }
         Insert: {
           chat_allowed_domains?: string[]
-          conversion_dry_run?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           name: string
           slug: string
-          subdomain?: string | null
         }
         Update: {
           chat_allowed_domains?: string[]
-          conversion_dry_run?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string
           slug?: string
-          subdomain?: string | null
         }
         Relationships: []
       }
@@ -1881,87 +1875,6 @@ export type Database = {
           },
         ]
       }
-      loss_reasons: {
-        Row: {
-          company_id: string
-          created_at: string
-          id: string
-          is_active: boolean
-          label: string
-          order_index: number
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          label: string
-          order_index?: number
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          label?: string
-          order_index?: number
-        }
-        Relationships: []
-      }
-      lead_stage_history: {
-        Row: {
-          company_id: string
-          from_order_index: number | null
-          from_stage_kind: string | null
-          from_stage_id: string | null
-          from_stage_name: string | null
-          id: string
-          lead_id: string
-          moved_at: string
-          moved_by: string | null
-          origem: string | null
-          to_order_index: number | null
-          to_stage_kind: string | null
-          loss_reason_name: string | null
-          to_stage_id: string | null
-          to_stage_name: string | null
-        }
-        Insert: {
-          company_id: string
-          from_order_index?: number | null
-          from_stage_kind?: string | null
-          from_stage_id?: string | null
-          from_stage_name?: string | null
-          id?: string
-          lead_id: string
-          moved_at?: string
-          moved_by?: string | null
-          origem?: string | null
-          to_order_index?: number | null
-          to_stage_kind?: string | null
-          loss_reason_name?: string | null
-          to_stage_id?: string | null
-          to_stage_name?: string | null
-        }
-        Update: {
-          company_id?: string
-          from_order_index?: number | null
-          from_stage_kind?: string | null
-          from_stage_id?: string | null
-          from_stage_name?: string | null
-          id?: string
-          lead_id?: string
-          moved_at?: string
-          moved_by?: string | null
-          origem?: string | null
-          to_order_index?: number | null
-          to_stage_kind?: string | null
-          loss_reason_name?: string | null
-          to_stage_id?: string | null
-          to_stage_name?: string | null
-        }
-        Relationships: []
-      }
       lead_events: {
         Row: {
           created_at: string | null
@@ -2158,8 +2071,6 @@ export type Database = {
           gclid: string | null
           id: string
           landing_page: string | null
-          loss_reason_id: string | null
-          lost_notes: string | null
           last_sync_at: string | null
           lead_score: number | null
           lead_temperature: string | null
@@ -2193,8 +2104,6 @@ export type Database = {
           gclid?: string | null
           id?: string
           landing_page?: string | null
-          loss_reason_id?: string | null
-          lost_notes?: string | null
           last_sync_at?: string | null
           lead_score?: number | null
           lead_temperature?: string | null
@@ -2228,8 +2137,6 @@ export type Database = {
           gclid?: string | null
           id?: string
           landing_page?: string | null
-          loss_reason_id?: string | null
-          lost_notes?: string | null
           last_sync_at?: string | null
           lead_score?: number | null
           lead_temperature?: string | null
@@ -3830,12 +3737,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3859,11 +3766,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3884,11 +3791,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3909,11 +3816,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3926,11 +3833,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
