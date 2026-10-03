@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getRecoveryClient } from '@/lib/recovery-client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,41 +14,52 @@ export const Route = createFileRoute('/_auth/reset-password')({
   component: ResetPasswordPage,
 });
 
+// Capture the link hash as early as possible, before any client can strip it.
+const initialHash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+
 function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   // Recovery link must produce a session before updateUser can work.
   const [linkState, setLinkState] = useState<'checking' | 'ready' | 'invalid'>('checking');
+  const clientRef = React.useRef<SupabaseClient>(supabase);
   const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get('code');
-    const hashError = new URLSearchParams(window.location.hash.slice(1)).get('error_description');
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event: string, session: unknown) => {
-      if (!active) return;
-      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) setLinkState('ready');
-    });
+    const hash = new URLSearchParams(initialHash || window.location.hash.slice(1));
+    const code = new URL(window.location.href).searchParams.get('code');
 
     (async () => {
-      if (hashError) { setLinkState('invalid'); return; }
-      if (code) {
-        // Exchange explicitly in case auto-detection did not run yet.
-        await supabase.auth.exchangeCodeForSession(code).catch(() => null);
+      if (hash.get('error_description')) { setLinkState('invalid'); return; }
+
+      // Implicit-flow link: tokens are in the URL hash.
+      const access_token = hash.get('access_token');
+      const refresh_token = hash.get('refresh_token');
+      if (access_token && refresh_token) {
+        const rc = getRecoveryClient();
+        const { error } = await rc.auth.setSession({ access_token, refresh_token });
+        if (!active) return;
+        if (!error) {
+          clientRef.current = rc;
+          window.history.replaceState(null, '', window.location.pathname);
+          setLinkState('ready');
+          return;
+        }
       }
-      // Give auto-detection a moment, then check for a session.
-      for (let i = 0; i < 10 && active; i++) {
+
+      // Legacy PKCE link (only works in the same browser).
+      if (code) await supabase.auth.exchangeCodeForSession(code).catch(() => null);
+      for (let i = 0; i < 5 && active; i++) {
         const { data } = await supabase.auth.getSession();
-        if (data.session) { setLinkState('ready'); return; }
+        if (data.session) { clientRef.current = supabase; setLinkState('ready'); return; }
         await new Promise((r) => setTimeout(r, 300));
       }
-      if (active) setLinkState((s) => (s === 'ready' ? s : 'invalid'));
+      if (active) setLinkState('invalid');
     })();
 
-    return () => { active = false; sub?.subscription?.unsubscribe(); };
+    return () => { active = false; };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -62,10 +75,10 @@ function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await clientRef.current.auth.updateUser({ password });
       if (error) throw error;
       toast.success('Senha atualizada! Faça login com a nova senha.');
-      await supabase.auth.signOut();
+      await clientRef.current.auth.signOut();
       navigate({ to: '/login' });
     } catch (error: any) {
       console.error(error);
