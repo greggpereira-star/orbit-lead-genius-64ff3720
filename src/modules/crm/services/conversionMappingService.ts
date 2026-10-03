@@ -25,6 +25,9 @@ export interface ConversionMapping {
  * configuração que falha só na hora do envio, dias depois, sem ninguém ligar
  * uma coisa à outra.
  */
+/** Marca a etapa como conversão para o relatório, sem enviar nada para mídia. */
+export const SO_MEDIR = '__so_medir__';
+
 export const EVENTOS_META = [
   { valor: 'QualifiedLead', rotulo: 'Lead qualificado', dica: 'o lead passou no seu filtro' },
   { valor: 'LeadSubmitted', rotulo: 'Lead registrado', dica: 'entrou no funil' },
@@ -49,14 +52,38 @@ export async function salvarConversionMapping(input: {
   whatsappLabel: string | null;
   sendDealValue: boolean;
 }): Promise<void> {
-  // Sem evento escolhido a configuração não tem razão de existir: apagar é mais
-  // honesto que guardar uma linha inerte que depois confunde quem for ler.
+  // "Não é conversão" apaga; "só medir" mantém a linha sem destino.
+  //
+  // A primeira versão apagava sempre que não havia evento, e isso virou
+  // armadilha: o mesmo registro define a RÉGUA do relatório, não só o disparo.
+  // Quem marcasse a etapa para medir e depois abrisse a tela perderia a régua
+  // sem perceber, e o relatório voltaria a dizer "não há como saber".
   if (!input.metaEventName) {
     const { error } = await (supabase as any)
       .from('stage_conversion_mappings')
       .delete()
       .eq('company_id', input.companyId)
       .eq('stage_id', input.stageId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  // Só medir: a etapa conta como qualificada no relatório e nada é enviado.
+  if (input.metaEventName === SO_MEDIR) {
+    const { error } = await (supabase as any)
+      .from('stage_conversion_mappings')
+      .upsert(
+        {
+          company_id: input.companyId,
+          stage_id: input.stageId,
+          meta_event_name: null,
+          whatsapp_label: input.whatsappLabel?.trim() || null,
+          send_deal_value: input.sendDealValue,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'company_id,stage_id' },
+      );
     if (error) throw new Error(error.message);
     return;
   }

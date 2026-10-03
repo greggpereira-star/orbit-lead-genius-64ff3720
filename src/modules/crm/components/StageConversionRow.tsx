@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   EVENTOS_META,
+  SO_MEDIR,
   salvarConversionMapping,
   type ConversionMapping,
 } from '@/modules/crm/services/conversionMappingService';
@@ -32,7 +33,11 @@ export function StageConversionRow({
   mapping?: ConversionMapping;
 }) {
   const qc = useQueryClient();
-  const [evento, setEvento] = useState(mapping?.meta_event_name ?? '__nenhum__');
+  // Linha que existe sem evento é "só medir", não "nada". Confundir os dois era
+  // justamente o que fazia a régua do relatório sumir ao abrir a tela.
+  const [evento, setEvento] = useState(
+    mapping ? (mapping.meta_event_name ?? SO_MEDIR) : '__nenhum__',
+  );
   const [etiqueta, setEtiqueta] = useState(mapping?.whatsapp_label ?? '');
   const [mandaValor, setMandaValor] = useState(mapping?.send_deal_value ?? false);
 
@@ -60,6 +65,7 @@ export function StageConversionRow({
   };
 
   const configurado = evento !== '__nenhum__';
+  const soMede = evento === SO_MEDIR;
 
   return (
     <div className="space-y-3 rounded-md border bg-muted/30 px-3 py-3">
@@ -74,7 +80,10 @@ export function StageConversionRow({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__nenhum__">Não dispara nada</SelectItem>
+          <SelectItem value="__nenhum__">Não é uma conversão</SelectItem>
+          <SelectItem value={SO_MEDIR}>
+            Só medir — <span className="text-muted-foreground">conta no relatório, não envia</span>
+          </SelectItem>
           {EVENTOS_META.map((e) => (
             <SelectItem key={e.valor} value={e.valor}>
               {e.rotulo} — <span className="text-muted-foreground">{e.dica}</span>
@@ -106,6 +115,7 @@ export function StageConversionRow({
             </p>
           </div>
 
+          {!soMede && (
           <label className="flex items-start gap-2.5">
             <Switch checked={mandaValor} onCheckedChange={(v) => aplicar({ valor: v })} className="mt-0.5" />
             <span className="text-[11px] leading-snug text-muted-foreground">
@@ -114,6 +124,14 @@ export function StageConversionRow({
               num evento de lead ensina a Meta a otimizar pela métrica errada.
             </span>
           </label>
+          )}
+
+          {soMede && (
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Esta etapa passa a contar como qualificada nos relatórios. Nenhum evento é
+              enviado para a Meta ou o Google até você escolher um acima.
+            </p>
+          )}
         </>
       )}
     </div>
