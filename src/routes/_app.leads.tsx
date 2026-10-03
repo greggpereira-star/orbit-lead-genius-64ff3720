@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
@@ -294,7 +295,7 @@ function LeadsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Leads</h1>
@@ -313,7 +314,7 @@ function LeadsPage() {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="h-10 gap-2 font-bold shadow-lg shadow-primary/20">
+              <Button className="h-10 gap-2 font-bold">
                 <Plus className="h-4 w-4" />
                 Novo lead
               </Button>
@@ -321,7 +322,7 @@ function LeadsPage() {
           <DialogContent className="sm:max-w-[560px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                <UserPlus className="h-5 w-5 text-primary" />
+                <UserPlus className="h-5 w-5 text-muted-foreground" />
                 Criar lead manual
               </DialogTitle>
               <DialogDescription>
@@ -370,19 +371,23 @@ function LeadsPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4">
         <MetricCard label="Leads ativos" value={metrics.total} />
         <MetricCard label="Últimas 24h" value={metrics.today} />
         <MetricCard label="Novos 7 dias" value={metrics.newThisWeek} />
         <MetricCard label="Sem responsável" value={metrics.unassigned} />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
+      <div className="cartao flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
+        {/* A busca pesa mais que os quatro filtros juntos: é o controle que se
+            usa em toda visita, enquanto filtro é eventual. `flex-[3]` contra
+            `flex-[4]` dá a ela ~43% da barra, espaço suficiente para o
+            placeholder inteiro sem espremer os filtros. */}
+        <div className="relative lg:flex-[3]">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:w-[820px] lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:flex-[4] lg:grid-cols-4">
           {/* Filtra pelas etapas do funil da empresa, as mesmas do pipeline.
               Antes eram sete status fixos em inglês traduzido ("Qualificado",
               "Proposal") que não correspondiam mais às colunas que o usuário
@@ -469,8 +474,8 @@ function LeadsPage() {
       {/* Barra só aparece com algo selecionado: parada, ocuparia uma faixa da
           tela pra oferecer uma ação impossível. */}
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
-          <span className="text-sm font-semibold text-primary">
+        <div className="cartao flex flex-wrap items-center justify-between gap-3 border-primary/25 bg-primary/[0.04] px-4 py-3">
+          <span className="text-sm font-semibold">
             {selectedIds.length === 1
               ? '1 lead selecionado'
               : `${selectedIds.length} leads selecionados`}
@@ -492,7 +497,7 @@ function LeadsPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      <div className="cartao overflow-x-auto">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
@@ -668,7 +673,7 @@ function LeadTableRow({
         />
       </TableCell>
       {show('contato') && (
-        <TableCell className="p-4">
+        <TableCell>
           {/* Nem <Link> nem onClick aqui, de propósito. O link navegava no
               PRIMEIRO clique e o duplo clique nunca abria a ficha; com onClick,
               o primeiro clique abria o modal e o segundo caía no overlay e
@@ -694,7 +699,7 @@ function LeadTableRow({
       {show('canal') && (
         <TableCell>
           <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-            {source.toLowerCase().includes('meta') ? <Share2 className="h-4 w-4 text-primary" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
+            {source.toLowerCase().includes('meta') ? <Share2 className="h-4 w-4 text-muted-foreground" /> : <Globe className="h-4 w-4 text-muted-foreground" />}
             {formatLabel(source)}
           </div>
         </TableCell>
@@ -794,9 +799,8 @@ function LeadField({ label, children }: { label: string; children: ReactNode }) 
 
 function MetricCard({ label, value, suffix = '' }: { label: string; value: number; suffix?: string }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
-      <div className="mt-2 text-2xl font-black tracking-tight text-foreground">{value}{suffix}</div>
+    <div className="cartao p-5">
+      <NumeroHeroi rotulo={label} valor={`${value}${suffix}`} />
     </div>
   );
 }

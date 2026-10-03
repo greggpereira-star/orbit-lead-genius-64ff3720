@@ -40,7 +40,7 @@
              <Button variant="ghost" className="flex items-center gap-2 p-1 pl-2">
                <span className="text-sm font-medium hidden sm:inline-block">{user?.name}</span>
                <Avatar className="h-8 w-8">
-                 <AvatarFallback className="bg-primary/10 text-primary">
+                 <AvatarFallback className="bg-[var(--superficie-tonal)] text-muted-foreground">
                    {user?.name?.charAt(0).toUpperCase()}
                  </AvatarFallback>
                </Avatar>

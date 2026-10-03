@@ -8,7 +8,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary/20 text-primary border border-primary/30 shadow-sm hover:bg-primary/30",
+        // Neutro. Como `default` é a variante sem argumento, TODO badge do app saía
+        // azul — contadores de aba, etiquetas, rótulos — e cada um subtraía do
+        // acento da tela. Contagem não é estado. Quem precisa de cor pede
+        // `destructive`, ou a variante própria.
+        default: "border border-border bg-[var(--superficie-tonal)] text-muted-foreground",
         secondary: "border-transparent bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80",
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",

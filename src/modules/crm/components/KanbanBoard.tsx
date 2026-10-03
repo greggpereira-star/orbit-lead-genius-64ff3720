@@ -731,7 +731,11 @@ export function KanbanBoard({
                                     asChild
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 shrink-0 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
+                                    // Neutro no card. O verde aparecia em quase todos os ~100 cards e
+                                    // ocupava o lugar do acento do board sem dizer nada que o
+                                    // ícone já não diga. Ele continua verde na ficha do lead,
+                                    // onde é a ação principal e aparece uma vez.
+                                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
                                     title="Abrir no WhatsApp"
                                   >
                                     <a

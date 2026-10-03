@@ -50,15 +50,22 @@ interface MenuItem {
   notify?: 'inbox';
 }
 
+/* `accent` virou vazio em todas as categorias e fica como campo para não
+   espalhar a remoção por cinco lugares. Eram cinco matizes classificando
+   ASSUNTO — sky para Principal, emerald para Atendimento, âmbar para
+   Automação —, e a cor da sidebar tem um trabalho só: dizer onde a pessoa
+   está. Pior: a regra era `active ? '' : accent`, ou seja, o item INATIVO
+   recebia cor e o ativo não, deixando "onde estou" mais fraco que o ruído
+   em volta. O estado ativo já é marcado em ui/sidebar.tsx:504. */
 const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
   {
     label: 'Principal',
-    accent: 'text-sky-600',
+    accent: '',
     items: [{ title: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' }],
   },
   {
     label: 'Captação & CRM',
-    accent: 'text-primary',
+    accent: '',
     items: [
       { title: 'Leads', icon: Users, to: '/leads' },
       { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
@@ -68,7 +75,7 @@ const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
   },
   {
     label: 'Atendimento',
-    accent: 'text-emerald-600',
+    accent: '',
     items: [
       { title: 'Chat ao vivo', icon: MessageSquare, to: '/inbox', notify: 'inbox' },
       { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
@@ -76,7 +83,7 @@ const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
   },
   {
     label: 'Automação',
-    accent: 'text-amber-600',
+    accent: '',
     items: [
       { title: 'Automations', icon: Zap, to: '/automations' },
       { title: 'Meta Lead Ads', icon: Share2, to: '/integrations/meta' },
@@ -84,7 +91,7 @@ const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
   },
   {
     label: 'Inteligência',
-    accent: 'text-violet-600',
+    accent: '',
     items: [
       { title: 'Analytics', icon: BarChart3, to: '/analytics' },
       { title: 'TV Mode', icon: Monitor, to: '/analytics/tv' },
@@ -112,7 +119,9 @@ export function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-sidebar-accent transition-colors text-left">
               <div className="relative shrink-0">
-                <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
+                {/* Neutro: um bloco de 36px de acento em TODAS as telas gastava, no shell,
+                    a cor que pertence à página. A inicial já identifica a empresa. */}
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--superficie-tonal)] text-lg font-bold text-foreground">
                   {initials}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-sidebar" />
