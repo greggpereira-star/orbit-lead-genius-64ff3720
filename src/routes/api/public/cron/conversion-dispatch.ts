@@ -76,13 +76,25 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
             // O clique de anúncio mais recente desse lead. É ele que carrega o
             // `ctwa_clid` e transforma a correspondência de probabilística em
             // determinística.
-            const { data: clique } = await admin
+            // Os últimos cliques do lead, não só o mais recente.
+            //
+            // A pessoa pode ter chegado por um anúncio do Google (gclid) e
+            // voltado por um da Meta (ctwa_clid), ou o contrário. Pegar só o
+            // último faria o identificador do outro canal sumir, e o canal
+            // ficaria sem conversão sem ninguém notar. Cada destino procura o
+            // identificador que entende.
+            const { data: cliques } = await admin
               .from('whatsapp_ad_clicks')
-              .select('ctwa_clid')
+              .select('ctwa_clid, gclid, clicked_at')
               .eq('lead_id', d.lead_id)
-              .not('ctwa_clid', 'is', null)
               .order('clicked_at', { ascending: false })
-              .limit(1).maybeSingle();
+              .limit(10);
+
+            const historico = (cliques ?? []) as Array<{ ctwa_clid: string | null; gclid: string | null }>;
+            const clique = {
+              ctwa_clid: historico.find((c) => c.ctwa_clid)?.ctwa_clid ?? null,
+              gclid: historico.find((c) => c.gclid)?.gclid ?? null,
+            };
 
             let metaResultado: unknown = null;
             if (mapa.meta_event_name) {
@@ -115,6 +127,34 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 resposta: r.response ?? null,
               };
               if (r.ok) enviados++; else falhas++;
+            }
+
+            // Google Ads: conversão offline da mesma transição.
+            //
+            // O `gclid` vem do clique do redirect — é a porta do Google, que não
+            // tem botão nativo de WhatsApp. Cai para o `leads.gclid` quando o
+            // lead entrou por outro caminho (formulário, quiz).
+            let googleResultado: unknown = null;
+            if (mapa.google_conversion_action) {
+              const { enviarConversaoGoogle } = await import('@/lib/google-ads.server');
+              const g = await enviarConversaoGoogle({
+                companyId: d.company_id,
+                tipo: mapa.send_deal_value ? 'sale' : 'lead',
+                leadId: d.lead_id,
+                acao: mapa.google_conversion_action,
+                // A chave de dedup é o evento, não o lead: com conversão por
+                // etapa o mesmo lead converte várias vezes, e usar o leadId faria
+                // o Google tratar todas como a mesma e descartar as seguintes.
+                orderId: d.event_id,
+                gclid: clique?.gclid ?? lead?.gclid ?? null,
+                email: lead?.email ?? null,
+                phone: lead?.phone ?? null,
+                quando: new Date(d.occurred_at),
+                valor: mapa.send_deal_value && lead?.deal_value ? Number(lead.deal_value) : null,
+                moeda: lead?.deal_currency || 'BRL',
+              });
+              googleResultado = { status: g.status, detalhe: g.detalhe ?? null };
+              if (g.status === 'enviada') enviados++; else falhas++;
             }
 
             // Espelha a etapa como etiqueta no WhatsApp.
@@ -151,14 +191,25 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
             // conveniência operacional; a conversão é o que não pode se perder.
             // Marcar o despacho como falho porque a etiqueta não colou faria o
             // evento ser reenviado para a Meta — e evento duplicado ensina errado.
-            const ok = !mapa.meta_event_name || (metaResultado as any)?.status === 'sent';
+            // Sucesso exige que CADA destino configurado tenha dado certo. Um
+            // "sent" com o Google falhando esconderia metade do problema, e é
+            // justamente a metade que o gestor de mídia precisa saber.
+            const metaOk = !mapa.meta_event_name || (metaResultado as any)?.status === 'sent';
+            const googleOk = !mapa.google_conversion_action || (googleResultado as any)?.status === 'enviada';
+            const ok = metaOk && googleOk;
             await admin.from('conversion_dispatches').update({
               status: ok ? 'sent' : 'failed',
               meta_result: metaResultado,
+              google_result: googleResultado,
               label_result: etiquetaResultado,
               attempts: (d.attempts ?? 0) + 1,
               dispatched_at: new Date().toISOString(),
-              last_error: ok ? null : String((metaResultado as any)?.erro ?? 'falha no envio'),
+              last_error: ok
+                ? null
+                : [
+                    metaOk ? null : `Meta: ${(metaResultado as any)?.erro ?? 'falhou'}`,
+                    googleOk ? null : `Google: ${(googleResultado as any)?.detalhe ?? (googleResultado as any)?.status ?? 'falhou'}`,
+                  ].filter(Boolean).join(' · '),
             }).eq('id', d.id);
 
             console.info(JSON.stringify({
@@ -167,6 +218,8 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               com_ctwa_clid: Boolean(clique?.ctwa_clid),
               com_page_id: Boolean(pagina?.page_id),
               etiqueta: (etiquetaResultado as any)?.status ?? null,
+              google: (googleResultado as any)?.status ?? null,
+              com_gclid: Boolean(clique?.gclid ?? lead?.gclid),
             }));
           } catch (err) {
             falhas++;

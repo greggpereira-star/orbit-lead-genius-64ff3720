@@ -168,6 +168,26 @@ export interface EnvioConversao {
   quando?: Date;
   valor?: number | null;
   moeda?: string | null;
+
+  /**
+   * Ação de conversão específica, vinda do mapeamento por etapa.
+   *
+   * Sem isto só existem duas conversões por empresa, 'lead' e 'sale', e o funil
+   * de cada nicho tem mais degraus que isso — visita agendada, proposta,
+   * contrato. Quando vem preenchida, vence a escolha do nível da empresa.
+   */
+  acao?: string | null;
+
+  /**
+   * Chave de deduplicação no Google.
+   *
+   * O padrão é o `leadId`, e isso basta quando há uma conversão por lead. Com
+   * conversão por ETAPA o mesmo lead converte várias vezes — qualificou, depois
+   * agendou, depois comprou — e usar o leadId faria o Google tratar todas como a
+   * mesma e descartar as seguintes. O despachante manda aqui o id do evento,
+   * que é determinístico por (lead, etapa).
+   */
+  orderId?: string | null;
 }
 
 export interface ResultadoConversao {
@@ -192,7 +212,9 @@ export async function enviarConversaoGoogle(envio: EnvioConversao): Promise<Resu
   if (!devToken) return { status: 'sem_configuracao', detalhe: 'developer token ausente' };
 
   const config = await getConfigGoogleAds(envio.companyId);
-  const acao = envio.tipo === 'lead' ? config?.lead_conversion_action : config?.sale_conversion_action;
+  // A ação do mapeamento por etapa vence a do nível da empresa.
+  const acao = envio.acao?.trim()
+    || (envio.tipo === 'lead' ? config?.lead_conversion_action : config?.sale_conversion_action);
   if (!config?.customer_id || !acao) {
     return { status: 'sem_configuracao', detalhe: `conversão de ${envio.tipo} não escolhida` };
   }
@@ -214,7 +236,7 @@ export async function enviarConversaoGoogle(envio: EnvioConversao): Promise<Resu
     conversionAction: acao,
     conversionDateTime: dataHoraGoogle(envio.quando ?? new Date()),
     // O mesmo lead nunca conta duas vezes, nem se o envio for repetido.
-    orderId: `${envio.tipo}-${envio.leadId}`,
+    orderId: envio.orderId?.trim() || `${envio.tipo}-${envio.leadId}`,
   };
   if (envio.gclid) conversao.gclid = envio.gclid;
   if (identificadores.length) conversao.userIdentifiers = identificadores;
