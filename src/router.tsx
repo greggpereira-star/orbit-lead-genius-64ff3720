@@ -62,7 +62,7 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
-    defaultErrorComponent: DefaultError,
+    defaultErrorComponent: DefaultError as never,
     defaultNotFoundComponent: DefaultNotFound,
   });
 
