@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { toast } from 'sonner';
-import { AlertCircle, Tag } from 'lucide-react';
+import { AlertCircle, Tag, FlaskConical, Radio } from 'lucide-react';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { listStages } from '@/modules/crm/services/stageService';
 import {
   EVENTOS_META, SO_MEDIR, EVENTO_PERSONALIZADO,
   listConversionMappings, salvarConversionMapping,
+  lerModoEnsaio, salvarModoEnsaio,
   type ConversionMapping,
 } from '@/modules/crm/services/conversionMappingService';
 import { listarEtiquetasDaEmpresa } from '@/lib/whatsapp-labels.functions';
@@ -56,6 +57,24 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
     staleTime: 60_000,
   });
 
+  const ensaio = useQuery({
+    queryKey: ['modo-ensaio', companyId],
+    queryFn: () => lerModoEnsaio(companyId),
+    enabled: Boolean(companyId),
+  });
+  const trocarEnsaio = useMutation({
+    mutationFn: (ligado: boolean) => salvarModoEnsaio(companyId, ligado),
+    onSuccess: (_, ligado) => {
+      qc.invalidateQueries({ queryKey: ['modo-ensaio', companyId] });
+      toast.success(ligado ? 'Ensaio ligado' : 'Ensaio desligado', {
+        description: ligado
+          ? 'Nada mais sai para a Meta nem para o Google até você desligar.'
+          : 'As próximas conversões vão de verdade para a Meta e o Google.',
+      });
+    },
+    onError: (e: Error) => toast.error('Não deu para trocar o modo', { description: e.message }),
+  });
+
   const porEtapa = useMemo(() => {
     const m = new Map<string, ConversionMapping>();
     for (const x of mappings.data ?? []) m.set(x.stage_id, x);
@@ -78,8 +97,45 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
   const listaEtiquetas = etiquetas.data?.etiquetas ?? [];
   const semEtiquetas = etiquetas.data && !etiquetas.data.ok;
 
+  const emEnsaio = ensaio.data === true;
+
   return (
     <div className="space-y-3">
+      {/* Primeira coisa na aba, de propósito. Quem abre esta tela está a um
+          clique de mandar conversão real para a campanha do cliente, e o
+          estado precisa ser legível antes disso — não depois. */}
+      <div
+        className={`flex items-start justify-between gap-4 rounded-lg border p-3 ${
+          emEnsaio
+            ? 'border-amber-500/40 bg-amber-500/10'
+            : 'border-emerald-600/30 bg-emerald-600/5'
+        }`}
+      >
+        <div className="flex items-start gap-2.5">
+          {emEnsaio ? (
+            <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          ) : (
+            <Radio className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          )}
+          <div className="space-y-1 text-sm">
+            <p className="font-medium">
+              {emEnsaio ? 'Modo de ensaio ligado' : 'Enviando de verdade'}
+            </p>
+            <p className="text-muted-foreground">
+              {emEnsaio
+                ? 'As etapas montam o evento e registram o que teria sido enviado, mas nada chega na Meta nem no Google. A etiqueta no WhatsApp continua sendo aplicada, para você conferir o resultado visível. Nenhuma campanha é afetada.'
+                : 'Cada etapa configurada manda conversão real para a Meta e o Google, e isso entra na otimização da campanha. Ligue o ensaio antes de testar movendo cartões.'}
+            </p>
+          </div>
+        </div>
+        <Switch
+          checked={emEnsaio}
+          disabled={ensaio.isLoading || trocarEnsaio.isPending}
+          onCheckedChange={(v) => trocarEnsaio.mutate(v)}
+          aria-label="Modo de ensaio"
+        />
+      </div>
+
       <div className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
         <p className="text-muted-foreground">
           Cada etapa pode avisar a Meta e o Google quando um lead chega nela. São eventos{' '}

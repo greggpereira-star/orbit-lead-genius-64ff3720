@@ -39,11 +39,11 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
         if (!pendentes?.length) return json({ processados: 0 });
 
         const { sendMetaCapiEvent } = await import('@/lib/meta-capi.server');
-        let enviados = 0, falhas = 0, pulados = 0;
+        let enviados = 0, falhas = 0, pulados = 0, ensaiados = 0;
 
         for (const d of pendentes as Array<Record<string, any>>) {
           try {
-            const [{ data: mapa }, { data: lead }] = await Promise.all([
+            const [{ data: mapa }, { data: lead }, { data: empresa }] = await Promise.all([
               admin.from('stage_conversion_mappings')
                 .select('meta_event_name, google_conversion_action, send_deal_value, whatsapp_label')
                 .eq('company_id', d.company_id).eq('stage_id', d.stage_id)
@@ -51,7 +51,16 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               admin.from('leads')
                 .select('email, phone, gclid, deal_value, deal_currency')
                 .eq('id', d.lead_id).maybeSingle(),
+              admin.from('companies')
+                .select('conversion_dry_run')
+                .eq('id', d.company_id).maybeSingle(),
             ]);
+
+            // Ensaio é por empresa e lido AQUI, no momento do envio — não no
+            // momento em que a transição entrou na fila. Quem desliga o ensaio
+            // quer que o próximo despacho valha, não que a fila acumulada de
+            // antes valha retroativamente.
+            const ensaio = empresa?.conversion_dry_run === true;
 
             // A configuração pode ter sido desligada entre enfileirar e
             // despachar. Pular é o certo: o usuário mudou de ideia.
@@ -116,6 +125,7 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 customData: mapa.send_deal_value && lead?.deal_value
                   ? { value: Number(lead.deal_value), currency: lead.deal_currency || 'BRL' }
                   : null,
+                dryRun: ensaio,
               });
               // Guarda a RESPOSTA da Meta, não só o código. Um "meta_http_400"
               // sozinho não diz se o problema é o evento, o identificador ou o
@@ -126,7 +136,8 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 erro: r.error ?? null,
                 resposta: r.response ?? null,
               };
-              if (r.ok) enviados++; else falhas++;
+              if (r.status === 'rehearsal') ensaiados++;
+              else if (r.ok) enviados++; else falhas++;
             }
 
             // Google Ads: conversão offline da mesma transição.
@@ -152,9 +163,11 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 quando: new Date(d.occurred_at),
                 valor: mapa.send_deal_value && lead?.deal_value ? Number(lead.deal_value) : null,
                 moeda: lead?.deal_currency || 'BRL',
+                ensaio,
               });
-              googleResultado = { status: g.status, detalhe: g.detalhe ?? null };
-              if (g.status === 'enviada') enviados++; else falhas++;
+              googleResultado = { status: g.status, detalhe: g.detalhe ?? null, conversao: g.conversao ?? null };
+              if (g.status === 'enviada') enviados++;
+              else if (g.status === 'ensaio') ensaiados++; else falhas++;
             }
 
             // Espelha a etapa como etiqueta no WhatsApp.
@@ -194,11 +207,16 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
             // Sucesso exige que CADA destino configurado tenha dado certo. Um
             // "sent" com o Google falhando esconderia metade do problema, e é
             // justamente a metade que o gestor de mídia precisa saber.
-            const metaOk = !mapa.meta_event_name || (metaResultado as any)?.status === 'sent';
-            const googleOk = !mapa.google_conversion_action || (googleResultado as any)?.status === 'enviada';
+            const metaOk = !mapa.meta_event_name
+              || ['sent', 'rehearsal'].includes((metaResultado as any)?.status);
+            const googleOk = !mapa.google_conversion_action
+              || ['enviada', 'ensaio'].includes((googleResultado as any)?.status);
             const ok = metaOk && googleOk;
+            // `rehearsal` em vez de `sent`: o relatório conta `sent`, e marcar
+            // ensaio como envio diria que a conversão chegou na Meta quando
+            // ela nunca saiu desta máquina.
             await admin.from('conversion_dispatches').update({
-              status: ok ? 'sent' : 'failed',
+              status: ok ? (ensaio ? 'rehearsal' : 'sent') : 'failed',
               meta_result: metaResultado,
               google_result: googleResultado,
               label_result: etiquetaResultado,
@@ -231,7 +249,7 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
           }
         }
 
-        return json({ processados: pendentes.length, enviados, falhas, pulados });
+        return json({ processados: pendentes.length, enviados, falhas, pulados, ensaiados });
       },
     },
   },

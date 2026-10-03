@@ -17,14 +17,6 @@ export interface ConversionMapping {
   is_active: boolean;
 }
 
-/**
- * Eventos que a Meta aceita em mensageria.
- *
- * `Lead` NÃO está aqui, e a ausência é proposital: a Meta recusa esse nome
- * quando a fonte é `business_messaging`. Oferecer na lista geraria uma
- * configuração que falha só na hora do envio, dias depois, sem ninguém ligar
- * uma coisa à outra.
- */
 /** Marca a etapa como conversão para o relatório, sem enviar nada para mídia. */
 export const SO_MEDIR = '__so_medir__';
 
@@ -168,4 +160,30 @@ export async function salvarConversionMapping(input: {
       { onConflict: 'company_id,stage_id' },
     );
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Modo de ensaio da empresa.
+ *
+ * Existe porque o pixel apontado é o de produção do cliente: conferir a corrente
+ * mexendo um cartão manda conversão real para dentro do aprendizado da campanha,
+ * e aprendizado sujo não tem desfazer. O código de teste da Meta cobre só a
+ * Meta — o Google Ads não tem equivalente.
+ */
+export async function lerModoEnsaio(companyId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('conversion_dry_run')
+    .eq('id', companyId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { conversion_dry_run?: boolean } | null)?.conversion_dry_run === true;
+}
+
+export async function salvarModoEnsaio(companyId: string, ligado: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('companies')
+    .update({ conversion_dry_run: ligado })
+    .eq('id', companyId);
+  if (error) throw error;
 }

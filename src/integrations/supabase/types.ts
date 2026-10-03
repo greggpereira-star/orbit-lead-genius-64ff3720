@@ -338,6 +338,7 @@ export type Database = {
       companies: {
         Row: {
           chat_allowed_domains: string[]
+          conversion_dry_run: boolean
           created_at: string
           created_by: string | null
           id: string
@@ -347,6 +348,7 @@ export type Database = {
         }
         Insert: {
           chat_allowed_domains?: string[]
+          conversion_dry_run?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -356,6 +358,7 @@ export type Database = {
         }
         Update: {
           chat_allowed_domains?: string[]
+          conversion_dry_run?: boolean
           created_at?: string
           created_by?: string | null
           id?: string

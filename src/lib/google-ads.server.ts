@@ -188,11 +188,16 @@ export interface EnvioConversao {
    * que é determinístico por (lead, etapa).
    */
   orderId?: string | null;
+
+  /** Ensaio: monta a conversão e devolve sem chamar o Google. */
+  ensaio?: boolean;
 }
 
 export interface ResultadoConversao {
-  status: 'enviada' | 'sem_configuracao' | 'sem_identificador' | 'falhou';
+  status: 'enviada' | 'sem_configuracao' | 'sem_identificador' | 'falhou' | 'ensaio';
   detalhe?: string;
+  /** Preenchido só no ensaio: a conversão que teria subido. */
+  conversao?: Record<string, unknown>;
 }
 
 /**
@@ -258,6 +263,12 @@ export async function enviarConversaoGoogle(envio: EnvioConversao): Promise<Resu
   if (envio.tipo === 'sale' && envio.valor != null) {
     conversao.conversionValue = envio.valor;
     conversao.currencyCode = envio.moeda ?? 'BRL';
+  }
+
+  // O Google Ads não tem código de teste como a Meta: uma conversão offline
+  // enviada já entra na conta. Por isso o ensaio para aqui.
+  if (envio.ensaio) {
+    return { status: 'ensaio', detalhe: 'nao enviada: modo de ensaio', conversao };
   }
 
   try {

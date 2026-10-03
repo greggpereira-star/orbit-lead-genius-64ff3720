@@ -51,11 +51,21 @@ export interface MetaCapiInput {
     /** A página do Facebook dona da conversa. */
     pageId?: string | null;
   } | null;
+
+  /**
+   * Ensaio: monta o payload e devolve sem chamar a Meta.
+   *
+   * Serve para conferir a corrente inteira contra um pixel de produção sem
+   * mandar conversão para dentro do aprendizado da campanha. Devolve o payload
+   * REAL — o mesmo objeto que iria no corpo do POST — porque conferir contra
+   * uma reconstrução só provaria que a reconstrução está certa.
+   */
+  dryRun?: boolean;
 }
 
 export interface MetaCapiResult {
   ok: boolean;
-  status: 'sent' | 'skipped_no_integration' | 'failed';
+  status: 'sent' | 'skipped_no_integration' | 'failed' | 'rehearsal';
   httpStatus?: number;
   response?: unknown;
   error?: string;
@@ -141,6 +151,13 @@ export async function sendMetaCapiEvent(input: MetaCapiInput): Promise<MetaCapiR
     ],
     ...(config.test_event_code ? { test_event_code: config.test_event_code } : {}),
   };
+
+  // Depois de montar, antes de enviar. Qualquer coisa acima — hash de
+  // telefone, escolha de action_source, ctwa_clid — já aconteceu e está
+  // visível no payload devolvido.
+  if (input.dryRun) {
+    return { ok: true, status: 'rehearsal', response: { ensaio: true, pixel_id: config.pixel_id, payload } };
+  }
 
   const url = `https://graph.facebook.com/v19.0/${config.pixel_id}/events?access_token=${encodeURIComponent(config.access_token!)}`;
 
