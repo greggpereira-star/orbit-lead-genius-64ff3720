@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Clock,
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
-  MessageCircle, ClipboardList, User, Radio, TrendingUp, XCircle, Zap, Tag as TagIcon,
+  MessageCircle, ClipboardList, User, Radio, TrendingUp, XCircle, Zap, CheckSquare, Tag as TagIcon,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
   ChevronDown, AlertTriangle, Sparkles, DollarSign, BarChart3, Home, CircleDot,
   PencilLine, MessagesSquare,
@@ -1199,13 +1199,13 @@ export function LeadDetailDialog({
             </TabsList>
 
             <ScrollArea className="min-h-0 flex-1">
-              <TabsContent value="visao-geral" className="m-0 sup-tonal">
+              <TabsContent value="visao-geral" className="m-0 sup-tonal @container">
   {/* Duas colunas independentes, não grade de linhas.
       Numa grade os cartões precisam alinhar em linha, e quando um termina antes
       abre um vão branco embaixo — era isso que fazia a versão de nove cartões
       parecer desalinhada. Colunas independentes fluem cada uma no seu ritmo.
       Esquerda: o que se LÊ. Direita: o que se CONSULTA e o que se FAZ. */}
-  <div className="grid gap-3.5 p-5 xl:grid-cols-[minmax(0,1fr)_21rem]">
+  <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
     <div className="flex min-w-0 flex-col gap-3.5">
       <CartaoFicha
         icone={<Sparkles className="h-4 w-4" />}
@@ -1389,133 +1389,137 @@ export function LeadDetailDialog({
 </TabsContent>
 
 
-              <TabsContent value="contato" className="m-0 sup-tonal">
-  {/* Aqui os campos são editáveis — e só aqui. Na visão geral eles são leitura
-      com um atalho para cá; dois lugares de escrita com as mesmas regras
-      acabam divergindo. */}
-  <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
-    <CartaoFicha icone={<User className="h-4 w-4" />} titulo="Quem cuida" descricao="Responsável por este lead">
-      <OwnerPicker
-        leadId={lead.id}
-        companyId={lead.company_id}
-        responsavelAtual={lead.assigned_to ?? null}
-      />
-    </CartaoFicha>
-
-    <CartaoFicha icone={<Phone className="h-4 w-4" />} titulo="Como falar com ele" descricao="Clique em qualquer campo para editar">
-      <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-        <Field
-          icon={<Phone className="h-4 w-4" />}
-          label="Telefone"
-          value={lead.phone}
-          emphasis
-          placeholder="Sem telefone"
-          onSave={(phone) => editMutation.mutate({ phone })}
-          action={lead.phone ? {
-            href: `tel:${lead.phone.replace(/[^\d+]/g, "")}`,
-            icon: <Phone className="h-3.5 w-3.5" />,
-            title: "Ligar",
-          } : undefined}
-        />
-        <Field
-          icon={<Mail className="h-4 w-4" />}
-          label="E-mail"
-          value={lead.email}
-          placeholder="Sem e-mail"
-          onSave={(email) => editMutation.mutate({ email })}
-          action={lead.email ? {
-            href: `mailto:${lead.email}`,
-            icon: <Mail className="h-3.5 w-3.5" />,
-            title: "Enviar e-mail",
-          } : undefined}
-        />
-        <Field
-          icon={<MapPin className="h-4 w-4" />}
-          label="Cidade (pelo DDD)"
-          value={city ? String(city) : null}
-          placeholder="Sem cidade"
-          onSave={(cityName) => editMutation.mutate({ city: cityName })}
-        />
-        <Field
-          icon={<CircleDollarSign className="h-4 w-4" />}
-          label="Valor da venda"
-          value={(() => {
-            const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
-            return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
-              style: 'currency', currency: l.deal_currency ?? 'BRL',
-            });
-          })()}
-          placeholder="Sem valor"
-          emphasis
-          onSave={(texto) => salvarValor(texto)}
-        />
-      </div>
-    </CartaoFicha>
-
-    <CartaoFicha icone={<Radio className="h-4 w-4" />} titulo="De onde veio" descricao="Vem da integração que trouxe o lead" >
-      {/* Leitura: origem e canal vêm da integração que trouxe o lead, e
-          reescrevê-los à mão criaria um dado que não corresponde a nada. */}
-      <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-        <div className="min-w-0">
-          <dt className="text-[11px] text-muted-foreground">{originLabel}</dt>
-          <dd className="truncate text-sm font-medium" title={origin ?? undefined}>
-            <ValorOuVazio valor={origin} vazio="Sem origem" />
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-[11px] text-muted-foreground">Canal</dt>
-          <dd className="truncate text-sm font-medium">
-            <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-[11px] text-muted-foreground">Entrou em</dt>
-          <dd className="truncate text-sm font-medium tabular-nums">
-            {created}
-            {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
-          </dd>
-        </div>
-      </dl>
-    </CartaoFicha>
-  </div>
-</TabsContent>
-
-              <TabsContent value="qualificacao" className="m-0 sup-tonal">
-                <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
-                  {answers.length === 0 ? (
+              <TabsContent value="contato" className="m-0 sup-tonal @container">
+                <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    {/* Os campos são editáveis aqui e só aqui. Na visão geral
+                        eles são leitura com um atalho para cá; dois lugares de
+                        escrita com as mesmas regras acabam divergindo. */}
                     <CartaoFicha
-                      icone={<ClipboardList className="h-4 w-4" />}
-                      titulo="Qualificação"
+                      icone={<Phone className="h-4 w-4" />}
+                      titulo="Como falar com ele"
+                      descricao="Clique em qualquer campo para editar"
                     >
-                      <p className="text-sm text-muted-foreground">
-                        Este lead não trouxe respostas de formulário. Quando trouxer, elas aparecem aqui.
-                      </p>
+                      <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                        <Field
+                          icon={<Phone className="h-4 w-4" />}
+                          label="Telefone"
+                          value={lead.phone}
+                          emphasis
+                          placeholder="Sem telefone"
+                          onSave={(phone) => editMutation.mutate({ phone })}
+                          action={lead.phone ? {
+                            href: `tel:${lead.phone.replace(/[^\d+]/g, "")}`,
+                            icon: <Phone className="h-3.5 w-3.5" />,
+                            title: "Ligar",
+                          } : undefined}
+                        />
+                        <Field
+                          icon={<Mail className="h-4 w-4" />}
+                          label="E-mail"
+                          value={lead.email}
+                          placeholder="Sem e-mail"
+                          onSave={(email) => editMutation.mutate({ email })}
+                          action={lead.email ? {
+                            href: `mailto:${lead.email}`,
+                            icon: <Mail className="h-3.5 w-3.5" />,
+                            title: "Enviar e-mail",
+                          } : undefined}
+                        />
+                        <Field
+                          icon={<MapPin className="h-4 w-4" />}
+                          label="Cidade (pelo DDD)"
+                          value={city ? String(city) : null}
+                          placeholder="Sem cidade"
+                          onSave={(cityName) => editMutation.mutate({ city: cityName })}
+                        />
+                        <Field
+                          icon={<CircleDollarSign className="h-4 w-4" />}
+                          label="Valor da venda"
+                          value={(() => {
+                            const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
+                            return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
+                              style: 'currency', currency: l.deal_currency ?? 'BRL',
+                            });
+                          })()}
+                          placeholder="Sem valor"
+                          emphasis
+                          onSave={(texto) => salvarValor(texto)}
+                        />
+                      </div>
                     </CartaoFicha>
-                  ) : (
-                    <>
-                      {summary && (
-                        <CartaoFicha
-                          icone={<Sparkles className="h-4 w-4" />}
-                          titulo="Resumo do perfil"
-                          descricao="Montado a partir das respostas — não há IA no projeto"
-                          assunto="acento"
-                        >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">{summary}</p>
-                            <CompletenessMeter data={completeness} />
-                          </div>
-                        </CartaoFicha>
-                      )}
 
-                      <CartaoFicha
-                        icone={<TrendingUp className="h-4 w-4" />}
-                        titulo="Respostas do formulário"
-                        descricao="O motivo de ligar para esta pessoa"
-                      >
-                        {/* Uma linha por resposta, não um cartão por resposta.
-                            Cartão dentro de cartão era a caixa-em-caixa que
-                            deixava a tela pesada; aqui o que separa é a régua
-                            e o ícone, que já dá o assunto de relance. */}
+                    <CartaoFicha
+                      icone={<Zap className="h-4 w-4" />}
+                      titulo="Falar agora"
+                    >
+                      <LeadQuickActions
+                        leadId={lead.id}
+                        companyId={lead.company_id}
+                        email={lead.email}
+                        whatsapp={wa}
+                      />
+                    </CartaoFicha>
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<User className="h-4 w-4" />}
+                      titulo="Quem cuida"
+                      descricao="Responsável por este lead"
+                    >
+                      <OwnerPicker
+                        leadId={lead.id}
+                        companyId={lead.company_id}
+                        responsavelAtual={lead.assigned_to ?? null}
+                      />
+                    </CartaoFicha>
+
+                    {/* Leitura: origem e canal vêm da integração que trouxe o
+                        lead, e reescrevê-los à mão criaria um dado que não
+                        corresponde a nada. */}
+                    <CartaoFicha
+                      icone={<Radio className="h-4 w-4" />}
+                      titulo="De onde veio"
+                      descricao="Da integração que trouxe o lead"
+                    >
+                      <div className="space-y-2.5">
+                        <PropFicha
+                          icone={<ClipboardList className="h-3.5 w-3.5" />}
+                          rotulo={originLabel}
+                          acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
+                        >
+                          <ValorOuVazio valor={origin} vazio="Sem origem" />
+                        </PropFicha>
+                        <PropFicha icone={<Radio className="h-3.5 w-3.5" />} rotulo="Canal">
+                          <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
+                        </PropFicha>
+                        <PropFicha icone={<CalendarClock className="h-3.5 w-3.5" />} rotulo="Entrou em">
+                          <span className="block truncate tabular-nums">{created}</span>
+                        </PropFicha>
+                      </div>
+                    </CartaoFicha>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="qualificacao" className="m-0 sup-tonal @container">
+                <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<TrendingUp className="h-4 w-4" />}
+                      titulo="Respostas do formulário"
+                      descricao="O motivo de ligar para esta pessoa"
+                    >
+                      {answers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Este lead não trouxe respostas de formulário. Quando trouxer, elas aparecem aqui.
+                        </p>
+                      ) : (
+                        /* Uma linha por resposta, não um cartão por resposta:
+                           cartão dentro de cartão era a caixa-em-caixa que
+                           pesava a tela. O que separa é a régua, e o ícone já
+                           dá o assunto de relance. */
                         <dl className="divide-y">
                           {answers.map((a) => {
                             const k = ANSWER_KIND_STYLE[a.kind];
@@ -1538,96 +1542,129 @@ export function LeadDetailDialog({
                             );
                           })}
                         </dl>
-                      </CartaoFicha>
-                    </>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="historico" className="m-0 sup-tonal">
-                <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
-                  <CartaoFicha
-                    icone={<Clock className="h-4 w-4" />}
-                    titulo="Caminho no funil"
-                    descricao="Gravado por gatilho desde 3 de outubro de 2026"
-                  >
-                    <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} semMoldura />
-                  </CartaoFicha>
-
-                  {tracking.length === 0 && metaInfo.length === 0 ? (
-                    <CartaoFicha icone={<Radio className="h-4 w-4" />} titulo="Rastreamento">
-                      <p className="text-sm text-muted-foreground">
-                        Este lead chegou sem parâmetros de campanha.
-                      </p>
+                      )}
                     </CartaoFicha>
-                  ) : (
-                    <>
-                      {tracking.length > 0 && (
-                        <CartaoFicha
-                          icone={<Radio className="h-4 w-4" />}
-                          titulo="Campanha"
-                          descricao="Parâmetros que vieram com o lead"
-                        >
-                          <dl className="divide-y">
-                            {tracking.map((t) => (
-                              <div key={t.label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-3 py-2 first:pt-0 last:pb-0">
-                                <dt className="text-sm text-muted-foreground">{t.label}</dt>
-                                <dd className="min-w-0 break-words text-sm font-medium">{String(t.value)}</dd>
-                              </div>
-                            ))}
-                          </dl>
-                        </CartaoFicha>
-                      )}
-                      {metaInfo.length > 0 && (
-                        <CartaoFicha
-                          icone={<ClipboardList className="h-4 w-4" />}
-                          titulo="Meta Lead Ads"
-                          descricao="Identificadores do formulário de origem"
-                        >
-                          <dl className="divide-y">
-                            {metaInfo.map((t) => (
-                              <div key={t.label} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-3 py-2 first:pt-0 last:pb-0">
-                                <dt className="text-sm text-muted-foreground">{t.label}</dt>
-                                {/* Mono porque são identificadores literais, não rótulos. */}
-                                <dd className="min-w-0 break-words font-mono text-xs">{String(t.value)}</dd>
-                              </div>
-                            ))}
-                          </dl>
-                        </CartaoFicha>
-                      )}
-                    </>
-                  )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<Sparkles className="h-4 w-4" />}
+                      titulo="Resumo do perfil"
+                      descricao="Montado a partir das respostas"
+                      assunto="acento"
+                    >
+                      <div className="space-y-4">
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {summary || 'Este lead não trouxe respostas de formulário.'}
+                        </p>
+                        <CompletenessMeter data={completeness} />
+                      </div>
+                    </CartaoFicha>
+                  </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="anotacoes" className="m-0 sup-tonal">
-                <div className="mx-auto max-w-[48rem] p-5">
-                  <CartaoFicha
-                    icone={<StickyNote className="h-4 w-4" />}
-                    titulo="Anotações"
-                    descricao="Anotação com data vira compromisso"
-                  >
-                    <NotesTab leadId={lead.id} companyId={lead.company_id} />
-                  </CartaoFicha>
+              <TabsContent value="historico" className="m-0 sup-tonal @container">
+                <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<Clock className="h-4 w-4" />}
+                      titulo="Caminho no funil"
+                      descricao="Gravado por gatilho desde 3 de outubro de 2026"
+                    >
+                      <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} semMoldura />
+                    </CartaoFicha>
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    {tracking.length === 0 && metaInfo.length === 0 ? (
+                      <CartaoFicha icone={<Radio className="h-4 w-4" />} titulo="Rastreamento">
+                        <p className="text-sm text-muted-foreground">
+                          Este lead chegou sem parâmetros de campanha.
+                        </p>
+                      </CartaoFicha>
+                    ) : (
+                      <>
+                        {tracking.length > 0 && (
+                          <CartaoFicha
+                            icone={<Radio className="h-4 w-4" />}
+                            titulo="Campanha"
+                            descricao="Parâmetros que vieram com o lead"
+                          >
+                            <div className="space-y-2.5">
+                              {tracking.map((t) => (
+                                <PropFicha key={t.label} rotulo={t.label}>
+                                  <span className="block break-words">{String(t.value)}</span>
+                                </PropFicha>
+                              ))}
+                            </div>
+                          </CartaoFicha>
+                        )}
+                        {metaInfo.length > 0 && (
+                          <CartaoFicha
+                            icone={<ClipboardList className="h-4 w-4" />}
+                            titulo="Meta Lead Ads"
+                            descricao="Identificadores do formulário"
+                          >
+                            <div className="space-y-2.5">
+                              {metaInfo.map((t) => (
+                                <PropFicha key={t.label} rotulo={t.label}>
+                                  {/* Mono: são identificadores literais, não rótulos. */}
+                                  <span className="block break-words font-mono text-xs">{String(t.value)}</span>
+                                </PropFicha>
+                              ))}
+                            </div>
+                          </CartaoFicha>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="arquivos" className="m-0 sup-tonal">
-                <div className="mx-auto flex max-w-[48rem] flex-col gap-3.5 p-5">
-                  <CartaoFicha
-                    icone={<Paperclip className="h-4 w-4" />}
-                    titulo="Arquivos"
-                    descricao="Documentos presos a este lead"
-                  >
-                    <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
-                  </CartaoFicha>
-                  <CartaoFicha
-                    icone={<TagIcon className="h-4 w-4" />}
-                    titulo="Etiquetas"
-                    descricao="Para organizar e segmentar"
-                  >
-                    <TagsTab leadId={lead.id} companyId={lead.company_id} />
-                  </CartaoFicha>
+              <TabsContent value="anotacoes" className="m-0 sup-tonal @container">
+                <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<StickyNote className="h-4 w-4" />}
+                      titulo="Anotações"
+                      descricao="Anotação com data vira compromisso"
+                    >
+                      <NotesTab leadId={lead.id} companyId={lead.company_id} />
+                    </CartaoFicha>
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    {/* O que está agendado fica ao lado do que se escreve: é a
+                        mesma tabela, vista pelo lado do prazo. */}
+                    <CartaoFicha icone={<CheckSquare className="h-4 w-4" />} titulo="Próximo passo">
+                      <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
+                    </CartaoFicha>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="arquivos" className="m-0 sup-tonal @container">
+                <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<Paperclip className="h-4 w-4" />}
+                      titulo="Arquivos"
+                      descricao="Documentos presos a este lead"
+                    >
+                      <AttachmentsTab leadId={lead.id} companyId={lead.company_id} />
+                    </CartaoFicha>
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<TagIcon className="h-4 w-4" />}
+                      titulo="Etiquetas"
+                      descricao="Para organizar e segmentar"
+                    >
+                      <TagsTab leadId={lead.id} companyId={lead.company_id} />
+                    </CartaoFicha>
+                  </div>
                 </div>
               </TabsContent>
             </ScrollArea>
