@@ -338,27 +338,33 @@ export type Database = {
       companies: {
         Row: {
           chat_allowed_domains: string[]
+          conversion_dry_run: boolean
           created_at: string
           created_by: string | null
           id: string
           name: string
           slug: string
+          subdomain: string | null
         }
         Insert: {
           chat_allowed_domains?: string[]
+          conversion_dry_run?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           name: string
           slug: string
+          subdomain?: string | null
         }
         Update: {
           chat_allowed_domains?: string[]
+          conversion_dry_run?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string
           slug?: string
+          subdomain?: string | null
         }
         Relationships: []
       }
@@ -2075,6 +2081,8 @@ export type Database = {
           lead_score: number | null
           lead_temperature: string | null
           location_info: Json | null
+          loss_reason_id: string | null
+          lost_notes: string | null
           metadata: Json | null
           name: string | null
           phone: string | null
@@ -2108,6 +2116,8 @@ export type Database = {
           lead_score?: number | null
           lead_temperature?: string | null
           location_info?: Json | null
+          loss_reason_id?: string | null
+          lost_notes?: string | null
           metadata?: Json | null
           name?: string | null
           phone?: string | null
@@ -2141,6 +2151,8 @@ export type Database = {
           lead_score?: number | null
           lead_temperature?: string | null
           location_info?: Json | null
+          loss_reason_id?: string | null
+          lost_notes?: string | null
           metadata?: Json | null
           name?: string | null
           phone?: string | null
@@ -3600,11 +3612,13 @@ export type Database = {
         Args: { p_name: string; p_slug: string; p_user_id: string }
         Returns: {
           chat_allowed_domains: string[]
+          conversion_dry_run: boolean
           created_at: string
           created_by: string | null
           id: string
           name: string
           slug: string
+          subdomain: string | null
         }
         SetofOptions: {
           from: "*"
