@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { toast } from 'sonner';
@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { listStages } from '@/modules/crm/services/stageService';
 import {
-  EVENTOS_META, SO_MEDIR, listConversionMappings, salvarConversionMapping,
+  EVENTOS_META, SO_MEDIR, EVENTO_PERSONALIZADO,
+  listConversionMappings, salvarConversionMapping,
   type ConversionMapping,
 } from '@/modules/crm/services/conversionMappingService';
 import { listarEtiquetasDaEmpresa } from '@/lib/whatsapp-labels.functions';
@@ -26,6 +27,17 @@ import { listarEtiquetasDaEmpresa } from '@/lib/whatsapp-labels.functions';
 export function ConversionSettingsTable({ companyId }: { companyId: string }) {
   const qc = useQueryClient();
   const buscarEtiquetas = useServerFn(listarEtiquetasDaEmpresa);
+
+  // Etapas em que a pessoa escolheu "outro evento" e ainda não digitou o nome.
+  // Sem isto, escolher a opção salvaria o valor interno como nome do evento.
+  const [escrevendo, setEscrevendo] = useState<Set<string>>(new Set());
+  const marcarEscrevendo = (stageId: string, ligado: boolean) =>
+    setEscrevendo((atual) => {
+      const proximo = new Set(atual);
+      if (ligado) proximo.add(stageId);
+      else proximo.delete(stageId);
+      return proximo;
+    });
 
   const stages = useQuery({
     queryKey: ['stages', companyId],
@@ -113,7 +125,13 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
           <tbody>
             {(stages.data ?? []).map((s) => {
               const m = porEtapa.get(s.id);
-              const evento = m ? (m.meta_event_name ?? SO_MEDIR) : '__nenhum__';
+              const salvo = m ? (m.meta_event_name ?? SO_MEDIR) : '__nenhum__';
+              const ehPadrao = EVENTOS_META.some((e) => e.valor === salvo);
+              // Evento salvo que não está na lista é personalizado — e precisa
+              // continuar aparecendo como tal ao reabrir a tela, senão o
+              // seletor voltaria vazio e a pessoa acharia que perdeu.
+              const personalizado = salvo !== '__nenhum__' && salvo !== SO_MEDIR && !ehPadrao;
+              const evento = personalizado || escrevendo.has(s.id) ? EVENTO_PERSONALIZADO : salvo;
               const etiqueta = m?.whatsapp_label ?? '';
               const valor = m?.send_deal_value ?? false;
               const envia = evento !== '__nenhum__' && evento !== SO_MEDIR;
@@ -130,7 +148,16 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                   <td className="py-2 pr-3">
                     <Select
                       value={evento}
-                      onValueChange={(v) => salvar.mutate({ stageId: s.id, evento: v, etiqueta: etiqueta || null, valor })}
+                      onValueChange={(v) => {
+                        if (v === EVENTO_PERSONALIZADO) {
+                          // Só abre o campo. Salvar agora gravaria o valor
+                          // interno como se fosse o nome do evento.
+                          marcarEscrevendo(s.id, true);
+                          return;
+                        }
+                        marcarEscrevendo(s.id, false);
+                        salvar.mutate({ stageId: s.id, evento: v, etiqueta: etiqueta || null, valor });
+                      }}
                     >
                       <SelectTrigger className="h-8 w-full" aria-label={`O que a etapa ${s.name} significa`}>
                         <SelectValue />
@@ -141,8 +168,31 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                         {EVENTOS_META.map((e) => (
                           <SelectItem key={e.valor} value={e.valor}>{e.rotulo}</SelectItem>
                         ))}
+                        {/* Nenhuma lista cobre todo nicho. "Matrícula",
+                            "orçamento aprovado", "laudo entregue" — o nome do
+                            degrau é do negócio, não da plataforma. */}
+                        <SelectItem value={EVENTO_PERSONALIZADO}>Outro evento (eu escrevo)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {evento === EVENTO_PERSONALIZADO && (
+                      <Input
+                        defaultValue={personalizado ? salvo : ''}
+                        placeholder="Nome do evento (ex.: ContratoEnviado)"
+                        className="mt-1.5 h-8 w-full"
+                        aria-label={`Nome do evento personalizado da etapa ${s.name}`}
+                        onBlur={(ev) => {
+                          // Sem espaço e sem acento: é um identificador que vai
+                          // para a API da Meta, não um rótulo de tela.
+                          const nome = ev.target.value
+                            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                            .replace(/[^A-Za-z0-9_]/g, '');
+                          if (nome && nome !== salvo) {
+                            marcarEscrevendo(s.id, false);
+                            salvar.mutate({ stageId: s.id, evento: nome, etiqueta: etiqueta || null, valor });
+                          }
+                        }}
+                      />
+                    )}
                     {/* A dúvida que o seletor sozinho não resolve é "isso manda
                         o quê, para onde". A frase embaixo responde sem exigir
                         que a pessoa abra a lista de novo. */}
@@ -151,7 +201,9 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                         ? 'Nada é enviado. É só um degrau do funil.'
                         : evento === SO_MEDIR
                           ? 'Conta como qualificado nos seus relatórios. Nada é enviado para a Meta nem para o Google.'
-                          : EVENTOS_META.find((e) => e.valor === evento)?.explica}
+                          : evento === EVENTO_PERSONALIZADO
+                            ? 'Para virar meta de otimização, crie uma Conversão personalizada com esse nome no Gerenciador de Eventos da Meta.'
+                            : EVENTOS_META.find((e) => e.valor === evento)?.explica}
                     </p>
                   </td>
 

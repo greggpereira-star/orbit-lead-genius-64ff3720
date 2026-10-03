@@ -28,26 +28,71 @@ export interface ConversionMapping {
 /** Marca a etapa como conversão para o relatório, sem enviar nada para mídia. */
 export const SO_MEDIR = '__so_medir__';
 
+/** Evento com nome livre, digitado pelo usuário. */
+export const EVENTO_PERSONALIZADO = '__personalizado__';
+
+/**
+ * Eventos padrão da Meta úteis num funil de lead.
+ *
+ * A lista anterior tinha cinco opções fixas e isso não cobria nicho nenhum:
+ * "contrato enviado" numa imobiliária, "orçamento aprovado" numa clínica,
+ * "matrícula" numa escola. A ordem aqui é a profundidade no funil, de raso para
+ * fundo, porque é assim que a pessoa pensa ao montar o degrau.
+ *
+ * `Lead` NÃO está aqui de propósito: a Meta recusa esse nome quando a origem é
+ * conversa de WhatsApp (`business_messaging`). `LeadSubmitted` é o equivalente
+ * aceito.
+ */
 export const EVENTOS_META = [
   {
-    valor: 'QualifiedLead',
-    rotulo: 'Lead qualificado',
-    explica: 'Envia QualifiedLead. Use no degrau em que você sabe que a pessoa tem perfil — é o evento que mais melhora a entrega.',
-  },
-  {
-    valor: 'Schedule',
-    rotulo: 'Agendamento',
-    explica: 'Envia Schedule. Para quando marca visita, avaliação ou reunião.',
+    valor: 'Contact',
+    rotulo: 'Contato iniciado',
+    explica: 'Envia Contact. A conversa começou — o degrau mais raso.',
   },
   {
     valor: 'LeadSubmitted',
     rotulo: 'Lead registrado',
-    explica: 'Envia LeadSubmitted. Só entrou no funil, ainda sem filtro.',
+    explica: 'Envia LeadSubmitted. Entrou no funil, ainda sem filtro.',
   },
   {
-    valor: 'Contact',
-    rotulo: 'Contato iniciado',
-    explica: 'Envia Contact. A conversa começou — o evento mais raso.',
+    valor: 'CompleteRegistration',
+    rotulo: 'Cadastro completo',
+    explica: 'Envia CompleteRegistration. Preencheu os dados que você precisa.',
+  },
+  {
+    valor: 'QualifiedLead',
+    rotulo: 'Lead qualificado',
+    explica: 'Envia QualifiedLead. O degrau em que você sabe que a pessoa tem perfil — costuma ser o que mais melhora a entrega.',
+  },
+  {
+    valor: 'Schedule',
+    rotulo: 'Agendamento',
+    explica: 'Envia Schedule. Marcou visita, avaliação ou reunião.',
+  },
+  {
+    valor: 'SubmitApplication',
+    rotulo: 'Proposta ou inscrição enviada',
+    explica: 'Envia SubmitApplication. Mandou proposta, ficha, cadastro de crédito.',
+  },
+  {
+    valor: 'InitiateCheckout',
+    rotulo: 'Começou a fechar',
+    explica: 'Envia InitiateCheckout. O passo antes da venda: contrato enviado, negociação aberta, carrinho iniciado.',
+  },
+  {
+    valor: 'AddPaymentInfo',
+    rotulo: 'Dados de pagamento',
+    explica: 'Envia AddPaymentInfo. Informou como vai pagar.',
+  },
+  {
+    valor: 'StartTrial',
+    rotulo: 'Teste iniciado',
+    explica: 'Envia StartTrial. Começou período de experiência.',
+  },
+  {
+    valor: 'Subscribe',
+    rotulo: 'Assinatura',
+    explica: 'Envia Subscribe. Virou recorrência.',
   },
   {
     valor: 'Purchase',
