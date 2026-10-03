@@ -126,6 +126,16 @@ export interface MoveLeadInput {
   fromStageName?: string | null;
   toStageName?: string | null;
   stages: Stage[];
+  /**
+   * Motivo da perda, quando a etapa de destino é do tipo `lost`.
+   *
+   * Vai no MESMO update da etapa de propósito: o gatilho de histórico lê o
+   * motivo de NEW, então gravá-lo depois, num segundo update, deixaria a linha
+   * do movimento sem motivo para sempre — e é essa linha que serve para montar
+   * público retroativo.
+   */
+  lossReasonId?: string | null;
+  lostNotes?: string | null;
 }
 
 /**
@@ -139,6 +149,8 @@ export async function moveLeadToStage(input: MoveLeadInput): Promise<void> {
   const stage = input.stages.find((s) => s.id === input.stageId);
   if (!stage) throw new Error('Etapa não encontrada.');
 
+  const virouPerdido = stage.kind === 'lost';
+
   const { error } = await (supabase as any)
     .from('leads')
     .update({
@@ -146,6 +158,11 @@ export async function moveLeadToStage(input: MoveLeadInput): Promise<void> {
       board_order: input.boardOrder,
       stage_entered_at: new Date().toISOString(),
       status: statusForStage(stage, input.stages),
+      // Sair de uma etapa de perda limpa o motivo: um lead reaberto não está
+      // mais perdido, e deixar o motivo antigo ali faria a consulta de perdidos
+      // contá-lo de novo. O histórico guarda o que valia na época.
+      loss_reason_id: virouPerdido ? (input.lossReasonId ?? null) : null,
+      lost_notes: virouPerdido ? (input.lostNotes?.trim() || null) : null,
     })
     .eq('id', input.leadId);
 

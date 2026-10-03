@@ -34,6 +34,7 @@ import { deleteLeads, listLeads, type LeadRow } from '../services/leadService';
 import {
   listStages, moveLeadToStage, orderBetween, type Stage,
 } from '../services/stageService';
+import { LossReasonDialog } from '@/modules/crm/components/LossReasonDialog';
 import {
   getLeadCity, getLeadOrigin, channelLabel, toTitleCase, whatsappLink, relativeTime,
 } from '../lib/leadFields';
@@ -234,10 +235,22 @@ export function KanbanBoard({
       : real;
   }, [leadsQuery.data, stages, quizId, search, origin]);
 
+  /**
+   * Movimento que caiu numa etapa de perda e está esperando o motivo.
+   *
+   * O card já se moveu na tela — arrastar precisa parecer instantâneo — e o
+   * diálogo pergunta por cima. Cancelar desfaz buscando o servidor.
+   */
+  const [perguntandoMotivo, setPerguntandoMotivo] = useState<{
+    leadId: string; leadName: string; stageId: string; boardOrder: number;
+    fromStageName: string; toStageName: string;
+  } | null>(null);
+
   const moveMutation = useMutation({
     mutationFn: (v: {
       leadId: string; stageId: string; boardOrder: number;
       fromStageName: string; toStageName: string;
+      lossReasonId?: string | null; lostNotes?: string | null;
     }) =>
       moveLeadToStage({
         leadId: v.leadId,
@@ -245,6 +258,8 @@ export function KanbanBoard({
         boardOrder: v.boardOrder,
         fromStageName: v.fromStageName,
         toStageName: v.toStageName,
+        lossReasonId: v.lossReasonId ?? null,
+        lostNotes: v.lostNotes ?? null,
         stages,
       }),
     onError: (e: Error) => {
@@ -334,6 +349,23 @@ export function KanbanBoard({
           : l,
       ),
     );
+
+    // Etapa de perda não grava direto: o motivo entra no MESMO update da
+    // etapa, porque é dele que o gatilho de histórico lê. Gravar agora e
+    // completar depois deixaria a linha do movimento sem motivo para sempre.
+    const destino = stages.find((st) => st.id === to.id);
+    if (destino?.kind === 'lost') {
+      const lead = (leadsQuery.data ?? []).find((l) => l.id === draggableId);
+      setPerguntandoMotivo({
+        leadId: draggableId,
+        leadName: (lead as { name?: string } | undefined)?.name || 'este lead',
+        stageId: to.id,
+        boardOrder,
+        fromStageName: from.title,
+        toStageName: to.title,
+      });
+      return;
+    }
 
     moveMutation.mutate({
       leadId: draggableId,
@@ -660,6 +692,24 @@ export function KanbanBoard({
         originLabel={originLabel}
         onStatusChange={() => qc.invalidateQueries({ queryKey: ['leads'] })}
       />
+
+      {perguntandoMotivo && (
+        <LossReasonDialog
+          companyId={companyId}
+          leadName={perguntandoMotivo.leadName}
+          open
+          onConfirm={(motivoId, observacao) => {
+            moveMutation.mutate({ ...perguntandoMotivo, lossReasonId: motivoId, lostNotes: observacao });
+            setPerguntandoMotivo(null);
+          }}
+          onCancel={() => {
+            setPerguntandoMotivo(null);
+            // O card já se moveu na tela e nada foi gravado. Buscar o servidor
+            // devolve ele para a coluna de origem.
+            qc.invalidateQueries({ queryKey: ['leads', companyId, 'board'] });
+          }}
+        />
+      )}
     </>
   );
 }

@@ -50,6 +50,7 @@ import {
 import type { LeadRow } from "../services/leadService";
 import { getLeadDisplayName, updateLead, deleteLead, type EditableLeadFields } from "../services/leadService";
 import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
+import { LossReasonDialog } from "@/modules/crm/components/LossReasonDialog";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
@@ -126,24 +127,31 @@ function StagePicker({
   const stages = stagesQuery.data ?? [];
   const current = stages.find((s) => s.id === currentId) ?? null;
 
+  /* Mesma regra do board: etapa de perda pergunta o motivo antes de gravar.
+     Os dois caminhos de escrita precisam concordar, senão trocar a etapa pela
+     ficha produziria perda sem motivo — o buraco que este item veio fechar. */
+  const [perguntandoMotivo, setPerguntandoMotivo] = useState<Stage | null>(null);
+
   const mutation = useMutation({
-    mutationFn: (stage: Stage) =>
+    mutationFn: (v: { stage: Stage; lossReasonId?: string | null; lostNotes?: string | null }) =>
       moveLeadToStage({
         leadId: lead.id,
-        stageId: stage.id,
+        stageId: v.stage.id,
         // O modal não conhece a posição na coluna; entra no topo, que é onde
         // um lead recém-mexido faz sentido estar.
         boardOrder: 0,
         fromStageName: current?.name ?? null,
-        toStageName: stage.name,
+        toStageName: v.stage.name,
+        lossReasonId: v.lossReasonId ?? null,
+        lostNotes: v.lostNotes ?? null,
         stages,
       }),
-    onSuccess: (_, stage) => {
-      setCurrentId(stage.id);
-      onChanged(stage.id);
+    onSuccess: (_, v) => {
+      setCurrentId(v.stage.id);
+      onChanged(v.stage.id);
       // A lista e o board atrás do modal precisam refletir a mudança na hora.
       qc.invalidateQueries({ queryKey: ["leads"] });
-      toast.success(`Etapa alterada para ${stage.name}`);
+      toast.success(`Etapa alterada para ${v.stage.name}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -172,7 +180,11 @@ function StagePicker({
         {stages.map((s) => (
           <DropdownMenuItem
             key={s.id}
-            onClick={() => s.id !== currentId && mutation.mutate(s)}
+            onClick={() => {
+              if (s.id === currentId) return;
+              if (s.kind === 'lost') { setPerguntandoMotivo(s); return; }
+              mutation.mutate({ stage: s });
+            }}
             className="gap-2"
           >
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
@@ -181,6 +193,21 @@ function StagePicker({
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
+
+      {perguntandoMotivo && (
+        <LossReasonDialog
+          companyId={lead.company_id}
+          leadName={lead.name || 'este lead'}
+          open
+          onConfirm={(motivoId, observacao) => {
+            mutation.mutate({ stage: perguntandoMotivo, lossReasonId: motivoId, lostNotes: observacao });
+            setPerguntandoMotivo(null);
+          }}
+          // Aqui nada se moveu ainda — a ficha só grava depois de confirmar —
+          // então cancelar não precisa desfazer coisa alguma.
+          onCancel={() => setPerguntandoMotivo(null)}
+        />
+      )}
     </DropdownMenu>
   );
 }

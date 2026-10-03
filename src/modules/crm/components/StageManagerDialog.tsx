@@ -8,6 +8,7 @@
  */
 import { useEffect, useState } from 'react';
 import { ConversionSettingsTable } from '@/modules/crm/components/ConversionSettingsTable';
+import { LossReasonsManager } from '@/modules/crm/components/LossReasonsManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { listConversionMappings } from '@/modules/crm/services/conversionMappingService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -157,6 +158,9 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
                   degraus" e "o que cada degrau significa". Misturar obrigava a
                   expandir etapa por etapa para enxergar o funil inteiro. */}
               <TabsTrigger value="conversoes">Conversões</TabsTrigger>
+              {/* Mesma decisão das outras duas: como este negócio descreve o
+                  próprio funil — inclusive a saída dele. */}
+              <TabsTrigger value="perdas">Motivos de perda</TabsTrigger>
             </TabsList>
             <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
 
@@ -308,6 +312,9 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </TabsContent>
             <TabsContent value="conversoes" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <ConversionSettingsTable companyId={companyId} />
+            </TabsContent>
+            <TabsContent value="perdas" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+              <LossReasonsManager companyId={companyId} />
             </TabsContent>
           </Tabs>
         </DialogContent>
