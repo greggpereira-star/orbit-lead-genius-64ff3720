@@ -155,7 +155,10 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
         {/* Só o corpo rola. Antes o diálogo inteiro rolava, e o título e as
             abas saíam de cena assim que a lista passava da altura — a pessoa
             perdia de vista em qual aba estava e como voltar. */}
-        <DialogContent className="flex max-h-[92dvh] max-w-6xl flex-col gap-0 overflow-hidden p-0">
+        {/* Mais largo que o max-w-6xl anterior: com o painel lateral de 17rem
+            dentro, 72rem deixavam 9,5rem para o seletor — e o rótulo mais
+            longo precisa de 15. */}
+        <DialogContent className="flex max-h-[92dvh] max-w-[84rem] flex-col gap-0 overflow-hidden p-0">
           <DialogHeader className="shrink-0 border-b px-6 py-5 text-left">
             <div className="flex items-start gap-3">
               {/* O ícone não é enfeite: ele é o mesmo funil do Kanban, e dá

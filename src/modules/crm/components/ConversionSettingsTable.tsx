@@ -26,8 +26,21 @@ import { listarEtiquetasDaEmpresa } from '@/lib/whatsapp-labels.functions';
 const NENHUM = '__nenhum__';
 const SEM_ETIQUETA = '__sem__';
 
-/** Grade do desktop. No celular cada campo vira um bloco com o próprio rótulo. */
-const GRADE = 'lg:grid-cols-[13rem_minmax(0,1fr)_11rem_10rem_3.5rem]';
+/**
+ * Grade do desktop. No celular cada campo vira um bloco com o próprio rótulo.
+ *
+ * Todas as colunas em `fr`, nenhuma fixa. A versão anterior fixava quatro
+ * larguras e deixava só o resto para o seletor: no modal real sobravam 152px
+ * para um rótulo que precisa de ~240px, e "Proposta ou inscrição enviada"
+ * aparecia como "Proposta o…". Quem lê a tela não conseguia conferir a
+ * configuração sem abrir cada lista.
+ *
+ * O seletor leva a maior fatia porque é a decisão da linha. O mínimo do
+ * `minmax` existe para a grade degradar em vez de espremer quando a janela é
+ * menor que o previsto.
+ */
+const GRADE =
+  'lg:grid-cols-[minmax(8rem,1.3fr)_minmax(9rem,1.6fr)_minmax(7rem,1.2fr)_minmax(7rem,1fr)_3rem]';
 
 /**
  * Sugestão de mapeamento pela posição no funil.
@@ -167,6 +180,10 @@ export function ConversionSettingsTable({
   const listaEtiquetas = etiquetas.data?.etiquetas ?? [];
   const semEtiquetas = etiquetas.data && !etiquetas.data.ok;
   const emEnsaio = ensaio.data === true;
+  const nenhumMapeado = lista.every((s) => {
+    const r = rascunho.get(s.id);
+    return !r || r.evento === NENHUM || r.evento === SO_MEDIR;
+  });
 
   /** Preenche o rascunho com a escada do funil. Nada é gravado até Salvar. */
   const sugerir = () => {
@@ -253,17 +270,40 @@ export function ConversionSettingsTable({
             aoTrocar={(v) => trocarEnsaio.mutate(v)}
           />
 
+          {/* Funil sem nenhum degrau mapeado é a tela mais importante e a mais
+              muda: sete selects em "Não é conversão" não dizem por onde
+              começar. O atalho vem para cima, onde o olho está. */}
+          {lista.length > 0 && nenhumMapeado && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed p-4">
+              <div className="text-sm">
+                <p className="font-medium">Nenhum degrau avisa a Meta ainda</p>
+                <p className="text-muted-foreground">
+                  Comece pela sugestão e ajuste o que não encaixar no seu nicho.
+                </p>
+              </div>
+              <Button type="button" onClick={sugerir}>
+                <RotateCcw className="h-4 w-4" />
+                <span className="ml-2">Sugerir pelo funil</span>
+              </Button>
+            </div>
+          )}
+
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
             <div className="min-w-0">
-              <div className={`hidden gap-x-4 px-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:grid ${GRADE}`}>
-                <span>Etapa do funil</span>
-                <span>Status no pipeline</span>
-                <span className="flex items-center gap-1">
-                  Evento de conversão
+              {/* `items-end` e `truncate`: "Status no pipeline" quebrava em duas
+                  linhas e desalinhava a base dos outros títulos. */}
+              <div className={`hidden items-end gap-x-4 px-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:grid ${GRADE}`}>
+                <span className="truncate">Etapa do funil</span>
+                <span className="truncate">O que significa</span>
+                <span className="flex items-center gap-1 truncate">
+                  <span className="truncate">Evento na Meta</span>
                   <Dica texto="O nome exato que a Meta recebe. É por ele que você escolhe a meta de otimização no Gerenciador de Anúncios." />
                 </span>
-                <span>Etiqueta no WhatsApp</span>
-                <span>Valor</span>
+                <span className="truncate">Etiqueta no WhatsApp</span>
+                <span className="flex items-center gap-1">
+                  <span className="truncate">Valor</span>
+                  <Dica texto="Manda o valor da venda junto do evento. Só faz sentido na etapa de fechamento: valor num degrau de lead ensina a Meta a otimizar pela métrica errada." />
+                </span>
               </div>
 
               <ul className="space-y-2">
@@ -397,20 +437,26 @@ function LinhaDaEtapa({
 
   return (
     <li
-      className={`grid gap-x-4 gap-y-3 rounded-xl border bg-card p-4 transition-colors lg:items-center ${GRADE} ${
+      className={`grid gap-x-4 gap-y-3 rounded-xl border bg-card p-4 transition-colors lg:items-start ${GRADE} ${
         alterada ? 'border-primary/40 ring-1 ring-primary/20' : ''
       }`}
     >
       <div className="flex items-start gap-2.5">
         <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: etapa.color }} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold">{etapa.name}</p>
-          <p className="text-xs leading-snug text-muted-foreground">{explica}</p>
+          <p className="truncate text-sm font-semibold" title={etapa.name}>{etapa.name}</p>
+          {/* Preso em duas linhas: a explicação de "Qualificado" ocupava quatro
+              e fazia a linha ficar 2,5× mais alta que a de "Novo lead". Coluna
+              com altura irregular não se varre com o olho — e varrer é o que
+              se faz aqui, comparando os degraus entre si. */}
+          <p className="line-clamp-2 text-xs leading-snug text-muted-foreground" title={explica}>
+            {explica}
+          </p>
         </div>
       </div>
 
       <div className="min-w-0 space-y-1.5">
-        <Rotulo>Status no pipeline</Rotulo>
+        <Rotulo>O que significa</Rotulo>
         <Select
           value={noSelect}
           onValueChange={(v) => {
@@ -436,7 +482,7 @@ function LinhaDaEtapa({
       </div>
 
       <div className="min-w-0 space-y-1.5">
-        <Rotulo>Evento de conversão</Rotulo>
+        <Rotulo>Evento na Meta</Rotulo>
         {noSelect === EVENTO_PERSONALIZADO ? (
           <Input
             defaultValue={personalizado ? rascunho.evento : ''}
@@ -453,7 +499,10 @@ function LinhaDaEtapa({
             }}
           />
         ) : envia ? (
-          <span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-md bg-primary/10 px-2 py-1.5 font-mono text-xs text-primary">
+          <span
+            className="flex min-w-0 items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 font-mono text-xs text-primary"
+            title={rascunho.evento}
+          >
             <Code2 className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{rascunho.evento}</span>
           </span>
@@ -482,9 +531,12 @@ function LinhaDaEtapa({
             </SelectContent>
           </Select>
         ) : (
+          // Sem WhatsApp conectado não há lista para escolher. O campo de texto
+          // fica, porque a etiqueta digitada funciona — mas precisa parecer
+          // editável, e não um select vazio e apagado.
           <Input
             defaultValue={rascunho.etiqueta ?? ''}
-            placeholder="Nenhuma"
+            placeholder="Digite o nome"
             className="h-9 w-full"
             aria-label={`Etiqueta da etapa ${etapa.name}`}
             onBlur={(e) => aoMudar({ etiqueta: e.target.value.trim() || null })}
