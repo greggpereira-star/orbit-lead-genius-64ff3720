@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenceCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -64,6 +66,9 @@ const funnelData = [
 ];
 
 function AnalyticsPage() {
+  const { company } = useAuth();
+  const companyId = company?.id ?? '';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -78,6 +83,11 @@ function AnalyticsPage() {
           </Badge>
         </div>
       </div>
+
+      {/* Dado real, no topo. O resto desta página ainda é exemplo herdado do
+          Lovable — números inventados em inglês. Deixar o real embaixo do
+          fictício ensinaria a desconfiar do que é verdadeiro. */}
+      <AdIntelligenceCard companyId={companyId} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         {kpis.map((kpi) => (
