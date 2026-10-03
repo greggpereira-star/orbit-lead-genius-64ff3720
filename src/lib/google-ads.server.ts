@@ -215,8 +215,23 @@ export async function enviarConversaoGoogle(envio: EnvioConversao): Promise<Resu
   // A ação do mapeamento por etapa vence a do nível da empresa.
   const acao = envio.acao?.trim()
     || (envio.tipo === 'lead' ? config?.lead_conversion_action : config?.sale_conversion_action);
-  if (!config?.customer_id || !acao) {
-    return { status: 'sem_configuracao', detalhe: `conversão de ${envio.tipo} não escolhida` };
+  // Mensagem por causa, e não uma só para as duas.
+  //
+  // A versão anterior dizia "conversão não escolhida" mesmo quando a conversão
+  // TINHA sido escolhida e o que faltava era a conta. Quem fosse investigar iria
+  // mexer no lugar errado — mandei a ação explicitamente num teste e levei a
+  // mesma frase de volta.
+  if (!config?.customer_id) {
+    return {
+      status: 'sem_configuracao',
+      detalhe: 'nenhuma conta do Google Ads escolhida para esta empresa',
+    };
+  }
+  if (!acao) {
+    return {
+      status: 'sem_configuracao',
+      detalhe: `nenhuma ação de conversão de ${envio.tipo} configurada`,
+    };
   }
 
   const identificadores: Array<Record<string, unknown>> = [];
