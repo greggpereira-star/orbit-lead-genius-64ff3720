@@ -134,7 +134,11 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
+        {/* Larga o suficiente para a tabela de conversões caber sem cortar a
+            última coluna — era o interruptor de valor que sumia na borda. E com
+            altura limitada ao viewport, senão sete etapas mais as explicações
+            estouram a tela em notebook. */}
+        <DialogContent className="max-h-[90dvh] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Etapas do funil</DialogTitle>
             <DialogDescription>

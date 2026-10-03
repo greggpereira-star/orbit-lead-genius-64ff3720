@@ -68,10 +68,17 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Diga o que cada etapa significa. A etiqueta é a mesma etapa vista do WhatsApp:
-        etiquetar lá move o card aqui, e mover aqui etiqueta lá.
-      </p>
+      <div className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
+        <p className="text-muted-foreground">
+          Cada etapa pode avisar a Meta e o Google quando um lead chega nela. São eventos{' '}
+          <span className="font-medium text-foreground">diferentes</span>, não repetidos: um lead
+          que passa por três etapas configuradas envia três avisos distintos, e é assim que o
+          algoritmo aprende a diferença entre quem só conversa e quem compra.
+        </p>
+        <p className="text-muted-foreground">
+          A mesma etapa nunca envia duas vezes para o mesmo lead, mesmo que ele volte e avance de novo.
+        </p>
+      </div>
 
       {/* Sem WhatsApp conectado a lista não existe. Dizer o motivo evita que a
           pessoa ache que a conta não tem etiqueta nenhuma. */}
@@ -86,14 +93,21 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
         </div>
       )}
 
+      <p className="text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Sobre as etiquetas:</span> elas precisam
+        existir no WhatsApp antes. O CRM aplica uma etiqueta que já existe — ele não cria.
+        Crie no aparelho em <span className="font-medium">Configurações da empresa → Etiquetas</span>,
+        e ela aparece aqui na lista.
+      </p>
+
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[46rem] text-sm">
           <thead>
             <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="pb-2 pr-3 font-medium">Etapa</th>
-              <th className="pb-2 pr-3 font-medium">O que significa</th>
-              <th className="pb-2 pr-3 font-medium">Etiqueta no WhatsApp</th>
-              <th className="pb-2 font-medium">Valor</th>
+              <th className="w-[22%] pb-2 pr-3 font-medium">Etapa</th>
+              <th className="w-[40%] pb-2 pr-3 font-medium">Quando o lead entra aqui</th>
+              <th className="w-[26%] pb-2 pr-3 font-medium">Etiqueta no WhatsApp</th>
+              <th className="w-[12%] pb-2 font-medium whitespace-nowrap">Mandar valor</th>
             </tr>
           </thead>
           <tbody>
@@ -118,7 +132,7 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                       value={evento}
                       onValueChange={(v) => salvar.mutate({ stageId: s.id, evento: v, etiqueta: etiqueta || null, valor })}
                     >
-                      <SelectTrigger className="h-8 w-56" aria-label={`O que a etapa ${s.name} significa`}>
+                      <SelectTrigger className="h-8 w-full" aria-label={`O que a etapa ${s.name} significa`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -129,6 +143,16 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* A dúvida que o seletor sozinho não resolve é "isso manda
+                        o quê, para onde". A frase embaixo responde sem exigir
+                        que a pessoa abra a lista de novo. */}
+                    <p className="mt-1 max-w-[20rem] text-[11px] leading-snug text-muted-foreground">
+                      {evento === '__nenhum__'
+                        ? 'Nada é enviado. É só um degrau do funil.'
+                        : evento === SO_MEDIR
+                          ? 'Conta como qualificado nos seus relatórios. Nada é enviado para a Meta nem para o Google.'
+                          : EVENTOS_META.find((e) => e.valor === evento)?.explica}
+                    </p>
                   </td>
 
                   <td className="py-2 pr-3">
@@ -139,7 +163,7 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                           salvar.mutate({ stageId: s.id, evento, etiqueta: v === '__sem__' ? null : v, valor })
                         }
                       >
-                        <SelectTrigger className="h-8 w-48" aria-label={`Etiqueta da etapa ${s.name}`}>
+                        <SelectTrigger className="h-8 w-full" aria-label={`Etiqueta da etapa ${s.name}`}>
                           <SelectValue placeholder="Nenhuma" />
                         </SelectTrigger>
                         <SelectContent>
@@ -157,7 +181,7 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                       <Input
                         defaultValue={etiqueta}
                         placeholder="—"
-                        className="h-8 w-48"
+                        className="h-8 w-full"
                         aria-label={`Etiqueta da etapa ${s.name}`}
                         onBlur={(e) =>
                           e.target.value !== etiqueta &&
@@ -167,7 +191,7 @@ export function ConversionSettingsTable({ companyId }: { companyId: string }) {
                     )}
                   </td>
 
-                  <td className="py-2">
+                  <td className="py-2 align-top">
                     {/* Valor só faz sentido quando há para onde enviar, e só em
                         etapa de fechamento: valor em evento de lead ensina a
                         Meta a otimizar pela métrica errada. */}

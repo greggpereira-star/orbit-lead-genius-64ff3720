@@ -29,11 +29,31 @@ export interface ConversionMapping {
 export const SO_MEDIR = '__so_medir__';
 
 export const EVENTOS_META = [
-  { valor: 'QualifiedLead', rotulo: 'Lead qualificado', dica: 'o lead passou no seu filtro' },
-  { valor: 'LeadSubmitted', rotulo: 'Lead registrado', dica: 'entrou no funil' },
-  { valor: 'Schedule', rotulo: 'Agendamento', dica: 'marcou visita, avaliação, reunião' },
-  { valor: 'Purchase', rotulo: 'Venda', dica: 'fechou — manda o valor junto' },
-  { valor: 'Contact', rotulo: 'Contato', dica: 'conversa iniciada' },
+  {
+    valor: 'QualifiedLead',
+    rotulo: 'Lead qualificado',
+    explica: 'Envia QualifiedLead. Use no degrau em que você sabe que a pessoa tem perfil — é o evento que mais melhora a entrega.',
+  },
+  {
+    valor: 'Schedule',
+    rotulo: 'Agendamento',
+    explica: 'Envia Schedule. Para quando marca visita, avaliação ou reunião.',
+  },
+  {
+    valor: 'LeadSubmitted',
+    rotulo: 'Lead registrado',
+    explica: 'Envia LeadSubmitted. Só entrou no funil, ainda sem filtro.',
+  },
+  {
+    valor: 'Contact',
+    rotulo: 'Contato iniciado',
+    explica: 'Envia Contact. A conversa começou — o evento mais raso.',
+  },
+  {
+    valor: 'Purchase',
+    rotulo: 'Venda',
+    explica: 'Envia Purchase. Ligue o valor ao lado para a Meta aprender com receita, não com volume.',
+  },
 ] as const;
 
 export async function listConversionMappings(companyId: string): Promise<ConversionMapping[]> {
