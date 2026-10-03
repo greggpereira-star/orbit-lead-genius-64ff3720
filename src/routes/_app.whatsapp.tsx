@@ -9,6 +9,8 @@
  */
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { RedirectLinksCard } from "@/modules/crm/components/RedirectLinksCard";
+import { useAuth } from "@/core/auth/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -100,6 +102,10 @@ function hourLabel(hour: number): string {
 }
 
 function WhatsAppPage() {
+  // Mesma origem que o resto do app usa para saber de qual empresa se trata.
+  const { company } = useAuth();
+  const companyId = company?.id ?? '';
+
   const qc = useQueryClient();
   const fetchStatus = useServerFn(getWhatsAppStatus);
   const connect = useServerFn(connectWhatsApp);
@@ -356,6 +362,11 @@ function WhatsAppPage() {
           </CardContent>
         )}
       </Card>
+
+      {/* Links de anúncio ficam aqui, e não numa tela de integrações, porque o
+          destino é um número de WhatsApp: quem vem configurar já está pensando
+          em "para qual número o anúncio manda". */}
+      <RedirectLinksCard companyId={companyId} />
 
       {/* ---------------- Automações ---------------- */}
       {form && (
