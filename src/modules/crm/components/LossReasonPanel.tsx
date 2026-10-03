@@ -15,6 +15,8 @@ interface Props {
   companyId: string;
   motivoAtualId: string | null;
   observacaoAtual: string | null;
+  /** Dentro de um cartão que já tem borda e título. */
+  semMoldura?: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Props {
  * foi para Perdido sem motivo e a única saída seria tirá-lo da etapa e
  * recolocá-lo, sujando o histórico com um movimento que não existiu.
  */
-export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAtual }: Props) {
+export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAtual, semMoldura }: Props) {
   const qc = useQueryClient();
   const [escolhido, setEscolhido] = useState<string | null>(motivoAtualId);
   const [observacao, setObservacao] = useState(observacaoAtual ?? '');
@@ -74,11 +76,13 @@ export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAt
   const pendente = salvar.isPending || criar.isPending;
 
   return (
-    <div className="space-y-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Por que perdeu</p>
-        {pendente && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-      </div>
+    <div className={semMoldura ? 'space-y-3' : 'space-y-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3'}>
+      {!semMoldura && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Por que perdeu</p>
+          {pendente && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+        </div>
+      )}
 
       {motivos.isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

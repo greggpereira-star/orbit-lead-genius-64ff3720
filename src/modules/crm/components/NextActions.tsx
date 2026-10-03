@@ -30,7 +30,14 @@ function daquiA(dias: number): string {
  * com um público personalizado na Meta, o botão gravaria um estado que nenhum
  * anúncio lê. Controle que não responde ensina a desconfiar da tela.
  */
-export function NextActions({ leadId, companyId }: { leadId: string; companyId: string }) {
+export function NextActions({
+  leadId, companyId, semMoldura,
+}: {
+  leadId: string;
+  companyId: string;
+  /** Dentro de um cartão que já tem borda e título. */
+  semMoldura?: boolean;
+}) {
   const qc = useQueryClient();
   const { user } = useAuth();
 
@@ -70,8 +77,8 @@ export function NextActions({ leadId, companyId }: { leadId: string; companyId: 
     .sort((a, b) => (a.scheduled_for ?? '').localeCompare(b.scheduled_for ?? ''));
 
   return (
-    <section className="rounded-xl border p-4">
-      <h3 className="mb-3 text-sm font-semibold">Próximas ações</h3>
+    <section className={semMoldura ? '' : 'rounded-xl border p-4'}>
+      {!semMoldura && <h3 className="mb-3 text-sm font-semibold">Próximas ações</h3>}
 
       {pendentes.length > 0 && (
         <ul className="mb-3 space-y-1.5">

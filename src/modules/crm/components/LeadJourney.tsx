@@ -30,12 +30,15 @@ const DATA = new Intl.DateTimeFormat('pt-BR', {
  * que ninguém mediu.
  */
 export function LeadJourney({
-  leadId, criadoEm, compacto,
+  leadId, criadoEm, compacto, semMoldura, limite = 3,
 }: {
   leadId: string;
   criadoEm: string | null;
-  /** Na visão geral só os três últimos passos cabem — o resto fica na aba. */
+  /** Mostra só os últimos passos — o resto fica na aba Histórico. */
   compacto?: boolean;
+  /** Dentro de um cartão que já tem borda e título, a moldura própria sobra. */
+  semMoldura?: boolean;
+  limite?: number;
 }) {
   const caminho = useQuery({
     queryKey: ['caminho-do-lead', leadId],
@@ -52,14 +55,16 @@ export function LeadJourney({
   }
 
   const todos = caminho.data ?? [];
-  const passos = compacto ? todos.slice(-3) : todos;
+  const passos = compacto ? todos.slice(-limite) : todos;
 
   return (
-    <section className="rounded-xl border p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Route className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">Caminho no funil</h3>
-      </div>
+    <section className={semMoldura ? '' : 'rounded-xl border p-4'}>
+      {!semMoldura && (
+        <div className="mb-3 flex items-center gap-2">
+          <Route className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Caminho no funil</h3>
+        </div>
+      )}
 
       {passos.length === 0 ? (
         <p className="text-xs leading-snug text-muted-foreground">
