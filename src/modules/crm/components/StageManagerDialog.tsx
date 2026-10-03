@@ -7,7 +7,8 @@
  * o funil precisa ser do cliente.
  */
 import { useEffect, useState } from 'react';
-import { StageConversionRow } from '@/modules/crm/components/StageConversionRow';
+import { ConversionSettingsTable } from '@/modules/crm/components/ConversionSettingsTable';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { listConversionMappings } from '@/modules/crm/services/conversionMappingService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -142,6 +143,16 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </DialogDescription>
           </DialogHeader>
 
+          <Tabs defaultValue="etapas">
+            <TabsList className="mb-3">
+              <TabsTrigger value="etapas">Etapas</TabsTrigger>
+              {/* Separado porque são duas perguntas diferentes: "quais são os
+                  degraus" e "o que cada degrau significa". Misturar obrigava a
+                  expandir etapa por etapa para enxergar o funil inteiro. */}
+              <TabsTrigger value="conversoes">Conversões</TabsTrigger>
+            </TabsList>
+            <TabsContent value="etapas" className="space-y-3">
+
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="stages">
               {(provided) => (
@@ -248,17 +259,6 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
                           </Button>
                           </div>
 
-                          {/* A conversão fica colada na etapa, e não numa tela
-                              de integrações, porque é da etapa que se trata:
-                              quem monta o funil é quem sabe qual degrau
-                              significa "esse lead presta". Separar obrigaria a
-                              decorar o nome da etapa e configurar no escuro. */}
-                          <StageConversionRow
-                            companyId={companyId}
-                            stageId={stage.id}
-                            stageName={stage.name}
-                            mapping={(mappingsQuery.data ?? []).find((m) => m.stage_id === stage.id)}
-                          />
                         </div>
                       )}
                     </Draggable>
@@ -298,6 +298,11 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
               Adicionar
             </Button>
           </div>
+            </TabsContent>
+            <TabsContent value="conversoes">
+              <ConversionSettingsTable companyId={companyId} />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
