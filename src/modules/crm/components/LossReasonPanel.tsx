@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Plus } from 'lucide-react';
+import { Check, Loader2, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,27 +84,37 @@ export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAt
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : (
         <>
+          {/* Lista empilhada, não pastilhas.
+              "Encontrou oportunidade melhor" e "Financiamento não aprovado"
+              quebravam em duas linhas dentro de um `rounded-full` de 200px — o
+              arredondado de pílula só funciona com texto de uma linha, e motivo
+              de perda é frase, não palavra. Em bloco cada item ocupa a largura
+              toda, lê numa linha e vira alvo de clique maior. */}
           {lista.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {lista.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  aria-pressed={escolhido === m.id}
-                  disabled={pendente}
-                  onClick={() => {
-                    setEscolhido(m.id);
-                    salvar.mutate({ reasonId: m.id, notes: observacao.trim() || null });
-                  }}
-                  className={`rounded-full border px-2.5 py-1 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                    escolhido === m.id
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'bg-background hover:bg-muted'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
+            <div className="space-y-1">
+              {lista.map((m) => {
+                const ativo = escolhido === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={ativo}
+                    disabled={pendente}
+                    onClick={() => {
+                      setEscolhido(m.id);
+                      salvar.mutate({ reasonId: m.id, notes: observacao.trim() || null });
+                    }}
+                    className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                      ativo
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-transparent bg-background hover:border-border hover:bg-muted'
+                    }`}
+                  >
+                    <span className="min-w-0 flex-1">{m.label}</span>
+                    {ativo && <Check className="h-3.5 w-3.5 shrink-0" />}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -144,10 +154,12 @@ export function LossReasonPanel({ leadId, companyId, motivoAtualId, observacaoAt
           />
 
           {!escolhido && (
-            // Sem isto a seção parece decorativa. Ela existe porque falta algo.
-            <p className="text-xs text-muted-foreground">
-              Sem motivo, este lead não entra em público de reengajamento nem de exclusão —
-              só aparece como perdido.
+            // Uma linha, não cinco. A versão anterior gastava um terço do
+            // painel explicando a consequência antes de a pessoa sequer ter
+            // escolhido — e empurrava os dados de contato para fora da vista.
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Sem motivo, este lead só conta como perdido — não entra em público de
+              reengajamento nem de exclusão.
             </p>
           )}
         </>

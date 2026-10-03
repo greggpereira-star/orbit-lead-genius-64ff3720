@@ -52,6 +52,8 @@ import { getLeadDisplayName, updateLead, deleteLead, type EditableLeadFields } f
 import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
 import { LossReasonDialog } from "@/modules/crm/components/LossReasonDialog";
 import { LossReasonPanel } from "@/modules/crm/components/LossReasonPanel";
+import { OwnerPicker } from "@/modules/crm/components/OwnerPicker";
+import { LeadJourney } from "@/modules/crm/components/LeadJourney";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
@@ -1056,7 +1058,7 @@ export function LeadDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0 xl:max-w-6xl">
+      <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0 xl:max-w-[80rem]">
         {/* Cabeçalho: identidade + etapa + a ação principal, tudo na primeira
             linha de leitura. Antes o topo era só o nome e uma data, e a ação
             mais usada (WhatsApp) ficava enterrada abaixo de seis campos. */}
@@ -1173,7 +1175,11 @@ export function LeadDetailDialog({
         {/* No celular as colunas viram uma pilha e quem rola é o modal inteiro.
             Com cada coluna rolando sozinha, o painel de contato ganhava uma
             faixa de ~150px e cortava o telefone no meio do número. */}
-        <div className="grid max-h-[78vh] grid-cols-1 overflow-y-auto md:grid-cols-[260px_1fr] md:overflow-y-hidden xl:grid-cols-[260px_1fr_330px]">
+        {/* 300px em vez de 260: a 260 o telefone saía como "+5527996993…" e o
+            e-mail como "melquisedec.a…". Truncar o dado que se usa para AGIR é
+            o pior corte possível numa ficha de lead — obriga a clicar para ler
+            o que deveria estar à vista. */}
+        <div className="grid max-h-[80vh] grid-cols-1 overflow-y-auto md:grid-cols-[300px_1fr] md:overflow-y-hidden xl:grid-cols-[300px_1fr_320px]">
           {/* ---------- Contexto ----------
               Antes era uma lista achatada de seis campos onde telefone
               (acionável) tinha o mesmo peso de etapa (estado interno). Agora
@@ -1191,6 +1197,14 @@ export function LeadDetailDialog({
             )}
 
             <Section title="Contato">
+              {/* Antes de "como falar com ele" vem "de quem é". Sem este campo
+                  nenhum dos 489 leads tinha dono, e `assigned_to` só era
+                  escrito pelo mapeamento de formulário da Meta. */}
+              <OwnerPicker
+                leadId={lead.id}
+                companyId={lead.company_id}
+                responsavelAtual={lead.assigned_to ?? null}
+              />
               <Field
                 icon={<Phone className="h-4 w-4" />}
                 label="Telefone"
@@ -1407,6 +1421,12 @@ export function LeadDetailDialog({
                       {attachmentCount === null ? "—" : attachmentCount}
                     </FactItem>
                   </div>
+
+                  {/* A coluna do meio tinha espaço sobrando embaixo enquanto a
+                      da esquerda estava espremida. O caminho no funil ocupa esse
+                      espaço com o dado que a ficha não respondia: até onde o
+                      lead chegou e quanto tempo levou em cada degrau. */}
+                  <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} />
                 </TabsContent>
 
                 <TabsContent value="rastreamento" className="m-0 space-y-6 p-6">

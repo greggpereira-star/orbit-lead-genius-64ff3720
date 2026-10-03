@@ -457,12 +457,14 @@ export interface MovimentoDeEtapa {
   moved_at: string;
   moved_by: string | null;
   origem: string | null;
+  /** Fotografado no movimento, quando o destino era etapa de perda. */
+  loss_reason_name: string | null;
 }
 
 export async function listarCaminhoDoLead(leadId: string): Promise<MovimentoDeEtapa[]> {
   const { data, error } = await supabase
     .from('lead_stage_history')
-    .select('from_stage_name, from_order_index, to_stage_name, to_order_index, moved_at, moved_by, origem')
+    .select('from_stage_name, from_order_index, to_stage_name, to_order_index, moved_at, moved_by, origem, loss_reason_name')
     .eq('lead_id', leadId)
     .order('moved_at', { ascending: true });
   if (error) throw error;
@@ -484,4 +486,21 @@ export async function profundidadeMaximaDoLead(leadId: string): Promise<number> 
   });
   if (error) throw error;
   return typeof data === 'number' ? data : -1;
+}
+
+/**
+ * Define o responsável pelo lead.
+ *
+ * `null` devolve o lead para a fila de ninguém — que é um estado legítimo, e
+ * diferente de nunca ter tido dono, porque a data de alteração registra quando.
+ */
+export async function atribuirResponsavel(
+  leadId: string,
+  userId: string | null,
+): Promise<void> {
+  const { error } = await (supabase as any)
+    .from('leads')
+    .update({ assigned_to: userId, updated_at: new Date().toISOString() })
+    .eq('id', leadId);
+  if (error) throw new Error(error.message);
 }
