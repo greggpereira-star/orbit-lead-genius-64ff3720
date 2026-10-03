@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import {
   listStages, createStage, updateStage, reorderStages, deleteStage, setEntryStage,
-  STAGE_COLORS, type Stage, type StageKind,
+  type Stage, type StageKind,
 } from '../services/stageService';
 
 const KIND_LABEL: Record<StageKind, string> = {

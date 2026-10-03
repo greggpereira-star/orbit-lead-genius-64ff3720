@@ -48,23 +48,41 @@ export function LeadQuickActions({
 
   return (
     <div className="grid gap-2 sm:grid-cols-2">
-      <Button asChild variant="outline" className="justify-start" disabled={!email}>
-        <a href={email ? `mailto:${email}` : undefined} aria-disabled={!email}>
+      {/* `disabled` não existe em <a>: a versão anterior marcava o botão como
+          desabilitado e o link seguia clicável, navegando para `undefined` —
+          ou seja, recarregando a própria página. Sem destino, vira um botão
+          de verdade desabilitado. */}
+      {email ? (
+        <Button asChild variant="outline" className="justify-start">
+          <a href={`mailto:${email}`}>
+            <Mail className="h-4 w-4" />
+            <span className="ml-2">Enviar e-mail</span>
+          </a>
+        </Button>
+      ) : (
+        <Button variant="outline" className="justify-start" disabled title="Este lead não tem e-mail">
           <Mail className="h-4 w-4" />
           <span className="ml-2">Enviar e-mail</span>
-        </a>
-      </Button>
+        </Button>
+      )}
 
-      <Button
-        asChild
-        variant="outline"
-        className="justify-start border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
-      >
-        <a href={whatsapp ?? undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!whatsapp}>
+      {whatsapp ? (
+        <Button
+          asChild
+          variant="outline"
+          className="justify-start border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+        >
+          <a href={whatsapp} target="_blank" rel="noopener noreferrer">
+            <MessageCircle className="h-4 w-4" />
+            <span className="ml-2">Chamar no WhatsApp</span>
+          </a>
+        </Button>
+      ) : (
+        <Button variant="outline" className="justify-start" disabled title="Este lead não tem telefone">
           <MessageCircle className="h-4 w-4" />
           <span className="ml-2">Chamar no WhatsApp</span>
-        </a>
-      </Button>
+        </Button>
+      )}
 
       <Button
         variant="outline"

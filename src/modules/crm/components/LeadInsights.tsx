@@ -21,7 +21,7 @@ interface Leitura {
  * Então cada linha abaixo é uma LEITURA, com a origem nomeada ao lado. O que é
  * conclusão sai rotulado como sugestão, no fim, separado dos fatos.
  */
-export function LeadInsights({ lead, etapaAtual }: { lead: LeadRow; etapaAtual: string | null }) {
+export function LeadInsights({ lead }: { lead: LeadRow }) {
   const caminho = useQuery({
     queryKey: ['caminho-do-lead', lead.id],
     queryFn: () => listarCaminhoDoLead(lead.id),
@@ -31,7 +31,6 @@ export function LeadInsights({ lead, etapaAtual }: { lead: LeadRow; etapaAtual: 
   const passos = caminho.data ?? [];
   const leituras: Leitura[] = [];
 
-  const queda = passos.find((p) => p.loss_reason_name || p.to_stage_name === etapaAtual);
   const maisFundo = passos
     .filter((p) => p.to_order_index != null)
     .reduce<typeof passos[number] | null>(

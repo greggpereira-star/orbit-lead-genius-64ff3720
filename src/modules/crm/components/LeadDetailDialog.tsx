@@ -5,12 +5,12 @@
  * tirar o usuário da lista. Duas colunas: identidade e ações à esquerda
  * (sempre visíveis), conteúdo em abas à direita.
  */
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Clock, Zap, CheckSquare, AlertCircle,
   Mail, Phone, MapPin, Copy, Check, ExternalLink,
-  MessageCircle, Tag as TagIcon, ClipboardList, Radio, User,
+  MessageCircle, ClipboardList, Radio, User,
   StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
   ChevronDown, AlertTriangle, Sparkles, DollarSign, BarChart3, Home, CircleDot,
   PencilLine, MessagesSquare,
@@ -44,7 +44,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { salvarValorDaVenda } from "@/lib/google-ads.functions";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -279,37 +278,7 @@ function CompletenessMeter({ data }: { data: LeadCompleteness }) {
   );
 }
 
-/** Um fato do cadastro na faixa inferior: rótulo pequeno, valor legível. */
-function FactItem({
-  icon, label, children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="text-muted-foreground/60" aria-hidden="true">{icon}</span>
-      <div className="leading-tight">
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium tabular-nums">{children}</p>
-      </div>
-    </div>
-  );
-}
 
-/** Agrupa campos com um rótulo pequeno — separa o que é contato do que é
- *  estado interno, que antes vinham na mesma lista achatada. */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-        {title}
-      </h3>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
 
 /** Copiar é a ação mais repetida numa ficha de lead — merece feedback próprio. */
 function CopyButton({ value, label }: { value: string; label: string }) {
@@ -367,7 +336,7 @@ function Field({
 
   return (
     <div className="group/field flex items-start gap-3">
-      <span className="mt-0.5 shrink-0 text-muted-foreground/70">{icon}</span>
+      {icon && <span className="mt-0.5 shrink-0 text-muted-foreground/70">{icon}</span>}
       <div className="min-w-0 flex-1">
         {!semRotulo && (
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
@@ -907,35 +876,16 @@ const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
  * "Anotações" e alargasse a janela veria o painel central em branco, porque a
  * aba continuava selecionada mas seu conteúdo sumia.
  */
-const WIDE_QUERY = "(min-width: 1280px)";
 
-function useIsWide(): boolean {
-  const [wide, setWide] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(WIDE_QUERY);
-    const sync = () => setWide(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return wide;
-}
 
 export function LeadDetailDialog({
   lead, open, onOpenChange, originLabel = "Origem", onStatusChange, onLeadUpdated,
 }: Props) {
-  const isWide = useIsWide();
   const qc = useQueryClient();
   const [tab, setTab] = useState("visao-geral");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
-
-  // Alargou a janela com "Anotações" aberta: a aba deixa de existir, então
-  // devolve o foco pra primeira em vez de deixar o painel vazio.
-  useEffect(() => {
-    if (isWide && tab === "anotacoes") setTab("respostas");
-  }, [isWide, tab]);
 
   /* Contagens da faixa de fatos. Mesmas chaves das abas, então o React Query
      serve as duas do mesmo cache — abrir o modal não dispara requisição a
@@ -1226,7 +1176,15 @@ export function LeadDetailDialog({
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{noteCount}</Badge>
                 ) : null}
               </TabsTrigger>
-              <TabsTrigger value="arquivos" className="gap-2"><Paperclip className="h-4 w-4" />Arquivos e Etiquetas</TabsTrigger>
+              <TabsTrigger value="arquivos" className="gap-2">
+                <Paperclip className="h-4 w-4" />Arquivos e Etiquetas
+                {/* A contagem existia na faixa de fatos do layout antigo e se
+                    perdeu na reorganização: ficou sendo calculada e nunca
+                    exibida. Na aba ela diz se vale abrir antes de abrir. */}
+                {attachmentCount ? (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{attachmentCount}</Badge>
+                ) : null}
+              </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="min-h-0 flex-1">
@@ -1355,7 +1313,7 @@ export function LeadDetailDialog({
     </CartaoFicha>
 
     <div className="xl:col-span-3">
-      <LeadInsights lead={lead} etapaAtual={null} />
+      <LeadInsights lead={lead} />
     </div>
   </div>
 </TabsContent>
@@ -1508,7 +1466,7 @@ export function LeadDetailDialog({
         </p>
       </CartaoFicha>
 
-      <LeadInsights lead={lead} etapaAtual={null} />
+      <LeadInsights lead={lead} />
     </div>
 
     <div className="space-y-4">
@@ -1517,9 +1475,7 @@ export function LeadDetailDialog({
         titulo="Resumo rápido"
         descricao="Quanto do cadastro está preenchido."
       >
-        <div className="flex items-start gap-4">
-          <CompletenessMeter data={completeness} />
-        </div>
+        <CompletenessMeter data={completeness} />
       </CartaoFicha>
 
       <CartaoFicha
@@ -1707,66 +1663,5 @@ export function LeadDetailDialog({
   );
 }
 
-/** Cartão de resumo da coluna da esquerda, com atalho para a aba que edita. */
-function CartaoResumo({
-  titulo, aoEditar, children,
-}: { titulo: string; aoEditar: () => void; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border p-4">
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">{titulo}</h3>
-        {/* "Editar" leva para a aba que de fato edita, em vez de abrir um
-            segundo lugar de edição com as mesmas regras — dois caminhos de
-            escrita acabam divergindo. */}
-        <button
-          type="button"
-          onClick={aoEditar}
-          className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          Editar
-        </button>
-      </div>
-      <div className="space-y-1.5">{children}</div>
-    </section>
-  );
-}
 
-/** Uma linha do cartão de resumo: ícone, valor e o botão de copiar. */
-function LinhaResumo({
-  icone, valor, rotulo, copiavel, vazio,
-}: {
-  icone: React.ReactNode;
-  valor: string | null;
-  rotulo: string;
-  copiavel?: boolean;
-  vazio?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="shrink-0 text-muted-foreground/70">{icone}</span>
-      <span
-        className={`min-w-0 flex-1 truncate text-sm ${valor ? "" : "text-muted-foreground"}`}
-        title={valor ? `${rotulo}: ${valor}` : rotulo}
-      >
-        {valor || vazio || `Sem ${rotulo.toLowerCase()}`}
-      </span>
-      {copiavel && valor && <CopyButton value={valor} label={rotulo} />}
-    </div>
-  );
-}
 
-/** Número verificável do cadastro, na faixa de fatos da visão geral. */
-function Fato({
-  icone, rotulo, valor, nota,
-}: { icone: React.ReactNode; rotulo: string; valor: string; nota?: string | null }) {
-  return (
-    <div className="rounded-xl border p-3">
-      <span className="mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        {icone}
-      </span>
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{rotulo}</p>
-      <p className="truncate text-sm font-semibold" title={valor}>{valor}</p>
-      {nota && <p className="truncate text-[11px] text-muted-foreground">{nota}</p>}
-    </div>
-  );
-}

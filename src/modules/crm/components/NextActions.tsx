@@ -83,14 +83,17 @@ export function NextActions({
       {pendentes.length > 0 && (
         <ul className="mb-3 space-y-1.5">
           {pendentes.map((n) => (
-            <li key={n.id} className="flex items-start gap-2 rounded-lg bg-muted/50 p-2 text-xs">
+            <li key={n.id} className="group flex items-start gap-2 rounded-lg bg-muted/50 p-2 text-xs">
+              {/* O `hover:` estava no ícone, que tem opacidade 0 e portanto
+                  não recebe ponteiro: a marca de conferido nunca aparecia e a
+                  caixa parecia inerte. O gatilho passa a ser o próprio botão. */}
               <button
                 type="button"
                 onClick={() => concluir.mutate({ id: n.id, done: true })}
                 aria-label={`Marcar "${n.body}" como feito`}
-                className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded border bg-background hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="group/caixa mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded border bg-background transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                <Check className="h-3 w-3 opacity-0 transition-opacity hover:opacity-40" />
+                <Check className="h-3 w-3 text-primary opacity-0 transition-opacity group-hover/caixa:opacity-100" />
               </button>
               <div className="min-w-0 flex-1">
                 <p className="leading-snug">{n.body}</p>
