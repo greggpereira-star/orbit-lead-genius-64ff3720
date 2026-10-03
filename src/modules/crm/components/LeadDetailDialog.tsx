@@ -57,7 +57,9 @@ import { LeadJourney } from "@/modules/crm/components/LeadJourney";
 import { LeadInsights } from "@/modules/crm/components/LeadInsights";
 import { NextActions } from "@/modules/crm/components/NextActions";
 import { LeadQuickActions } from "@/modules/crm/components/LeadQuickActions";
-import { SecaoFicha, LinhaFicha, ValorOuVazio } from "@/modules/crm/components/LeadCards";
+import {
+  TrilhaDeProps, GrupoDeProps, Prop, ValorOuVazio, BlocoDeTrabalho, FatoRapido,
+} from "@/modules/crm/components/LeadCards";
 import {
   getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
   relativeTime, whatsappLink, toTitleCase, channelLabel,
@@ -1027,10 +1029,10 @@ export function LeadDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 54rem: a coluna de leitura tem 40rem e as seis abas somam 752px, que
-          não cabiam nos 720 de um modal de 48rem — a barra rolava e a última
-          aba ficava cortada. O que sobra nas laterais é respiro, não vão. */}
-      <DialogContent className="max-w-[54rem] gap-0 overflow-hidden p-0">
+      {/* 64rem. A trilha de propriedades leva 18rem e sobram 42 para a área de
+          trabalho, que é onde se lê e se age. Também é o que deixa as seis abas
+          (752px) caberem com folga. */}
+      <DialogContent className="max-w-[64rem] gap-0 overflow-hidden p-0">
         {/* Cabeçalho: identidade + etapa + a ação principal, tudo na primeira
             linha de leitura. Antes o topo era só o nome e uma data, e a ação
             mais usada (WhatsApp) ficava enterrada abaixo de seis campos. */}
@@ -1192,179 +1194,197 @@ export function LeadDetailDialog({
 
             <ScrollArea className="min-h-0 flex-1">
               <TabsContent value="visao-geral" className="m-0">
-  {/* Coluna única, largura de leitura.
-      A ficha é uma narrativa: por que terminou assim, quem é, de onde veio,
-      como chegou até aqui, o que fazer agora. Em três colunas essa ordem se
-      perdia e o olho tinha de escolher por onde começar. */}
-  <div className="mx-auto max-w-[40rem] space-y-10 px-8 py-8">
-    {estaPerdido && (
-      <LossReasonPanel
-        leadId={lead.id}
-        companyId={lead.company_id}
-        motivoAtualId={lead.loss_reason_id ?? null}
-        observacaoAtual={lead.lost_notes ?? null}
-      />
-    )}
+  {/* Trilha de propriedades + área de trabalho.
+      A trilha é o registro: densa, sempre na mesma ordem, consultada de
+      relance. A área é o que se lê e se faz. Separá-las é o que distingue um
+      CRM de um formulário — e era o que faltava nas duas tentativas anteriores,
+      uma com tudo no mesmo peso e outra com tudo no mesmo ritmo. */}
+  <div className="grid md:grid-cols-[18rem_minmax(0,1fr)]">
+    <TrilhaDeProps>
+      {estaPerdido && (
+        <LossReasonPanel
+          leadId={lead.id}
+          companyId={lead.company_id}
+          motivoAtualId={lead.loss_reason_id ?? null}
+          observacaoAtual={lead.lost_notes ?? null}
+        />
+      )}
 
-    {summary && (
-      /* Abre a leitura: é a frase que diz quem é a pessoa, e vem antes de
-         qualquer lista de campos. O medidor fica ao lado porque responde a
-         pergunta seguinte — "o quanto disso eu sei?". */
-      <section className="flex items-start justify-between gap-8">
-        <p className="min-w-0 text-[15px] leading-relaxed">{summary}</p>
-        <CompletenessMeter data={completeness} />
-      </section>
-    )}
-
-    <SecaoFicha
-      rotulo="Contato"
-      acao={
-        <button
-          type="button"
-          onClick={() => setTab('contato')}
-          className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          Editar
-        </button>
-      }
-    >
-        <LinhaFicha rotulo="Responsável">
+      <GrupoDeProps titulo="Atendimento">
+        <Prop rotulo="Responsável">
           <OwnerPicker
             leadId={lead.id}
             companyId={lead.company_id}
             responsavelAtual={lead.assigned_to ?? null}
             compacto
           />
-        </LinhaFicha>
-        <LinhaFicha
+        </Prop>
+      </GrupoDeProps>
+
+      <GrupoDeProps titulo="Contato">
+        <Prop
           rotulo="Telefone"
           acao={lead.phone ? <CopyButton value={lead.phone} label="Telefone" /> : undefined}
         >
-          <ValorOuVazio valor={lead.phone} vazio="Sem telefone" />
-        </LinhaFicha>
-        <LinhaFicha
+          <span className="tabular-nums">
+            <ValorOuVazio valor={lead.phone} vazio="Sem telefone" />
+          </span>
+        </Prop>
+        <Prop
           rotulo="E-mail"
           acao={lead.email ? <CopyButton value={lead.email} label="E-mail" /> : undefined}
         >
           <ValorOuVazio valor={lead.email} vazio="Sem e-mail" />
-        </LinhaFicha>
-        <LinhaFicha rotulo="Cidade">
+        </Prop>
+        <Prop rotulo="Cidade (pelo DDD)">
           <ValorOuVazio valor={city ? String(city) : null} vazio="Sem cidade" />
-        </LinhaFicha>
-    </SecaoFicha>
+        </Prop>
+      </GrupoDeProps>
 
-    <SecaoFicha rotulo="Origem">
-        <LinhaFicha
+      <GrupoDeProps titulo="Origem">
+        <Prop
           rotulo={originLabel}
           acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
         >
           <ValorOuVazio valor={origin} vazio="Sem origem" />
-        </LinhaFicha>
-        <LinhaFicha rotulo="Canal">
+        </Prop>
+        <Prop rotulo="Canal">
           <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
-        </LinhaFicha>
-        <LinhaFicha rotulo="Criado em">
-          <span className="block tabular-nums">
-            {created}
-            {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
-          </span>
-        </LinhaFicha>
-        <LinhaFicha rotulo="Valor da venda">
-          <ValorOuVazio
-            valor={(() => {
-              const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
-              return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
-                style: 'currency', currency: l.deal_currency ?? 'BRL',
-              });
-            })()}
-            vazio="Sem valor"
-          />
-        </LinhaFicha>
-    </SecaoFicha>
+        </Prop>
+        <Prop rotulo="Entrou em">
+          <span className="tabular-nums">{created}</span>
+        </Prop>
+      </GrupoDeProps>
 
-    {answers.length > 0 && (
-      <SecaoFicha
-        rotulo="O que ele quer"
+      <GrupoDeProps titulo="Negócio">
+        <Prop rotulo="Valor da venda">
+          <span className="tabular-nums">
+            <ValorOuVazio
+              valor={(() => {
+                const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
+                return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
+                  style: 'currency', currency: l.deal_currency ?? 'BRL',
+                });
+              })()}
+              vazio="Sem valor"
+            />
+          </span>
+        </Prop>
+      </GrupoDeProps>
+
+      <button
+        type="button"
+        onClick={() => setTab('contato')}
+        className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        Editar dados
+      </button>
+    </TrilhaDeProps>
+
+    <div className="min-w-0 space-y-8 px-6 py-6">
+      {/* Faixa de leitura rápida: os números que situam o lead sem abrir nada.
+          Todos vêm do cadastro — nenhum é estimado. */}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-b pb-5 sm:grid-cols-4">
+        <FatoRapido rotulo="No funil há" valor={ago ? ago.replace('há ', '') : '—'} />
+        <FatoRapido rotulo="Respostas" valor={`${answers.length}`} />
+        <FatoRapido rotulo="Anotações" valor={noteCount === null ? '—' : String(noteCount)} />
+        <FatoRapido rotulo="Arquivos" valor={attachmentCount === null ? '—' : String(attachmentCount)} />
+      </div>
+
+      {summary && (
+        <section className="flex items-start justify-between gap-8">
+          <p className="min-w-0 text-[15px] leading-relaxed">{summary}</p>
+          <CompletenessMeter data={completeness} />
+        </section>
+      )}
+
+      <BlocoDeTrabalho titulo="Próximo passo">
+        <div className="space-y-4">
+          <LeadQuickActions
+            leadId={lead.id}
+            companyId={lead.company_id}
+            email={lead.email}
+            whatsapp={wa}
+          />
+          <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
+        </div>
+      </BlocoDeTrabalho>
+
+      <BlocoDeTrabalho
+        titulo="Caminho no funil"
         acao={
           <button
             type="button"
-            onClick={() => setTab('qualificacao')}
+            onClick={() => setTab('historico')}
             className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             Ver tudo
           </button>
         }
       >
-        {answers.slice(0, 4).map((a) => (
-          <LinhaFicha key={a.key} rotulo={a.short}>
-            <span className="block truncate" title={a.value}>{a.value}</span>
-          </LinhaFicha>
-        ))}
-      </SecaoFicha>
-    )}
+        <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} compacto semMoldura />
+      </BlocoDeTrabalho>
 
-    <SecaoFicha
-      rotulo="Caminho no funil"
-      acao={
-        <button
-          type="button"
-          onClick={() => setTab('historico')}
-          className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      {answers.length > 0 && (
+        <BlocoDeTrabalho
+          titulo="O que ele quer"
+          acao={
+            <button
+              type="button"
+              onClick={() => setTab('qualificacao')}
+              className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              Ver tudo
+            </button>
+          }
         >
-          Ver tudo
-        </button>
-      }
-    >
-      <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} compacto semMoldura />
-    </SecaoFicha>
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {answers.slice(0, 4).map((a) => (
+              <div key={a.key} className="min-w-0">
+                <dt className="truncate text-[11px] text-muted-foreground" title={a.label}>{a.short}</dt>
+                <dd className="truncate text-sm font-medium" title={a.value}>{a.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </BlocoDeTrabalho>
+      )}
 
-    <SecaoFicha rotulo="Próximo passo">
-      <div className="space-y-4">
-        <LeadQuickActions
-          leadId={lead.id}
-          companyId={lead.company_id}
-          email={lead.email}
-          whatsapp={wa}
-        />
-        <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
-      </div>
-    </SecaoFicha>
+      <BlocoDeTrabalho
+        titulo="Anotações"
+        acao={
+          <button
+            type="button"
+            onClick={() => setTab('anotacoes')}
+            className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            Ver todas
+          </button>
+        }
+      >
+        <NotesTab leadId={lead.id} companyId={lead.company_id} compacto />
+      </BlocoDeTrabalho>
 
-    <SecaoFicha
-      rotulo="Anotações"
-      acao={
-        <button
-          type="button"
-          onClick={() => setTab('anotacoes')}
-          className="rounded text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          Ver todas
-        </button>
-      }
-    >
-      <NotesTab leadId={lead.id} companyId={lead.company_id} compacto />
-    </SecaoFicha>
-
-    <LeadInsights lead={lead} />
+      <LeadInsights lead={lead} />
+    </div>
   </div>
 </TabsContent>
 
 
               <TabsContent value="contato" className="m-0">
-  <div className="mx-auto max-w-[40rem] space-y-10 px-8 py-8">
-    <SecaoFicha rotulo="Quem cuida">
+  {/* Aqui os campos são editáveis — e só aqui. Na visão geral eles são leitura
+      com um atalho para cá; dois lugares de escrita com as mesmas regras
+      acabam divergindo. */}
+  <div className="mx-auto max-w-[44rem] space-y-9 px-8 py-8">
+    <BlocoDeTrabalho titulo="Quem cuida">
       <OwnerPicker
         leadId={lead.id}
         companyId={lead.company_id}
         responsavelAtual={lead.assigned_to ?? null}
       />
-    </SecaoFicha>
+    </BlocoDeTrabalho>
 
-    {/* Os campos ficam editáveis aqui e só aqui. Na visão geral eles são
-        leitura com um atalho para cá — dois lugares de escrita com as mesmas
-        regras acabam divergindo. */}
-    <SecaoFicha rotulo="Como falar com ele">
-      <div className="space-y-1">
+    <BlocoDeTrabalho titulo="Como falar com ele">
+      <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
         <Field
           icon={<Phone className="h-4 w-4" />}
           label="Telefone"
@@ -1397,29 +1417,6 @@ export function LeadDetailDialog({
           placeholder="Sem cidade"
           onSave={(cityName) => editMutation.mutate({ city: cityName })}
         />
-      </div>
-    </SecaoFicha>
-
-    <SecaoFicha rotulo="De onde veio">
-        <LinhaFicha
-          rotulo={originLabel}
-          acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
-        >
-          <ValorOuVazio valor={origin} vazio="Sem origem" />
-        </LinhaFicha>
-        <LinhaFicha rotulo="Canal">
-          <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
-        </LinhaFicha>
-        <LinhaFicha rotulo="Criado em">
-          <span className="block tabular-nums">
-            {created}
-            {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
-          </span>
-        </LinhaFicha>
-    </SecaoFicha>
-
-    <SecaoFicha rotulo="Negócio">
-      <div className="space-y-1">
         <Field
           icon={<CircleDollarSign className="h-4 w-4" />}
           label="Valor da venda"
@@ -1434,11 +1431,37 @@ export function LeadDetailDialog({
           onSave={(texto) => salvarValor(texto)}
         />
       </div>
-    </SecaoFicha>
+    </BlocoDeTrabalho>
+
+    <BlocoDeTrabalho titulo="De onde veio">
+      {/* Leitura: origem e canal vêm da integração que trouxe o lead, e
+          reescrevê-los à mão criaria um dado que não corresponde a nada. */}
+      <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+        <div className="min-w-0">
+          <dt className="text-[11px] text-muted-foreground">{originLabel}</dt>
+          <dd className="truncate text-sm font-medium" title={origin ?? undefined}>
+            <ValorOuVazio valor={origin} vazio="Sem origem" />
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[11px] text-muted-foreground">Canal</dt>
+          <dd className="truncate text-sm font-medium">
+            <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[11px] text-muted-foreground">Entrou em</dt>
+          <dd className="truncate text-sm font-medium tabular-nums">
+            {created}
+            {ago && <span className="ml-1 font-normal text-muted-foreground">({ago})</span>}
+          </dd>
+        </div>
+      </dl>
+    </BlocoDeTrabalho>
   </div>
 </TabsContent>
 
-              <TabsContent value="qualificacao" className="m-0"><div className="mx-auto max-w-[40rem] space-y-4 px-8 py-8">
+              <TabsContent value="qualificacao" className="m-0"><div className="mx-auto max-w-[48rem] space-y-4 px-8 py-8">
                   {answers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Este lead não trouxe respostas de formulário.
@@ -1503,7 +1526,7 @@ export function LeadDetailDialog({
                   </div>
             </TabsContent>
 
-              <TabsContent value="historico" className="m-0"><div className="mx-auto max-w-[40rem] space-y-6 px-8 py-8">
+              <TabsContent value="historico" className="m-0"><div className="mx-auto max-w-[48rem] space-y-6 px-8 py-8">
   <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} />
 <div className="space-y-6">
                   {tracking.length === 0 && metaInfo.length === 0 ? (
@@ -1547,7 +1570,7 @@ export function LeadDetailDialog({
             </TabsContent>
 
               <TabsContent value="anotacoes" className="m-0">
-                <div className="mx-auto max-w-[40rem] px-8 py-8">
+                <div className="mx-auto max-w-[48rem] px-8 py-8">
                   <NotesTab leadId={lead.id} companyId={lead.company_id} />
                 </div>
               </TabsContent>
