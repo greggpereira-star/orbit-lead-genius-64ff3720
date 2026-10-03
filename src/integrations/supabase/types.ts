@@ -2063,6 +2063,87 @@ export type Database = {
           },
         ]
       }
+      lead_stage_history: {
+        Row: {
+          company_id: string
+          from_order_index: number | null
+          from_stage_id: string | null
+          from_stage_kind: string | null
+          from_stage_name: string | null
+          id: string
+          lead_id: string
+          loss_reason_name: string | null
+          moved_at: string
+          moved_by: string | null
+          origem: string | null
+          to_order_index: number | null
+          to_stage_id: string | null
+          to_stage_kind: string | null
+          to_stage_name: string | null
+        }
+        Insert: {
+          company_id: string
+          from_order_index?: number | null
+          from_stage_id?: string | null
+          from_stage_kind?: string | null
+          from_stage_name?: string | null
+          id?: string
+          lead_id: string
+          loss_reason_name?: string | null
+          moved_at?: string
+          moved_by?: string | null
+          origem?: string | null
+          to_order_index?: number | null
+          to_stage_id?: string | null
+          to_stage_kind?: string | null
+          to_stage_name?: string | null
+        }
+        Update: {
+          company_id?: string
+          from_order_index?: number | null
+          from_stage_id?: string | null
+          from_stage_kind?: string | null
+          from_stage_name?: string | null
+          id?: string
+          lead_id?: string
+          loss_reason_name?: string | null
+          moved_at?: string
+          moved_by?: string | null
+          origem?: string | null
+          to_order_index?: number | null
+          to_stage_id?: string | null
+          to_stage_kind?: string | null
+          to_stage_name?: string | null
+        }
+        Relationships: []
+      }
+      loss_reasons: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          order_index: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          order_index?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           assigned_to: string | null
