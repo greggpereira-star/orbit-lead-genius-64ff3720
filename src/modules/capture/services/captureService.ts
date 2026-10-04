@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/core/observability/logger';
 import { cvcrmService } from '@/modules/cvcrm/services/cvcrmService';
-import { automationService } from '@/modules/automation/services/automationService';
 import { resolveEntryStageId, newLeadBoardOrder } from '@/modules/crm/services/stageService';
 
 export interface LeadSubmission {
@@ -240,11 +239,14 @@ export const captureService = {
         });
       }
 
-      // Automations
-      automationService.processTrigger(companyId, {
-        type: 'lead_created',
-        data: { ...lead, submission_id: submissionId }
-      }).catch(console.error);
+      // Automação: nada a fazer aqui.
+      //
+      // O disparo saiu do cliente e virou o gatilho `leads_automacao`, que
+      // enfileira em `automation_jobs` no mesmo INSERT do lead. Antes esta
+      // chamada era o ÚNICO ponto de disparo do produto — lead que entrasse
+      // pelo quiz, pelo chat, pelo WhatsApp ou pelo painel nunca disparava
+      // automação nenhuma. E consultava a tabela `automations`, que não
+      // existia, sem conferir o erro.
 
       return { success: true, leadId: lead.id, submissionId };
     } catch (err: any) {

@@ -66,6 +66,7 @@ import { Route as AppQuizzesIdLeadsRouteImport } from './routes/_app.quizzes_.$i
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
+import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/api/public/cron/automation-dispatch'
 import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 
@@ -357,6 +358,12 @@ const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
   path: '/quizzes/$id/publish',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicCronAutomationDispatchRoute =
+  ApiPublicCronAutomationDispatchRouteImport.update({
+    id: '/api/public/cron/automation-dispatch',
+    path: '/api/public/cron/automation-dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronConversionDispatchRoute =
   ApiPublicCronConversionDispatchRouteImport.update({
     id: '/api/public/cron/conversion-dispatch',
@@ -425,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
@@ -483,6 +491,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
@@ -545,6 +554,7 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
@@ -606,6 +616,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-retry'
   fileRoutesByTo: FileRoutesByTo
@@ -664,6 +675,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-retry'
   id:
@@ -725,6 +737,7 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/performance'
     | '/_app/quizzes_/$id/preview'
     | '/_app/quizzes_/$id/publish'
+    | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-retry'
   fileRoutesById: FileRoutesById
@@ -750,6 +763,7 @@ export interface RootRouteChildren {
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
+  ApiPublicCronAutomationDispatchRoute: typeof ApiPublicCronAutomationDispatchRoute
   ApiPublicCronConversionDispatchRoute: typeof ApiPublicCronConversionDispatchRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
 }
@@ -1155,6 +1169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/cron/automation-dispatch': {
+      id: '/api/public/cron/automation-dispatch'
+      path: '/api/public/cron/automation-dispatch'
+      fullPath: '/api/public/cron/automation-dispatch'
+      preLoaderRoute: typeof ApiPublicCronAutomationDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/conversion-dispatch': {
       id: '/api/public/cron/conversion-dispatch'
       path: '/api/public/cron/conversion-dispatch'
@@ -1313,6 +1334,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
+  ApiPublicCronAutomationDispatchRoute: ApiPublicCronAutomationDispatchRoute,
   ApiPublicCronConversionDispatchRoute: ApiPublicCronConversionDispatchRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
 }
