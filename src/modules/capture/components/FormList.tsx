@@ -44,7 +44,7 @@ function EmbedDialog({ form }: { form: Form }) {
         <Tabs defaultValue="iframe" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="iframe">iFrame</TabsTrigger>
-            <TabsTrigger value="link">Public Link</TabsTrigger>
+            <TabsTrigger value="link">Link público</TabsTrigger>
             <TabsTrigger value="wordpress">WordPress</TabsTrigger>
           </TabsList>
           
@@ -66,10 +66,10 @@ function EmbedDialog({ form }: { form: Form }) {
           </TabsContent>
 
           <TabsContent value="link" className="space-y-4 pt-4">
-            <p className="text-xs text-muted-foreground">Share this link directly or use it in buttons and social media.</p>
+            <p className="text-xs text-muted-foreground">Compartilhe este link direto ou use em botões e redes sociais.</p>
             <div className="flex gap-2">
               <Input value={publicUrl} readOnly className="text-xs" />
-              <Button onClick={() => copyToClipboard(publicUrl)}>Copy</Button>
+              <Button onClick={() => copyToClipboard(publicUrl)}>Copiar</Button>
             </div>
             <Button variant="outline" className="w-full gap-2" onClick={() => window.open(publicUrl, '_blank')}>
               <ExternalLink className="h-4 w-4" /> View Live Form

@@ -14,7 +14,19 @@ export interface LeadSubmission {
   utm_medium?: string;
   utm_campaign?: string;
   gclid?: string;
+  /** iOS troca o `gclid` por um destes dois. Ver migração 20261004120000. */
+  wbraid?: string;
+  gbraid?: string;
   fbclid?: string;
+  /**
+   * Chave de deduplicação do evento de conversão.
+   *
+   * O Pixel dispara `Lead` pelo navegador e pelo servidor com o MESMO id para a
+   * Meta contar um só. Guardá-lo no lead é o que permite, depois, dizer qual
+   * evento do Gerenciador corresponde a qual linha do CRM — sem isso a
+   * reconciliação é impossível.
+   */
+  event_id?: string;
 }
 
 export const captureService = {
@@ -77,7 +89,10 @@ export const captureService = {
         utm_medium: data.utm_medium || trackingData.utm_medium,
         utm_campaign: data.utm_campaign || trackingData.utm_campaign,
         gclid: data.gclid || trackingData.gclid,
+        wbraid: data.wbraid || trackingData.wbraid,
+        gbraid: data.gbraid || trackingData.gbraid,
         fbclid: data.fbclid || trackingData.fbclid,
+        event_id: data.event_id ?? null,
         metadata: { ...data.metadata, ...trackingData.metadata, tags },
         referrer: trackingData.referrer,
         landing_page: trackingData.landing_page,
@@ -94,9 +109,20 @@ export const captureService = {
 
       // 3. Insert Tag rules (persist tags to lead_tags table)
       if (tags.length > 0) {
-        await supabase.from('lead_tags').insert(
+        // Falha aqui não derruba a captura — o lead já está gravado e as
+        // etiquetas também vão no `metadata`. Mas tem que aparecer no log: sem
+        // o erro conferido, etiqueta sumida ficava indistinguível de regra de
+        // pontuação que não casou com nada.
+        const { error: tagError } = await supabase.from('lead_tags').insert(
           tags.map(tag => ({ lead_id: lead.id, tag_name: tag }))
         );
+        if (tagError) {
+          logger.error('CaptureService: lead_tags insert failed', {
+            leadId: lead.id,
+            tags,
+            error: tagError.message,
+          });
+        }
       }
 
       // 4. Save Final Submission record

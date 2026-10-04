@@ -43,8 +43,8 @@ import { Plus } from 'lucide-react';
         <>
           <div className="flex justify-between items-end">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Forms & Capture</h1>
-              <p className="text-muted-foreground text-sm">Create and manage your high-converting lead capture forms.</p>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Formulários e Captação</h1>
+              <p className="text-muted-foreground text-sm">Crie e gerencie os formulários que captam seus leads.</p>
             </div>
             <Button onClick={handleCreate} className="flex items-center gap-2 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4" />
