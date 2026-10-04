@@ -37,7 +37,7 @@ export function FormTypeSelector({ onSelect, onBack }: FormTypeSelectorProps) {
     {
       id: 'quiz',
       title: 'Quiz de Qualificação',
-      description: 'Ideal para perguntas com pontuação, segmentação e recomendação automática.',
+      description: 'Perguntas com pontuação, segmentação e recomendação automática. Abre o Alt Quiz, que tem construtor próprio.',
       icon: Zap,
       color: 'orange'
     }

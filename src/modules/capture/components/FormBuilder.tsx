@@ -25,7 +25,9 @@ import {
    Layers,
    Trophy,
    Target,
-   ChevronRight
+   ChevronRight,
+   ChevronUp,
+   ChevronDown
  } from 'lucide-react';
   import { FormEventsPanel } from './events/FormEventsPanel';
   import { FormSubmissionsPanel } from './events/FormSubmissionsPanel';
@@ -114,11 +116,14 @@ const normalizeFieldForEditor = (field: any, index: number) => {
     template?: any;
   }
  
- function SortableField({ field, index, onUpdate, onRemove }: { 
+ function SortableField({ field, index, onUpdate, onRemove, steps, onAssignStep }: { 
    field: any, 
    index: number, 
    onUpdate: (index: number, data: any) => void,
-   onRemove: (id: string) => void
+   onRemove: (id: string) => void,
+   /* Etapas do formulário step-by-step. Vazio = formulário de página única. */
+   steps?: any[],
+   onAssignStep?: (campoId: string, stepId: string) => void
  }) {
    const {
      attributes,
@@ -180,8 +185,26 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                  checked={field.required} 
                  onCheckedChange={(val) => onUpdate(index, { required: val })}
                />
-               <span className="text-xs font-medium">Required</span>
+               <span className="text-xs font-medium">Obrigatório</span>
              </div>
+             {/* Sem isto as etapas existiam e nenhum campo pertencia a
+                 nenhuma: o formulário salvava com etapas e renderizava tudo
+                 numa tela só. */}
+             {steps && steps.length > 0 && (
+               <div className="flex items-center gap-2">
+                 <span className="text-xs text-muted-foreground">Etapa</span>
+                 <select
+                   className="h-9 rounded-md border bg-background px-2 text-sm"
+                   value={field.step_id ?? ''}
+                   onChange={(e) => onAssignStep?.(field.id, e.target.value)}
+                 >
+                   <option value="">Sem etapa</option>
+                   {steps.map((s: any, i: number) => (
+                     <option key={s.id} value={s.id}>{i + 1}. {s.title || `Etapa ${i + 1}`}</option>
+                   ))}
+                 </select>
+               </div>
+             )}
              <Button 
                variant="ghost" 
                size="icon" 
@@ -378,6 +401,79 @@ const normalizeFieldForEditor = (field: any, index: number) => {
     }
   }, [existingForm, formId, template, initialType]);
 
+    /* --- Etapas ---------------------------------------------------------
+       `sort_order` é sempre reescrito a partir da posição no array: era o que
+       o `save_form_builder_v1` usava para ordenar, e deixar o valor antigo
+       faria a reordenação na tela não surtir efeito no formulário público. */
+    const normalizarOrdem = (lista: any[]) =>
+      lista.map((s, i) => ({ ...s, sort_order: i }));
+
+    const adicionarEtapa = () => {
+      setSteps((atuais) => normalizarOrdem([
+        ...atuais,
+        {
+          id: crypto.randomUUID(),
+          title: `Etapa ${atuais.length + 1}`,
+          description: '',
+          button_text: 'Avançar',
+          conditional_logic: {},
+        },
+      ]));
+    };
+
+    const atualizarEtapa = (idx: number, patch: Record<string, unknown>) => {
+      setSteps((atuais) => atuais.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+    };
+
+    const moverEtapa = (idx: number, direcao: -1 | 1) => {
+      setSteps((atuais) => {
+        const destino = idx + direcao;
+        if (destino < 0 || destino >= atuais.length) return atuais;
+        const copia = [...atuais];
+        [copia[idx], copia[destino]] = [copia[destino], copia[idx]];
+        return normalizarOrdem(copia);
+      });
+    };
+
+    const removerEtapa = (idx: number) => {
+      const etapa = steps[idx];
+      if (!etapa) return;
+      const restantes = normalizarOrdem(steps.filter((_, i) => i !== idx));
+      /* Campo órfão não aparece em etapa nenhuma e some do formulário sem
+         aviso. Os campos da etapa removida vão para a primeira que sobrar; se
+         não sobrar nenhuma, ficam sem etapa e o formulário vira página única. */
+      const destino = restantes[0];
+      setFields((atuais) => atuais.map((f: any) =>
+        f.step_id === etapa.id
+          ? { ...f, step_id: destino?.id, step_number: destino ? 1 : 1 }
+          : f,
+      ));
+      setSteps(restantes);
+    };
+
+    const atribuirCampoAEtapa = (campoId: string, stepId: string) => {
+      const indice = steps.findIndex((s) => s.id === stepId);
+      setFields((atuais) => atuais.map((f: any) =>
+        f.id === campoId ? { ...f, step_id: stepId, step_number: indice >= 0 ? indice + 1 : 1 } : f,
+      ));
+    };
+
+    /* Step-by-step sem nenhuma etapa não tem como funcionar: semeia a
+       primeira para que a aba Steps abra com algo e os campos tenham onde
+       entrar. */
+    useEffect(() => {
+      if (formConfig.type === 'multi_step' && steps.length === 0 && !isLoading) {
+        setSteps([{
+          id: crypto.randomUUID(),
+          title: 'Etapa 1',
+          description: '',
+          button_text: 'Avançar',
+          conditional_logic: {},
+          sort_order: 0,
+        }]);
+      }
+    }, [formConfig.type, steps.length, isLoading]);
+
     const [isSaving, setIsSaving] = useState(false);
 
     const saveMutation = useMutation({
@@ -421,6 +517,17 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             optionCount: optionsByField.reduce((total, item) => total + item.options.length, 0),
           });
 
+          /* A ordem das etapas e o `step_number` de cada campo são derivados
+             da posição no momento de salvar. O `step_number` ficava no valor
+             com que o campo nasceu, então reordenar etapas na tela não mudava
+             a ordem no formulário público. */
+          const stepsParaSalvar = steps.map((s: any, i: number) => ({ ...s, sort_order: i }));
+          const indicePorStepId = new Map(stepsParaSalvar.map((s: any, i: number) => [s.id, i + 1]));
+          for (const f of fieldsToUpsert) {
+            const n = f.step_id ? indicePorStepId.get(f.step_id) : undefined;
+            f.step_number = n ?? 1;
+          }
+
           const saveResult = await formService.saveFormBuilder({
             formId: formId || undefined,
             companyId: company.id,
@@ -433,7 +540,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               type: formConfig.type || 'standard'
             },
             fields: fieldsToUpsert,
-            steps,
+            steps: stepsParaSalvar,
             optionsByField
           });
 
@@ -732,6 +839,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                            key={field.id} 
                            field={field} 
                            index={index}
+                           steps={formConfig.type === 'multi_step' ? steps : []}
+                           onAssignStep={atribuirCampoAEtapa}
                            onRemove={removeField}
                            onUpdate={(idx: number, data: any) => {
                              const newFields = [...fields];
@@ -990,29 +1099,108 @@ const normalizeFieldForEditor = (field: any, index: number) => {
          </TabsContent>
 
           <TabsContent value="steps" className="pt-6">
+            {/* Esta aba era uma maquete: o botão "Adicionar Etapa" não tinha
+                `onClick`, a lista lia `template?.steps` em vez do estado
+                `steps`, e o "Etapa 1 / Dados iniciais" que aparecia era o
+                literal do fallback. Nada podia ser criado, editado ou
+                reordenado. O backend (`save_form_builder_v1`) já persistia
+                etapas corretamente — só faltava a tela. */}
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold">Gerenciar Etapas</h3>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" /> Adicionar Etapa
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold tracking-[-0.01em]">Gerenciar etapas</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Cada etapa é uma tela do formulário. Os campos são distribuídos na aba Builder.
+                  </p>
+                </div>
+                <Button size="sm" className="gap-2" onClick={adicionarEtapa}>
+                  <Plus className="h-4 w-4" /> Adicionar etapa
                 </Button>
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                {(template?.steps || [{ title: 'Etapa 1', description: 'Dados iniciais' }]).map((step: any, idx: number) => (
-                  <Card key={idx} className="border-none shadow-sm p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-sm">{step.title}</h4>
-                        <p className="text-xs text-muted-foreground">{step.description || 'Sem descrição'}</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon"><Settings2 className="h-4 w-4" /></Button>
-                  </Card>
-                ))}
-              </div>
+
+              {steps.length === 0 ? (
+                <div className="rounded-xl border border-dashed p-10 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma etapa ainda. Um formulário step-by-step precisa de pelo menos uma.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-3 gap-2" onClick={adicionarEtapa}>
+                    <Plus className="h-4 w-4" /> Criar a primeira
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {steps.map((step: any, idx: number) => {
+                    const camposDaEtapa = fields.filter((f: any) => f.step_id === step.id).length;
+                    return (
+                      <Card key={step.id || idx} className="p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 h-8 w-8 shrink-0 rounded-full bg-primary/10 grid place-items-center text-primary font-semibold text-sm tabular-nums">
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0 flex-1 grid gap-2 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label className="text-[11px] font-semibold text-muted-foreground">Título</Label>
+                              <Input
+                                value={step.title ?? ''}
+                                placeholder={`Etapa ${idx + 1}`}
+                                onChange={(e) => atualizarEtapa(idx, { title: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[11px] font-semibold text-muted-foreground">Descrição</Label>
+                              <Input
+                                value={step.description ?? ''}
+                                placeholder="Opcional"
+                                onChange={(e) => atualizarEtapa(idx, { description: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[11px] font-semibold text-muted-foreground">Texto do botão</Label>
+                              <Input
+                                value={step.button_text ?? ''}
+                                placeholder="Avançar"
+                                onChange={(e) => atualizarEtapa(idx, { button_text: e.target.value })}
+                              />
+                            </div>
+                            <div className="flex items-end">
+                              <p className="text-xs text-muted-foreground">
+                                {camposDaEtapa === 0
+                                  ? 'Nenhum campo nesta etapa'
+                                  : `${camposDaEtapa} campo${camposDaEtapa > 1 ? 's' : ''} nesta etapa`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-col gap-1">
+                            <Button
+                              type="button" variant="ghost" size="icon" className="h-7 w-7"
+                              disabled={idx === 0}
+                              onClick={() => moverEtapa(idx, -1)}
+                              aria-label="Mover etapa para cima"
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button" variant="ghost" size="icon" className="h-7 w-7"
+                              disabled={idx === steps.length - 1}
+                              onClick={() => moverEtapa(idx, 1)}
+                              aria-label="Mover etapa para baixo"
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button" variant="ghost" size="icon" className="h-7 w-7"
+                              onClick={() => removerEtapa(idx)}
+                              aria-label="Remover etapa"
+                            >
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </TabsContent>
 

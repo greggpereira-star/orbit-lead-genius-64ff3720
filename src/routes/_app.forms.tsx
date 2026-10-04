@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
  import { FormBuilder } from '@/modules/capture/components/FormBuilder';
  import { FormTypeSelector } from '@/modules/capture/components/FormTypeSelector';
 import { FormList } from '@/modules/capture/components/FormList';
@@ -15,6 +15,7 @@ import { Plus } from 'lucide-react';
    const [editingId, setEditingId] = useState<string | undefined>(undefined);
    const [initialTemplate, setInitialTemplate] = useState<any>(null);
    const [selectedType, setSelectedType] = useState<'standard' | 'multi_step' | 'quiz'>('standard');
+   const navigate = useNavigate();
  
    const handleCreate = () => {
      setEditingId(undefined);
@@ -22,6 +23,19 @@ import { Plus } from 'lucide-react';
    };
  
    const handleTypeSelect = (type: 'standard' | 'multi_step' | 'quiz', template?: any) => {
+     /* "Quiz de Qualificação" abria o MESMO construtor de formulário.
+        `initialType` só era usado para gravar `forms.type`: não existe nenhum
+        ramo `type === 'quiz'` no FormBuilder, então a tela era idêntica à do
+        formulário normal — e nem a aba de etapas aparecia, porque ela só é
+        exibida para `multi_step`.
+
+        O quiz tem módulo próprio e completo (`/quizzes`, com construtor,
+        fluxo, pontuação, publicação e o player em `/q/$slug`). É para lá que
+        a escolha deve levar. */
+     if (type === 'quiz') {
+       navigate({ to: '/quizzes' });
+       return;
+     }
      setSelectedType(type);
      setInitialTemplate(template);
      setView('builder');
@@ -48,7 +62,7 @@ import { Plus } from 'lucide-react';
             </div>
             <Button onClick={handleCreate} className="flex items-center gap-2 shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4" />
-              Create Form
+              Criar formulário
             </Button>
           </div>
           <FormList onEdit={handleEdit} onCreate={handleCreate} />
