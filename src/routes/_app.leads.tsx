@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Columns3, Download, ExternalLink, Eye, Filter, Globe, Loader2, MapPin, MoreHorizontal, Plus, Search, Share2, Trash2, UserPlus } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Columns3, Download, ExternalLink, Eye, Filter, Globe, Loader2, MapPin, MoreHorizontal, Plus, Search, Share2, Trash2, UserPlus,
+} from 'lucide-react';
 
 import { LeadDetailDialog } from '@/modules/crm/components/LeadDetailDialog';
 import {
@@ -248,6 +250,20 @@ function LeadsPage() {
   const leads = leadsQuery.data ?? [];
   const metrics = useMemo(() => buildMetrics(leads), [leads]);
 
+  /* Paginação.
+     489 leads renderizavam de uma vez — 489 linhas no DOM, cada uma com
+     menu, caixa e etiquetas. Além do custo, uma lista sem fim não tem onde
+     o olho descansar. 50 por página é o padrão: cabe numa rolada e ainda
+     mostra bastante. */
+  const [porPagina, setPorPagina] = useState(50);
+  const [pagina, setPagina] = useState(1);
+  const totalPaginas = Math.max(1, Math.ceil(leads.length / porPagina));
+  // Mudar filtro com a página 7 aberta deixaria a tela vazia sem explicação.
+  useEffect(() => { setPagina(1); }, [search, stageId, temperature, assignment, metaFormId, porPagina]);
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const inicio = (paginaAtual - 1) * porPagina;
+  const leadsDaPagina = leads.slice(inicio, inicio + porPagina);
+
   const handleCreateLead = () => {
     if (!form.name.trim() && !form.email.trim() && !form.phone.trim()) {
       toast.error('Informe ao menos nome, e-mail ou telefone.');
@@ -378,71 +394,78 @@ function LeadsPage() {
         <MetricCard label="Sem responsável" value={metrics.unassigned} />
       </div>
 
-      <div className="cartao flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
-        {/* A busca pesa mais que os quatro filtros juntos: é o controle que se
-            usa em toda visita, enquanto filtro é eventual. `flex-[3]` contra
-            `flex-[4]` dá a ela ~43% da barra, espaço suficiente para o
-            placeholder inteiro sem espremer os filtros. */}
-        <div className="relative lg:flex-[3]">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone..." className="pl-10" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 lg:flex-[4] lg:grid-cols-4">
-          {/* Filtra pelas etapas do funil da empresa, as mesmas do pipeline.
-              Antes eram sete status fixos em inglês traduzido ("Qualificado",
-              "Proposal") que não correspondiam mais às colunas que o usuário
-              vê — escolher um deles podia não trazer ninguém. */}
-          <Select value={stageId} onValueChange={setStageId}>
-            <SelectTrigger className="gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Etapa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as etapas</SelectItem>
-              {stages.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                    {s.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={temperature} onValueChange={(value) => setTemperature(value as typeof temperature)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Temperatura" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {TEMPERATURE_OPTIONS.map((option) => (
-                <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={assignment} onValueChange={(value) => setAssignment(value as typeof assignment)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Atribuição" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os vendedores</SelectItem>
-              <SelectItem value="mine">Meus leads</SelectItem>
-              <SelectItem value="unassigned">Sem atribuição</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={metaFormId} onValueChange={setMetaFormId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Formulário Meta" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os formulários</SelectItem>
-              {(metaFormsQuery.data ?? []).map((f) => (
-                <SelectItem key={f.form_id} value={f.form_id}>{f.form_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="cartao space-y-3 p-4">
+        {/* Busca em linha própria, filtros embaixo.
+            Cinco controles numa linha só davam ~155px a cada filtro, e o
+            gatilho mostrava o texto do item selecionado — "Todos os
+            vendedores" não cabia e saía cortado. Em duas linhas cada um
+            respira, e o rótulo passa a ser o NOME DO CAMPO quando nada está
+            filtrado; o valor aparece só quando há filtro, o que deixa visível
+            de relance qual deles está ligado. */}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por nome, e-mail ou telefone…"
+            className="h-10 pl-10"
+          />
         </div>
 
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {/* Filtra pelas etapas do funil da empresa, as mesmas do pipeline. */}
+          <FiltroSelect
+            valor={stageId}
+            aoMudar={setStageId}
+            campo="Etapa"
+            rotuloAtivo={stages.find((x) => x.id === stageId)?.name}
+          >
+            <SelectItem value="all">Todas as etapas</SelectItem>
+            {stages.map((st) => (
+              <SelectItem key={st.id} value={st.id}>
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: st.color }} />
+                  {st.name}
+                </span>
+              </SelectItem>
+            ))}
+          </FiltroSelect>
+
+          <FiltroSelect
+            valor={temperature}
+            aoMudar={(v) => setTemperature(v as typeof temperature)}
+            campo="Temperatura"
+            rotuloAtivo={temperature === 'all' ? undefined : formatLabel(temperature)}
+          >
+            <SelectItem value="all">Todas as temperaturas</SelectItem>
+            {TEMPERATURE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>{formatLabel(option)}</SelectItem>
+            ))}
+          </FiltroSelect>
+
+          <FiltroSelect
+            valor={assignment}
+            aoMudar={(v) => setAssignment(v as typeof assignment)}
+            campo="Vendedor"
+            rotuloAtivo={assignment === 'mine' ? 'Meus leads' : assignment === 'unassigned' ? 'Sem atribuição' : undefined}
+          >
+            <SelectItem value="all">Todos os vendedores</SelectItem>
+            <SelectItem value="mine">Meus leads</SelectItem>
+            <SelectItem value="unassigned">Sem atribuição</SelectItem>
+          </FiltroSelect>
+
+          <FiltroSelect
+            valor={metaFormId}
+            aoMudar={setMetaFormId}
+            campo="Formulário"
+            rotuloAtivo={(metaFormsQuery.data ?? []).find((f) => f.form_id === metaFormId)?.form_name}
+          >
+            <SelectItem value="all">Todos os formulários</SelectItem>
+            {(metaFormsQuery.data ?? []).map((f) => (
+              <SelectItem key={f.form_id} value={f.form_id}>{f.form_name}</SelectItem>
+            ))}
+          </FiltroSelect>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -502,14 +525,14 @@ function LeadsPage() {
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="w-10">
-                {/* Marca só o que está FILTRADO na tela. Selecionar tudo
-                    incluindo linha que o filtro escondeu seria excluir às
-                    cegas. */}
+                {/* Marca só o que está NESTA PÁGINA. Marcar o que o filtro
+                    escondeu, ou o que está em outra página, seria excluir às
+                    cegas — e o botão ao lado exclui de verdade. */}
                 <Checkbox
-                  aria-label="Selecionar todos os leads visíveis"
-                  checked={leads.length > 0 && selectedIds.length === leads.length}
+                  aria-label="Selecionar os leads desta página"
+                  checked={leadsDaPagina.length > 0 && leadsDaPagina.every((l) => selectedIds.includes(l.id))}
                   onCheckedChange={(v) =>
-                    setSelectedIds(v ? leads.map((l) => l.id) : [])
+                    setSelectedIds(v ? leadsDaPagina.map((l) => l.id) : [])
                   }
                 />
               </TableHead>
@@ -524,14 +547,14 @@ function LeadsPage() {
           <TableBody>
             {leadsQuery.isLoading ? (
               <LoadingRows />
-            ) : leads.length === 0 ? (
+            ) : leadsDaPagina.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleCols.length + 2} className="h-32 text-center text-sm text-muted-foreground">
                   Nenhum lead encontrado para os filtros atuais.
                 </TableCell>
               </TableRow>
             ) : (
-              leads.map((lead) => (
+              leadsDaPagina.map((lead) => (
                 <LeadTableRow
                   key={lead.id}
                   lead={lead}
@@ -551,6 +574,16 @@ function LeadsPage() {
             )}
           </TableBody>
         </Table>
+        <RodapeDaTabela
+          total={leads.length}
+          inicio={inicio}
+          quantidade={leadsDaPagina.length}
+          pagina={paginaAtual}
+          totalPaginas={totalPaginas}
+          porPagina={porPagina}
+          aoMudarPagina={setPagina}
+          aoMudarPorPagina={setPorPagina}
+        />
       </div>
 
       <LeadDetailDialog
@@ -848,4 +881,104 @@ function formatLabel(value: string): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(value));
+}
+
+/**
+ * Filtro da barra de leads.
+ *
+ * O gatilho mostra o NOME DO CAMPO quando nada está filtrado e o VALOR quando
+ * está. Antes mostrava o texto do item selecionado — "Todos os vendedores",
+ * "Todos os formulários" — que não cabia na largura e saía cortado, e ainda
+ * fazia filtro ligado e desligado parecerem iguais.
+ */
+function FiltroSelect({
+  valor, aoMudar, campo, rotuloAtivo, children,
+}: {
+  valor: string;
+  aoMudar: (v: string) => void;
+  campo: string;
+  /** Ausente = nada filtrado. Presente = o que está filtrado, em texto curto. */
+  rotuloAtivo?: string;
+  children: ReactNode;
+}) {
+  const ativo = valor !== 'all';
+  return (
+    <Select value={valor} onValueChange={aoMudar}>
+      <SelectTrigger
+        aria-label={campo}
+        className={`h-10 gap-2 ${ativo ? 'border-primary/40 bg-primary/[0.04]' : ''}`}
+      >
+        <Filter className={`h-3.5 w-3.5 shrink-0 ${ativo ? 'text-primary' : 'text-muted-foreground'}`} />
+        <SelectValue>
+          <span className="truncate">{ativo ? (rotuloAtivo ?? campo) : campo}</span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>{children}</SelectContent>
+    </Select>
+  );
+}
+
+/**
+ * Rodapé da tabela: quantos por página, onde estamos, e como andar.
+ *
+ * A contagem vem antes dos botões porque a pergunta que se faz aqui é "ainda
+ * falta muito?", não "qual é a próxima". E diz o total filtrado, não o total
+ * da base — o número que corresponde ao que está na tela.
+ */
+function RodapeDaTabela({
+  total, inicio, quantidade, pagina, totalPaginas, porPagina, aoMudarPagina, aoMudarPorPagina,
+}: {
+  total: number;
+  inicio: number;
+  quantidade: number;
+  pagina: number;
+  totalPaginas: number;
+  porPagina: number;
+  aoMudarPagina: (p: number) => void;
+  aoMudarPorPagina: (n: number) => void;
+}) {
+  if (total === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="tabular-nums">
+          {inicio + 1}–{inicio + quantidade} de {total}
+        </span>
+        <span className="text-muted-foreground/50">·</span>
+        <Select value={String(porPagina)} onValueChange={(v) => aoMudarPorPagina(Number(v))}>
+          <SelectTrigger className="h-7 w-[4.5rem] text-xs" aria-label="Leads por página">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[10, 25, 50, 100, 200].map((n) => (
+              <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span>por página</span>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline" size="sm" className="h-8 px-2.5"
+          disabled={pagina <= 1}
+          onClick={() => aoMudarPagina(pagina - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="ml-1 hidden sm:inline">Anterior</span>
+        </Button>
+        <span className="px-2 text-xs tabular-nums text-muted-foreground">
+          {pagina} / {totalPaginas}
+        </span>
+        <Button
+          variant="outline" size="sm" className="h-8 px-2.5"
+          disabled={pagina >= totalPaginas}
+          onClick={() => aoMudarPagina(pagina + 1)}
+        >
+          <span className="mr-1 hidden sm:inline">Próxima</span>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 }
