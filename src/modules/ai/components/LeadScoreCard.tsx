@@ -14,9 +14,9 @@
  
    const getGradeColor = (grade: string) => {
      switch (grade) {
-       case 'A': return 'bg-emerald-500 hover:bg-emerald-600';
+       case 'A': return 'bg-[var(--sucesso)] hover:bg-[var(--sucesso)]';
        case 'B': return 'bg-blue-500 hover:bg-blue-600';
-       case 'C': return 'bg-amber-500 hover:bg-amber-600';
+       case 'C': return 'bg-[var(--aviso)] hover:bg-[var(--aviso)]';
        default: return 'bg-slate-500 hover:bg-slate-600';
      }
    };

@@ -63,7 +63,7 @@ export function CommandPalette() {
              <CommandShortcut>⌘N</CommandShortcut>
            </CommandItem>
            <CommandItem onSelect={() => runCommand(() => setOpen(false))}>
-             <Zap className="mr-2 h-4 w-4 text-amber-500" />
+             <Zap className="mr-2 h-4 w-4 text-[var(--aviso)]" />
              <span>Run Automation Audit</span>
            </CommandItem>
          </CommandGroup>
@@ -102,7 +102,7 @@ export function CommandPalette() {
              toast.info("Logging out...");
              navigate({ to: "/login" });
            })}>
-             <LogOut className="mr-2 h-4 w-4 text-rose-500" />
+             <LogOut className="mr-2 h-4 w-4 text-destructive" />
              <span>Logout</span>
            </CommandItem>
          </CommandGroup>

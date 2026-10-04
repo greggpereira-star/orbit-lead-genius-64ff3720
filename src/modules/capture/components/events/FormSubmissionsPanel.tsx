@@ -106,7 +106,7 @@ export function FormSubmissionsPanel({ formId }: { formId: string }) {
                         </Badge>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-xs font-black ${sub.score > 80 ? 'text-green-500' : 'text-orange-500'}`}>{sub.score}</span>
+                        <span className={`text-xs font-black ${sub.score > 80 ? 'text-[var(--sucesso)]' : 'text-[var(--aviso)]'}`}>{sub.score}</span>
                       </td>
                       <td className="p-4 text-right">
                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">

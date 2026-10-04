@@ -30,7 +30,7 @@ export function SocialLogin() {
         {pending === 'google' ? (
           <div className="h-4 w-4 border-2 border-primary/20 border-t-primary animate-spin rounded-full" />
         ) : (
-          <Globe className="h-4 w-4 text-blue-500" />
+          <Globe className="h-4 w-4 text-muted-foreground" />
         )}
         Google
       </Button>
@@ -43,7 +43,7 @@ export function SocialLogin() {
         {pending === 'meta' ? (
           <div className="h-4 w-4 border-2 border-primary/20 border-t-primary animate-spin rounded-full" />
         ) : (
-          <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+          <Zap className="h-4 w-4 text-[var(--aviso)] fill-amber-500" />
         )}
         Meta
       </Button>

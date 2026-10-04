@@ -162,7 +162,7 @@ export function QuizPlayer({
   return (
     <>
       {preview && (
-        <div className="fixed top-2 right-2 z-50 px-3 py-1 rounded-full bg-yellow-500 text-black text-xs font-semibold shadow">
+        <div className="fixed top-2 right-2 z-50 px-3 py-1 rounded-full bg-[var(--aviso)] text-black text-xs font-semibold shadow">
           Preview (rascunho)
         </div>
       )}
@@ -2117,7 +2117,7 @@ function BlockView({
               <div className="text-xs font-semibold uppercase tracking-wide opacity-60">{block.comparisonLeftLabel}</div>
               {(block.comparisonLeftItems ?? []).map((item, i) => (
                 <div key={i} className="flex items-start gap-2 text-sm leading-snug">
-                  <X className="h-4 w-4 shrink-0 mt-px text-red-400" /> {item}
+                  <X className="h-4 w-4 shrink-0 mt-px text-destructive" /> {item}
                 </div>
               ))}
             </div>

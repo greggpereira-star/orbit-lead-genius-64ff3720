@@ -103,7 +103,7 @@ export function LeadInsights({ lead }: { lead: LeadRow }) {
       <ul className="space-y-2">
         {leituras.map((l) => (
           <li key={l.texto} className="flex items-start gap-2 text-xs leading-snug">
-            <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" />
+            <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--sucesso)]" />
             <span>
               {l.texto}{' '}
               <span className="text-muted-foreground">({l.fonte})</span>

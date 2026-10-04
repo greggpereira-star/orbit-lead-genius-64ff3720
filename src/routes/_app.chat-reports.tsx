@@ -65,7 +65,7 @@ function ChatReportsPage() {
             <KPI icon={<Users className="h-4 w-4" />} label="Leads capturados" value={data.leadsCaptured} sub={`${data.conversionRate.toFixed(1)}% de conversão`} />
             <KPI icon={<Clock className="h-4 w-4" />} label="Msgs / conversa" value={data.avgMessagesPerConversation.toFixed(1)} sub="Média no período" />
             <KPI
-              icon={<span className="text-amber-500">★</span>}
+              icon={<span className="text-[var(--aviso)]">★</span>}
               label="CSAT"
               value={data.avgRating != null ? `${data.avgRating.toFixed(1)}/5` : '—'}
               sub={`${data.ratingCount} avaliação${data.ratingCount === 1 ? '' : 'ões'}`}

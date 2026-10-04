@@ -104,8 +104,8 @@ function AnalyticsPage() {
       {/* O aviso vem ANTES dos números. Ver "Qualificados —" sem explicação faz
           a pessoa achar que o sistema está quebrado, quando falta configurar. */}
       {r && !r.tem_regua && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <div className="flex items-start gap-2.5 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-3 text-sm">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
           <p className="text-muted-foreground">
             Nenhuma etapa do funil foi marcada como conversão, então não dá para medir
             qualificação. Configure em{' '}

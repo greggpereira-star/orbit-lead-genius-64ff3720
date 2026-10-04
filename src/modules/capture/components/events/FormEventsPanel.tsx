@@ -23,9 +23,9 @@ export function FormEventsPanel({ formId }: { formId: string }) {
 
   const stats = [
     { label: 'Total Eventos', value: '1,284', icon: Activity, color: 'text-primary' },
-    { label: 'Inícios', value: '842', icon: PlayCircle, color: 'text-blue-500' },
-    { label: 'Submissões', value: '156', icon: CheckCircle2, color: 'text-green-500' },
-    { label: 'Taxa Conv.', value: '18.5%', icon: ArrowUpRight, color: 'text-orange-500' }
+    { label: 'Inícios', value: '842', icon: PlayCircle, color: 'text-muted-foreground' },
+    { label: 'Submissões', value: '156', icon: CheckCircle2, color: 'text-[var(--sucesso)]' },
+    { label: 'Taxa Conv.', value: '18.5%', icon: ArrowUpRight, color: 'text-[var(--aviso)]' }
   ];
 
   const mockEvents = [
@@ -93,7 +93,7 @@ export function FormEventsPanel({ formId }: { formId: string }) {
                   <tr key={event.id} className="hover:bg-muted/30 transition-colors cursor-pointer group">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${event.name === 'form_submitted' ? 'bg-green-500' : 'bg-primary'}`} />
+                        <div className={`h-2 w-2 rounded-full ${event.name === 'form_submitted' ? 'bg-[var(--sucesso)]' : 'bg-primary'}`} />
                         <span className="font-mono text-xs">{event.name}</span>
                       </div>
                     </td>

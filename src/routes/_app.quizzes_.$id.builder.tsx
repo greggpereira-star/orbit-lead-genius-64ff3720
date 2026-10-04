@@ -999,17 +999,17 @@ function QuizBuilderPage() {
             <div
               className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
                 saving
-                  ? 'border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                  ? 'border-primary/40 bg-primary/10 text-primary'
                   : dirty
-                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    ? 'border-[var(--aviso-borda)] bg-[var(--aviso-suave)] text-[var(--aviso)]'
+                    : 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] text-[var(--sucesso)]'
               }`}
               aria-live="polite"
             >
               {saving ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+                <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-[var(--aviso)] animate-pulse' : 'bg-[var(--sucesso)]'}`} />
               )}
               {/* "Salvo" sozinho virou meia verdade num quiz publicado: o
                   rascunho está salvo, mas o visitante continua vendo a versão
@@ -1050,7 +1050,7 @@ function QuizBuilderPage() {
             onClick={handleTogglePublish}
             disabled={publishing}
             variant={quiz?.status === 'published' ? 'outline' : 'default'}
-            className={`gap-2 px-2 sm:px-3 ${quiz?.status === 'published' ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400' : 'shadow-lg shadow-primary/20'}`}
+            className={`gap-2 px-2 sm:px-3 ${quiz?.status === 'published' ? 'border-[var(--sucesso-borda)] text-[var(--sucesso)]' : 'shadow-lg shadow-primary/20'}`}
           >
             {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
             <span className="hidden sm:inline">{quiz?.status === 'published' ? 'Publicado' : 'Publicar'}</span>

@@ -113,7 +113,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
                         key={s} 
                         className={`h-1 flex-1 rounded-full transition-colors ${
                           s <= passwordStrength 
-                            ? passwordStrength <= 1 ? 'bg-rose-500' : passwordStrength <= 2 ? 'bg-amber-500' : 'bg-emerald-500'
+                            ? passwordStrength <= 1 ? 'bg-destructive' : passwordStrength <= 2 ? 'bg-[var(--aviso)]' : 'bg-[var(--sucesso)]'
                             : 'bg-muted'
                         }`} 
                       />

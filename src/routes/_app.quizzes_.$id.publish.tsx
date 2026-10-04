@@ -61,7 +61,7 @@ function QuizPublishPage() {
             <div className="text-sm text-muted-foreground">Status</div>
             <div className="flex items-center gap-2 mt-1">
               <span
-                className={`inline-block h-2 w-2 rounded-full ${isPublished ? 'bg-green-500' : 'bg-amber-500'}`}
+                className={`inline-block h-2 w-2 rounded-full ${isPublished ? 'bg-[var(--sucesso)]' : 'bg-[var(--aviso)]'}`}
               />
               <span className="font-semibold">{isPublished ? 'Publicado' : 'Rascunho'}</span>
             </div>

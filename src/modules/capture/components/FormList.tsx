@@ -60,7 +60,7 @@ function EmbedDialog({ form }: { form: Form }) {
                 className="absolute top-2 right-2"
                 onClick={() => copyToClipboard(iframeCode)}
               >
-                {copied ? <ClipboardCheck className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {copied ? <ClipboardCheck className="h-4 w-4 text-[var(--sucesso)]" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
           </TabsContent>
@@ -102,7 +102,7 @@ function EmbedDialog({ form }: { form: Form }) {
                        className="absolute top-1 right-1 h-7 w-7"
                        onClick={() => copyToClipboard(scriptCode)}
                      >
-                       {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                       {copied ? <CheckCircle2 className="h-3 w-3 text-[var(--sucesso)]" /> : <Copy className="h-3 w-3" />}
                      </Button>
                    </div>
                  </div>
@@ -120,7 +120,7 @@ function EmbedDialog({ form }: { form: Form }) {
                        className="absolute top-1 right-1 h-7 w-7"
                        onClick={() => copyToClipboard(iframeCode)}
                      >
-                       {copied ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                       {copied ? <CheckCircle2 className="h-3 w-3 text-[var(--sucesso)]" /> : <Copy className="h-3 w-3" />}
                      </Button>
                    </div>
                  </div>
@@ -129,7 +129,7 @@ function EmbedDialog({ form }: { form: Form }) {
 
              <div className="p-4 bg-slate-50 border rounded-xl space-y-2">
                <h5 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                 <AlertCircle className="h-3 w-3 text-amber-500" />
+                 <AlertCircle className="h-3 w-3 text-[var(--aviso)]" />
                  Como inserir no WordPress:
                </h5>
                <ol className="text-[11px] text-muted-foreground list-decimal pl-4 space-y-1">
@@ -369,7 +369,7 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
                 <span className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Leads</span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-black text-slate-900 leading-none tracking-tighter">0</span>
-                  <span className="text-[9px] text-green-500 font-bold">+0%</span>
+                  <span className="text-[9px] text-[var(--sucesso)] font-bold">+0%</span>
                 </div>
               </div>
               <div className="flex flex-col gap-0.5 border-l border-slate-200/60 pl-3">

@@ -131,8 +131,8 @@
                <div className="flex flex-col md:flex-row md:items-center">
                  <div className="p-6 flex-1">
                    <div className="flex items-center gap-3 mb-2">
-                     <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                       <Zap className="h-5 w-5 text-amber-500" />
+                     <div className="h-10 w-10 rounded-xl bg-[var(--aviso-suave)] flex items-center justify-center">
+                       <Zap className="h-5 w-5 text-[var(--aviso)]" />
                      </div>
                      <div>
                        <h4 className="font-semibold text-foreground">{workflow.name}</h4>
@@ -162,9 +162,9 @@
                    <div className="space-y-3">
                      {workflow.actions.map((action, i) => (
                        <div key={i} className="flex items-center gap-2 text-sm text-foreground/80">
-                         {action.type === 'slack' && <MessageSquare className="h-4 w-4 text-emerald-500" />}
-                         {action.type === 'whatsapp' && <Share2 className="h-4 w-4 text-green-500" />}
-                         {action.type === 'meta' && <Zap className="h-4 w-4 text-blue-500" />}
+                         {action.type === 'slack' && <MessageSquare className="h-4 w-4 text-[var(--sucesso)]" />}
+                         {action.type === 'whatsapp' && <Share2 className="h-4 w-4 text-[var(--sucesso)]" />}
+                         {action.type === 'meta' && <Zap className="h-4 w-4 text-muted-foreground" />}
                          <span className="font-medium">{action.label}</span>
                        </div>
                      ))}

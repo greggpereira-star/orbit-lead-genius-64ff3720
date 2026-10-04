@@ -147,8 +147,8 @@ function InstallGuide() {
             Verificar instalação
           </Button>
           {verified === true && (
-            <div className="flex items-start gap-2 rounded-lg border border-green-500/40 bg-green-500/10 p-3 text-sm">
-              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+            <div className="flex items-start gap-2 rounded-lg border border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] p-3 text-sm">
+              <CheckCircle2 className="h-5 w-5 text-[var(--sucesso)] shrink-0" />
               <div>
                 <p className="font-medium">Widget conectado com sucesso!</p>
                 {lastSeen && (
@@ -165,8 +165,8 @@ function InstallGuide() {
             </div>
           )}
           {verified === false && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-              <XCircle className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex items-start gap-2 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-3 text-sm">
+              <XCircle className="h-5 w-5 text-[var(--aviso)] shrink-0" />
               <div>
                 <p className="font-medium">Ainda não recebemos nenhuma conversa</p>
                 <p className="text-xs text-muted-foreground">

@@ -163,7 +163,7 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
           {carregando ? (
             <Badge variant="outline" className="text-muted-foreground">Verificando…</Badge>
           ) : conectado ? (
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">Conectado</Badge>
+            <Badge className="bg-[var(--sucesso-suave)] text-[var(--sucesso)] border-[var(--sucesso-borda)] font-bold">Conectado</Badge>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">Desconectado</Badge>
           )}
@@ -209,7 +209,7 @@ export function GoogleIntegration({ companyId }: { companyId: string }) {
         {contas && (
           <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
             <p className="font-bold flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-[var(--sucesso)]" />
               Contas acessíveis
             </p>
             {contas.length === 0 ? (

@@ -308,8 +308,8 @@ function ObservabilityPage() {
                       <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">State Machine</label>
                       <div className="mt-1">
                         <Badge className={`text-lg px-4 py-1 font-black ${
-                          auth.state === 'READY' ? 'bg-emerald-500' : 
-                          auth.state === 'ERROR' ? 'bg-rose-500' : 'bg-primary animate-pulse'
+                          auth.state === 'READY' ? 'bg-[var(--sucesso)]' : 
+                          auth.state === 'ERROR' ? 'bg-destructive' : 'bg-primary animate-pulse'
                         }`}>
                           {auth.state}
                         </Badge>
@@ -339,7 +339,7 @@ function ObservabilityPage() {
                     <div>
                       <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Tenant Resolution</label>
                       <div className="mt-2 flex items-center gap-3">
-                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${auth.company ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${auth.company ? 'bg-[var(--sucesso-suave)] text-[var(--sucesso)]' : 'bg-destructive/10 text-destructive'}`}>
                            <ShieldCheck className="h-5 w-5" />
                          </div>
                          <div>
@@ -379,7 +379,7 @@ function ObservabilityPage() {
                     sessionStorage.clear();
                     window.location.reload();
                   }}>
-                    <Key className="h-4 w-4 text-amber-500" />
+                    <Key className="h-4 w-4 text-[var(--aviso)]" />
                     Simulate Expiration
                   </Button>
                   <Button variant="destructive" className="w-full justify-start gap-3 h-11 font-bold" onClick={() => auth.logout()}>

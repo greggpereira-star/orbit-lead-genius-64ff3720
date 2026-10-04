@@ -24,7 +24,7 @@ export function MetaIntegration({ companyId: _companyId }: { companyId: string }
             <Share2 className="h-6 w-6" />
           </div>
           {connected ? (
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">
+            <Badge className="bg-[var(--sucesso-suave)] text-[var(--sucesso)] border-[var(--sucesso-borda)] font-bold">
               Connected
             </Badge>
           ) : (

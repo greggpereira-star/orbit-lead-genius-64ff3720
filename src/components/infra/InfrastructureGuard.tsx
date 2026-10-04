@@ -129,7 +129,7 @@ const PREFIXOS_PUBLICOS = ['/q/', '/f/', '/embed-form/', '/chat-embed/'];
                        <div className="flex items-center justify-between text-sm">
                          <span className="text-muted-foreground">Autenticação (Auth):</span>
                          {report.checks.auth ? (
-                           <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                           <span className="flex items-center gap-1.5 text-[var(--sucesso)] font-bold">
                              <CheckCircle2 className="h-4 w-4" /> ATIVA
                            </span>
                          ) : (
@@ -141,7 +141,7 @@ const PREFIXOS_PUBLICOS = ['/q/', '/f/', '/embed-form/', '/chat-embed/'];
                        <div className="flex items-center justify-between text-sm">
                          <span className="text-muted-foreground">Banco de Dados (DB):</span>
                          {report.checks.database ? (
-                           <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                           <span className="flex items-center gap-1.5 text-[var(--sucesso)] font-bold">
                              <CheckCircle2 className="h-4 w-4" /> ATIVO
                            </span>
                          ) : (

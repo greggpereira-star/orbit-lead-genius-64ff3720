@@ -298,9 +298,9 @@ function OperatorRow({
   }
 
   const statusColor =
-    operator.status === 'online' ? 'bg-emerald-500'
-    : operator.status === 'away' ? 'bg-amber-500'
-    : operator.status === 'busy' ? 'bg-red-500'
+    operator.status === 'online' ? 'bg-[var(--sucesso)]'
+    : operator.status === 'away' ? 'bg-[var(--aviso)]'
+    : operator.status === 'busy' ? 'bg-destructive'
     : 'bg-muted-foreground/40';
 
   return (

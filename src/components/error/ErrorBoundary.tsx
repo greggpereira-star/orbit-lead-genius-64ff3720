@@ -137,7 +137,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 
                 <div>
                   <label className="text-[9px] font-bold text-muted-foreground uppercase">Exception Signature</label>
-                  <pre className="mt-1 p-3 bg-slate-950 rounded text-rose-400 text-[10px] overflow-auto max-h-40 font-mono border border-white/5">
+                  <pre className="mt-1 p-3 bg-slate-950 rounded text-destructive text-[10px] overflow-auto max-h-40 font-mono border border-white/5">
                     {diagnostics.captured_error}
                     {"\n\n"}
                     {diagnostics.stack}

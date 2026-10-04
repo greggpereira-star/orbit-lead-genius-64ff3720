@@ -232,7 +232,7 @@ export function QuizPreview({
                                   </div>
                                   {b.showIf?.enabled && (
                                     <div
-                                      className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-500"
+                                      className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--aviso)]"
                                       title="Este bloco só aparece quando a condição configurada for verdadeira"
                                     >
                                       <Eye className="h-2.5 w-2.5" /> condicional
@@ -889,7 +889,7 @@ export function BlockRenderer({
               <div className="text-xs font-semibold mb-1" style={{ color: design.muted }}>{block.comparisonLeftLabel}</div>
               {(block.comparisonLeftItems ?? []).map((item, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-xs" style={{ color: design.text }}>
-                  <X className="h-3 w-3 shrink-0 text-red-400" /> {item}
+                  <X className="h-3 w-3 shrink-0 text-destructive" /> {item}
                 </div>
               ))}
             </div>

@@ -69,7 +69,7 @@ function GoogleOAuthCallback() {
 
         {status === 'ok' && (
           <>
-            <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto" />
+            <CheckCircle2 className="h-10 w-10 text-[var(--sucesso)] mx-auto" />
             <h1 className="text-lg font-bold">Google Ads conectado</h1>
             <p className="text-sm text-muted-foreground">
               A autorização ficou guardada no servidor. Agora dá para listar as contas de anúncio

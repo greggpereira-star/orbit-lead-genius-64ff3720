@@ -79,7 +79,7 @@ export function PixelSettingsCard({ companyId }: { companyId: string }) {
             </CardDescription>
           </div>
           {!loading && (settings?.metaPixelId || settings?.googleConversionId) ? (
-            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold shrink-0">
+            <Badge className="bg-[var(--sucesso-suave)] text-[var(--sucesso)] border-[var(--sucesso-borda)] font-bold shrink-0">
               Medindo
             </Badge>
           ) : (
@@ -133,7 +133,7 @@ export function PixelSettingsCard({ companyId }: { companyId: string }) {
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Token da Conversions API
                   {settings.metaTokenConfigured && !trocandoToken && (
-                    <span className="text-xs font-normal text-emerald-600">
+                    <span className="text-xs font-normal text-[var(--sucesso)]">
                       • salvo, {settings.metaTokenLength} caracteres
                     </span>
                   )}

@@ -357,8 +357,8 @@ export function MetaFormMappingDrawer({ open, form, onOpenChange }: Props) {
                           <SelectContent>
                             <SelectItem value={NONE}>— Indefinida —</SelectItem>
                             <SelectItem value="cold" className="text-blue-500">❄️ Fria</SelectItem>
-                            <SelectItem value="warm" className="text-orange-500">🔥 Morna</SelectItem>
-                            <SelectItem value="hot" className="text-red-600">🔥🔥 Quente</SelectItem>
+                            <SelectItem value="warm" className="text-[var(--aviso)]">🔥 Morna</SelectItem>
+                            <SelectItem value="hot" className="text-destructive">🔥🔥 Quente</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

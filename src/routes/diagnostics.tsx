@@ -19,7 +19,7 @@ function DiagnosticsPage() {
   }, []);
 
   const getStatusIcon = (healthy: boolean) => {
-    return healthy ? <ShieldCheck className="h-5 w-5 text-emerald-500" /> : <Activity className="h-5 w-5 text-destructive" />;
+    return healthy ? <ShieldCheck className="h-5 w-5 text-[var(--sucesso)]" /> : <Activity className="h-5 w-5 text-destructive" />;
   };
 
   return (

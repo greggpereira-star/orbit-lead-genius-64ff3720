@@ -16,9 +16,9 @@ export const RuntimeStatus = () => {
   if (!isDev) return null;
 
   const getStatusColor = () => {
-    if (state.status === 'ready') return 'text-emerald-500';
+    if (state.status === 'ready') return 'text-[var(--sucesso)]';
     if (state.status === 'failed') return 'text-destructive';
-    if (state.health?.status === 'degraded') return 'text-amber-500';
+    if (state.health?.status === 'degraded') return 'text-[var(--aviso)]';
     return 'text-blue-500';
   };
 

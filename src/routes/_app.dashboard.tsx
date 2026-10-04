@@ -201,7 +201,7 @@ function DashboardPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Conversão</p>
-                <div className="text-2xl font-bold text-emerald-500">{(data?.whatsapp.conversionRate ?? 0).toFixed(1)}%</div>
+                <div className="text-2xl font-bold text-[var(--sucesso)]">{(data?.whatsapp.conversionRate ?? 0).toFixed(1)}%</div>
               </div>
             </div>
 
@@ -236,10 +236,10 @@ function DashboardPage() {
               <div className="pt-3 border-t">
                 <p className="text-xs font-medium text-muted-foreground mb-1.5">Meta CAPI (Conversions API)</p>
                 <div className="flex flex-wrap gap-1.5 text-xs">
-                  <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30">Enviados: {data.whatsapp.capi.sent}</Badge>
+                  <Badge variant="outline" className="bg-[var(--sucesso-suave)] border-[var(--sucesso-borda)]">Enviados: {data.whatsapp.capi.sent}</Badge>
                   <Badge variant="outline">Pendentes: {data.whatsapp.capi.pending}</Badge>
-                  <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30">Retry: {data.whatsapp.capi.failed}</Badge>
-                  <Badge variant="outline" className="bg-red-500/10 border-red-500/30">DLQ: {data.whatsapp.capi.deadLetter}</Badge>
+                  <Badge variant="outline" className="bg-[var(--aviso-suave)] border-[var(--aviso-borda)]">Retry: {data.whatsapp.capi.failed}</Badge>
+                  <Badge variant="outline" className="bg-destructive/10 border-destructive/30">DLQ: {data.whatsapp.capi.deadLetter}</Badge>
                   <Badge variant="outline" className="text-muted-foreground">Sem integração: {data.whatsapp.capi.skipped}</Badge>
                 </div>
               </div>
@@ -356,7 +356,7 @@ function KpiCard({ title, value, delta, hint }: KpiCardProps) {
           nota={
             <>
               {typeof delta === 'number' && (
-                <span className={cn('flex items-center gap-1', delta >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                <span className={cn('flex items-center gap-1', delta >= 0 ? 'text-[var(--sucesso)]' : 'text-destructive')}>
                   {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                   {delta >= 0 ? '+' : ''}{delta.toFixed(1)}% vs período anterior
                 </span>
@@ -372,8 +372,8 @@ function KpiCard({ title, value, delta, hint }: KpiCardProps) {
 
 function TemperatureBadge({ t }: { t: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    hot: { label: '🔥 Hot', cls: 'bg-red-500/10 text-red-500 border-red-500/20' },
-    warm: { label: 'Warm', cls: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
+    hot: { label: '🔥 Hot', cls: 'bg-destructive/10 text-destructive border-destructive/30' },
+    warm: { label: 'Warm', cls: 'bg-[var(--aviso-suave)] text-[var(--aviso)] border-[var(--aviso-borda)]' },
     cold: { label: 'Cold', cls: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
   };
   const cfg = map[t] ?? { label: t, cls: '' };

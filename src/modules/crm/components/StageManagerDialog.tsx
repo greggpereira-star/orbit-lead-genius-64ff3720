@@ -452,7 +452,7 @@ function Resumo({
     <div className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2">
       <span
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-          destaque ? 'bg-emerald-600/10 text-emerald-600' : 'bg-primary/10 text-primary'
+          destaque ? 'bg-[var(--sucesso-suave)] text-[var(--sucesso)]' : 'bg-primary/10 text-primary'
         }`}
       >
         {icone}

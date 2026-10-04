@@ -308,7 +308,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
         );
       }}
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? <Check className="h-3.5 w-3.5 text-[var(--sucesso)]" /> : <Copy className="h-3.5 w-3.5" />}
     </Button>
   );
 }
@@ -1139,8 +1139,8 @@ export function LeadDetailDialog({
             cada um traz respostas próprias, e um pode ser de outro
             empreendimento — mas o aviso precisa estar visível antes da ligação. */}
         {duplicateSince && (
-          <div className="flex items-center gap-2.5 border-b border-amber-500/25 bg-amber-500/8 px-6 py-2.5 text-sm">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-center gap-2.5 border-b border-[var(--aviso-borda)] bg-[var(--aviso-suave)] px-6 py-2.5 text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--aviso)]" />
             <span>
               Este contato já havia se cadastrado em{" "}
               <strong>{formatDateTime(duplicateSince)}</strong>. Confira o histórico antes de ligar.

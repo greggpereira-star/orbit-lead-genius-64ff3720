@@ -151,13 +151,13 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
                    title: 'Marketing Attribution',
                    desc: 'Track UTMs, GCLID, and FBCLID to see exactly which ads drive revenue.',
                    icon: Target,
-                   color: 'bg-emerald-50 text-emerald-600'
+                   color: 'bg-[var(--sucesso-suave)] text-[var(--sucesso)]'
                  },
                  {
                    title: 'Automated Workflows',
                    desc: 'Trigger Slack, WhatsApp, and Email alerts the second a hot lead arrives.',
                    icon: Zap,
-                   color: 'bg-amber-50 text-amber-600'
+                   color: 'bg-[var(--aviso-suave)] text-[var(--aviso)]'
                  },
                  {
                    title: 'Sales Pipeline',
@@ -169,7 +169,7 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
                    title: 'Real-time Analytics',
                    desc: 'Monitor ROI and conversion rates across all your marketing channels.',
                    icon: BarChart3,
-                   color: 'bg-rose-50 text-rose-600'
+                   color: 'bg-destructive/10 text-destructive'
                  },
                  {
                    title: 'Global Integrations',

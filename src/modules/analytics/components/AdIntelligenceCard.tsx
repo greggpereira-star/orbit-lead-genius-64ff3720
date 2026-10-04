@@ -60,8 +60,8 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
             com o caminho para resolver, é melhor que uma tabela de zeros que
             parece dizer que nenhum anúncio presta. */}
         {semRegua && (
-          <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-3 text-sm">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
             <p className="text-muted-foreground">
               Nenhuma etapa foi marcada como conversão ainda, então não dá para dizer quem
               qualificou. Configure em{' '}

@@ -22,12 +22,12 @@ import { Switch } from '@/components/ui/switch';
               ].map((run) => (
                 <div key={run.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/10">
                   <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${run.status === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${run.status === 'success' ? 'bg-[var(--sucesso-suave)] text-[var(--sucesso)]' : 'bg-destructive/10 text-destructive'}`}>
                       {run.status === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                     </div>
                     <div>
                       <p className="text-sm font-medium">{run.name}</p>
-                      <p className="text-[10px] text-muted-foreground">Lead: {run.lead} • {run.status === 'failed' ? <span className="text-rose-600 font-semibold">{run.error}</span> : 'Completed'}</p>
+                      <p className="text-[10px] text-muted-foreground">Lead: {run.lead} • {run.status === 'failed' ? <span className="text-destructive font-semibold">{run.error}</span> : 'Completed'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">

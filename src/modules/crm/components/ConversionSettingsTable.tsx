@@ -344,7 +344,7 @@ export function ConversionSettingsTable({
 
           <div className="flex flex-wrap items-center gap-3">
             {alterados.length > 0 && (
-              <span className="text-sm text-amber-700 dark:text-amber-500">
+              <span className="text-sm text-[var(--aviso)]">
                 {alterados.length === 1 ? '1 alteração não salva' : `${alterados.length} alterações não salvas`}
               </span>
             )}
@@ -391,14 +391,14 @@ function FaixaDeEnsaio({
     <div
       className={`flex items-start justify-between gap-4 rounded-xl border p-3 ${
         ligado
-          ? 'border-amber-500/40 bg-amber-500/10'
-          : 'border-emerald-600/30 bg-emerald-600/5'
+          ? 'border-[var(--aviso-borda)] bg-[var(--aviso-suave)]'
+          : 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)]'
       }`}
     >
       <div className="flex items-start gap-2.5">
         {ligado
-          ? <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          : <Radio className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
+          ? <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
+          : <Radio className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sucesso)]" />}
         <div className="space-y-0.5 text-sm">
           <p className="font-medium">{ligado ? 'Modo de ensaio ligado' : 'Enviando de verdade'}</p>
           <p className="text-muted-foreground">
@@ -591,8 +591,8 @@ function PainelDeApoio({
         {praticas.map((p) => (
           <li key={p.bom} className="flex items-start gap-2 text-xs leading-snug">
             {p.ok
-              ? <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-emerald-600" />
-              : <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-amber-600" />}
+              ? <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--sucesso)]" />
+              : <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--aviso)]" />}
             <span className={p.ok ? 'text-muted-foreground' : 'text-foreground'}>
               {p.ok ? p.bom : p.ruim}
             </span>
@@ -600,7 +600,7 @@ function PainelDeApoio({
         ))}
         {semEtiquetas && (
           <li className="flex items-start gap-2 text-xs leading-snug">
-            <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-amber-600" />
+            <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--aviso)]" />
             <span>
               Não deu para listar as etiquetas: {motivo}. Dá para digitar o nome, mas confira a
               grafia — a Evolution só aplica etiqueta que já existe no aparelho.

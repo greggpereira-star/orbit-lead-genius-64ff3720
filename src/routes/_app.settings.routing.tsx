@@ -309,7 +309,7 @@ function MemberRow({ member, name, onChanged }: { member: RoutingMember; name: s
       <div className="flex items-center gap-2">
         <Label className="text-xs">Ativo</Label>
         <Switch checked={available} onCheckedChange={(v) => { setAvailable(v); persist({ is_available: v }); }} />
-        <Button variant="ghost" size="icon" onClick={remove}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+        <Button variant="ghost" size="icon" onClick={remove}><Trash2 className="h-4 w-4 text-destructive" /></Button>
       </div>
     </div>
   );
@@ -352,12 +352,12 @@ function TemperatureCard({ config, companyId, onSaved }: { config: RoutingConfig
             <p className="text-blue-500 font-semibold">Cold</p>
             <p className="text-muted-foreground">score &lt; {warm}</p>
           </div>
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-            <p className="text-amber-500 font-semibold">Warm</p>
+          <div className="rounded-md border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-3">
+            <p className="text-[var(--aviso)] font-semibold">Warm</p>
             <p className="text-muted-foreground">{warm} – {hot - 1}</p>
           </div>
-          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3">
-            <p className="text-red-500 font-semibold">🔥 Hot</p>
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+            <p className="text-destructive font-semibold">🔥 Hot</p>
             <p className="text-muted-foreground">≥ {hot}</p>
           </div>
         </div>

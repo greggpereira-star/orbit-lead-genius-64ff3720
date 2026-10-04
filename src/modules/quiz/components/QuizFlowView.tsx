@@ -97,7 +97,7 @@ function StepNode({ data }: { data: StepNodeData }) {
         type="target"
         id="branch-target"
         position={Position.Top}
-        className="!bg-amber-500 !w-2.5 !h-2.5 !border-2 !border-background"
+        className="!bg-[var(--aviso)] !w-2.5 !h-2.5 !border-2 !border-background"
       />
 
       <div className="flex items-center gap-1.5 px-3 py-2 border-b bg-muted/40 rounded-t-[10px]">
@@ -125,13 +125,13 @@ function StepNode({ data }: { data: StepNodeData }) {
         )}
         <div className="ml-auto flex items-center gap-1 shrink-0">
           {step.isGoal && (
-            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-600">
+            <span className="rounded-full bg-[var(--sucesso-suave)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--sucesso)]">
               Meta
             </span>
           )}
           {hasBranch && (
             <span
-              className="flex items-center justify-center h-4 w-4 rounded-full bg-amber-500/15 text-amber-500"
+              className="flex items-center justify-center h-4 w-4 rounded-full bg-[var(--aviso-suave)] text-[var(--aviso)]"
               title="Tem ramificação (pular para outra etapa)"
             >
               <ArrowDownWideNarrow className="h-2.5 w-2.5 rotate-[-90deg]" />
@@ -139,7 +139,7 @@ function StepNode({ data }: { data: StepNodeData }) {
           )}
           {hasConditional && (
             <span
-              className="flex items-center justify-center h-4 w-4 rounded-full bg-amber-500/15 text-amber-500"
+              className="flex items-center justify-center h-4 w-4 rounded-full bg-[var(--aviso-suave)] text-[var(--aviso)]"
               title="Contém bloco com exibição condicional"
             >
               <Eye className="h-2.5 w-2.5" />
@@ -151,7 +151,7 @@ function StepNode({ data }: { data: StepNodeData }) {
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggleGoal(step.id); }}
                   title={step.isGoal ? 'Desmarcar meta de conversão' : 'Marcar etapa como meta de conversão'}
-                  className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${step.isGoal ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                  className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${step.isGoal ? 'text-[var(--sucesso)] hover:bg-[var(--sucesso-suave)]' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                 >
                   <Target className="h-3.5 w-3.5" />
                 </button>
@@ -209,7 +209,7 @@ function StepNode({ data }: { data: StepNodeData }) {
         type="source"
         id="branch-source"
         position={Position.Bottom}
-        className="!bg-amber-500 !w-2.5 !h-2.5 !border-2 !border-background"
+        className="!bg-[var(--aviso)] !w-2.5 !h-2.5 !border-2 !border-background"
       />
     </div>
   );
@@ -465,12 +465,12 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{def?.label ?? b.type}</p>
                     <p className="text-xs truncate">{b.title || b.resultTitle || '—'}</p>
                     {b.showIf?.enabled && (
-                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold text-amber-500">
+                      <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold text-[var(--aviso)]">
                         <Eye className="h-2.5 w-2.5" /> exibição condicional ativa
                       </span>
                     )}
                   </div>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[var(--sucesso)] shrink-0" />
                 </div>
               );
             })}

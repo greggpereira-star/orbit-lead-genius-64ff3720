@@ -208,7 +208,7 @@ function QuizPerformancePage() {
                           <span className="flex items-center gap-1.5 shrink-0">
                             <span className="font-semibold">{b.views}</span>
                             {i > 0 && b.dropRate > 0 && (
-                              <span className="text-red-600">-{b.dropRate.toFixed(0)}%</span>
+                              <span className="text-destructive">-{b.dropRate.toFixed(0)}%</span>
                             )}
                           </span>
                         </div>
@@ -308,7 +308,7 @@ function QuizPerformancePage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium truncate">{test.blockLabel}</span>
                         {hasWinner && (
-                          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                          <span className="flex items-center gap-1 text-xs font-medium text-[var(--sucesso)]">
                             <Trophy className="h-3.5 w-3.5" /> Vencedor sugerido: {leader.label}
                           </span>
                         )}
@@ -320,7 +320,7 @@ function QuizPerformancePage() {
                           return (
                             <div
                               key={v.id}
-                              className={`rounded-lg border p-3 text-xs space-y-1.5 ${isLeader ? 'border-emerald-500/50 bg-emerald-500/5' : ''}`}
+                              className={`rounded-lg border p-3 text-xs space-y-1.5 ${isLeader ? 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)]' : ''}`}
                             >
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold truncate">{v.label}</span>
@@ -383,9 +383,9 @@ function QuizPerformancePage() {
                             <span
                               className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                                 s.temperature === 'hot'
-                                  ? 'bg-red-500/10 text-red-600'
+                                  ? 'bg-destructive/10 text-destructive'
                                   : s.temperature === 'warm'
-                                    ? 'bg-amber-500/10 text-amber-600'
+                                    ? 'bg-[var(--aviso-suave)] text-[var(--aviso)]'
                                     : 'bg-blue-500/10 text-blue-600'
                               }`}
                             >

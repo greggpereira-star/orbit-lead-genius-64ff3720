@@ -592,8 +592,8 @@ function MetaIntegrationsPage() {
                       <span
                         className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                           p.subscribed
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            ? "bg-[var(--sucesso-suave)] text-[var(--sucesso)]"
+                            : "bg-[var(--aviso-suave)] text-[var(--aviso)]"
                         }`}
                       >
                         {p.subscribed ? (
@@ -732,7 +732,7 @@ function MetaIntegrationsPage() {
                     <LayoutGrid className="w-4.5 h-4.5 text-muted-foreground" />
                     Formulários
                     {unconfiguredCount > 0 && (
-                      <Badge variant="outline" className="ml-1 border-amber-500/40 text-amber-600 dark:text-amber-400 font-normal">
+                      <Badge variant="outline" className="ml-1 border-[var(--aviso-borda)] text-[var(--aviso)] font-normal">
                         {unconfiguredCount} sem configuração
                       </Badge>
                     )}
@@ -1029,7 +1029,7 @@ function MetaIntegrationsPage() {
                                 formulário está alimentando o pipeline ou não. */}
                             <td className="py-4 px-6">
                               {!mapping ? (
-                                <span className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                <span className="inline-flex items-center gap-2 text-[var(--aviso)]">
                                   <AlertCircle className="h-3.5 w-3.5" />
                                   <span className="text-sm font-medium">Não configurado</span>
                                 </span>
@@ -1038,7 +1038,7 @@ function MetaIntegrationsPage() {
                                   <span className="inline-flex items-center gap-2">
                                     <span
                                       className={`h-2 w-2 rounded-full ${
-                                        mapping.is_active ? "bg-emerald-500" : "bg-muted-foreground/40"
+                                        mapping.is_active ? "bg-[var(--sucesso)]" : "bg-muted-foreground/40"
                                       }`}
                                     />
                                     <span className="text-sm font-medium">

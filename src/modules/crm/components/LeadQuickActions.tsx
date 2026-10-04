@@ -77,7 +77,7 @@ export function LeadQuickActions({
         <Button
           asChild
           variant="outline"
-          className={`${estilo} border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400`}
+          className={`${estilo} border-[var(--sucesso-borda)] text-[var(--sucesso)] hover:bg-[var(--sucesso-suave)]`}
         >
           <a href={whatsapp} target="_blank" rel="noopener noreferrer">
             <MessageCircle className="h-4 w-4 shrink-0" />

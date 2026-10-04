@@ -116,7 +116,7 @@ export function FormTypeSelector({ onSelect, onBack }: FormTypeSelectorProps) {
 
       <div className="pt-8 border-t">
         <div className="flex items-center gap-2 mb-6">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-[var(--aviso)]" />
           <h3 className="text-xl font-bold uppercase tracking-tight">Templates Imobiliários de Alta Conversão</h3>
         </div>
 

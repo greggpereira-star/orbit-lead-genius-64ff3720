@@ -281,7 +281,7 @@ function RatingBar({ conversation, client, onRated }: { conversation: ChatConver
             className="text-2xl leading-none transition-transform hover:scale-110"
             aria-label={`${n} estrela${n > 1 ? 's' : ''}`}
           >
-            <span className={cn((hover ?? rating ?? 0) >= n ? 'text-amber-500' : 'text-muted-foreground/40')}>★</span>
+            <span className={cn((hover ?? rating ?? 0) >= n ? 'text-[var(--aviso)]' : 'text-muted-foreground/40')}>★</span>
           </button>
         ))}
       </div>

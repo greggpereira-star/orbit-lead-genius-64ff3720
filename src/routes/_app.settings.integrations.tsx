@@ -108,7 +108,7 @@ function IntegrationsSettings() {
                 <cvCrmInfo.icon className="h-6 w-6" />
               </div>
               {integrationStatus?.connection_status === 'connected' ? (
-                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">Active</Badge>
+                <Badge className="bg-[var(--sucesso-suave)] text-[var(--sucesso)] border-[var(--sucesso-borda)] font-bold">Active</Badge>
               ) : (
                 <Badge variant="outline" className="text-muted-foreground">{integrationStatus?.connection_status || 'Disconnected'}</Badge>
               )}
@@ -149,11 +149,11 @@ function IntegrationsSettings() {
                   </div>
 
                   {integrationStatus?.connection_status === 'connected' && (
-                    <div className="space-y-4 border rounded-xl p-4 bg-emerald-50/50 border-emerald-100">
+                    <div className="space-y-4 border rounded-xl p-4 bg-[var(--sucesso-suave)]/50 border-[var(--sucesso-borda)]">
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label className="text-sm font-bold text-emerald-900">Test Delivery</Label>
-                          <p className="text-[11px] text-emerald-700">Push a sample lead into CV.CRM to verify the full pipeline.</p>
+                          <Label className="text-sm font-bold text-[var(--sucesso)]">Test Delivery</Label>
+                          <p className="text-[11px] text-[var(--sucesso)]">Push a sample lead into CV.CRM to verify the full pipeline.</p>
                         </div>
                         <Button 
                           size="sm" 
@@ -207,7 +207,7 @@ function IntegrationsSettings() {
                       <p className="text-[10px] uppercase font-bold text-muted-foreground">Integration Health</p>
                       <div className="flex items-center justify-between text-xs">
                         <span>Status:</span>
-                        <Badge className={integrationStatus.connection_status === 'connected' ? 'bg-emerald-500' : 'bg-rose-500'}>
+                        <Badge className={integrationStatus.connection_status === 'connected' ? 'bg-[var(--sucesso)]' : 'bg-destructive'}>
                           {integrationStatus.connection_status}
                         </Badge>
                       </div>
@@ -220,7 +220,7 @@ function IntegrationsSettings() {
                 </div>
                 
                 <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="ghost" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold">
+                  <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 font-bold">
                     Disconnect
                   </Button>
                   <Button 

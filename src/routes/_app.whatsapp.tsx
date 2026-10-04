@@ -228,8 +228,8 @@ function WhatsAppPage() {
           que estava tudo certo só porque as variáveis existiam, e o erro só
           aparecia ao clicar em conectar. */}
       {!data?.configured ? (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        <div className="flex items-start gap-3 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-4 text-sm">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
           <p>
             O servidor ainda não tem as variáveis <code className="font-mono">EVOLUTION_API_URL</code> e{" "}
             <code className="font-mono">EVOLUTION_API_KEY</code> configuradas. Sem elas, nenhuma mensagem é enviada.
@@ -271,7 +271,7 @@ function WhatsAppPage() {
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                   connected
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    ? "bg-[var(--sucesso-suave)] text-[var(--sucesso)]"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
@@ -294,7 +294,7 @@ function WhatsAppPage() {
             <div className="flex items-center gap-2">
               {connected ? (
                 <>
-                  <Badge className="bg-emerald-500 hover:bg-emerald-600">
+                  <Badge className="bg-[var(--sucesso)] hover:bg-[var(--sucesso)]">
                     <CheckCircle2 className="mr-1 h-3 w-3" />
                     Conectado
                   </Badge>
@@ -604,7 +604,7 @@ function WhatsAppPage() {
                       variant={
                         m.status === "sent" ? "default" : m.status === "failed" ? "destructive" : "secondary"
                       }
-                      className={m.status === "sent" ? "bg-emerald-500 hover:bg-emerald-600" : ""}
+                      className={m.status === "sent" ? "bg-[var(--sucesso)] hover:bg-[var(--sucesso)]" : ""}
                     >
                       {STATUS_LABEL[m.status] ?? m.status}
                     </Badge>

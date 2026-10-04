@@ -124,7 +124,7 @@ export function AppSidebar() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--superficie-tonal)] text-lg font-bold text-foreground">
                   {initials}
                 </div>
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-sidebar" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--sucesso)] border-2 border-sidebar" />
               </div>
               <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                 <p className="font-semibold text-sm truncate">{company?.name || 'Workspace'}</p>

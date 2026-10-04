@@ -106,7 +106,7 @@ function InboxPage() {
                 )}
               </div>
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <Circle className={cn('h-2 w-2 fill-current', c.status === 'open' ? 'text-emerald-500' : c.status === 'pending' ? 'text-amber-500' : 'text-muted-foreground')} />
+                <Circle className={cn('h-2 w-2 fill-current', c.status === 'open' ? 'text-[var(--sucesso)]' : c.status === 'pending' ? 'text-[var(--aviso)]' : 'text-muted-foreground')} />
                 {formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true, locale: ptBR })}
               </div>
             </button>
@@ -221,7 +221,7 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
             {conversation.visitor_email && <span>{conversation.visitor_email}</span>}
             {conversation.page_url && <span className="truncate">· {conversation.page_url}</span>}
             {conversation.rating && (
-              <span className="text-amber-500 font-medium">· ★ {conversation.rating}/5</span>
+              <span className="text-[var(--aviso)] font-medium">· ★ {conversation.rating}/5</span>
             )}
           </div>
         </div>
@@ -467,7 +467,7 @@ function OnlineVisitorsPopover({ companyId }: { companyId: string | undefined })
             return (
               <div key={v.visitor_id} className="px-3 py-2 border-b last:border-b-0 space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <Circle className="h-2 w-2 fill-green-500 text-green-500" />
+                  <Circle className="h-2 w-2 fill-green-500 text-[var(--sucesso)]" />
                   <span className="font-medium truncate">{v.visitor_name || 'Visitante anônimo'}</span>
                 </div>
                 <div className="text-[11px] text-muted-foreground truncate">{host}</div>
