@@ -231,7 +231,8 @@
       btn.style.bottom = '20px';
       if (!options.position || options.position === 'bottom-right') btn.style.right = '20px';
       
-      btn.style.backgroundColor = options.color || '#000';
+      // Preto por padrão destoava de qualquer site; o azul é o do produto e segue configurável.
+      btn.style.backgroundColor = options.color || '#2563eb';
       btn.style.color = '#fff';
       btn.style.padding = '12px 24px';
       btn.style.borderRadius = '50px';
@@ -352,7 +353,31 @@
       // orientação anterior.
       window.addEventListener('resize', aoRedimensionar);
 
+      /* Enquanto o formulário carrega, o modal era uma CAIXA BRANCA VAZIA —
+         medido em celular: cerca de 10 segundos de nada, que a pessoa lê como
+         travamento e fecha. O indicador sai quando o iframe termina. */
+      var carregando = document.createElement('div');
+      carregando.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;' +
+        'justify-content:center;background:#fff;z-index:1';
+      carregando.innerHTML =
+        '<div style="width:26px;height:26px;border:2.5px solid #e3e9f2;border-top-color:#2563eb;' +
+        'border-radius:50%;animation:lf-gira .7s linear infinite"></div>';
+      if (!document.getElementById('lf-estilo-giro')) {
+        var estilo = document.createElement('style');
+        estilo.id = 'lf-estilo-giro';
+        estilo.textContent = '@keyframes lf-gira{to{transform:rotate(360deg)}}';
+        document.head.appendChild(estilo);
+      }
+      iframe.addEventListener('load', function () {
+        carregando.style.transition = 'opacity .2s ease';
+        carregando.style.opacity = '0';
+        setTimeout(function () {
+          if (carregando.parentNode) carregando.parentNode.removeChild(carregando);
+        }, 220);
+      });
+
       content.appendChild(fechar);
+      content.appendChild(carregando);
       content.appendChild(iframe);
       overlay.appendChild(content);
       document.body.appendChild(overlay);

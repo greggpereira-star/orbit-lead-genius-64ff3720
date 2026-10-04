@@ -208,7 +208,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Autenticando formulário...</p>
+        <p className="text-[13px] text-muted-foreground">Carregando...</p>
       </div>
     );
   }
@@ -335,7 +335,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               <CheckCircle2 className="h-10 w-10" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-3xl font-black uppercase tracking-tighter">Tudo certo!</h2>
+              <h2 className="text-[26px] font-semibold tracking-[-0.02em]">Tudo certo!</h2>
               <p className="text-muted-foreground font-medium">
                 {form.settings.success_message}
               </p>
@@ -362,12 +362,12 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             <Activity className="h-8 w-8" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-2xl font-black uppercase tracking-tighter">Continuar de onde parou?</h2>
+            <h2 className="text-[22px] font-semibold tracking-[-0.02em]">Continuar de onde parou?</h2>
             <p className="text-muted-foreground">Identificamos que você já começou a preencher este formulário.</p>
           </div>
           <div className="flex flex-col gap-3">
-            <Button onClick={handleResume} className="h-12 font-bold uppercase tracking-widest">Continuar</Button>
-            <Button variant="ghost" onClick={() => setResumePrompt(false)} className="text-xs uppercase tracking-widest opacity-60">Começar do Zero</Button>
+            <Button onClick={handleResume} className="h-11 font-medium">Continuar</Button>
+            <Button variant="ghost" onClick={() => setResumePrompt(false)} className="text-xs text-muted-foreground">Começar do zero</Button>
           </div>
         </Card>
       </div>
@@ -413,23 +413,25 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       >
         <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep && (
-          <div className="pt-6 px-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          /* `pr-12`: dentro do modal o botão de fechar fica no canto superior
+             direito e cobria o "50% completo". A folga reserva o espaço dele. */
+          <div className="pt-5 px-6 sm:px-8 pr-12 sm:pr-14">
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[11px] font-medium text-muted-foreground">
                 Passo {currentStep + 1} de {sortedSteps.length}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                {Math.round(progress)}% Completo
+              <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+                {Math.round(progress)}%
               </span>
             </div>
-            <Progress value={progress} className="h-1.5" />
+            <Progress value={progress} className="h-1" />
           </div>
         )}
         
-        <CardHeader className="space-y-2 pb-6 pt-2 border-none" style={{ borderColor: 'var(--border)' }}>
+        <CardHeader className="space-y-1.5 px-6 sm:px-8 pb-7 pt-5 border-none" style={{ borderColor: 'var(--border)' }}>
           {isMultiStep ? (
             <div className="text-center space-y-1">
-               <CardTitle className="text-2xl font-black uppercase tracking-tighter">
+               <CardTitle className="text-[22px] font-semibold tracking-[-0.02em] text-foreground">
                 {sortedSteps[currentStep]?.title || form.name}
               </CardTitle>
               {sortedSteps[currentStep]?.description && (
@@ -438,18 +440,18 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             </div>
           ) : (
             <div className="bg-primary px-6 py-8 rounded-xl mb-6 shadow-lg">
-              <CardTitle className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-center text-white">{form.name}</CardTitle>
+              <CardTitle className="text-[22px] md:text-[26px] font-semibold tracking-[-0.02em] text-center text-white">{form.name}</CardTitle>
               {form.description && (
                 <CardDescription className="text-center text-sm md:text-base font-medium text-white/80 mt-2">{form.description}</CardDescription>
               )}
             </div>
           )}
         </CardHeader>
-        <CardContent className="pb-8 pt-0 px-4 md:px-6">
-          <div className="space-y-5 max-w-2xl mx-auto">
+        <CardContent className="pb-8 pt-0 px-6 sm:px-8">
+          <div className="space-y-6 max-w-2xl mx-auto">
             {currentStepFields.map((field) => (
-              <div key={field.id} className="space-y-2 animate-in fade-in slide-in-from-right-2 duration-300">
-                 <Label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
+              <div key={field.id} className="space-y-2.5 animate-in fade-in slide-in-from-right-2 duration-300">
+                 <Label className="text-[13px] font-medium text-foreground">
                   {field.label} {field.required && <span className="text-destructive">*</span>}
                 </Label>
                 
@@ -488,7 +490,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   />
                 )}
                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
-                  <span className="text-[10px] font-bold text-destructive uppercase tracking-widest block mt-1">
+                  <span className="text-[12px] text-destructive block mt-1.5">
                     {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')]?.type === 'pattern' 
                       ? 'E-mail inválido' 
                       : 'Campo obrigatório'}
@@ -518,7 +520,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 <Button 
                   variant="outline"
                   onClick={handleBack}
-                  className="h-14 px-8 font-bold uppercase tracking-widest border-2"
+                  className="h-12 px-6 font-medium"
                 >
                   <ArrowLeft className="mr-2 h-5 w-5" /> Voltar
                 </Button>
@@ -531,7 +533,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   handleNext();
                 } : undefined}
                 disabled={isSubmitting}
-                className="flex-1 h-14 text-base md:text-lg font-black uppercase tracking-widest shadow-xl transition-all hover:brightness-110 active:scale-[0.98] bg-primary text-white"
+                className="flex-1 h-12 text-[15px] font-semibold tracking-[-0.01em] shadow-lg shadow-primary/20 transition-all hover:brightness-[1.06] active:scale-[0.99] bg-primary text-white"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -552,8 +554,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       </form>
       
       <div className="mt-4 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity pb-4 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Powered by</span>
-        <span className="text-xs font-black uppercase tracking-tighter">LeadFlow Intelligence</span>
+        <span className="text-[11px] text-muted-foreground">Formulário por <span className="font-medium text-foreground/70">LeadFlow</span></span>
       </div>
     </div>
   );
