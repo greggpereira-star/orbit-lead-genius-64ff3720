@@ -174,16 +174,20 @@ const normalizeFieldForEditor = (field: any, index: number) => {
        style={style}
        className="group flex flex-col gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm"
      >
-       <div className="flex items-center gap-4 w-full">
+       {/* `items-start` + `min-w-0` + quebra: a linha era `flex items-center`
+           com um grid de 3 colunas fixas mais os controles à direita. No painel
+           do construtor, que divide a largura com as configurações, o seletor
+           de etapa saía pela borda e ficava cortado. */}
+       <div className="flex items-start gap-3 w-full min-w-0">
          <div 
            {...attributes} 
            {...listeners}
-           className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors p-1"
+           className="cursor-grab text-muted-foreground group-hover:text-primary transition-colors p-1 pt-7 shrink-0"
          >
            <GripVertical className="h-5 w-5" />
          </div>
          
-         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+         <div className="flex-1 min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2">
            <div className="space-y-1.5">
              <Label className="text-xs">Rótulo do campo</Label>
              <Input 
@@ -236,7 +240,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                <option value="select">Dropdown</option>
              </select>
            </div>
-           <div className="flex items-center gap-4 pt-6">
+           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:col-span-2">
              <div className="flex items-center gap-2">
                <Switch 
                  checked={field.required} 
@@ -384,7 +388,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
    const [steps, setSteps] = useState<any[]>([]);
     const [showTemplates, setShowTemplates] = useState(!formId);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
-    name: 'Untitled Form',
+    name: 'Formulário sem nome',
     slug: '',
     status: 'draft',
     type: initialType || 'standard',
@@ -621,7 +625,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             formId: formId || undefined,
             companyId: company.id,
             formData: {
-              name: formConfig.name || 'Untitled Form',
+              name: formConfig.name || 'Formulário sem nome',
               slug: formConfig.slug || `form-${Date.now()}`,
               description: formConfig.description,
               status: formConfig.status || 'draft',
@@ -835,15 +839,15 @@ const normalizeFieldForEditor = (field: any, index: number) => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <CardTitle className="text-xl font-bold">{formId ? 'Edit Form' : 'New Form'}</CardTitle>
-            <CardDescription>Configure fields and settings</CardDescription>
+            <CardTitle className="text-xl font-bold">{formId ? 'Editar formulário' : 'Novo formulário'}</CardTitle>
+            <CardDescription>Campos, etapas, pontuação e publicação</CardDescription>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onBack}>Cancel</Button>
+          <Button variant="outline" onClick={onBack}>Cancelar</Button>
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="gap-2">
             {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Form
+            Salvar formulário
           </Button>
         </div>
       </div>
@@ -906,12 +910,12 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               <Card className="border-none shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                   <div>
-                    <CardTitle className="text-lg font-semibold">Form Structure</CardTitle>
-                    <CardDescription>Drag and drop fields to reorder</CardDescription>
+                    <CardTitle className="text-lg font-semibold">Campos do formulário</CardTitle>
+                    <CardDescription>Arraste para reordenar</CardDescription>
                   </div>
                   <Button onClick={addField} size="sm" className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Add Field
+                    Adicionar campo
                   </Button>
                 </CardHeader>
                  <CardContent className="space-y-3">
@@ -945,18 +949,18 @@ const normalizeFieldForEditor = (field: any, index: number) => {
               <Card className="border-none shadow-sm sticky top-6">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Form Settings</CardTitle>
+                    <CardTitle className="text-base">Configurações</CardTitle>
                     <Settings2 className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-xs">Form Name</Label>
+                      <Label className="text-xs">Nome do formulário</Label>
                       <Input 
                         value={formConfig.name} 
                         onChange={(e) => setFormConfig(prev => ({...prev, name: e.target.value}))}
-                        placeholder="E.g. Enterprise Contact" 
+                        placeholder="Ex: Contato do site" 
                       />
                     </div>
                     <div className="space-y-2">
@@ -1061,8 +1065,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-xs">Track UTMs</Label>
-                        <p className="text-[10px] text-muted-foreground">Automatically capture marketing data</p>
+                        <Label className="text-xs">Capturar UTMs</Label>
+                        <p className="text-[10px] text-muted-foreground">Guarda a origem da visita junto com o lead</p>
                       </div>
                       <Switch 
                         checked={formConfig.settings?.capture_utms} 
@@ -1083,8 +1087,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-xs">Published</Label>
-                        <p className="text-[10px] text-muted-foreground">Make form public</p>
+                        <Label className="text-xs">Publicado</Label>
+                        <p className="text-[10px] text-muted-foreground">Fora disso o formulário não abre para ninguém</p>
                       </div>
                       <Switch 
                         checked={formConfig.status === 'published'} 
@@ -1165,7 +1169,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                     <div className="space-y-4 pt-4 border-t">
                       <Label className="text-[10px] uppercase font-bold tracking-widest opacity-70">Post-Submission</Label>
                       <div className="space-y-2">
-                        <Label className="text-xs">Success Message</Label>
+                        <Label className="text-xs">Mensagem de sucesso</Label>
                         <Input 
                           value={formConfig.settings?.success_message} 
                           onChange={(e) => setFormConfig(prev => {
@@ -1185,7 +1189,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                         />
                       </div>
                      <div className="space-y-2">
-                       <Label className="text-xs">Redirect URL (Optional)</Label>
+                       <Label className="text-xs">Redirecionar após o envio (opcional)</Label>
                        <textarea
                          className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono break-all"
                          value={formConfig.settings?.redirect_url || ''}
@@ -1213,7 +1217,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                        <p className="text-[10px] text-muted-foreground">Cole o link completo do WhatsApp ou página de obrigado. O sistema agora suporta URLs longas e complexas.</p>
                      </div>
                       <div className="space-y-2">
-                        <Label className="text-xs">WhatsApp (Optional)</Label>
+                        <Label className="text-xs">WhatsApp (opcional)</Label>
                         <Input 
                           value={formConfig.settings?.whatsapp_number || ''} 
                           onChange={(e) => setFormConfig(prev => {

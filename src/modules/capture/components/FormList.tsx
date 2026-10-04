@@ -1,146 +1,34 @@
+import { FormPublish } from './FormPublish';
 function EmbedDialog({ form }: { form: Form }) {
-  const [copied, setCopied] = React.useState(false);
-  // Era um ternário que tratava o preview do lovable.app à parte. Fora dali as
-  // duas pontas davam no mesmo, e hoje o app não roda mais naquele domínio.
-  const appDomain = window.location.origin;
+  /* Esta tela era uma SEGUNDA implementação de publicação, divergente da que
+     fica dentro do construtor: três opções (iFrame, link, WordPress), em
+     inglês, e sem nenhum dos canais novos. Duas telas para a mesma coisa
+     divergem na primeira mudança — e divergiram.
 
-  const publicUrl = `${appDomain}/f/${form.slug}`;
-  
-  const iframeCode = `<iframe src="${appDomain}/embed-form/${form.id}" width="100%" height="700" style="border:0; border-radius:12px;" loading="lazy"></iframe>`;
-  const scriptCode = `<div id="leadflow-form-${form.id}"></div>
-<script src="${appDomain}/sdk.js"></script>
-<script>
-  window.addEventListener('load', function() {
-    LeadFlow.init({
-      formId: "${form.id}",
-      target: "#leadflow-form-${form.id}",
-      mode: "inline"
-    });
-  });
-</script>`;
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success('Code copied to clipboard');
-  };
-
+     Agora reusa o `FormPublish`, que é a tela de verdade. */
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex-1 text-[10px] uppercase font-bold tracking-wider h-8 gap-1.5">
-          <Code2 className="h-3 w-3" /> Embed
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 text-[10px] uppercase font-bold tracking-wider h-10 gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Code2 className="h-3 w-3" /> Publicar
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        className="max-w-3xl max-h-[88vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
-          <DialogTitle>Embed Form: {form.name}</DialogTitle>
+          <DialogTitle className="text-lg">Publicar: {form.name}</DialogTitle>
           <DialogDescription>
-            Choose how you want to integrate this form into your website.
+            Escolha por onde este formulário vai receber leads.
           </DialogDescription>
         </DialogHeader>
-        
-        <Tabs defaultValue="iframe" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="iframe">iFrame</TabsTrigger>
-            <TabsTrigger value="link">Link público</TabsTrigger>
-            <TabsTrigger value="wordpress">WordPress</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="iframe" className="space-y-4 pt-4">
-            <p className="text-xs text-muted-foreground">The easiest way to embed. Works on any site including WordPress, Elementor, and Webflow.</p>
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg text-[10px] font-mono overflow-x-auto">
-                {iframeCode}
-              </pre>
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                className="absolute top-2 right-2"
-                onClick={() => copyToClipboard(iframeCode)}
-              >
-                {copied ? <ClipboardCheck className="h-4 w-4 text-[var(--sucesso)]" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="link" className="space-y-4 pt-4">
-            <p className="text-xs text-muted-foreground">Compartilhe este link direto ou use em botões e redes sociais.</p>
-            <div className="flex gap-2">
-              <Input value={publicUrl} readOnly className="text-xs" />
-              <Button onClick={() => copyToClipboard(publicUrl)}>Copiar</Button>
-            </div>
-            <Button variant="outline" className="w-full gap-2" onClick={() => window.open(publicUrl, '_blank')}>
-              <ExternalLink className="h-4 w-4" /> View Live Form
-            </Button>
-          </TabsContent>
-
-           <TabsContent value="wordpress" className="space-y-4 pt-4">
-             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 space-y-4">
-               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                   <CheckCircle2 className="h-5 w-5" />
-                 </div>
-                 <div>
-                   <h4 className="text-sm font-black uppercase tracking-tight">WordPress Integration</h4>
-                   <p className="text-[11px] text-muted-foreground">Siga os passos abaixo para inserir no seu site.</p>
-                 </div>
-               </div>
-
-               <div className="space-y-4">
-                 <div className="space-y-2">
-                   <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">Opção 1: Script (Recomendado)</Label>
-                   <p className="text-[11px] text-muted-foreground">Melhor para rastreamento de UTMs e performance.</p>
-                   <div className="relative">
-                     <pre className="bg-background p-3 rounded-lg text-[10px] font-mono border overflow-x-auto">
-                       {scriptCode}
-                     </pre>
-                     <Button 
-                       size="icon" 
-                       variant="ghost" 
-                       className="absolute top-1 right-1 h-7 w-7"
-                       onClick={() => copyToClipboard(scriptCode)}
-                     >
-                       {copied ? <CheckCircle2 className="h-3 w-3 text-[var(--sucesso)]" /> : <Copy className="h-3 w-3" />}
-                     </Button>
-                   </div>
-                 </div>
-
-                 <div className="space-y-2 pt-2 border-t border-primary/10">
-                   <Label className="text-[10px] font-bold uppercase tracking-widest text-primary">Opção 2: Iframe</Label>
-                   <p className="text-[11px] text-muted-foreground">Use se o seu tema bloquear scripts externos.</p>
-                   <div className="relative">
-                     <pre className="bg-background p-3 rounded-lg text-[10px] font-mono border overflow-x-auto">
-                       {iframeCode}
-                     </pre>
-                     <Button 
-                       size="icon" 
-                       variant="ghost" 
-                       className="absolute top-1 right-1 h-7 w-7"
-                       onClick={() => copyToClipboard(iframeCode)}
-                     >
-                       {copied ? <CheckCircle2 className="h-3 w-3 text-[var(--sucesso)]" /> : <Copy className="h-3 w-3" />}
-                     </Button>
-                   </div>
-                 </div>
-               </div>
-             </div>
-
-             <div className="p-4 bg-slate-50 border rounded-xl space-y-2">
-               <h5 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                 <AlertCircle className="h-3 w-3 text-[var(--aviso)]" />
-                 Como inserir no WordPress:
-               </h5>
-               <ol className="text-[11px] text-muted-foreground list-decimal pl-4 space-y-1">
-                 <li>No editor do WordPress (Gutenberg), adicione um bloco chamado <strong>"HTML Personalizado"</strong>.</li>
-                 <li>Cole o código da <strong>Opção 1</strong> acima dentro do bloco.</li>
-                 <li>Se estiver usando <strong>Elementor</strong>, use o widget "HTML".</li>
-                 <li>Salve a página e visualize o resultado.</li>
-               </ol>
-             </div>
-           </TabsContent>
-        </Tabs>
+        <FormPublish form={form} />
       </DialogContent>
     </Dialog>
   );
@@ -321,14 +209,27 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {forms?.map((form) => (
-        <Card key={form.id} className="group relative transition-all duration-500 border-none shadow-[0_4px_15px_-3px_rgba(0,0,0,0.08)] hover:shadow-[0_15px_30px_-10px_rgba(0,0,0,0.12)] hover:-translate-y-1 bg-white overflow-hidden flex flex-col rounded-[20px]">
+        /* O cartão não tinha handler nenhum: clicar nele — uma ou duas vezes —
+           não fazia nada, e editar só era possível pelo menu de três pontinhos,
+           que é onde ninguém procura primeiro. Os botões de dentro param a
+           propagação para não abrirem o editor junto. */
+        <Card
+          key={form.id}
+          role="button"
+          tabIndex={0}
+          aria-label={`Editar o formulário ${form.name}`}
+          onClick={() => onEdit(form.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(form.id); }
+          }}
+          className="group relative cursor-pointer transition-all duration-500 border-none shadow-[0_4px_15px_-3px_rgba(0,0,0,0.08)] hover:shadow-[0_15px_30px_-10px_rgba(0,0,0,0.12)] hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary bg-white overflow-hidden flex flex-col rounded-[20px]">
           {/* Blue Top Banner - Adjusted Height */}
           <div className="h-10 w-full bg-gradient-to-r from-primary to-blue-600 relative overflow-hidden shrink-0">
             <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.1)_75%,transparent_75%,transparent)] bg-[length:20px_20px] opacity-10" />
             <div className="absolute top-2 right-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm transition-all">
+                  <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()} className="h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm transition-all">
                     <MoreVertical className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -396,7 +297,7 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
                 variant="outline" 
                 size="sm" 
                 className="flex-1 text-[10px] uppercase font-black tracking-widest h-10 gap-2 rounded-lg border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm" 
-                onClick={() => window.open(`/f/${form.slug}`, '_blank')}
+                onClick={(e) => { e.stopPropagation(); window.open(`/f/${form.slug}`, '_blank'); }}
               >
                 <Eye className="h-3.5 w-3.5" /> Ver
               </Button>
