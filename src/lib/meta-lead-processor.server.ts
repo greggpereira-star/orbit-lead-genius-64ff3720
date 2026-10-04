@@ -237,6 +237,26 @@ export async function processMetaLeadEvent(
       mapping?.stage_id ?? null,
     );
 
+    /* Quando a pessoa PREENCHEU, e não quando nós gravamos.
+     *
+     * `createdTime` já vinha na entrada (o `created_time` do webhook) e não era
+     * usado em lugar nenhum: o lead sempre nascia com o `now()` padrão da
+     * coluna. Com o webhook chegando na hora a diferença é de segundos e
+     * ninguém nota — mas numa reentrega da Meta, numa fila atrasada ou num
+     * reprocessamento, o lead cai no dia errado e todo relatório por período
+     * mente.
+     *
+     * Medido em 04/10/2026: os 10 leads recuperados da janela do gatilho
+     * quebrado nasceram todos com a data da recuperação, até 1 dia e 7 horas
+     * depois do preenchimento real.
+     */
+    const quando = (() => {
+      if (!input.createdTime) return null;
+      const d = new Date(input.createdTime);
+      // Data inválida vira null em vez de 'Invalid Date' no banco.
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    })();
+
     const leadInsert: Record<string, unknown> = {
       company_id: page.company_id,
       name: parsed.name ?? "Lead sem nome",
@@ -260,15 +280,18 @@ export async function processMetaLeadEvent(
       // embaixo, então o seletor de etapa do mapeamento era configurado e nunca
       // surtia efeito: o lead nascia com stage_id NULL e sumia do pipeline.
       stage_id: entryStageId,
-      stage_entered_at: new Date().toISOString(),
+      stage_entered_at: quando ?? new Date().toISOString(),
       // Negativo pra entrar no topo da coluna: os leads do backfill têm
       // valores positivos, e lead novo no pé de uma coluna de 100 cards é o
       // mesmo que não aparecer.
-      board_order: -Date.now(),
+      // `board_order` sai da MESMA data: derivado de `Date.now()`, um lead
+      // reprocessado ia para o topo da coluna como se fosse o mais recente.
+      board_order: quando ? -new Date(quando).getTime() : -Date.now(),
       lead_score: mapping?.default_score ?? null,
       score: mapping?.default_score ?? null,
       lead_temperature: mapping?.default_temperature ?? null,
       temperature: mapping?.default_temperature ?? null,
+      ...(quando ? { created_at: quando } : {}),
       metadata: {
         ...parsed.metadata,
         meta_leadgen_id: input.leadgenId,
