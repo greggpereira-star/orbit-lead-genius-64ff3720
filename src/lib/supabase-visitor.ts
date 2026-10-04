@@ -23,6 +23,7 @@ export function createChatVisitorClient(visitorId: string) {
   return createVisitorSupabase({ 'x-visitor-id': visitorId });
 }
 
-export function createSessionVisitorClient(sessionId: string) {
-  return createVisitorSupabase({ 'x-session-id': sessionId });
-}
+/* `createSessionVisitorClient` saiu em 04/10/2026. Ele existia para o cliente
+   anônimo gravar o rascunho do formulário com o cabeçalho `x-session-id`, mas o
+   papel `anon` nunca teve grant em `form_partial_submissions` — a autorização
+   agora é da função `form_rascunho_salvar`, que roda como dono. */

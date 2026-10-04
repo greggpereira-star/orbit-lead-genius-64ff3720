@@ -307,8 +307,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
     status: 'draft',
     type: initialType || 'standard',
     settings: {
-      submit_label: 'Submit',
-      success_message: 'Thank you!',
+      submit_label: 'Enviar',
+      success_message: 'Recebemos seus dados. Entraremos em contato em breve.',
       theme: 'premium-light',
       cv_crm_integration: false,
       capture_utms: true
@@ -773,13 +773,13 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Submit Button Text</Label>
+                      <Label className="text-xs">Texto do botão de envio</Label>
                       <Input 
                         value={formConfig.settings?.submit_label} 
                         onChange={(e) => setFormConfig(prev => {
                           const currentSettings = prev.settings || {
-                            submit_label: 'Submit',
-                            success_message: 'Thank you!',
+                            submit_label: 'Enviar',
+                            success_message: 'Recebemos seus dados. Entraremos em contato em breve.',
                             theme: 'premium-light',
                             cv_crm_integration: false,
                             capture_utms: true
@@ -801,8 +801,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                         checked={formConfig.settings?.capture_utms} 
                         onCheckedChange={(val) => setFormConfig(prev => {
                           const currentSettings = prev.settings || {
-                            submit_label: 'Submit',
-                            success_message: 'Thank you!',
+                            submit_label: 'Enviar',
+                            success_message: 'Recebemos seus dados. Entraremos em contato em breve.',
                             theme: 'premium-light',
                             cv_crm_integration: false,
                             capture_utms: true
@@ -838,8 +838,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                         value={(formConfig.settings as Record<string, unknown> | undefined)?.default_stage_id as string ?? null}
                         onChange={(stageId) => setFormConfig(prev => {
                           const currentSettings = prev.settings || {
-                            submit_label: 'Submit',
-                            success_message: 'Thank you!',
+                            submit_label: 'Enviar',
+                            success_message: 'Recebemos seus dados. Entraremos em contato em breve.',
                             theme: 'premium-light',
                             cv_crm_integration: false,
                             capture_utms: true

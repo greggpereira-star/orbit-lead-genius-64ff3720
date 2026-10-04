@@ -38,6 +38,26 @@ function origemDoEmbutidor(): string {
   return '*';
 }
 
+/**
+ * Contato lido pelo TIPO do campo, não por um nome convencionado.
+ *
+ * Era `values.email` e `values.phone`, que só funcionava se o cliente tivesse
+ * nomeado os campos exatamente assim. O servidor resolve do mesmo jeito dentro
+ * de `form_submit_publico`; aqui é para a correspondência avançada do Pixel.
+ */
+function contatoDasRespostas(
+  campos: Array<{ name: string; type: string }> | undefined,
+  valores: Record<string, any>,
+): { email?: string; phone?: string } {
+  const pegar = (tipo: string) => {
+    const campo = (campos ?? []).find((c) => c.type === tipo);
+    const v = campo ? valores[campo.name] : undefined;
+    const t = typeof v === 'string' ? v.trim() : '';
+    return t || undefined;
+  };
+  return { email: pegar('email'), phone: pegar('phone') };
+}
+
 interface PublicFormRendererProps {
   slug: string;
 }
@@ -145,7 +165,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     
     const loadPartial = async () => {
       if (form?.id) {
-        const data = await partialSubmissionService.getPartial(form.id, sessionId);
+        const data = await partialSubmissionService.getPartial(slug, form.id, sessionId);
         if (data && data.status !== 'completed') {
           setPartialData(data);
           setResumePrompt(true);
@@ -164,20 +184,20 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     setResumePrompt(false);
   };
 
-  const saveProgress = async (stepIndex: number, status: any = 'in_progress') => {
+  /* O `score_preview` não vem mais daqui. Ele era `0` fixo, o que tornava
+     impossível distinguir "lead quente abandonou no passo 3" de "alguém abriu
+     e saiu" — agora é calculado dentro de `form_rascunho_salvar`, com as
+     regras que já estão no banco. */
+  const saveProgress = async (stepIndex: number) => {
     if (!form) return;
-    
-    const values = getValues();
     await partialSubmissionService.savePartial({
-      company_id: form.company_id,
-      form_id: form.id,
-      form_slug: form.slug,
-      session_id: sessionId,
-      current_step_index: stepIndex,
-      answers: values,
-      tracking: tracker.getTrackingParams(),
-      score_preview: 0,
-      status
+      slug,
+      formId: form.id,
+      sessionId,
+      answers: getValues(),
+      stepIndex,
+      tracking: { ...tracker.getTrackingParams(), ...(tracking ?? {}) },
+      visitorId: tracker.getTrackingParams().visitor_id ?? undefined,
     });
   };
 
@@ -232,26 +252,26 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
          linha do lead, que é o que permite reconciliar depois. */
       const eventId = newEventId();
 
-      const result = await captureService.submitLead(form.company_id, {
-        /* Sem nome o lead fica sem nome. 'Anonymous' virava literalmente o nome
-           da pessoa no CRM, em inglês, indistinguível de quem se chamasse
-           assim. */
-        name: values.name || values.full_name || '',
-        email: values.email,
-        phone: values.phone,
-        event_id: eventId,
-        metadata: {
-          form_id: form.id,
-          form_slug: form.slug,
-          answers: values,
-          source: 'public_form_v2'
-        }
-      }, trackingData);
+      /* Uma chamada, uma transação: lead + etiquetas + submissão + histórico.
+         Nome, e-mail, telefone, score, temperatura e etiquetas saem do
+         servidor — o navegador não decide mais a qualificação de quem
+         preenche. */
+      const result = await captureService.submitPublicForm({
+        slug,
+        sessionId,
+        answers: values,
+        tracking: trackingData,
+        eventId,
+      });
 
        if (result.success) {
          trackLead(
-           { email: values.email, phone: values.phone },
-           { content_name: form.name ?? 'formulario' },
+           contatoDasRespostas(form.form_fields, values),
+           {
+             content_name: form.name ?? 'formulario',
+             ...(result.score != null ? { score: result.score } : {}),
+             ...(result.temperature ? { temperatura: result.temperature } : {}),
+           },
            eventId,
          );
 
@@ -264,7 +284,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
            }, origemDoEmbutidor());
          }
 
-        await partialSubmissionService.markAsCompleted(form.id, sessionId);
+        partialSubmissionService.clearLocal(form.id, sessionId);
         
         if (form.settings.redirect_url) {
           // Se houver redirect, dar um pequeno delay para o usuário ver o feedback ou garantir que as mensagens de sucesso sejam processadas

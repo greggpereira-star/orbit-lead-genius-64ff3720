@@ -1,30 +1,33 @@
 import { supabase } from '@/lib/supabase';
-import { createSessionVisitorClient } from '@/lib/supabase-visitor';
 import { logger } from '@/core/observability/logger';
 
-// RLS scopes anon reads/writes on form_partial_submissions to rows where
-// session_id matches the x-session-id header. Signed-in members bypass this
-// via the authenticated policy. Use the session-scoped client for anon.
-function clientFor(sessionId: string) {
-  return typeof window !== 'undefined' ? createSessionVisitorClient(sessionId) : (supabase as any);
-}
-
-
+/**
+ * Rascunho do formulário — o que a pessoa já digitou antes de enviar.
+ *
+ * Passava por leitura e escrita diretas em `form_partial_submissions`. As
+ * políticas RLS `{anon}` daquela tabela existem, mas eram letra morta: medido
+ * em 04/10/2026, o papel `anon` não tem grant nenhum ali, e política sem
+ * privilégio não autoriza nada. Agora vai por função `SECURITY DEFINER`, que
+ * só toca a linha daquela sessão.
+ *
+ * O `localStorage` continua como cache de leitura, porque responde na hora e
+ * preenche o formulário antes do primeiro ida-e-volta à rede. Ele não é a
+ * fonte da verdade: o `score_preview` e o status vêm do servidor.
+ */
 export interface PartialSubmission {
   id?: string;
-  company_id: string;
-  form_id: string;
-  form_slug: string;
-  session_id: string;
+  company_id?: string;
+  form_id?: string;
+  form_slug?: string;
+  session_id?: string;
   visitor_id?: string;
   lead_id?: string;
-  current_step_id?: string;
   current_step_index: number;
   answers: Record<string, any>;
-  tracking: Record<string, any>;
-  score_preview: number;
+  tracking?: Record<string, any>;
+  score_preview?: number;
   temperature_preview?: string;
-  status: 'started' | 'in_progress' | 'abandoned' | 'completed' | 'expired';
+  status?: 'started' | 'in_progress' | 'abandoned' | 'completed' | 'expired';
 }
 
 const STORAGE_KEY_PREFIX = 'leadflow_partial_form_';
@@ -34,93 +37,80 @@ export const partialSubmissionService = {
     return `${STORAGE_KEY_PREFIX}${formId}_${sessionId}`;
   },
 
-  async savePartial(data: PartialSubmission): Promise<string | null> {
+  async savePartial(p: {
+    slug: string;
+    formId: string;
+    sessionId: string;
+    answers: Record<string, any>;
+    stepIndex: number;
+    tracking?: Record<string, any>;
+    visitorId?: string;
+  }): Promise<{ score: number; temperature: string } | null> {
     try {
-      // Save to localStorage
-      const localKey = this.getLocalStorageKey(data.form_id, data.session_id);
-      localStorage.setItem(localKey, JSON.stringify({
-        ...data,
-        updated_at: new Date().toISOString()
-      }));
-
-      const c = clientFor(data.session_id);
-      // Save to Supabase (Upsert based on session_id + form_id)
-      const { data: saved, error } = await c
-        .from('form_partial_submissions')
-        .upsert({
-          company_id: data.company_id,
-          form_id: data.form_id,
-          form_slug: data.form_slug,
-          session_id: data.session_id,
-          visitor_id: data.visitor_id,
-          current_step_index: data.current_step_index,
-          answers: data.answers,
-          tracking: data.tracking,
-          score_preview: data.score_preview,
-          temperature_preview: data.temperature_preview,
-          status: data.status,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'session_id,form_id'
-        })
-        .select()
-        .single();
-
-      if (error) {
-        logger.warn('PartialSubmission: Upsert might have failed, trying standard insert', { error });
-        const { data: inserted } = await c
-          .from('form_partial_submissions')
-          .insert({
-             ...data,
-             updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        return inserted?.id || null;
-      }
-
-      return saved?.id || null;
-
-    } catch (err) {
-      logger.error('Failed to save partial submission', { err });
-      return null;
-    }
-  },
-
-  async getPartial(formId: string, sessionId: string): Promise<PartialSubmission | null> {
-    // Try localStorage first for speed
-    const localKey = this.getLocalStorageKey(formId, sessionId);
-    const localData = localStorage.getItem(localKey);
-    if (localData) {
-      try { return JSON.parse(localData); } catch (e) {}
+      localStorage.setItem(
+        this.getLocalStorageKey(p.formId, p.sessionId),
+        JSON.stringify({
+          current_step_index: p.stepIndex,
+          answers: p.answers,
+          updated_at: new Date().toISOString(),
+        }),
+      );
+    } catch {
+      /* Aba privada ou armazenamento bloqueado: o rascunho vive no servidor. */
     }
 
-    // Fallback to Supabase
-    const { data, error } = await clientFor(sessionId)
-      .from('form_partial_submissions')
-      .select('*')
-      .eq('form_id', formId)
-      .eq('session_id', sessionId)
-      .maybeSingle();
+    const { data, error } = await (supabase as any).rpc('form_rascunho_salvar', {
+      p_slug: p.slug,
+      p_session_id: p.sessionId,
+      p_answers: p.answers ?? {},
+      p_step_index: p.stepIndex,
+      p_tracking: p.tracking ?? {},
+      p_visitor_id: p.visitorId ?? null,
+    });
 
     if (error) {
-      logger.error('Failed to fetch partial submission', { error, formId, sessionId });
+      logger.warn('Falha ao gravar rascunho do formulário', { error: error.message, slug: p.slug });
       return null;
     }
-
-    return data;
+    const r = (data ?? {}) as Record<string, any>;
+    return r.ok ? { score: r.score ?? 0, temperature: r.temperature ?? 'cold' } : null;
   },
 
-  async markAsCompleted(formId: string, sessionId: string): Promise<void> {
-    const localKey = this.getLocalStorageKey(formId, sessionId);
-    localStorage.removeItem(localKey);
+  async getPartial(
+    slug: string,
+    formId: string,
+    sessionId: string,
+  ): Promise<PartialSubmission | null> {
+    const { data, error } = await (supabase as any).rpc('form_rascunho_ler', {
+      p_slug: slug,
+      p_session_id: sessionId,
+    });
 
-    await clientFor(sessionId)
-      .from('form_partial_submissions')
-      .update({ status: 'completed' })
-      .eq('form_id', formId)
-      .eq('session_id', sessionId);
-  }
+    if (!error && data) return data as PartialSubmission;
+    if (error) {
+      logger.warn('Falha ao ler rascunho do formulário', { error: error.message, slug });
+    }
+
+    // Queda para o cache local: a pessoa não perde o que digitou só porque a
+    // rede falhou.
+    try {
+      const local = localStorage.getItem(this.getLocalStorageKey(formId, sessionId));
+      return local ? (JSON.parse(local) as PartialSubmission) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * O rascunho é fechado pelo próprio `form_submit_publico`, na mesma
+   * transação do lead — então não há janela em que o lead exista e o rascunho
+   * continue contando como abandono. Aqui só resta limpar o cache local.
+   */
+  clearLocal(formId: string, sessionId: string): void {
+    try {
+      localStorage.removeItem(this.getLocalStorageKey(formId, sessionId));
+    } catch {
+      /* sem cache para limpar */
+    }
+  },
 };
-

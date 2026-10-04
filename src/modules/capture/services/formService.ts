@@ -118,19 +118,23 @@ export const formService = {
       return data;
     },
 
-   async getFormBySlug(slug: string): Promise<Form & { form_fields: FormField[], form_steps: FormStep[] } | null> {
-     const { data, error } = await supabase
-       .from('forms')
-       .select('*, form_fields(*), form_steps(*)')
-       .eq('slug', slug)
-       .eq('status', 'published')
-       .maybeSingle();
+  /**
+   * Formulário publicado, para o visitante anônimo.
+   *
+   * Lia a tabela direto, e o papel `anon` não tem grant em `forms` — medido em
+   * 04/10/2026: `permission denied for table forms`. O formulário público
+   * nunca renderizava. Agora vai pela função `form_publico`, que roda como
+   * dono e devolve só o que a página precisa (sem as regras de pontuação, que
+   * são a régua de qualificação do cliente).
+   */
+  async getFormBySlug(slug: string): Promise<Form & { form_fields: FormField[], form_steps: FormStep[] } | null> {
+    const { data, error } = await (supabase as any).rpc('form_publico', { p_slug: slug });
 
     if (error) {
-      logger.error('Failed to fetch form by slug', { error, slug });
+      logger.error('Falha ao buscar formulário público pelo slug', { error, slug });
       throw error;
     }
-    return data;
+    return (data as Form & { form_fields: FormField[]; form_steps: FormStep[] }) ?? null;
   },
 
    async createForm(
