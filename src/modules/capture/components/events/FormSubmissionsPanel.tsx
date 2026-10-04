@@ -1,125 +1,183 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { FileDown, Search, Loader2, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  FileDown, 
-  FileText, 
-  Download,
-  Filter,
-  Search,
-  CheckCircle2,
-  Mail,
-  Phone,
-  User,
-  Calendar,
-  Share2
-} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import {
+  formMetrics, submissoesParaCsv, baixarCsv,
+  type SubmissaoDeFormulario,
+} from '../../services/formService';
 
-export function FormSubmissionsPanel({ formId }: { formId: string }) {
-  const handleExport = (type: 'csv' | 'pdf') => {
-    toast.info(`Preparando exportação \${type.toUpperCase()}...`);
-    setTimeout(() => {
-      toast.success(`Exportação concluída! O download iniciará em breve.`);
-    }, 2000);
+const POR_PAGINA = 50;
+
+/**
+ * Submissões reais.
+ *
+ * O que havia aqui era uma lista de três pessoas inventadas — "João Silva",
+ * "Maria Oliveira", "Pedro Santos" — com telefones e datas escritos no
+ * componente. E os botões CSV e PDF emitiam `toast.info` e, dois segundos
+ * depois, `toast.success('Exportação concluída')` sem gerar arquivo nenhum.
+ */
+export function FormSubmissionsPanel({ formId, formName }: { formId: string; formName?: string }) {
+  const [busca, setBusca] = useState('');
+  const [buscaAplicada, setBuscaAplicada] = useState('');
+  const [pagina, setPagina] = useState(0);
+  const [exportando, setExportando] = useState(false);
+
+  /* Espera a digitação parar antes de consultar: uma chamada por tecla
+     bateria no banco a cada letra. Sem dependência nova para isso. */
+  useEffect(() => {
+    const t = setTimeout(() => { setBuscaAplicada(busca); setPagina(0); }, 350);
+    return () => clearTimeout(t);
+  }, [busca]);
+
+  const { data: linhas, isLoading } = useQuery({
+    queryKey: ['form-submissions', formId, buscaAplicada, pagina],
+    queryFn: () => formMetrics.submissoes({
+      formId, busca: buscaAplicada, limite: POR_PAGINA, offset: pagina * POR_PAGINA,
+    }),
+    enabled: !!formId,
+  });
+
+  const total = linhas?.[0]?.total ?? 0;
+
+  const exportar = async () => {
+    setExportando(true);
+    try {
+      /* Exporta TUDO o que o filtro alcança, não só a página na tela — quem
+         pede o CSV quer a base, não 50 linhas. */
+      const todas: SubmissaoDeFormulario[] = [];
+      let off = 0;
+      for (;;) {
+        const lote = await formMetrics.submissoes({
+          formId, busca: buscaAplicada, limite: 500, offset: off,
+        });
+        todas.push(...lote);
+        if (lote.length < 500) break;
+        off += 500;
+      }
+      if (!todas.length) {
+        toast.info('Não há submissões para exportar.');
+        return;
+      }
+      const base = (formName || 'formulario').toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      baixarCsv(submissoesParaCsv(todas), `submissoes-${base}.csv`);
+      toast.success(`${todas.length} submissões exportadas.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Não foi possível exportar.');
+    } finally {
+      setExportando(false);
+    }
   };
 
-  const submissions = [
-    { id: '1', name: 'João Silva', email: 'joao@exemplo.com', phone: '(11) 98888-7777', date: '09/05/2026 14:20', status: 'Novo', score: 85 },
-    { id: '2', name: 'Maria Oliveira', email: 'maria@test.com', phone: '(21) 97777-6666', date: '09/05/2026 12:45', status: 'Qualificado', score: 92 },
-    { id: '3', name: 'Pedro Santos', email: 'pedro@lead.com', phone: '(31) 96666-5555', date: '08/05/2026 18:10', status: 'Novo', score: 45 }
-  ];
-
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-xl font-black uppercase tracking-tighter">Gestão de Submissões</h3>
-          <p className="text-muted-foreground text-xs">Visualize e exporte os leads capturados neste formulário.</p>
+          <h3 className="text-lg font-semibold tracking-[-0.01em]">Submissões</h3>
+          <p className="text-sm text-muted-foreground">
+            {total > 0
+              ? `${total.toLocaleString('pt-BR')} ${total === 1 ? 'resposta recebida' : 'respostas recebidas'}`
+              : 'Nenhuma resposta ainda'}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-           <Button onClick={() => handleExport('csv')} variant="outline" size="sm" className="gap-2 text-xs font-bold uppercase tracking-wider h-9">
-             <FileDown className="h-4 w-4" /> CSV
-           </Button>
-           <Button onClick={() => handleExport('pdf')} variant="outline" size="sm" className="gap-2 text-xs font-bold uppercase tracking-wider h-9">
-             <FileText className="h-4 w-4" /> PDF
-           </Button>
-        </div>
+        <Button variant="outline" size="sm" className="gap-2"
+          onClick={exportar} disabled={exportando || total === 0}>
+          {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+          Exportar CSV
+        </Button>
       </div>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader className="pb-4">
-           <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar por nome, email ou telefone..." className="pl-9 h-10 text-xs" />
-              </div>
-              <Button variant="outline" className="h-10 gap-2 text-xs font-bold uppercase tracking-wider">
-                <Filter className="h-4 w-4" /> Filtros
-              </Button>
-           </div>
-        </CardHeader>
-        <CardContent>
-           <div className="rounded-xl border overflow-hidden">
-             <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr className="text-left">
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest opacity-60">Lead</th>
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest opacity-60">Contato</th>
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest opacity-60">Data</th>
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest opacity-60">Status</th>
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest opacity-60 text-center">Score</th>
-                    <th className="p-4"></th>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por nome, e-mail ou telefone..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Carregando...
+        </div>
+      ) : !linhas?.length ? (
+        <div className="rounded-xl border border-dashed py-16 text-center">
+          <Inbox className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            {buscaAplicada ? 'Nada encontrado para essa busca.' : 'Nenhuma submissão ainda.'}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-muted/40">
+                <tr className="text-left">
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">Lead</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">Contato</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">Score</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">Origem</th>
+                  <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">Quando</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {linhas.map((s) => (
+                  <tr key={s.id} className="align-top">
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{s.nome || 'Sem nome'}</p>
+                      {(s.etiquetas ?? []).length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {(s.etiquetas ?? []).map((t) => (
+                            <Badge key={t} variant="secondary" className="font-normal">{t}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <p>{s.email || '—'}</p>
+                      <p className="tabular-nums">{s.telefone || '—'}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-semibold tabular-nums">{s.score ?? 0}</span>
+                      {s.temperatura && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">{s.temperatura}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {s.utm_source || '—'}
+                      {s.utm_campaign && <p className="truncate max-w-[180px]">{s.utm_campaign}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
+                      {new Date(s.criado_em).toLocaleString('pt-BR')}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {submissions.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-muted/30 transition-colors group">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                            <User className="h-4 w-4" />
-                          </div>
-                          <span className="font-bold text-xs">{sub.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3" /> {sub.email}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Phone className="h-3 w-3" /> {sub.phone}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                           <Calendar className="h-3 w-3" /> {sub.date}
-                         </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant={sub.status === 'Qualificado' ? 'default' : 'secondary'} className="text-[9px] uppercase font-bold tracking-widest h-5">
-                          {sub.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`text-xs font-black ${sub.score > 80 ? 'text-[var(--sucesso)]' : 'text-[var(--aviso)]'}`}>{sub.score}</span>
-                      </td>
-                      <td className="p-4 text-right">
-                         <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Share2 className="h-4 w-4" />
-                         </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-             </table>
-           </div>
-        </CardContent>
-      </Card>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {total > POR_PAGINA && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground tabular-nums">
+                {pagina * POR_PAGINA + 1}–{Math.min((pagina + 1) * POR_PAGINA, total)} de {total}
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={pagina === 0}
+                  onClick={() => setPagina((p) => p - 1)}>Anterior</Button>
+                <Button variant="outline" size="sm"
+                  disabled={(pagina + 1) * POR_PAGINA >= total}
+                  onClick={() => setPagina((p) => p + 1)}>Próxima</Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

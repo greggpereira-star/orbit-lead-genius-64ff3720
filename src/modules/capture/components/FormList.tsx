@@ -147,7 +147,7 @@ function EmbedDialog({ form }: { form: Form }) {
 }
  import React from 'react';
  import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
- import { formService, Form } from '../services/formService';
+ import { formMetrics, formService, Form } from '../services/formService';
  import { useAuth } from '@/core/auth/hooks/useAuth';
  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
  import { Button } from '@/components/ui/button';
@@ -197,6 +197,14 @@ interface FormListProps {
 export function FormList({ onEdit, onCreate }: FormListProps) {
   const { company } = useAuth();
   const queryClient = useQueryClient();
+
+   /* Os números do cartão eram `0` e `0%` escritos no JSX, com um `+0%` em
+      verde ao lado. Nunca mostrariam nada real, por mais leads que entrassem. */
+   const { data: metricas } = useQuery({
+     queryKey: ['form-metrics', company?.id],
+     queryFn: () => formMetrics.porEmpresa(company!.id),
+     enabled: !!company?.id,
+   });
 
    const { data: forms, isLoading, isError, error: queryError, refetch } = useQuery({
      queryKey: ['forms', company?.id],
@@ -368,14 +376,17 @@ export function FormList({ onEdit, onCreate }: FormListProps) {
               <div className="flex flex-col gap-0.5">
                 <span className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Leads</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-black text-slate-900 leading-none tracking-tighter">0</span>
-                  <span className="text-[9px] text-[var(--sucesso)] font-bold">+0%</span>
+                  <span className="text-xl font-black text-slate-900 leading-none tracking-tighter tabular-nums">
+                    {(metricas?.[form.id]?.enviados ?? 0).toLocaleString('pt-BR')}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-col gap-0.5 border-l border-slate-200/60 pl-3">
-                <span className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Conv.</span>
+                <span className="text-[9px] text-slate-400 uppercase tracking-widest font-black">Conclusão</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-black text-slate-900 leading-none tracking-tighter">0%</span>
+                  <span className="text-xl font-black text-slate-900 leading-none tracking-tighter tabular-nums">
+                    {metricas?.[form.id]?.taxa_de_conclusao ?? 0}%
+                  </span>
                 </div>
               </div>
             </div>

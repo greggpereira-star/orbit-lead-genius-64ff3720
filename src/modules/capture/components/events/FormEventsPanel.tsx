@@ -1,128 +1,116 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Activity, 
-  Clock, 
-  MousePointer2, 
-  CheckCircle2, 
-  AlertCircle, 
-  Search, 
-  Filter,
-  Download,
-  Smartphone,
-  Laptop,
-  Globe,
-  ArrowUpRight
-} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2, CircleDashed, DoorOpen, Percent, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/core/auth/hooks/useAuth';
+import { formMetrics } from '../../services/formService';
 
+/**
+ * Atividade real do formulário.
+ *
+ * O que havia era inventado: "1.284 eventos", "842 inícios", "156 submissões",
+ * "18.5%" e cinco linhas de atividade (`field_focused`, `form_viewed`,
+ * `sdk_loaded`) escritas no componente.
+ *
+ * O produto não registra foco de campo nem visualização — montar esses números
+ * exigiria um coletor que não existe. O que existe de verdade é o funil entre
+ * rascunho e envio, e é isso que a tela mostra agora. Preferi quatro números
+ * verdadeiros a oito inventados.
+ */
 export function FormEventsPanel({ formId }: { formId: string }) {
-  const [filter, setFilter] = useState('');
+  const { company } = useAuth();
 
-  const stats = [
-    { label: 'Total Eventos', value: '1,284', icon: Activity, color: 'text-primary' },
-    { label: 'Inícios', value: '842', icon: PlayCircle, color: 'text-muted-foreground' },
-    { label: 'Submissões', value: '156', icon: CheckCircle2, color: 'text-[var(--sucesso)]' },
-    { label: 'Taxa Conv.', value: '18.5%', icon: ArrowUpRight, color: 'text-[var(--aviso)]' }
-  ];
+  const { data: metricas, isLoading } = useQuery({
+    queryKey: ['form-metrics', company?.id],
+    queryFn: () => formMetrics.porEmpresa(company!.id),
+    enabled: !!company?.id,
+  });
 
-  const mockEvents = [
-    { id: 1, name: 'form_submitted', time: 'Há 2 min', page: '/imoveis/loteamento-x', mode: 'inline', device: 'Desktop' },
-    { id: 2, name: 'field_focused', time: 'Há 5 min', page: '/contato', mode: 'popup', device: 'Mobile' },
-    { id: 3, name: 'form_viewed', time: 'Há 8 min', page: '/home', mode: 'floating', device: 'Desktop' },
-    { id: 4, name: 'utm_captured', time: 'Há 12 min', page: '/promo-black-friday', mode: 'inline', device: 'Mobile' },
-    { id: 5, name: 'sdk_loaded', time: 'Há 15 min', page: '/quem-somos', mode: 'script', device: 'Desktop' }
+  const { data: atividade } = useQuery({
+    queryKey: ['form-activity', formId],
+    queryFn: () => formMetrics.atividade(formId, 25),
+    enabled: !!formId,
+  });
+
+  const m = metricas?.[formId];
+
+  const cartoes = [
+    { rotulo: 'Enviados', valor: m?.enviados ?? 0, icone: CheckCircle2, cor: 'text-[var(--sucesso)]' },
+    { rotulo: 'Em preenchimento', valor: (m?.iniciados ?? 0) - (m?.abandonados ?? 0), icone: CircleDashed, cor: 'text-muted-foreground' },
+    { rotulo: 'Abandonados', valor: m?.abandonados ?? 0, icone: DoorOpen, cor: 'text-[var(--aviso)]' },
+    { rotulo: 'Conclusão', valor: `${m?.taxa_de_conclusao ?? 0}%`, icone: Percent, cor: 'text-primary' },
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm">
-            <CardContent className="p-4 flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {cartoes.map((c) => (
+          <Card key={c.rotulo}>
+            <CardContent className="flex items-center justify-between p-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-black mt-1">{stat.value}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+                  {c.rotulo}
+                </p>
+                <p className="mt-1 text-[22px] font-semibold tracking-[-0.025em] tabular-nums">
+                  {isLoading ? '—' : c.valor}
+                </p>
               </div>
-              <div className={`p-2 rounded-lg bg-muted/50 ${stat.color}`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
+              <c.icone className={`h-5 w-5 ${c.cor}`} />
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-black uppercase tracking-tighter">Live Event Stream</CardTitle>
-              <CardDescription className="text-xs">Eventos em tempo real capturados pelo SDK LeadFlow.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar evento..." className="pl-9 h-9 w-64 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)} />
-              </div>
-              <Button variant="outline" size="sm" className="h-9 gap-2 text-xs font-bold uppercase tracking-wider">
-                <Filter className="h-3.5 w-3.5" /> Filtros
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 gap-2 text-xs font-bold uppercase tracking-wider">
-                <Download className="h-3.5 w-3.5" /> Exportar
-              </Button>
-            </div>
+      <p className="text-[11px] text-muted-foreground">
+        Conclusão é a proporção de quem enviou entre todos que começaram a preencher.
+        O produto não registra visualizações do formulário, então não há taxa sobre visitas.
+      </p>
+
+      <div className="cartao">
+        <div className="cartao-topo">
+          <span className="disco"><CheckCircle2 className="h-4 w-4" /></span>
+          <div>
+            <h3 className="text-[13px] font-semibold leading-tight">Atividade recente</h3>
+            <p className="text-[11px] text-muted-foreground">Envios, abandonos e quem está preenchendo agora.</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-xl border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
-                <tr className="text-left">
-                  <th className="p-3 text-[10px] font-bold uppercase tracking-widest opacity-60">Evento</th>
-                  <th className="p-3 text-[10px] font-bold uppercase tracking-widest opacity-60">Data/Hora</th>
-                  <th className="p-3 text-[10px] font-bold uppercase tracking-widest opacity-60">Página</th>
-                  <th className="p-3 text-[10px] font-bold uppercase tracking-widest opacity-60">Modo</th>
-                  <th className="p-3 text-[10px] font-bold uppercase tracking-widest opacity-60">Device</th>
-                  <th className="p-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {mockEvents.map((event) => (
-                  <tr key={event.id} className="hover:bg-muted/30 transition-colors cursor-pointer group">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${event.name === 'form_submitted' ? 'bg-[var(--sucesso)]' : 'bg-primary'}`} />
-                        <span className="font-mono text-xs">{event.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {event.time}
-                    </td>
-                    <td className="p-3 text-xs truncate max-w-[200px] text-muted-foreground">{event.page}</td>
-                    <td className="p-3">
-                      <Badge variant="outline" className="text-[9px] uppercase font-bold tracking-widest h-5">{event.mode}</Badge>
-                    </td>
-                    <td className="p-3">
-                      {event.device === 'Desktop' ? <Laptop className="h-4 w-4 text-muted-foreground" /> : <Smartphone className="h-4 w-4 text-muted-foreground" />}
-                    </td>
-                    <td className="p-3 text-right">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="cartao-corpo">
+          {!atividade ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" /> Carregando...
+            </p>
+          ) : atividade.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma atividade ainda.
+            </p>
+          ) : (
+            <div className="divide-y divide-[var(--linha-sutil)]">
+              {atividade.map((a, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 first:pt-0 last:pb-0">
+                  <span className={`text-[10px] font-semibold uppercase tracking-[0.06em] ${
+                    a.tipo === 'enviado' ? 'text-[var(--sucesso)]'
+                      : a.tipo === 'abandonado' ? 'text-[var(--aviso)]'
+                      : 'text-muted-foreground'
+                  }`}>
+                    {a.tipo}
+                  </span>
+                  <span className="text-[13px] font-medium">{a.identificacao}</span>
+                  {a.passo != null && (
+                    <span className="text-[12px] text-muted-foreground">passo {a.passo}</span>
+                  )}
+                  {a.score != null && a.score > 0 && (
+                    <span className="text-[12px] text-muted-foreground tabular-nums">
+                      score {a.score}
+                    </span>
+                  )}
+                  <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+                    {new Date(a.quando).toLocaleString('pt-BR')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-}
-
-function PlayCircle({ className }: { className?: string }) {
-  return <Activity className={className} />;
 }

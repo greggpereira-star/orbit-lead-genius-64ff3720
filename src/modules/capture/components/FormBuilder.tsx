@@ -1378,7 +1378,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
           </TabsContent>
 
           <TabsContent value="submissions" className="pt-6">
-            {formId && <FormSubmissionsPanel formId={formId} />}
+            {formId && <FormSubmissionsPanel formId={formId} formName={formConfig.name} />}
           </TabsContent>
       </Tabs>
     </div>

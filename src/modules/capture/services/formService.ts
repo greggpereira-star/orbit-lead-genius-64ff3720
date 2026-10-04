@@ -314,3 +314,133 @@ export const formService = {
     if (error) throw error;
   }
 };
+/* ------------------------------------------------------------------------
+   Números reais dos formulários.
+
+   O que havia nas telas era inventado: "1.284 eventos", "18.5%", "João
+   Silva", e `0`/`0%` literais no cartão de cada formulário. Dado inventado
+   num produto é pior que tela vazia — o cliente lê como se fosse o número
+   dele.
+   ------------------------------------------------------------------------ */
+
+export interface MetricaDeFormulario {
+  form_id: string;
+  enviados: number;
+  iniciados: number;
+  abandonados: number;
+  taxa_de_conclusao: number;
+  ultimo_envio: string | null;
+}
+
+export interface SubmissaoDeFormulario {
+  id: string;
+  lead_id: string | null;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  score: number | null;
+  temperatura: string | null;
+  etiquetas: string[] | null;
+  respostas: Record<string, unknown> | null;
+  utm_source: string | null;
+  utm_campaign: string | null;
+  criado_em: string;
+  total: number;
+}
+
+export interface AtividadeDeFormulario {
+  tipo: 'enviado' | 'abandonado' | 'preenchendo';
+  quando: string;
+  passo: number | null;
+  score: number | null;
+  temperatura: string | null;
+  identificacao: string | null;
+}
+
+export const formMetrics = {
+  async porEmpresa(companyId: string): Promise<Record<string, MetricaDeFormulario>> {
+    const { data, error } = await (supabase as any).rpc('metricas_dos_formularios', {
+      p_company_id: companyId,
+    });
+    if (error) throw new Error(error.message);
+    const mapa: Record<string, MetricaDeFormulario> = {};
+    for (const m of (data ?? []) as MetricaDeFormulario[]) mapa[m.form_id] = m;
+    return mapa;
+  },
+
+  async submissoes(p: {
+    formId: string;
+    busca?: string;
+    limite?: number;
+    offset?: number;
+  }): Promise<SubmissaoDeFormulario[]> {
+    const { data, error } = await (supabase as any).rpc('submissoes_do_formulario', {
+      p_form_id: p.formId,
+      p_busca: p.busca ?? null,
+      p_limite: p.limite ?? 50,
+      p_offset: p.offset ?? 0,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as SubmissaoDeFormulario[];
+  },
+
+  async atividade(formId: string, limite = 25): Promise<AtividadeDeFormulario[]> {
+    const { data, error } = await (supabase as any).rpc('atividade_do_formulario', {
+      p_form_id: formId,
+      p_limite: limite,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as AtividadeDeFormulario[];
+  },
+};
+
+/**
+ * CSV de verdade.
+ *
+ * Os botões antigos emitiam `toast.info` e, 2 segundos depois,
+ * `toast.success('Exportação concluída')` — sem gerar arquivo nenhum.
+ *
+ * As colunas das respostas saem da união das chaves presentes: formulário que
+ * mudou de campos ao longo do tempo tem submissões com conjuntos diferentes, e
+ * fixar as colunas do formulário ATUAL perderia o que foi respondido antes.
+ */
+export function submissoesParaCsv(linhas: SubmissaoDeFormulario[]): string {
+  const chavesDeResposta = Array.from(
+    new Set(linhas.flatMap((l) => Object.keys(l.respostas ?? {}))),
+  ).sort();
+
+  const cabecalho = [
+    'data', 'nome', 'email', 'telefone', 'score', 'temperatura',
+    'etiquetas', 'utm_source', 'utm_campaign', ...chavesDeResposta,
+  ];
+
+  // Aspas duplicadas e o campo todo entre aspas: é o que faz vírgula, quebra
+  // de linha e aspas dentro do texto não partirem a coluna no Excel.
+  const campo = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+  const corpo = linhas.map((l) => [
+    new Date(l.criado_em).toLocaleString('pt-BR'),
+    l.nome, l.email, l.telefone, l.score, l.temperatura,
+    (l.etiquetas ?? []).join('; '),
+    l.utm_source, l.utm_campaign,
+    ...chavesDeResposta.map((k) => {
+      const v = (l.respostas ?? {})[k];
+      return Array.isArray(v) ? v.join('; ') : v;
+    }),
+  ].map(campo).join(','));
+
+  // BOM para o Excel reconhecer UTF-8 — sem ele "orçamento" vira "orÃ§amento".
+  return '﻿' + [cabecalho.map(campo).join(','), ...corpo].join('\r\n');
+}
+
+export function baixarCsv(conteudo: string, nome: string) {
+  const blob = new Blob([conteudo], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
