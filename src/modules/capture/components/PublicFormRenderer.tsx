@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formService, Form, FormField } from '../services/formService';
 import { useForm } from 'react-hook-form';
@@ -15,6 +15,28 @@ import { captureService } from '../services/captureService';
 import { tracker } from '@/core/tracking/tracker';
 import { partialSubmissionService } from '../services/partialSubmissionService';
 import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
+import { newEventId } from '@/core/tracking/pixels';
+
+/**
+ * Origem de quem embutiu o formulário.
+ *
+ * O aviso de envio ia com `targetOrigin: '*'`, que entrega a mensagem a
+ * qualquer página que embuta o formulário. Num iframe de outra origem o
+ * `document.referrer` é o endereço do embutidor, e é essa a origem correta.
+ * Quando não há como determinar (referrer removido por política), volta ao
+ * curinga — a carga não tem dado pessoal, só o id do formulário que o próprio
+ * embutidor já conhece.
+ */
+function origemDoEmbutidor(): string {
+  try {
+    const ancestral = window.location.ancestorOrigins?.[0];
+    if (ancestral) return ancestral;
+    if (document.referrer) return new URL(document.referrer).origin;
+  } catch {
+    /* URL inválida: cai no curinga abaixo. */
+  }
+  return '*';
+}
 
 interface PublicFormRendererProps {
   slug: string;
@@ -23,7 +45,14 @@ interface PublicFormRendererProps {
 export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   const [submitted, setSubmitted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [sessionId] = useState(() => localStorage.getItem(`lf_session_${slug}`) || Math.random().toString(36).substring(2, 15));
+  /* `crypto.randomUUID` e não `Math.random`: a RLS de `form_partial_submissions`
+     autoriza a leitura comparando este id com o cabeçalho `x-session-id`, então
+     ele É a credencial do rascunho — nome, e-mail e telefone em digitação.
+     `Math.random` no V8 é xorshift128+, previsível a partir de saídas
+     observadas, e aqui dava ~52 bits contra os 122 do UUID v4. */
+  const [sessionId] = useState(
+    () => localStorage.getItem(`lf_session_${slug}`) || crypto.randomUUID(),
+  );
   const [resumePrompt, setResumePrompt] = useState(false);
   const [partialData, setPartialData] = useState<any>(null);
 
@@ -43,6 +72,24 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     },
   });
 
+  /* O que a URL do anúncio trouxe. Vai para o Pixel e para a CAPI — sem isto
+     o evento do servidor saía sem identificador de clique nenhum, e a conversão
+     do Google ficava só na correspondência por contato. */
+  const tracking = useMemo(() => {
+    if (typeof window === 'undefined') return undefined;
+    const qs = new URLSearchParams(window.location.search);
+    const chaves = [
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+      'fbclid', 'gclid', 'wbraid', 'gbraid',
+    ] as const;
+    const out: Record<string, string> = {};
+    for (const k of chaves) {
+      const v = qs.get(k);
+      if (v) out[k] = v;
+    }
+    return out;
+  }, []);
+
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue, getValues, trigger } = useForm();
 
   /* Formulário tem um momento só: enviar É deixar o contato. Por isso aqui sai
@@ -56,6 +103,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       googleConversionId: form?.settings?.google_conversion_id,
       googleLeadLabel: form?.settings?.google_lead_label,
     },
+    tracking,
     enabled: !!form,
   });
 
@@ -66,7 +114,10 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       const height = root ? root.scrollHeight : document.body.scrollHeight;
       
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: 'LEADFLOW_RESIZE', height: height + 20 }, '*');
+        window.parent.postMessage(
+          { type: 'LEADFLOW_RESIZE', height: height + 20 },
+          origemDoEmbutidor(),
+        );
       }
     };
 
@@ -149,9 +200,9 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             <div className="w-12 h-12 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="h-6 w-6 rotate-45" />
             </div>
-            <h2 className="text-xl font-bold">Form not found</h2>
+            <h2 className="text-xl font-bold">Formulário não encontrado</h2>
             <p className="text-muted-foreground text-sm">
-              The form you are looking for does not exist or has been unpublished.
+              Este formulário não existe ou foi despublicado.
             </p>
           </CardContent>
         </Card>
@@ -170,13 +221,25 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         utm_content: params.get('utm_content') || undefined,
         utm_term: params.get('utm_term') || undefined,
         gclid: params.get('gclid') || undefined,
+        // No iOS o Google manda um destes em vez do `gclid`.
+        wbraid: params.get('wbraid') || undefined,
+        gbraid: params.get('gbraid') || undefined,
         fbclid: params.get('fbclid') || undefined,
       };
 
+      /* O id nasce aqui, não dentro do disparo, porque tem que ir para os dois
+         lados: para a Meta (navegador + servidor, para contar um só) e para a
+         linha do lead, que é o que permite reconciliar depois. */
+      const eventId = newEventId();
+
       const result = await captureService.submitLead(form.company_id, {
-        name: values.name || values.full_name || 'Anonymous',
+        /* Sem nome o lead fica sem nome. 'Anonymous' virava literalmente o nome
+           da pessoa no CRM, em inglês, indistinguível de quem se chamasse
+           assim. */
+        name: values.name || values.full_name || '',
         email: values.email,
         phone: values.phone,
+        event_id: eventId,
         metadata: {
           form_id: form.id,
           form_slug: form.slug,
@@ -189,15 +252,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
          trackLead(
            { email: values.email, phone: values.phone },
            { content_name: form.name ?? 'formulario' },
+           eventId,
          );
 
-         // Notify parent window for tracking
+         // Avisa a página que embutiu o formulário, para a medição dela.
          if (window.parent) {
            window.parent.postMessage({
              type: 'LEADFLOW_FORM_SUBMITTED',
              formId: form.id,
              formSlug: form.slug
-           }, '*');
+           }, origemDoEmbutidor());
          }
 
         await partialSubmissionService.markAsCompleted(form.id, sessionId);
@@ -211,10 +275,10 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
           setSubmitted(true);
         }
       } else {
-        toast.error('Failed to submit form. Please try again.');
+        toast.error('Não foi possível enviar. Tente novamente.');
       }
     } catch (err) {
-      toast.error('An error occurred during submission.');
+      toast.error('Ocorreu um erro no envio.');
     }
   };
 
@@ -227,7 +291,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               <CheckCircle2 className="h-10 w-10" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-3xl font-black uppercase tracking-tighter">Success!</h2>
+              <h2 className="text-3xl font-black uppercase tracking-tighter">Tudo certo!</h2>
               <p className="text-muted-foreground font-medium">
                 {form.settings.success_message}
               </p>
@@ -237,7 +301,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 className="w-full h-12 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold gap-2"
                 onClick={() => window.open(`https://wa.me/${form.settings.whatsapp_number}`)}
               >
-                Continue to WhatsApp
+                Continuar no WhatsApp
               </Button>
             )}
           </CardContent>

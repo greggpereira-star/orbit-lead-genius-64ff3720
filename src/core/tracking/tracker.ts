@@ -32,7 +32,7 @@ class EnterpriseTracker {
     if (typeof localStorage === 'undefined') return 'server';
     let id = localStorage.getItem('ent_visitor_id');
     if (!id) {
-      id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      id = crypto.randomUUID();
       localStorage.setItem('ent_visitor_id', id);
     }
     return id;
@@ -84,6 +84,11 @@ class EnterpriseTracker {
       utm_medium: urlParams.get('utm_medium'),
       utm_campaign: urlParams.get('utm_campaign'),
       gclid: urlParams.get('gclid'),
+      // No iOS o Google troca o `gclid` por um destes dois. Sem lê-los, todo
+      // clique de iPhone chega sem identificador e a conversão offline sobra
+      // só com a correspondência por contato.
+      wbraid: urlParams.get('wbraid'),
+      gbraid: urlParams.get('gbraid'),
       fbclid: urlParams.get('fbclid'),
       referrer: document.referrer,
       landing_page: window.location.pathname,
