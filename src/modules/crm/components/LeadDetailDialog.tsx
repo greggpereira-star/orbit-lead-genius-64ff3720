@@ -16,8 +16,10 @@ import {
   PencilLine, MessagesSquare,
   type LucideIcon,
   CircleDollarSign,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DadosDoTitular } from "./DadosDoTitular";
 
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { Input } from "@/components/ui/input";
@@ -1383,6 +1385,18 @@ export function LeadDetailDialog({
           />
           <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
         </div>
+      </CartaoFicha>
+
+      <CartaoFicha
+        icone={<ShieldCheck className="h-4 w-4" />}
+        titulo="Dados do titular"
+        descricao="Acesso e eliminação (LGPD)"
+      >
+        <DadosDoTitular
+          leadId={lead.id}
+          nome={lead.name}
+          onEliminado={() => onOpenChange(false)}
+        />
       </CartaoFicha>
     </div>
   </div>
