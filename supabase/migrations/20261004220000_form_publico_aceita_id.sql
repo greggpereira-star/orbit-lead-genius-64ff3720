@@ -67,13 +67,15 @@ as $$
   )
   from forms f
   where f.status = 'published'
-    and (
-      f.slug = p_chave
-      -- O `~` guarda o cast: `'nao-uuid'::uuid` levantaria 22P02 e derrubaria
-      -- a consulta inteira, inclusive para quem passou um slug válido.
-      or (p_chave ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-          and f.id = p_chave::uuid)
-    )
+    -- Compara o ID como TEXTO, e nunca faz cast da entrada.
+    --
+    -- A primeira versão guardava o cast com um `~` de formato UUID, e isso NÃO
+    -- funciona: o planejador pode avaliar `p_chave::uuid` antes do teste, e
+    -- `'teste-id-0410'::uuid` levanta 22P02 e derruba a consulta inteira —
+    -- inclusive para quem passou um slug perfeitamente válido. Medido:
+    -- `form_publico('teste-id-0410')` falhava com
+    -- `invalid input syntax for type uuid`. `uuid::text` é sempre seguro.
+    and (f.slug = p_chave or f.id::text = lower(btrim(p_chave)))
   limit 1;
 $$;
 
@@ -118,9 +120,7 @@ begin
   -- Slug OU id, pelo mesmo motivo do `form_publico`.
   select * into v_form from forms
    where status = 'published'
-     and (slug = p_slug
-          or (p_slug ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-              and id = p_slug::uuid))
+     and (slug = p_slug or id::text = lower(btrim(p_slug)))
    limit 1;
   if v_form.id is null then
     return jsonb_build_object('ok', false, 'erro', 'formulario_nao_publicado');
@@ -269,9 +269,7 @@ as $$
   from form_partial_submissions p
   join forms f on f.id = p.form_id
   where f.status = 'published'
-    and (f.slug = p_slug
-         or (p_slug ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-             and f.id = p_slug::uuid))
+    and (f.slug = p_slug or f.id::text = lower(btrim(p_slug)))
     and p.session_id = p_session_id
   limit 1;
 $$;
@@ -299,9 +297,7 @@ begin
 
   select * into v_form from forms
    where status = 'published'
-     and (slug = p_slug
-          or (p_slug ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-              and id = p_slug::uuid))
+     and (slug = p_slug or id::text = lower(btrim(p_slug)))
    limit 1;
   if v_form.id is null then
     return jsonb_build_object('ok', false, 'erro', 'formulario_nao_publicado');
