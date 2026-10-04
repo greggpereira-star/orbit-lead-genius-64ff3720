@@ -103,16 +103,22 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
             // deram certo ficam registradas em `resultado` — assim a próxima
             // tentativa é auditável, e não um mistério.
             const algumaFalhou = resultados.some((r) => r.status === 'falhou');
+            // Esgotada a última tentativa, o job vira 'failed' e não 'pending'.
+            // Deixá-lo em 'pending' faria a tela dizer "na fila" para sempre,
+            // porque a consulta do lote filtra por `attempts < MAX_TENTATIVAS`
+            // e ele nunca mais seria escolhido.
+            const esgotou = job.attempts + 1 >= MAX_TENTATIVAS;
+            const status = !algumaFalhou ? 'done' : esgotou ? 'failed' : 'pending';
 
             await admin
               .from('automation_jobs')
               .update({
-                status: algumaFalhou ? 'pending' : 'done',
+                status,
                 resultado: resultados,
                 last_error: algumaFalhou
                   ? resultados.filter((r) => r.status === 'falhou').map((r) => `${r.acao}: ${r.detalhe}`).join(' | ')
                   : null,
-                finished_at: algumaFalhou ? null : new Date().toISOString(),
+                finished_at: status === 'pending' ? null : new Date().toISOString(),
               })
               .eq('id', job.id);
 
