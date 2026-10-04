@@ -13,7 +13,9 @@ function EmbedFormPage() {
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['form-embed', id],
-    queryFn: () => formService.getFormById(id),
+    // `getFormById` lê a tabela `forms` direto e o visitante é anônimo —
+    // `permission denied`. O caminho público vai pela função que roda como dono.
+    queryFn: () => formService.getPublicForm(id),
     enabled: !!id,
   });
 

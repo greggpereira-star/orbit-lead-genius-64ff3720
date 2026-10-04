@@ -128,13 +128,25 @@ export const formService = {
    * são a régua de qualificação do cliente).
    */
   async getFormBySlug(slug: string): Promise<Form & { form_fields: FormField[], form_steps: FormStep[] } | null> {
-    const { data, error } = await (supabase as any).rpc('form_publico', { p_slug: slug });
+    const { data, error } = await (supabase as any).rpc('form_publico', { p_chave: slug });
 
     if (error) {
       logger.error('Falha ao buscar formulário público pelo slug', { error, slug });
       throw error;
     }
     return (data as Form & { form_fields: FormField[]; form_steps: FormStep[] }) ?? null;
+  },
+
+  /**
+   * Mesma leitura pública, mas pela chave que a tela de publicação entrega.
+   *
+   * `FormPublish` monta todos os trechos de instalação com o UUID, e o
+   * `sdk.js` manda UUID para `/embed-form/<id>`. Esse caminho continuava lendo
+   * a tabela `forms` direto depois da correção de 04/10 — e `anon` não tem
+   * grant nela. `form_publico` aceita slug ou id; aqui é o mesmo RPC.
+   */
+  async getPublicForm(chave: string): Promise<Form & { form_fields: FormField[], form_steps: FormStep[] } | null> {
+    return this.getFormBySlug(chave);
   },
 
    async createForm(

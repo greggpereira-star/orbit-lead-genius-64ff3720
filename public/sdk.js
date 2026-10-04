@@ -86,7 +86,19 @@
 
      init: function(config) {
        this.debug('LeadFlow SDK Initialized with config: ' + JSON.stringify(config));
-       if (config.mode === 'inline') {
+       /* Antes daqui só saía `inline`. Os modos `popup` e `floating` existiam
+          como funções logo abaixo e NUNCA eram chamados — o trecho que a tela
+          de publicação entregava ao cliente carregava o script, escrevia no
+          console e não renderizava nada. */
+       var mode = config.mode || 'inline';
+       if (mode === 'inline') {
+         this.renderInline(config);
+       } else if (mode === 'popup') {
+         this.popup(config.formId, config);
+       } else if (mode === 'floating') {
+         this.floating(config.formId, config);
+       } else {
+         this.debug('Modo desconhecido: ' + mode + '. Usando inline.');
          this.renderInline(config);
        }
        this.listenForEvents();
@@ -181,14 +193,31 @@
     },
 
     popup: function(formId, options = {}) {
-      if (options.trigger === 'exit') {
+      /* `exit_intent` é o que a tela de publicação escreve no trecho; `exit` é
+         o que este código esperava. A grafia não batia, então mesmo chamando a
+         função direto nenhum ouvinte era instalado. Aceita as duas. */
+      var trigger = options.trigger || 'exit_intent';
+      if (trigger === 'exit' || trigger === 'exit_intent') {
         document.addEventListener('mouseleave', (e) => {
           if (e.clientY < 0) {
             this.showModal(formId);
           }
         }, { once: true });
-      } else if (options.trigger === 'delay') {
+      } else if (trigger === 'delay') {
         setTimeout(() => this.showModal(formId), (options.delay || 5) * 1000);
+      } else if (trigger === 'scroll') {
+        var disparado = false;
+        window.addEventListener('scroll', () => {
+          if (disparado) return;
+          var h = document.documentElement;
+          var pct = (h.scrollTop + window.innerHeight) / h.scrollHeight;
+          if (pct >= (options.percent || 0.5)) {
+            disparado = true;
+            this.showModal(formId);
+          }
+        }, { passive: true });
+      } else {
+        this.debug('Gatilho desconhecido: ' + trigger);
       }
     },
 

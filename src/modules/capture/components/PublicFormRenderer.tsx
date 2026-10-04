@@ -79,16 +79,10 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['public-form', slug],
     queryFn: async () => {
-      // Try slug first
-      const bySlug = await formService.getFormBySlug(slug);
-      if (bySlug) return bySlug;
-      
-      // Fallback: Check if slug is actually an ID (common in some embeds)
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
-      if (isUuid) {
-        return await formService.getFormById(slug);
-      }
-      return null;
+      /* Uma chamada só: `form_publico` casa por slug OU id. O fallback antigo
+         ia para `getFormById`, que lê a tabela direto — e o visitante anônimo
+         não tem grant em `forms`. */
+      return await formService.getPublicForm(slug);
     },
   });
 
