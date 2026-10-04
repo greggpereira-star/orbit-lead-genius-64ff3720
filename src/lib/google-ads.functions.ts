@@ -117,7 +117,7 @@ async function despacharConversaoVenda(
     .from('leads')
     // `deal_value`/`deal_currency` são novas e ainda não estão no `types.ts`
     // gerado; regerar exige rodar o CLI do Supabase contra o banco.
-    .select('id, company_id, gclid, email, phone, deal_value, deal_currency' as never)
+    .select('id, company_id, gclid, wbraid, gbraid, email, phone, deal_value, deal_currency' as never)
     .eq('id', leadId)
     .maybeSingle();
 
@@ -126,6 +126,8 @@ async function despacharConversaoVenda(
   const l = lead as unknown as {
     company_id: string;
     gclid: string | null;
+    wbraid: string | null;
+    gbraid: string | null;
     email: string | null;
     phone: string | null;
     deal_value: number | string | null;
@@ -138,6 +140,8 @@ async function despacharConversaoVenda(
     tipo: 'sale',
     leadId,
     gclid: l.gclid,
+    wbraid: l.wbraid,
+    gbraid: l.gbraid,
     email: l.email,
     phone: l.phone,
     // `numeric` volta como string do PostgREST — mandar assim faria o Google

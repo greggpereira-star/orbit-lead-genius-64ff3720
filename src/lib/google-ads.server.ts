@@ -163,6 +163,16 @@ export interface EnvioConversao {
   /** Identificador do lead. Vira `orderId` — é o que evita contar duas vezes. */
   leadId: string;
   gclid?: string | null;
+  /**
+   * Identificadores de clique do iOS.
+   *
+   * Quando o clique vem do Safari/app no iOS o Google não entrega `gclid`: ele
+   * entrega `wbraid` (Rede de Pesquisa) ou `gbraid` (Display/YouTube). A API
+   * aceita UM dos três por conversão — a ordem de preferência abaixo é
+   * gclid > wbraid > gbraid, do mais exato para o menos.
+   */
+  wbraid?: string | null;
+  gbraid?: string | null;
   email?: string | null;
   phone?: string | null;
   quando?: Date;
@@ -204,7 +214,9 @@ export interface ResultadoConversao {
  * Envia uma conversão offline ao Google Ads.
  *
  * Duas formas de atribuir, nesta ordem de preferência:
- *   `gclid` — o identificador do clique no anúncio. É a atribuição exata.
+ *   `gclid` / `wbraid` / `gbraid` — o identificador do clique no anúncio. É a
+ *   atribuição exata. No iOS o Google entrega um dos dois últimos no lugar do
+ *   primeiro, e a API aceita apenas um deles por conversão.
  *   contato com hash — "conversões otimizadas para leads". Serve para quem
  *   chegou sem gclid ou perdeu o parâmetro no caminho, com correspondência
  *   probabilística.
@@ -248,8 +260,19 @@ export async function enviarConversaoGoogle(envio: EnvioConversao): Promise<Resu
     if (e164) identificadores.push({ hashedPhoneNumber: await sha256Hex(e164) });
   }
 
-  if (!envio.gclid && identificadores.length === 0) {
-    return { status: 'sem_identificador', detalhe: 'lead sem gclid e sem contato' };
+  const cliqueDeAnuncio = envio.gclid?.trim()
+    ? ({ campo: 'gclid', valor: envio.gclid.trim() } as const)
+    : envio.wbraid?.trim()
+      ? ({ campo: 'wbraid', valor: envio.wbraid.trim() } as const)
+      : envio.gbraid?.trim()
+        ? ({ campo: 'gbraid', valor: envio.gbraid.trim() } as const)
+        : null;
+
+  if (!cliqueDeAnuncio && identificadores.length === 0) {
+    return {
+      status: 'sem_identificador',
+      detalhe: 'lead sem identificador de clique (gclid/wbraid/gbraid) e sem contato',
+    };
   }
 
   const conversao: Record<string, unknown> = {
@@ -258,7 +281,8 @@ export async function enviarConversaoGoogle(envio: EnvioConversao): Promise<Resu
     // O mesmo lead nunca conta duas vezes, nem se o envio for repetido.
     orderId: envio.orderId?.trim() || `${envio.tipo}-${envio.leadId}`,
   };
-  if (envio.gclid) conversao.gclid = envio.gclid;
+  // Um só dos três: a API rejeita a conversão que traz mais de um.
+  if (cliqueDeAnuncio) conversao[cliqueDeAnuncio.campo] = cliqueDeAnuncio.valor;
   if (identificadores.length) conversao.userIdentifiers = identificadores;
   if (envio.tipo === 'sale' && envio.valor != null) {
     conversao.conversionValue = envio.valor;

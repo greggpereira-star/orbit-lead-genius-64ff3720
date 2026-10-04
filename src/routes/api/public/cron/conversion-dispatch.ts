@@ -49,7 +49,7 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 .eq('company_id', d.company_id).eq('stage_id', d.stage_id)
                 .eq('is_active', true).maybeSingle(),
               admin.from('leads')
-                .select('email, phone, gclid, deal_value, deal_currency')
+                .select('email, phone, gclid, wbraid, gbraid, deal_value, deal_currency')
                 .eq('id', d.lead_id).maybeSingle(),
               admin.from('companies')
                 .select('conversion_dry_run')
@@ -94,15 +94,23 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
             // identificador que entende.
             const { data: cliques } = await admin
               .from('whatsapp_ad_clicks')
-              .select('ctwa_clid, gclid, clicked_at')
+              .select('ctwa_clid, gclid, wbraid, gbraid, clicked_at')
               .eq('lead_id', d.lead_id)
               .order('clicked_at', { ascending: false })
               .limit(10);
 
-            const historico = (cliques ?? []) as Array<{ ctwa_clid: string | null; gclid: string | null }>;
+            const historico = (cliques ?? []) as Array<{
+              ctwa_clid: string | null;
+              gclid: string | null;
+              wbraid: string | null;
+              gbraid: string | null;
+            }>;
             const clique = {
               ctwa_clid: historico.find((c) => c.ctwa_clid)?.ctwa_clid ?? null,
               gclid: historico.find((c) => c.gclid)?.gclid ?? null,
+              // Clique de iOS: o Google entrega um destes no lugar do `gclid`.
+              wbraid: historico.find((c) => c.wbraid)?.wbraid ?? null,
+              gbraid: historico.find((c) => c.gbraid)?.gbraid ?? null,
             };
 
             let metaResultado: unknown = null;
@@ -158,6 +166,8 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 // o Google tratar todas como a mesma e descartar as seguintes.
                 orderId: d.event_id,
                 gclid: clique?.gclid ?? lead?.gclid ?? null,
+                wbraid: clique?.wbraid ?? lead?.wbraid ?? null,
+                gbraid: clique?.gbraid ?? lead?.gbraid ?? null,
                 email: lead?.email ?? null,
                 phone: lead?.phone ?? null,
                 quando: new Date(d.occurred_at),

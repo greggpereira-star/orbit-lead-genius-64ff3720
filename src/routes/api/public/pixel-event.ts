@@ -124,6 +124,9 @@ export const Route = createFileRoute('/api/public/pixel-event')({
                 tipo: 'lead',
                 leadId: body.eventId!,
                 gclid: body.tracking?.gclid ?? null,
+                // No iOS o Google manda um destes em vez do `gclid`.
+                wbraid: body.tracking?.wbraid ?? null,
+                gbraid: body.tracking?.gbraid ?? null,
                 email: body.email ?? null,
                 phone: body.phone ?? null,
               });

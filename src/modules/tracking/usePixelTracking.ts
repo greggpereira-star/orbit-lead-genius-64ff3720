@@ -100,10 +100,19 @@ export function usePixelTracking(opts: {
       googleLabel: string | undefined,
       contact: { email?: string; phone?: string },
       customData?: Record<string, unknown>,
+      /**
+       * Id de evento vindo de fora.
+       *
+       * Quem grava o lead precisa do MESMO id que subiu para a Meta, senão não
+       * há como reconciliar depois qual evento do Gerenciador é qual linha do
+       * CRM. Nesse caso o id nasce no chamador e chega aqui pronto; sem ele,
+       * continua nascendo aqui.
+       */
+      eventIdExterno?: string,
     ) => {
       if (!active) return;
       try {
-        const eventId = newEventId();
+        const eventId = eventIdExterno ?? newEventId();
         const { fbp, fbc } = getFbCookies(tracking?.fbclid);
 
         // O hash vem antes do disparo porque é o que carrega o contato nos dois
@@ -148,15 +157,21 @@ export function usePixelTracking(opts: {
 
   /** Contato capturado — o mesmo instante em que o lead nasce no CRM. */
   const trackLead = useCallback(
-    (contact: { email?: string; phone?: string }, customData?: Record<string, unknown>) =>
-      fire("Lead", config.googleLeadLabel, contact, customData),
+    (
+      contact: { email?: string; phone?: string },
+      customData?: Record<string, unknown>,
+      eventId?: string,
+    ) => fire("Lead", config.googleLeadLabel, contact, customData, eventId),
     [fire, config.googleLeadLabel],
   );
 
   /** Funil concluído. */
   const trackComplete = useCallback(
-    (contact: { email?: string; phone?: string }, customData?: Record<string, unknown>) =>
-      fire("CompleteRegistration", config.googleCompleteLabel, contact, customData),
+    (
+      contact: { email?: string; phone?: string },
+      customData?: Record<string, unknown>,
+      eventId?: string,
+    ) => fire("CompleteRegistration", config.googleCompleteLabel, contact, customData, eventId),
     [fire, config.googleCompleteLabel],
   );
 
