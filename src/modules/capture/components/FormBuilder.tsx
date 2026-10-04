@@ -881,6 +881,78 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                         placeholder="e-g-enterprise-contact" 
                       />
                     </div>
+                    {/* LGPD ------------------------------------------------
+                        O formulário público não pedia consentimento nenhum.
+                        O componente que existia era usado só pelo formulário de
+                        dentro do painel, estava em inglês e nascia com as
+                        caixas marcadas — o oposto do que o art. 8º pede. */}
+                    <div className="space-y-3 rounded-xl border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <Label className="text-xs font-semibold">Pedir consentimento (LGPD)</Label>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            O envio só é aceito com a autorização marcada. A checagem
+                            também roda no servidor.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={Boolean((formConfig.settings as any)?.lgpd_exigir_consentimento)}
+                          onCheckedChange={(v) => setFormConfig(prev => ({
+                            ...prev,
+                            settings: { ...(prev.settings as any), lgpd_exigir_consentimento: v },
+                          }))}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">Texto mostrado ao lead</Label>
+                        <Input
+                          value={(formConfig.settings as any)?.lgpd_texto ?? ''}
+                          placeholder="Autorizo o tratamento dos meus dados para que entrem em contato comigo."
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev,
+                            settings: { ...(prev.settings as any), lgpd_texto: e.target.value },
+                          }))}
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          O texto exibido fica gravado junto com o consentimento: se você
+                          mudar a redação depois, os registros antigos continuam provando
+                          o que a pessoa leu naquele dia.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] text-muted-foreground">Link da Política de Privacidade</Label>
+                        <Input
+                          value={(formConfig.settings as any)?.lgpd_politica_url ?? ''}
+                          placeholder="https://seusite.com.br/privacidade"
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev,
+                            settings: { ...(prev.settings as any), lgpd_politica_url: e.target.value },
+                          }))}
+                        />
+                      </div>
+
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <Label className="text-[11px] text-muted-foreground">
+                            Pedir aceite de marketing (opcional)
+                          </Label>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Caixa separada e não obrigatória. Atender o contato e enviar
+                            promoção são finalidades distintas.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={Boolean((formConfig.settings as any)?.lgpd_pedir_marketing)}
+                          onCheckedChange={(v) => setFormConfig(prev => ({
+                            ...prev,
+                            settings: { ...(prev.settings as any), lgpd_pedir_marketing: v },
+                          }))}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-xs">Texto do botão de envio</Label>
                       <Input 

@@ -59,6 +59,8 @@ export const captureService = {
     answers: Record<string, unknown>;
     tracking?: Record<string, unknown>;
     eventId?: string;
+    /** { dados, marketing } — a prova é gravada na mesma transação do lead. */
+    consents?: { dados: boolean; marketing: boolean };
   }): Promise<ResultadoEnvioPublico> {
     const { data, error } = await (supabase as any).rpc('form_submit_publico', {
       p_slug: p.slug,
@@ -66,6 +68,7 @@ export const captureService = {
       p_answers: p.answers ?? {},
       p_tracking: p.tracking ?? {},
       p_event_id: p.eventId ?? null,
+      p_consents: p.consents ?? {},
     });
 
     if (error) {

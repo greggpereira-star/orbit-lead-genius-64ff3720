@@ -16,6 +16,7 @@ import { tracker } from '@/core/tracking/tracker';
 import { partialSubmissionService } from '../services/partialSubmissionService';
 import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
 import { newEventId } from '@/core/tracking/pixels';
+import { ConsentimentoLGPD, type Consentimentos } from './ConsentimentoLGPD';
 
 /**
  * Origem de quem embutiu o formulário.
@@ -74,6 +75,12 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     () => localStorage.getItem(`lf_session_${slug}`) || crypto.randomUUID(),
   );
   const [resumePrompt, setResumePrompt] = useState(false);
+  /* Desmarcado. O art. 8º da LGPD pede manifestação livre e inequívoca — uma
+     caixa já marcada é o contrário disso. */
+  const [consentimentos, setConsentimentos] = useState<Consentimentos>({
+    dados: false, marketing: false,
+  });
+  const [erroDeConsentimento, setErroDeConsentimento] = useState(false);
   const [partialData, setPartialData] = useState<any>(null);
 
   const { data: form, isLoading, error } = useQuery({
@@ -224,7 +231,27 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     );
   }
 
+  /* Configuração por formulário: o cliente decide se exige, com que texto e
+     apontando para qual política. */
+  const exigeConsentimento = Boolean(
+    (form?.settings as Record<string, unknown> | undefined)?.lgpd_exigir_consentimento,
+  );
+  const textoLgpd = (form?.settings as Record<string, any> | undefined)?.lgpd_texto as string | undefined;
+  const politicaLgpd = (form?.settings as Record<string, any> | undefined)?.lgpd_politica_url as string | undefined;
+  const pedirMarketing = Boolean(
+    (form?.settings as Record<string, unknown> | undefined)?.lgpd_pedir_marketing,
+  );
+
   const onSubmit = async (values: any) => {
+    /* A checagem também existe no servidor (`form_submit_publico` recusa com
+       `consentimento_obrigatorio`). Aqui é só para a pessoa ver o motivo sem
+       perder o que digitou — travar só na tela não protegeria nada, porque
+       qualquer um chama a API direto. */
+    if (exigeConsentimento && !consentimentos.dados) {
+      setErroDeConsentimento(true);
+      return;
+    }
+    setErroDeConsentimento(false);
     try {
       const params = new URLSearchParams(window.location.search);
       const trackingData = {
@@ -256,6 +283,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         answers: values,
         tracking: trackingData,
         eventId,
+        consents: consentimentos,
       });
 
        if (result.success) {
@@ -288,6 +316,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         } else {
           setSubmitted(true);
         }
+      } else if (result.error === 'consentimento_obrigatorio') {
+        setErroDeConsentimento(true);
       } else {
         toast.error('Não foi possível enviar. Tente novamente.');
       }
@@ -467,7 +497,23 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               </div>
             ))}
             
-            <div className="flex gap-4 pt-4">
+            {/* Só na última etapa: pedir autorização no passo 1 de 5, antes de a
+                  pessoa saber o que está preenchendo, reduz a conversão e não
+                  melhora em nada a qualidade do consentimento. */}
+              {(!isMultiStep || currentStep === sortedSteps.length - 1) && (exigeConsentimento || pedirMarketing) && (
+                <div className="w-full">
+                  <ConsentimentoLGPD
+                    valor={consentimentos}
+                    onMudar={(v) => { setConsentimentos(v); if (v.dados) setErroDeConsentimento(false); }}
+                    texto={textoLgpd}
+                    politicaUrl={politicaLgpd}
+                    pedirMarketing={pedirMarketing}
+                    erro={erroDeConsentimento}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-4 pt-4">
               {isMultiStep && currentStep > 0 && (
                 <Button 
                   variant="outline"
