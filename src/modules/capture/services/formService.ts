@@ -294,7 +294,18 @@ export const formService = {
         p_steps: p.steps || [],
         p_options_by_field: p.optionsByField
       });
-      if (error) throw error;
+      if (error) {
+        /* 23505 no índice de chave do campo vira uma frase que diz o que
+           fazer. A mensagem crua do Postgres fala em "duplicate key value
+           violates unique constraint form_fields_form_name_uniq", que não
+           ajuda quem está montando o formulário. */
+        if (error.code === '23505' && error.message?.includes('form_fields_form_name_uniq')) {
+          throw new Error(
+            'Dois campos estão com a mesma chave de resposta. Abra a chave abaixo do rótulo e deixe uma diferente.',
+          );
+        }
+        throw error;
+      }
       return data as any;
     },
 

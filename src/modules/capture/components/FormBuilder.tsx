@@ -67,6 +67,27 @@ const makeOptionValue = (label: string) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 
+/**
+ * Chave com que a resposta é gravada.
+ *
+ * Era `field_${index}` — posicional e invisível. Três consequências medidas:
+ * as respostas ficavam gravadas como `{"field_0": "...", "field_3": "..."}`,
+ * ilegíveis em `form_submissions.answers`; a resolução de contato no servidor
+ * (que procura `nome`/`email`) só funcionava pelo rótulo; e havia COLISÃO —
+ * apague o campo 0, adicione outro e o novo recebe `field_1`, que já pertence
+ * a um campo existente. Duas chaves iguais em `answers`: uma sobrescreve a
+ * outra e a resposta se perde.
+ *
+ * Agora sai do rótulo, com sufixo numérico quando repetir.
+ */
+const gerarNomeDoCampo = (rotulo: string, usados: Set<string>, posicao: number) => {
+  const base = makeOptionValue(rotulo || '') || `campo_${posicao + 1}`;
+  if (!usados.has(base)) return base;
+  let n = 2;
+  while (usados.has(`${base}_${n}`)) n += 1;
+  return `${base}_${n}`;
+};
+
 const normalizeDropdownOption = (option: any, index: number) => {
   if (typeof option === 'string') {
     return {
@@ -103,7 +124,11 @@ const normalizeFieldForEditor = (field: any, index: number) => {
   return {
     ...field,
     id: field.id || crypto.randomUUID(),
-    name: field.name || `field_${index}`,
+    name: field.name || '',
+    /* Campo que já existe no banco tem a chave CONGELADA: renomear quebraria
+       as respostas já gravadas, que são indexadas por ela, e as regras de
+       pontuação que apontam para o campo. Só muda se a pessoa pedir. */
+    nome_travado: Boolean(field.name),
     sort_order: index,
     options: persistedOptions.map(normalizeDropdownOption)
   };
@@ -134,6 +159,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
      isDragging
    } = useSortable({ id: field.id });
  
+   const [editandoNome, setEditandoNome] = useState(false);
+
    const style = {
      transform: CSS.Transform.toString(transform),
      transition,
@@ -158,15 +185,45 @@ const normalizeFieldForEditor = (field: any, index: number) => {
          
          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
            <div className="space-y-1.5">
-             <Label className="text-xs">Field Label</Label>
+             <Label className="text-xs">Rótulo do campo</Label>
              <Input 
                value={field.label} 
                onChange={(e) => onUpdate(index, { label: e.target.value })}
                className="h-9"
              />
+             {/* A chave era invisível e posicional (`field_0`, `field_3`): é
+                 com ela que a resposta é gravada e lida depois. Mostrar evita
+                 que o cliente só descubra ao exportar as submissões. */}
+             <div className="flex items-center gap-1.5 pt-0.5">
+               <span className="text-[10px] text-muted-foreground shrink-0">chave:</span>
+               {editandoNome ? (
+                 <Input
+                   autoFocus
+                   value={field.name ?? ''}
+                   onChange={(e) => onUpdate(index, {
+                     name: e.target.value
+                       .toLowerCase()
+                       .normalize('NFD')
+                       .replace(/[\u0300-\u036f]/g, '')
+                       .replace(/[^a-z0-9_]+/g, '_'),
+                   })}
+                   onBlur={() => setEditandoNome(false)}
+                   className="h-6 text-[11px] font-mono px-1.5 py-0"
+                 />
+               ) : (
+                 <button
+                   type="button"
+                   onClick={() => setEditandoNome(true)}
+                   className="text-[11px] font-mono text-muted-foreground underline underline-offset-2 decoration-dotted truncate"
+                   title="Clique para editar a chave da resposta"
+                 >
+                   {field.name || '—'}
+                 </button>
+               )}
+             </div>
            </div>
            <div className="space-y-1.5">
-             <Label className="text-xs">Field Type</Label>
+             <Label className="text-xs">Tipo do campo</Label>
              <select 
                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                value={field.type}
@@ -321,7 +378,9 @@ const normalizeFieldForEditor = (field: any, index: number) => {
  
   const { company } = useAuth();
   const queryClient = useQueryClient();
-   const [fields, setFields] = useState<(Partial<FormField> & { id: string })[]>([]);
+   /* `nome_travado` é só do editor: diz que a chave do campo não deve
+      acompanhar o rótulo. Não é coluna do banco. */
+   const [fields, setFields] = useState<(Partial<FormField> & { id: string; nome_travado?: boolean })[]>([]);
    const [steps, setSteps] = useState<any[]>([]);
     const [showTemplates, setShowTemplates] = useState(!formId);
   const [formConfig, setFormConfig] = useState<Partial<Form>>({
@@ -474,6 +533,34 @@ const normalizeFieldForEditor = (field: any, index: number) => {
       }
     }, [formConfig.type, steps.length, isLoading]);
 
+    /* Mantém as chaves coerentes enquanto a pessoa edita: campo novo acompanha
+       o rótulo, campo já salvo (ou renomeado à mão) não é tocado, e nenhuma
+       chave se repete dentro do mesmo formulário. */
+    const nomesAtualizados = (lista: any[]) => {
+      const usados = new Set<string>();
+      // Primeiro os travados, que têm prioridade sobre a chave que já ocupam.
+      for (const f of lista) if (f.nome_travado && f.name) usados.add(f.name);
+      return lista.map((f, i) => {
+        if (f.nome_travado && f.name) return f;
+        const novo = gerarNomeDoCampo(f.label, usados, i);
+        usados.add(novo);
+        return f.name === novo ? f : { ...f, name: novo };
+      });
+    };
+
+    const atualizarCampo = (index: number, data: any) => {
+      setFields((atuais) => {
+        const copia = [...atuais];
+        copia[index] = { ...copia[index], ...data };
+        /* Editar a chave à mão trava: a partir daí o rótulo não a sobrescreve
+           mais, senão a escolha da pessoa sumiria na próxima letra digitada. */
+        if (Object.prototype.hasOwnProperty.call(data, 'name')) {
+          copia[index].nome_travado = true;
+        }
+        return nomesAtualizados(copia);
+      });
+    };
+
     const [isSaving, setIsSaving] = useState(false);
 
     const saveMutation = useMutation({
@@ -491,7 +578,9 @@ const normalizeFieldForEditor = (field: any, index: number) => {
           const fieldsToUpsert = fields.map((f, index) => ({
             id: f.id,
             label: f.label || 'Campo',
-            name: f.name || `field_${index}`,
+            // Sem `field_${index}` de reserva: o estado já garante chave única
+            // e legível. O fallback posicional era a origem da colisão.
+            name: f.name || gerarNomeDoCampo(f.label || '', new Set(), index),
             type: f.type || 'text',
             required: !!f.required,
             placeholder: f.placeholder || '',
@@ -611,7 +700,8 @@ const normalizeFieldForEditor = (field: any, index: number) => {
        type: 'text',
        required: false,
        placeholder: 'Digite aqui...',
-       options: []
+       options: [],
+       name: '',
      };
      setFields(prev => [...prev, newField]);
    };
@@ -842,11 +932,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                            steps={formConfig.type === 'multi_step' ? steps : []}
                            onAssignStep={atribuirCampoAEtapa}
                            onRemove={removeField}
-                           onUpdate={(idx: number, data: any) => {
-                             const newFields = [...fields];
-                             newFields[idx] = { ...newFields[idx], ...data };
-                             setFields(newFields);
-                           }}
+                           onUpdate={atualizarCampo}
                          />
                        ))}
                      </SortableContext>
