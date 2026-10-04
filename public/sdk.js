@@ -280,7 +280,9 @@
       fechar.type = 'button';
       fechar.setAttribute('aria-label', 'Fechar');
       fechar.innerHTML = '&times;';
-      fechar.style.cssText = 'position:absolute;top:8px;right:10px;z-index:2;width:32px;' +
+      // Fora do fluxo do conteúdo: com `top:8px` ele cobria o "100% completo"
+      // do cabeçalho do formulário.
+      fechar.style.cssText = 'position:absolute;top:10px;right:10px;z-index:2;width:30px;' +
         'height:32px;border:0;border-radius:999px;background:rgba(255,255,255,.92);' +
         'color:#334155;font-size:22px;line-height:1;cursor:pointer;' +
         'box-shadow:0 1px 3px rgba(0,0,0,.15)';
@@ -296,6 +298,7 @@
         if (!overlay.parentNode) return;
         document.removeEventListener('keydown', aoTeclar);
         window.removeEventListener('message', aoReceber);
+        window.removeEventListener('resize', aoRedimensionar);
         document.body.style.overflow = rolagemOriginal;
         overlay.style.opacity = '0';
         setTimeout(function() {
@@ -305,12 +308,32 @@
 
       function aoTeclar(e) { if (e.key === 'Escape') encerrar(); }
 
+      function ajustarAltura(conteudo) {
+        /* O teto da janela vence o piso.
+         *
+         * A primeira versão fazia `Math.max(alturaLimitada, minHeight)`, e numa
+         * janela baixa — medido com 409px de altura, onde 92vh dá 376px — o
+         * piso de 420px passava por cima do teto e o modal ficava MAIOR que o
+         * espaço disponível. O piso agora é ele próprio limitado pela janela.
+         */
+        var teto = Math.max(Math.round(window.innerHeight * 0.92) - 32, 220);
+        var piso = Math.min(options.minHeight || 420, teto);
+        var altura = Math.max(Math.min(conteudo || piso, teto), piso);
+        iframe.style.height = altura + 'px';
+        /* Quando o conteúdo não cabe no teto, a rolagem passa a ser do iframe —
+         * com `scrolling="no"` o fim do formulário ficaria inalcançável em tela
+         * baixa, que é justamente onde isso acontece. */
+        var precisaRolar = (conteudo || 0) > teto;
+        iframe.setAttribute('scrolling', precisaRolar ? 'auto' : 'no');
+        iframe.style.overflow = precisaRolar ? 'auto' : 'hidden';
+      }
+
       function aoReceber(e) {
         if (!e.data) return;
         // A altura vem do próprio formulário, como no modo inline.
         if (e.data.type === 'LEADFLOW_RESIZE' && e.data.height) {
-          var altura = Math.min(e.data.height, Math.round(window.innerHeight * 0.92));
-          iframe.style.height = Math.max(altura, options.minHeight || 420) + 'px';
+          ultimaAltura = e.data.height;
+          ajustarAltura(e.data.height);
         }
         if (e.data.type === 'LEADFLOW_FORM_SUBMITTED' && options.closeOnSubmit !== false) {
           // Tempo de ler a confirmação antes de fechar.
@@ -318,10 +341,16 @@
         }
       }
 
+      var ultimaAltura = 0;
+      var aoRedimensionar = function() { ajustarAltura(ultimaAltura); };
+
       overlay.onclick = encerrar;
       fechar.onclick = encerrar;
       document.addEventListener('keydown', aoTeclar);
       window.addEventListener('message', aoReceber);
+      // Girar o celular muda o teto; sem isto o modal ficaria com a altura da
+      // orientação anterior.
+      window.addEventListener('resize', aoRedimensionar);
 
       content.appendChild(fechar);
       content.appendChild(iframe);
