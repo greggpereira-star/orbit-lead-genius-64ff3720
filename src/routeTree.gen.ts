@@ -68,6 +68,7 @@ import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
 import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/api/public/cron/automation-dispatch'
 import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
+import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/api/public/cron/meta-reprocess-failed'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 
 const IndexRoute = IndexRouteImport.update({
@@ -370,6 +371,12 @@ const ApiPublicCronConversionDispatchRoute =
     path: '/api/public/cron/conversion-dispatch',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronMetaReprocessFailedRoute =
+  ApiPublicCronMetaReprocessFailedRouteImport.update({
+    id: '/api/public/cron/meta-reprocess-failed',
+    path: '/api/public/cron/meta-reprocess-failed',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
   id: '/api/public/cron/meta-retry',
   path: '/api/public/cron/meta-retry',
@@ -434,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
+  '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRoutesByTo {
@@ -493,6 +501,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
+  '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRoutesById {
@@ -556,6 +565,7 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
+  '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
 }
 export interface FileRouteTypes {
@@ -618,6 +628,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/publish'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
+    | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -677,6 +688,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/publish'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
+    | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
   id:
     | '__root__'
@@ -739,6 +751,7 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/publish'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
+    | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
   fileRoutesById: FileRoutesById
 }
@@ -765,6 +778,7 @@ export interface RootRouteChildren {
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
   ApiPublicCronAutomationDispatchRoute: typeof ApiPublicCronAutomationDispatchRoute
   ApiPublicCronConversionDispatchRoute: typeof ApiPublicCronConversionDispatchRoute
+  ApiPublicCronMetaReprocessFailedRoute: typeof ApiPublicCronMetaReprocessFailedRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
 }
 
@@ -1183,6 +1197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronConversionDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/meta-reprocess-failed': {
+      id: '/api/public/cron/meta-reprocess-failed'
+      path: '/api/public/cron/meta-reprocess-failed'
+      fullPath: '/api/public/cron/meta-reprocess-failed'
+      preLoaderRoute: typeof ApiPublicCronMetaReprocessFailedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/meta-retry': {
       id: '/api/public/cron/meta-retry'
       path: '/api/public/cron/meta-retry'
@@ -1336,6 +1357,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
   ApiPublicCronAutomationDispatchRoute: ApiPublicCronAutomationDispatchRoute,
   ApiPublicCronConversionDispatchRoute: ApiPublicCronConversionDispatchRoute,
+  ApiPublicCronMetaReprocessFailedRoute: ApiPublicCronMetaReprocessFailedRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
 }
 export const routeTree = rootRouteImport
