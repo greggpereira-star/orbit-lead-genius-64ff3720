@@ -34,9 +34,15 @@ interface FormPublishProps {
 
 export function FormPublish({ form }: FormPublishProps) {
   const [copied, setCopied] = useState<string | null>(null);
-  const [mode, setMode] = useState<'inline' | 'popup' | 'floating' | 'iframe'>('inline');
-  
+  const [mode, setMode] = useState<
+    'inline' | 'botao' | 'popup' | 'floating' | 'iframe' | 'email' | 'link'
+  >('inline');
+  /* Origem por canal: o mesmo formulário distribuído em dez lugares sem UTM
+     chega todo como "(direct)/(none)" e não dá para saber o que trouxe lead. */
+  const [canal, setCanal] = useState('email');
+
   const publicUrl = `${window.location.origin}/f/${form.slug}`;
+  const urlComOrigem = `${publicUrl}?utm_source=${encodeURIComponent(canal)}&utm_medium=formulario&utm_campaign=${encodeURIComponent(form.slug)}`;
   
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -45,36 +51,46 @@ export function FormPublish({ form }: FormPublishProps) {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const codes = {
-     inline: `<div id="leadflow-form-${form.id}"></div>\n<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function() {\n    LeadFlow.init({\n      formId: "${form.id}",\n      target: "#leadflow-form-${form.id}",\n      mode: "inline"\n    });\n  });\n</script>`,
-     popup: `<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function() {\n    LeadFlow.init({\n      formId: "${form.id}",\n      mode: "popup",\n      trigger: "exit_intent"\n    });\n  });\n</script>`,
-     floating: `<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function() {\n    LeadFlow.init({\n      formId: "${form.id}",\n      mode: "floating",\n      position: "bottom-right",\n      label: "Fale com um consultor"\n    });\n  });\n</script>`,
-    iframe: `<iframe 
-  src="${window.location.origin}/embed-form/${form.id}" 
-  width="100%" 
-  height="700" 
-  style="border:0; border-radius:16px;" 
-  loading="lazy">
-</iframe>`
+  const codes: Record<string, string> = {
+    inline: `<!-- Cole onde o formulário deve aparecer -->\n<div data-lf-form="${form.id}"></div>\n<script src="${window.location.origin}/sdk.js" async></script>`,
+
+    // O que faltava: ligar um botão QUE JÁ EXISTE na página ao formulário.
+    // O botão flutuante cria um botão novo no canto; isto usa o da página.
+    botao: `<!-- Em QUALQUER botão ou link já existente, basta o atributo -->\n<a href="#" data-lf-open="${form.id}">Fale com um consultor</a>\n\n<!-- Uma vez por página, de preferência antes do </body> -->\n<script src="${window.location.origin}/sdk.js" async></script>\n\n<!-- Em construtor que não deixa editar o HTML do botão, chame por código: -->\n<!-- onclick="LeadFlow.open('${form.id}')" -->`,
+
+    popup: `<div data-lf-popup="${form.id}" data-lf-trigger="exit_intent"></div>\n<script src="${window.location.origin}/sdk.js" async></script>\n\n<!-- data-lf-trigger: exit_intent | delay | scroll -->\n<!-- com delay:  data-lf-trigger="delay" data-lf-delay="8" -->\n<!-- com rolagem: data-lf-trigger="scroll" data-lf-percent="0.6" -->`,
+
+    floating: `<script src="${window.location.origin}/sdk.js"></script>\n<script>\n  window.addEventListener('load', function () {\n    LeadFlow.init({\n      formId: "${form.id}",\n      mode: "floating",\n      position: "bottom-right",\n      label: "Fale com um consultor"\n    });\n  });\n</script>`,
+
+    iframe: `<iframe\n  src="${window.location.origin}/embed-form/${form.id}"\n  width="100%"\n  height="700"\n  style="border:0; border-radius:16px;"\n  loading="lazy">\n</iframe>`,
+
+    // E-mail não executa JavaScript: só link. Tabela e estilo embutido porque
+    // é o que o Outlook e o Gmail renderizam de forma previsível.
+    email: `<table role="presentation" cellpadding="0" cellspacing="0" border="0">\n  <tr>\n    <td align="center" bgcolor="#2563eb" style="border-radius:8px;">\n      <a href="${publicUrl}?utm_source=email&utm_medium=formulario&utm_campaign=${form.slug}"\n         style="display:inline-block;padding:14px 28px;font-family:Arial,sans-serif;\n                font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none;">\n        ${form.settings?.submit_label || 'Quero falar'}\n      </a>\n    </td>\n  </tr>\n</table>`,
+
+    link: urlComOrigem,
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
         {[
-          { id: 'inline', title: 'Inline Script', icon: FileCode },
-          { id: 'iframe', title: 'Iframe Embed', icon: Code2 },
-          { id: 'popup', title: 'Exit Popup', icon: MousePointer2 },
-          { id: 'floating', title: 'Floating Button', icon: MessageSquare }
+          { id: 'inline', title: 'Dentro da página', icon: FileCode },
+          { id: 'botao', title: 'Botão que você já tem', icon: MousePointer2 },
+          { id: 'popup', title: 'Pop-up', icon: PlayCircle },
+          { id: 'floating', title: 'Botão flutuante', icon: MessageSquare },
+          { id: 'iframe', title: 'Iframe', icon: Code2 },
+          { id: 'email', title: 'E-mail', icon: ShoppingBag },
+          { id: 'link', title: 'Link com origem', icon: ExternalLink },
         ].map(m => (
           <Button 
             key={m.id}
             variant={mode === m.id ? 'default' : 'outline'}
-            className="h-24 flex flex-col gap-2"
+            className="h-20 flex flex-col gap-1.5"
             onClick={() => setMode(m.id as any)}
           >
-            <m.icon className="h-6 w-6" />
-            <span className="text-xs font-bold">{m.title}</span>
+            <m.icon className="h-5 w-5" />
+            <span className="text-[11px] font-semibold leading-tight text-center">{m.title}</span>
           </Button>
         ))}
       </div>
@@ -92,9 +108,36 @@ export function FormPublish({ form }: FormPublishProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {(mode === 'link' || mode === 'email') && (
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest">Origem do canal</Label>
+              <div className="flex flex-wrap gap-2">
+                {['email', 'whatsapp', 'instagram', 'bio', 'qrcode', 'sms', 'parceiro'].map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    size="sm"
+                    variant={canal === c ? 'default' : 'outline'}
+                    className="h-8 text-xs"
+                    onClick={() => setCanal(c)}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Entra como <code>utm_source</code> no lead. Sem isso o mesmo formulário
+                distribuído em dez lugares chega todo como “(direct)/(none)” e não dá
+                para saber o que trouxe o lead.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-bold uppercase tracking-widest">Código de Instalação</Label>
+              <Label className="text-xs font-bold uppercase tracking-widest">
+                {mode === 'link' ? 'Link para compartilhar' : 'Código de instalação'}
+              </Label>
               <Button variant="ghost" size="sm" onClick={() => copyToClipboard(codes[mode], 'code')} className="h-8 gap-2">
                 {copied === 'code' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 Copiar Código
@@ -111,9 +154,31 @@ export function FormPublish({ form }: FormPublishProps) {
               Dicas de Implementação
             </h4>
             <ul className="text-xs space-y-2 text-muted-foreground list-disc pl-4">
-              <li>O Script Embed captura UTMs automaticamente da página onde está instalado.</li>
-              <li>Certifique-se de que o formulário está no status <strong>Publicado</strong>.</li>
-              <li>Para WordPress, você pode usar um bloco "HTML Personalizado" para colar o código.</li>
+              <li>O formulário precisa estar <strong>Publicado</strong> — fora disso ele não abre para ninguém.</li>
+              <li>As UTMs da página onde o formulário está são capturadas junto com o lead.</li>
+              {mode === 'botao' && (
+                <li>
+                  O atributo <code>data-lf-open</code> vale para qualquer botão ou link,
+                  inclusive os criados depois pelo construtor da página. O script só precisa
+                  estar na página uma vez.
+                </li>
+              )}
+              {mode === 'email' && (
+                <li>
+                  E-mail não executa JavaScript: o único caminho é o link. O botão abaixo usa
+                  tabela e estilo embutido, que é o que o Outlook e o Gmail renderizam de
+                  forma previsível.
+                </li>
+              )}
+              {mode === 'popup' && (
+                <li>
+                  Três gatilhos: <code>exit_intent</code> (o cursor sai pelo topo),
+                  <code>delay</code> (segundos) e <code>scroll</code> (proporção da página).
+                </li>
+              )}
+              {(mode === 'inline' || mode === 'iframe') && (
+                <li>Pode haver vários formulários diferentes na mesma página.</li>
+              )}
             </ul>
           </div>
 

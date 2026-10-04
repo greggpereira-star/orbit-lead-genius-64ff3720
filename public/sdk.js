@@ -245,41 +245,102 @@
       document.body.appendChild(btn);
     },
 
-    showModal: function(formId) {
+    /**
+     * Abre o formulário num modal.
+     *
+     * O modal antigo tinha altura FIXA de 600px — formulário de uma etapa
+     * sobrava espaço, de cinco etapas cortava —, não tinha botão de fechar
+     * visível, não fechava com Esc, não travava a rolagem do fundo e NÃO
+     * fechava depois do envio: a pessoa enviava e a tela de sucesso ficava ali
+     * para sempre. O SDK já recebia `LEADFLOW_RESIZE`, mas só aplicava no modo
+     * inline.
+     */
+    showModal: function(formId, options = {}) {
       if (document.getElementById('lf-modal-overlay')) return;
 
-      const overlay = document.createElement('div');
+      var self = this;
+      var rolagemOriginal = document.body.style.overflow;
+
+      var overlay = document.createElement('div');
       overlay.id = 'lf-modal-overlay';
-      overlay.style.position = 'fixed';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.width = '100%';
-      overlay.style.height = '100%';
-      overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-      overlay.style.display = 'flex';
-      overlay.style.alignItems = 'center';
-      overlay.style.justifyContent = 'center';
-      overlay.style.zIndex = '10000';
-      overlay.onclick = () => document.body.removeChild(overlay);
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);' +
+        'display:flex;align-items:center;justify-content:center;z-index:2147483000;' +
+        'padding:16px;opacity:0;transition:opacity .18s ease';
 
-      const content = document.createElement('div');
-      content.style.width = '90%';
-      content.style.maxWidth = '500px';
-      content.style.backgroundColor = '#fff';
-      content.style.borderRadius = '16px';
-      content.style.overflow = 'hidden';
-      content.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
-      content.onclick = (e) => e.stopPropagation();
+      var content = document.createElement('div');
+      content.style.cssText = 'position:relative;width:100%;max-width:' +
+        (options.maxWidth || 520) + 'px;max-height:92vh;background:#fff;' +
+        'border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);' +
+        'transform:translateY(8px);transition:transform .18s ease';
+      content.onclick = function(e) { e.stopPropagation(); };
 
-      const iframe = document.createElement('iframe');
+      var fechar = document.createElement('button');
+      fechar.type = 'button';
+      fechar.setAttribute('aria-label', 'Fechar');
+      fechar.innerHTML = '&times;';
+      fechar.style.cssText = 'position:absolute;top:8px;right:10px;z-index:2;width:32px;' +
+        'height:32px;border:0;border-radius:999px;background:rgba(255,255,255,.92);' +
+        'color:#334155;font-size:22px;line-height:1;cursor:pointer;' +
+        'box-shadow:0 1px 3px rgba(0,0,0,.15)';
+
+      var iframe = document.createElement('iframe');
       iframe.src = this.buildUrl(formId);
-      iframe.width = '100%';
-      iframe.height = '600px';
-      iframe.style.border = 'none';
+      iframe.setAttribute('data-leadflow-modal', 'true');
+      iframe.setAttribute('scrolling', 'no');
+      iframe.style.cssText = 'display:block;width:100%;height:' +
+        (options.minHeight || 420) + 'px;border:0;transition:height .25s ease';
 
+      function encerrar() {
+        if (!overlay.parentNode) return;
+        document.removeEventListener('keydown', aoTeclar);
+        window.removeEventListener('message', aoReceber);
+        document.body.style.overflow = rolagemOriginal;
+        overlay.style.opacity = '0';
+        setTimeout(function() {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        }, 180);
+      }
+
+      function aoTeclar(e) { if (e.key === 'Escape') encerrar(); }
+
+      function aoReceber(e) {
+        if (!e.data) return;
+        // A altura vem do próprio formulário, como no modo inline.
+        if (e.data.type === 'LEADFLOW_RESIZE' && e.data.height) {
+          var altura = Math.min(e.data.height, Math.round(window.innerHeight * 0.92));
+          iframe.style.height = Math.max(altura, options.minHeight || 420) + 'px';
+        }
+        if (e.data.type === 'LEADFLOW_FORM_SUBMITTED' && options.closeOnSubmit !== false) {
+          // Tempo de ler a confirmação antes de fechar.
+          setTimeout(encerrar, options.closeDelay || 2500);
+        }
+      }
+
+      overlay.onclick = encerrar;
+      fechar.onclick = encerrar;
+      document.addEventListener('keydown', aoTeclar);
+      window.addEventListener('message', aoReceber);
+
+      content.appendChild(fechar);
       content.appendChild(iframe);
       overlay.appendChild(content);
       document.body.appendChild(overlay);
+      document.body.style.overflow = 'hidden';
+
+      requestAnimationFrame(function() {
+        overlay.style.opacity = '1';
+        content.style.transform = 'translateY(0)';
+      });
+
+      self.debug('Modal aberto para o formulário ' + formId);
+      return encerrar;
+    },
+
+    /** API pública: qualquer botão do site pode chamar. */
+    open: function(formId, options) {
+      return this.showModal(formId, options || {});
     },
 
     // E-commerce Helper
@@ -291,15 +352,72 @@
 
   window.LeadFlow = LeadFlow;
 
-  // Auto-init via data attributes if present
-  document.addEventListener('DOMContentLoaded', () => {
-    const el = document.querySelector('[data-lf-form]');
-    if (el) {
+  /* Ligação declarativa: nada de JS para quem só quer colar o atributo.
+   *
+   *   <div data-lf-form="ID"></div>            formulário embutido ali
+   *   <a href="#" data-lf-open="ID">Fale</a>   abre no modal
+   *
+   * `data-lf-open` é o que faltava: o modal existia, mas não havia como ligar
+   * um botão JÁ EXISTENTE do site nele — só o botão flutuante que o próprio
+   * SDK cria, que nem sempre é o que a página quer.
+   */
+  function iniciarEmbutidos() {
+    // `querySelectorAll`, não `querySelector`: a versão anterior pegava apenas
+    // o PRIMEIRO elemento, então duas âncoras na mesma página e a segunda
+    // ficava vazia sem erro nenhum.
+    var alvos = document.querySelectorAll('[data-lf-form]');
+    for (var i = 0; i < alvos.length; i++) {
+      var el = alvos[i];
+      if (el.getAttribute('data-lf-pronto')) continue;
+      el.setAttribute('data-lf-pronto', '1');
+      if (!el.id) el.id = 'lf-embed-' + i + '-' + Date.now();
       LeadFlow.init({
         formId: el.getAttribute('data-lf-form'),
-        target: '[data-lf-form]',
+        target: '#' + el.id,
         mode: 'inline'
       });
     }
+  }
+
+  // Delegado no documento: funciona para botão que só aparece depois, vindo de
+  // carrossel, menu ou de qualquer construtor de página.
+  document.addEventListener('click', function(e) {
+    var alvo = e.target && e.target.closest && e.target.closest('[data-lf-open]');
+    if (!alvo) return;
+    e.preventDefault();
+    LeadFlow.open(alvo.getAttribute('data-lf-open'), {
+      maxWidth: Number(alvo.getAttribute('data-lf-largura')) || undefined
+    });
   });
+
+  // Gatilho de saída/tempo/rolagem também por atributo, no <body> ou em qualquer
+  // elemento: <div data-lf-popup="ID" data-lf-trigger="exit"></div>
+  function iniciarPopups() {
+    var els = document.querySelectorAll('[data-lf-popup]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.getAttribute('data-lf-pronto')) continue;
+      el.setAttribute('data-lf-pronto', '1');
+      LeadFlow.popup(el.getAttribute('data-lf-popup'), {
+        trigger: el.getAttribute('data-lf-trigger') || 'exit_intent',
+        delay: Number(el.getAttribute('data-lf-delay')) || undefined,
+        percent: Number(el.getAttribute('data-lf-percent')) || undefined
+      });
+    }
+  }
+
+  function iniciarTudo() { iniciarEmbutidos(); iniciarPopups(); }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', iniciarTudo);
+  } else {
+    iniciarTudo();
+  }
+  // Página montada por construtor visual troca o DOM depois do load.
+  if (window.MutationObserver) {
+    new MutationObserver(iniciarTudo).observe(document.documentElement, {
+      childList: true, subtree: true
+    });
+  }
+
 })(window);
