@@ -185,5 +185,20 @@ Ficaram de fora, de propósito: o **anel de foco** (`focus-visible:ring-primary`
 que é acessibilidade e não decoração, e o **botão de inserir etapa** no Fluxo,
 que é a única chamada para ação daquele canvas.
 
-Resultado medido no construtor, inspetor, editor de texto e Fluxo:
-**49 → 12 usos**, todos com o mesmo significado.
+Resultado medido — e aqui vale a correção de uma conta que fiz errado no
+caminho: o `49` do começo são **ocorrências** (`grep -o`), não linhas.
+Comparando a mesma medida, no mesmo par de arquivos (construtor + inspetor):
+
+| | Antes | Depois |
+|---|---|---|
+| Ocorrências | 49 | **15** |
+| Variantes distintas | 10 | **7** |
+
+Somando o editor de texto (0) e o Fluxo (5), são **20 ocorrências** nas quatro
+telas de construção — e todas com o mesmo significado, que é o que a regra
+pedia. As sete variantes que sobraram são: `ring-primary/40` e `ring-primary`
+(bloco selecionado), `border-primary` e `border-primary/30` (escolha entre
+opções), `bg-primary/5`, `bg-primary/10` e `bg-primary/[0.03]` (etapa corrente).
+
+Vale uma próxima mão: três tons de fundo para dizer a mesma coisa — "é esta a
+etapa" — ainda é mais do que a regra justifica.
