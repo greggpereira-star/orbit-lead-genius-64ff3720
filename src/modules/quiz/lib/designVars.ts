@@ -21,9 +21,11 @@ export function designVars(design: QuizDesign): CSSProperties {
     '--quiz-surface': d.surface,
     '--quiz-text': d.text,
     '--quiz-muted': d.muted,
-    // Título tem cor própria: quando o usuário não define, herda o texto, que
-    // é exatamente o comportamento de hoje — nenhum quiz publicado muda.
-    '--quiz-title': d.titleColor ?? d.text,
+    /* Título tem cor própria: quando o usuário não define, herda o texto.
+       O `??` precisa ler o design CRU, e não o mesclado: um valor de título no
+       DEFAULT_DESIGN venceria a herança e pintaria de claro o título de todo
+       quiz de fundo claro que nunca escolheu cor nenhuma. */
+    '--quiz-title': design.titleColor ?? d.text,
     '--quiz-title-size': `${d.titleSize ?? 28}px`,
     '--quiz-content-size': `${d.contentSize ?? 16}px`,
     '--quiz-element-size': `${d.elementSize ?? 56}px`,

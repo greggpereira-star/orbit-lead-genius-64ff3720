@@ -12,7 +12,6 @@ export const DEFAULT_DESIGN: QuizDesign = {
   fontBody: 'Inter',
   buttonStyle: 'gradient',
   progressStyle: 'bar',
-  titleColor: '#f1f5f9',
   titleSize: 28,
   contentSize: 16,
   elementSize: 56,
