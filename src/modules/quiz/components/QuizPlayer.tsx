@@ -2893,12 +2893,27 @@ function executarScriptDoBloco(bloco: QuizBlock, resposta: unknown): void {
  * Campos de texto entram como foram digitados; múltipla escolha vira lista
  * separada por vírgula.
  */
+/**
+ * Só estes blocos PERGUNTAM alguma coisa.
+ *
+ * Um bloco decorativo — Cards, CTA, vídeo — chama `onSubmit(true)` ao avançar
+ * a etapa, e isso grava `true` em `responses` com o id dele. Sem esta lista, o
+ * resumo exibia linhas como "Como funciona → true": o título de um bloco de
+ * conteúdo apresentado como se fosse resposta do visitante.
+ */
+const BLOCOS_QUE_PERGUNTAM = new Set<QuizBlock['type']>([
+  'single-choice', 'multi-choice', 'rating',
+  'short-text', 'long-text', 'email', 'phone',
+  'weight', 'height',
+]);
+
 export function montarResumo(
   blocks: QuizBlock[],
   responses: Record<string, unknown>,
 ): { pergunta: string; resposta: string }[] {
   const linhas: { pergunta: string; resposta: string }[] = [];
   for (const b of blocks) {
+    if (!BLOCOS_QUE_PERGUNTAM.has(b.type)) continue;
     const v = responses[b.id];
     if (v === undefined || v === null || v === '') continue;
     const rotuloDaOpcao = (id: string) =>
@@ -2907,7 +2922,7 @@ export function montarResumo(
     let resposta: string;
     if (Array.isArray(v)) resposta = v.map((x) => rotuloDaOpcao(String(x))).join(', ');
     else if (b.options?.length) resposta = rotuloDaOpcao(String(v));
-    else if (typeof v === 'object') continue; // formulário e agendamento têm tela própria
+    else if (typeof v === 'object' || typeof v === 'boolean') continue;
     else resposta = String(v);
 
     if (!resposta.trim()) continue;

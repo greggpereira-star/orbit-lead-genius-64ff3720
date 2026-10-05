@@ -34,6 +34,14 @@ describe('sumário das respostas', () => {
     expect(montarResumo(blocks, { nome: '   ' })).toHaveLength(0);
   });
 
+  it('bloco decorativo NÃO entra, mesmo tendo título e "resposta"', () => {
+    // Cards, CTA e vídeo chamam `onSubmit(true)` ao avançar: sem filtro, o
+    // resumo exibia "Como funciona → true".
+    const comCards = [...blocks, b({ id: 'cards', type: 'cards', title: 'Como funciona' })];
+    const r = montarResumo(comCards, { q1: 'o1', cards: true });
+    expect(r.map((x) => x.pergunta)).toEqual(['Qual sua dor?']);
+  });
+
   it('formulário e agendamento ficam de fora — têm tela própria', () => {
     const comForm = [...blocks, b({ id: 'f', type: 'form', title: 'Contato' })];
     const r = montarResumo(comForm, { f: { name: 'Maria', email: 'a@b.c' } });
