@@ -8,6 +8,7 @@ import { getSteps } from '../lib/steps';
 import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
+import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
 import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
@@ -349,6 +350,13 @@ function PlayerRunner({
     });
   }, [visibleStepBlocks]);
 
+  /* Último bloco que de fato está no fluxo da etapa. É dele o botão que avança;
+     um bloco fixo ou flutuante nunca deve assumir esse papel. */
+  const ultimoNoFluxo = useMemo(() => {
+    const noFluxo = effectiveBlocks.filter(estaNoFluxo);
+    return noFluxo[noFluxo.length - 1]?.id ?? effectiveBlocks[effectiveBlocks.length - 1]?.id;
+  }, [effectiveBlocks]);
+
   useEffect(() => {
     if (preview) return;
     quizService.trackEvent({ quizId, companyId, eventType: 'start', sessionId: sessionId.current }).catch(() => {});
@@ -650,10 +658,14 @@ function PlayerRunner({
             {done ? (
               <ResultView schema={schema} state={state} />
             ) : (
-              effectiveBlocks.map((b, i) => {
-                const isTerminal = i === effectiveBlocks.length - 1;
+              effectiveBlocks.map((b) => {
+                /* O terminal é o último bloco DO FLUXO, não da lista: uma barra
+                   fixa ou um selo flutuante no fim não pode herdar o botão que
+                   avança a etapa só por estar por último no array. */
+                const isTerminal = b.id === ultimoNoFluxo;
+                const posicao = estiloDaPosicao(b, contentWidth(design));
                 if (b.type === 'container') {
-                  return (
+                  const conteudo = (
                     <ContainerView
                       key={b.id}
                       block={b}
@@ -675,11 +687,14 @@ function PlayerRunner({
                       }}
                     />
                   );
+                  // Container fora do fluxo precisa do embrulho posicionado; no
+                  // fluxo, segue sem camada extra de DOM.
+                  return posicao ? <div key={b.id} style={posicao}>{conteudo}</div> : conteudo;
                 }
                 return (
                   // Mesmo embrulho de estilo do canvas — um resolvedor só, para
                   // o que é ajustado no Builder ser o que o visitante vê.
-                  <div key={b.id} style={resolveBlockStyle(b)}>
+                  <div key={b.id} style={{ ...resolveBlockStyle(b), ...posicao }}>
                   <BlockView
                     block={b}
                     design={design}

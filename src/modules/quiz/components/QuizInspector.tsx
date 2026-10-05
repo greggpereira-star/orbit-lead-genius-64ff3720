@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp, BlockLogicOp, BlockLogicRule } from '../types';
 import { MASCARAS, tamanhoDaMascara } from '../lib/fieldMask';
+import { POSICOES, ANCORAS } from '../lib/blockPosition';
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from '../lib/blockStyle';
 import type { BlockStyle, TextStyle, TextSlot } from '../lib/blockStyle';
 import { getSteps } from '../lib/steps';
@@ -1043,6 +1044,8 @@ function BlockInspector({
       )}
 
       <ShowIfSection block={block} allBlocks={allBlocks} onChange={onChange} />
+
+      <PosicaoSection block={block} onChange={onChange} />
 
       <LogicRulesSection block={block} allBlocks={allBlocks} onChange={onChange} />
 
@@ -2655,6 +2658,66 @@ function LogicRulesSection({
       {regras.length > 1 && (
         <p className="text-[10px] text-muted-foreground">
           Quando mais de uma regra bate, vale a última da lista.
+        </p>
+      )}
+    </Section>
+  );
+}
+
+/**
+ * Onde o bloco fica na tela.
+ *
+ * `fixed`, e não `sticky`: sticky só gruda enquanto o contêiner que envolve o
+ * elemento está em vista, e aqui esse contêiner é a coluna da etapa — a barra
+ * descolaria no fim dela, justamente quando mais precisa aparecer.
+ */
+function PosicaoSection({
+  block,
+  onChange,
+}: {
+  block: QuizBlock;
+  onChange: (p: Partial<QuizBlock>) => void;
+}) {
+  const atual = block.posicao ?? 'fluxo';
+  return (
+    <Section title="Posição na tela" icon={LayoutGrid}>
+      <div className="grid grid-cols-2 gap-1.5">
+        {POSICOES.map((p) => (
+          <Button
+            key={p.valor}
+            type="button"
+            size="sm"
+            variant={atual === p.valor ? 'default' : 'outline'}
+            className="h-8 text-[11px]"
+            title={p.ajuda}
+            onClick={() => onChange({ posicao: p.valor })}
+          >
+            {p.rotulo}
+          </Button>
+        ))}
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        {POSICOES.find((p) => p.valor === atual)?.ajuda}
+      </p>
+
+      {atual === 'flutuante' && (
+        <Field label="Canto da janela">
+          <select
+            value={block.ancora ?? 'abaixo-direita'}
+            onChange={(e) => onChange({ ancora: e.target.value as NonNullable<QuizBlock['ancora']> })}
+            className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+          >
+            {ANCORAS.map((a) => (
+              <option key={a.valor} value={a.valor}>{a.rotulo}</option>
+            ))}
+          </select>
+        </Field>
+      )}
+
+      {atual !== 'fluxo' && (
+        <p className="text-[10px] text-amber-600 dark:text-amber-400">
+          Fora do fluxo, este bloco não recebe o botão que avança a etapa — deixe
+          pelo menos um bloco no fluxo para o visitante poder seguir.
         </p>
       )}
     </Section>

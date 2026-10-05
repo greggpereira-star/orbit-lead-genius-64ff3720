@@ -203,6 +203,21 @@ export interface QuizBlock {
   countdownEndsAt?: string;
   countdownMinutes?: number;
   // Logic (Phase 4)
+  /**
+   * Onde o bloco vive na tela.
+   *
+   * `fluxo` é o padrão e o de sempre: o bloco entra na coluna, empilhado com
+   * os outros. Os demais o tiram da coluna e o fixam na janela — é o que
+   * permite barra de oferta sempre visível, aviso no topo e botão flutuante
+   * sem depender de rolagem.
+   */
+  posicao?: 'fluxo' | 'topo-fixo' | 'rodape-fixo' | 'flutuante' | 'tela-cheia';
+  /** Canto da janela, só para `flutuante`. */
+  ancora?:
+    | 'topo-esquerda' | 'topo-centro' | 'topo-direita'
+    | 'centro-esquerda' | 'centro-direita'
+    | 'abaixo-esquerda' | 'abaixo-centro' | 'abaixo-direita';
+
   /** Disposição das opções. Lista é o padrão de sempre. */
   optionsLayout?: 'lista' | 'grade-2' | 'grade-3' | 'grade-4';
   /** Forma do cartão. 'cartao' põe a imagem grande em cima e o rótulo embaixo —
