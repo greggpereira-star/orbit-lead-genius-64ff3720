@@ -326,14 +326,32 @@
          encostado na borda de cima. Um traço desenhado é sempre o mesmo. */
       fechar.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
         + 'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
-        + '<path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.8" '
+        + '<path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" '
         + 'stroke-linecap="round"/></svg>';
-      // Fora do fluxo do conteúdo: com `top:8px` ele cobria o "100% completo"
-      // do cabeçalho do formulário.
-      fechar.style.cssText = 'position:absolute;top:10px;right:10px;z-index:2;width:30px;' +
-        'height:32px;border:0;border-radius:999px;background:rgba(255,255,255,.92);' +
-        'color:#334155;font-size:22px;line-height:1;cursor:pointer;' +
-        'box-shadow:0 1px 3px rgba(0,0,0,.15)';
+      /* ACIMA do cartão, inteiro sobre o escurecido.
+       *
+       * Estava no canto superior direito DENTRO do cartão, bem onde a borda
+       * curva: círculo branco sobre cartão branco, metade dele na curva. Lia
+       * como elemento quebrado — foi o que apareceu na tela da Exata. Inteiro
+       * fora, sobre o fundo escuro, vira um controle claro; e como não encosta
+       * no cartão, também não disputa espaço com a barra de rolagem do
+       * formulário, que era o problema de antes.
+       *
+       * Vidro em vez de branco chapado: sobre o escurecido, um círculo branco
+       * sólido puxa mais atenção que o próprio formulário. */
+      fechar.style.cssText = 'position:absolute;bottom:calc(100% + 12px);right:0;z-index:3;' +
+        'width:36px;height:36px;border:1px solid rgba(255,255,255,.22);border-radius:999px;' +
+        'background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(6px);' +
+        'backdrop-filter:blur(6px);color:#fff;cursor:pointer;display:grid;place-items:center;' +
+        'padding:0;transition:background .15s ease,border-color .15s ease';
+      fechar.onmouseenter = function () {
+        fechar.style.background = 'rgba(255,255,255,.24)';
+        fechar.style.borderColor = 'rgba(255,255,255,.38)';
+      };
+      fechar.onmouseleave = function () {
+        fechar.style.background = 'rgba(255,255,255,.12)';
+        fechar.style.borderColor = 'rgba(255,255,255,.22)';
+      };
 
       var iframe = document.createElement('iframe');
       /* `lf_modo=modal` avisa o formulário de que a altura é LIMITADA.
@@ -371,8 +389,9 @@
          * piso de 420px passava por cima do teto e o modal ficava MAIOR que o
          * espaço disponível. O piso agora é ele próprio limitado pela janela.
          */
-        // 22px de folga em cima e embaixo, mais 13px da saliência do botão.
-        var teto = Math.max(window.innerHeight - 70, 240);
+        /* Reserva: 22px de folga em cima e embaixo, mais 36px do botão de
+           fechar e 12px entre ele e o cartão — ele agora fica ACIMA. */
+        var teto = Math.max(window.innerHeight - 92, 240);
         /* Acompanha o conteúdo até o teto da janela.
          *
          * Fixar sempre no teto deixava uma área branca enorme num formulário
