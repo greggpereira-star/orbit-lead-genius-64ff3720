@@ -11,34 +11,61 @@
  * O documento resultante é desenhado pelo mesmo `<RichText>` do Preview e do
  * quiz público — o que você formata aqui é o que o visitante vê.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
-  Bold, Italic, Underline, Strikethrough, List, ListOrdered,
-  AlignLeft, AlignCenter, AlignRight, Link2, Undo2, Redo2, Baseline, Highlighter, Variable,
-  Superscript, Subscript, ImagePlus, Code2,
-} from 'lucide-react';
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link2,
+  Undo2,
+  Redo2,
+  Baseline,
+  Highlighter,
+  Variable,
+  Superscript,
+  Subscript,
+  ImagePlus,
+  Code2,
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { docFromDom, docToPlainText, type RichDoc, type RichNodeType } from '../lib/richdoc';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { docFromDom, docToPlainText, type RichDoc, type RichNodeType } from "../lib/richdoc";
 
 /** Fundo só da área de edição — ajuda a julgar contraste sem mudar o quiz. */
-type Backdrop = 'padrao' | 'escuro' | 'pastel';
+type Backdrop = "padrao" | "escuro" | "pastel";
 
 const BACKDROP_STYLE: Record<Backdrop, { background: string; color: string }> = {
-  padrao: { background: '#ffffff', color: '#111827' },
-  escuro: { background: '#111827', color: '#f9fafb' },
-  pastel: { background: '#fdf6f0', color: '#3f2d23' },
+  padrao: { background: "#ffffff", color: "#111827" },
+  escuro: { background: "#111827", color: "#f9fafb" },
+  pastel: { background: "#fdf6f0", color: "#3f2d23" },
 };
 
-const TEXT_COLORS = ['#111827', '#be1858', '#0ea5e9', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#ffffff'];
-const HIGHLIGHTS = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'];
+const TEXT_COLORS = [
+  "#111827",
+  "#be1858",
+  "#0ea5e9",
+  "#16a34a",
+  "#f59e0b",
+  "#dc2626",
+  "#7c3aed",
+  "#ffffff",
+];
+const HIGHLIGHTS = ["#fef08a", "#bbf7d0", "#bfdbfe", "#fecaca", "#e9d5ff", "#fed7aa"];
 
 interface Props {
   value: RichDoc | null | undefined;
@@ -57,32 +84,37 @@ function exec(command: string, value?: string) {
 }
 
 export function RichTextEditor({
-  value, fallbackText, onChange, variables = [], label, minHeight = 92,
+  value,
+  fallbackText,
+  onChange,
+  variables = [],
+  label,
+  minHeight = 92,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [backdrop, setBackdrop] = useState<Backdrop>('padrao');
-  const [linkUrl, setLinkUrl] = useState('');
-  const [imgUrl, setImgUrl] = useState('');
+  const [backdrop, setBackdrop] = useState<Backdrop>("padrao");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [imgUrl, setImgUrl] = useState("");
   const savedRange = useRef<Range | null>(null);
 
   /* O conteúdo inicial é escrito UMA vez. Reescrever a cada render mataria o
      cursor a cada tecla — o defeito mais comum em editor controlado por React. */
   useEffect(() => {
     const el = ref.current;
-    if (!el || el.dataset.ready === '1') return;
-    el.innerHTML = '';
+    if (!el || el.dataset.ready === "1") return;
+    el.innerHTML = "";
     if (value?.nodes?.length) {
       for (const node of value.nodes) {
         el.appendChild(nodeToElement(node));
       }
     } else if (fallbackText) {
-      const p = document.createElement('p');
+      const p = document.createElement("p");
       p.textContent = fallbackText;
       el.appendChild(p);
     } else {
-      el.appendChild(document.createElement('p'));
+      el.appendChild(document.createElement("p"));
     }
-    el.dataset.ready = '1';
+    el.dataset.ready = "1";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -118,7 +150,7 @@ export function RichTextEditor({
   const insertVariable = (name: string) => {
     ref.current?.focus();
     restoreSelection();
-    exec('insertText', `{{${name}}}`);
+    exec("insertText", `{{${name}}}`);
     emit();
   };
 
@@ -129,17 +161,17 @@ export function RichTextEditor({
     if (!/^https?:\/\//i.test(url)) return;
     ref.current?.focus();
     restoreSelection();
-    exec('insertImage', url);
+    exec("insertImage", url);
     emit();
-    setImgUrl('');
+    setImgUrl("");
   };
 
   const applyLink = () => {
     const url = linkUrl.trim();
     if (!url) return;
     const safe = /^(https?:\/\/|mailto:)/i.test(url) ? url : `https://${url}`;
-    run('createLink', safe);
-    setLinkUrl('');
+    run("createLink", safe);
+    setLinkUrl("");
   };
 
   const skin = BACKDROP_STYLE[backdrop];
@@ -151,32 +183,56 @@ export function RichTextEditor({
       <div className="rounded-lg border bg-card">
         {/* ---- barra de ferramentas ---- */}
         <div className="flex flex-wrap items-center gap-0.5 border-b p-1.5">
-          <ToolButton onClick={() => run('undo')} label="Desfazer"><Undo2 className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('redo')} label="Refazer"><Redo2 className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run("undo")} label="Desfazer">
+            <Undo2 className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("redo")} label="Refazer">
+            <Redo2 className="h-3.5 w-3.5" />
+          </ToolButton>
           <Divider />
 
           <Select
-            onValueChange={(v) => run('formatBlock', v === 'p' ? '<p>' : `<${v}>`)}
+            onValueChange={(v) => run("formatBlock", v === "p" ? "<p>" : `<${v}>`)}
             defaultValue="p"
           >
             <SelectTrigger className="h-7 w-[104px] text-xs" aria-label="Nível do texto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="p" className="text-xs">Parágrafo</SelectItem>
-              <SelectItem value="h1" className="text-xs">Título 1</SelectItem>
-              <SelectItem value="h2" className="text-xs">Título 2</SelectItem>
-              <SelectItem value="h3" className="text-xs">Título 3</SelectItem>
+              <SelectItem value="p" className="text-xs">
+                Parágrafo
+              </SelectItem>
+              <SelectItem value="h1" className="text-xs">
+                Título 1
+              </SelectItem>
+              <SelectItem value="h2" className="text-xs">
+                Título 2
+              </SelectItem>
+              <SelectItem value="h3" className="text-xs">
+                Título 3
+              </SelectItem>
             </SelectContent>
           </Select>
           <Divider />
 
-          <ToolButton onClick={() => run('bold')} label="Negrito"><Bold className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('italic')} label="Itálico"><Italic className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('underline')} label="Sublinhado"><Underline className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('strikeThrough')} label="Tachado"><Strikethrough className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('superscript')} label="Sobrescrito"><Superscript className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('subscript')} label="Subscrito"><Subscript className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run("bold")} label="Negrito">
+            <Bold className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("italic")} label="Itálico">
+            <Italic className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("underline")} label="Sublinhado">
+            <Underline className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("strikeThrough")} label="Tachado">
+            <Strikethrough className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("superscript")} label="Sobrescrito">
+            <Superscript className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("subscript")} label="Subscrito">
+            <Subscript className="h-3.5 w-3.5" />
+          </ToolButton>
           <Divider />
 
           <SwatchPicker
@@ -184,51 +240,82 @@ export function RichTextEditor({
             icon={<Baseline className="h-3.5 w-3.5" />}
             colors={TEXT_COLORS}
             onOpen={rememberSelection}
-            onPick={(c) => run('foreColor', c)}
+            onPick={(c) => run("foreColor", c)}
           />
           <SwatchPicker
             label="Marca-texto"
             icon={<Highlighter className="h-3.5 w-3.5" />}
             colors={HIGHLIGHTS}
             onOpen={rememberSelection}
-            onPick={(c) => run('hiliteColor', c)}
+            onPick={(c) => run("hiliteColor", c)}
           />
           <Divider />
 
-          <ToolButton onClick={() => run('insertUnorderedList')} label="Lista com marcadores"><List className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('insertOrderedList')} label="Lista numerada"><ListOrdered className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('formatBlock', '<pre>')} label="Bloco de código"><Code2 className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run("insertUnorderedList")} label="Lista com marcadores">
+            <List className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("insertOrderedList")} label="Lista numerada">
+            <ListOrdered className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("formatBlock", "<pre>")} label="Bloco de código">
+            <Code2 className="h-3.5 w-3.5" />
+          </ToolButton>
           <Divider />
 
-          <ToolButton onClick={() => run('justifyLeft')} label="Alinhar à esquerda"><AlignLeft className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('justifyCenter')} label="Centralizar"><AlignCenter className="h-3.5 w-3.5" /></ToolButton>
-          <ToolButton onClick={() => run('justifyRight')} label="Alinhar à direita"><AlignRight className="h-3.5 w-3.5" /></ToolButton>
+          <ToolButton onClick={() => run("justifyLeft")} label="Alinhar à esquerda">
+            <AlignLeft className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("justifyCenter")} label="Centralizar">
+            <AlignCenter className="h-3.5 w-3.5" />
+          </ToolButton>
+          <ToolButton onClick={() => run("justifyRight")} label="Alinhar à direita">
+            <AlignRight className="h-3.5 w-3.5" />
+          </ToolButton>
           <Divider />
 
           <Popover onOpenChange={(o) => o && rememberSelection()}>
             <PopoverTrigger asChild>
-              <button type="button" title="Link" aria-label="Link" className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <button
+                type="button"
+                title="Link"
+                aria-label="Link"
+                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
                 <Link2 className="h-3.5 w-3.5" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-64 space-y-2 p-2" align="start">
-              <p className="text-[11px] text-muted-foreground">Selecione o texto antes de aplicar o link.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Selecione o texto antes de aplicar o link.
+              </p>
               <div className="flex gap-1.5">
                 <Input
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyLink(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyLink();
+                    }
+                  }}
                   placeholder="site.com.br"
                   className="h-8 text-xs"
                 />
-                <Button size="sm" className="h-8" onClick={applyLink}>Aplicar</Button>
+                <Button size="sm" className="h-8" onClick={applyLink}>
+                  Aplicar
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
 
           <Popover onOpenChange={(o) => o && rememberSelection()}>
             <PopoverTrigger asChild>
-              <button type="button" title="Imagem no meio do texto" aria-label="Inserir imagem" className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <button
+                type="button"
+                title="Imagem no meio do texto"
+                aria-label="Inserir imagem"
+                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
                 <ImagePlus className="h-3.5 w-3.5" />
               </button>
             </PopoverTrigger>
@@ -240,11 +327,18 @@ export function RichTextEditor({
                 <Input
                   value={imgUrl}
                   onChange={(e) => setImgUrl(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); insertImage(); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      insertImage();
+                    }
+                  }}
                   placeholder="https://..."
                   className="h-8 text-xs"
                 />
-                <Button size="sm" className="h-8" onClick={insertImage}>Inserir</Button>
+                <Button size="sm" className="h-8" onClick={insertImage}>
+                  Inserir
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -264,12 +358,14 @@ export function RichTextEditor({
             <PopoverContent className="w-60 p-2" align="start">
               {variables.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Nenhuma variável ainda. Dê um nome à resposta de um bloco anterior
-                  (campo “Variável de saída”) para usá-la aqui.
+                  Nenhuma variável ainda. Dê um nome à resposta de um bloco anterior (campo
+                  “Variável de saída”) para usá-la aqui.
                 </p>
               ) : (
                 <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground">O valor entra no texto ao responder.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    O valor entra no texto ao responder.
+                  </p>
                   {variables.map((v) => (
                     <button
                       key={v}
@@ -291,18 +387,32 @@ export function RichTextEditor({
           <span className="text-[11px] text-muted-foreground">
             Fundo de apoio <span className="opacity-70">— só na edição</span>
           </span>
-          <div className="flex gap-0.5">
-            {(['padrao', 'escuro', 'pastel'] as Backdrop[]).map((b) => (
+          {/* O rótulo saía da própria chave com `capitalize`, e imprimia
+              "Padrao" sem til na tela. */}
+          {/* O chip ativo vinha preenchido de acento — o tratamento mais forte
+              da interface, num ajuste que é "só na edição" e nem chega ao quiz
+              publicado. Agora é o segmentado neutro: trilho acinzentado, o
+              escolhido em branco. O acento fica para a seleção de verdade. */}
+          <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+            {(
+              [
+                ["padrao", "Padrão"],
+                ["escuro", "Escuro"],
+                ["pastel", "Pastel"],
+              ] as [Backdrop, string][]
+            ).map(([b, rotulo]) => (
               <button
                 key={b}
                 type="button"
                 onClick={() => setBackdrop(b)}
                 aria-pressed={backdrop === b}
-                className={`rounded px-2 py-0.5 text-[11px] capitalize transition-colors ${
-                  backdrop === b ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                className={`rounded px-2 py-0.5 text-[11px] transition-colors ${
+                  backdrop === b
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {b}
+                {rotulo}
               </button>
             ))}
           </div>
@@ -315,7 +425,7 @@ export function RichTextEditor({
           suppressContentEditableWarning
           role="textbox"
           aria-multiline="true"
-          aria-label={label ?? 'Editor de texto'}
+          aria-label={label ?? "Editor de texto"}
           onInput={emit}
           onBlur={emit}
           onKeyUp={rememberSelection}
@@ -328,7 +438,15 @@ export function RichTextEditor({
   );
 }
 
-function ToolButton({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
+function ToolButton({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -350,7 +468,11 @@ function Divider() {
 }
 
 function SwatchPicker({
-  label, icon, colors, onPick, onOpen,
+  label,
+  icon,
+  colors,
+  onPick,
+  onOpen,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -391,15 +513,27 @@ function SwatchPicker({
 }
 
 /** Documento -> DOM inicial da área de edição (só na montagem). */
-function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unknown; items?: unknown }): HTMLElement {
-  const spans = (node.spans ?? []) as { text: string; marks?: string[]; color?: string; highlight?: string; href?: string; img?: string }[];
+function nodeToElement(node: {
+  type: RichNodeType;
+  align?: string;
+  spans?: unknown;
+  items?: unknown;
+}): HTMLElement {
+  const spans = (node.spans ?? []) as {
+    text: string;
+    marks?: string[];
+    color?: string;
+    highlight?: string;
+    href?: string;
+    img?: string;
+  }[];
   const items = (node.items ?? []) as (typeof spans)[];
 
   const spanToNode = (s: (typeof spans)[number]): Node => {
     if (s.img) {
-      const img = document.createElement('img');
+      const img = document.createElement("img");
       img.src = s.img;
-      img.alt = s.text || '';
+      img.alt = s.text || "";
       return img;
     }
     let inner: Node = document.createTextNode(s.text);
@@ -408,21 +542,21 @@ function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unkno
       w.appendChild(inner);
       inner = w;
     };
-    if (s.marks?.includes('bold')) wrap('b');
-    if (s.marks?.includes('italic')) wrap('i');
-    if (s.marks?.includes('underline')) wrap('u');
-    if (s.marks?.includes('strike')) wrap('s');
-    if (s.marks?.includes('sup')) wrap('sup');
-    if (s.marks?.includes('sub')) wrap('sub');
+    if (s.marks?.includes("bold")) wrap("b");
+    if (s.marks?.includes("italic")) wrap("i");
+    if (s.marks?.includes("underline")) wrap("u");
+    if (s.marks?.includes("strike")) wrap("s");
+    if (s.marks?.includes("sup")) wrap("sup");
+    if (s.marks?.includes("sub")) wrap("sub");
     if (s.color || s.highlight) {
-      const w = document.createElement('span');
+      const w = document.createElement("span");
       if (s.color) w.style.color = s.color;
       if (s.highlight) w.style.backgroundColor = s.highlight;
       w.appendChild(inner);
       inner = w;
     }
     if (s.href) {
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = s.href;
       a.appendChild(inner);
       inner = a;
@@ -430,11 +564,11 @@ function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unkno
     return inner;
   };
 
-  if (node.type === 'ul' || node.type === 'ol') {
+  if (node.type === "ul" || node.type === "ol") {
     const list = document.createElement(node.type);
     if (node.align) list.style.textAlign = node.align;
     for (const item of items) {
-      const li = document.createElement('li');
+      const li = document.createElement("li");
       item.forEach((s) => li.appendChild(spanToNode(s)));
       list.appendChild(li);
     }
@@ -442,7 +576,7 @@ function nodeToElement(node: { type: RichNodeType; align?: string; spans?: unkno
   }
 
   // 'code' é o nome no documento; no DOM do editor ele é um <pre>.
-  const el = document.createElement(node.type === 'code' ? 'pre' : node.type);
+  const el = document.createElement(node.type === "code" ? "pre" : node.type);
   if (node.align) el.style.textAlign = node.align;
   spans.forEach((s) => el.appendChild(spanToNode(s)));
   return el;

@@ -169,4 +169,21 @@ O que **manteve** o acento, porque é seleção: o anel do bloco selecionado no
 canvas, a etapa corrente na lista, o chip ativo, o preset escolhido e o estilo
 de botão escolhido. Na barra, só `Publicar`.
 
-Resultado medido: **49 → 10 usos**, todos com o mesmo significado.
+O editor de texto rico e o Fluxo entraram junto, porque a regra vale para toda
+tela de construção e a deriva era a mesma:
+
+- O chip de **fundo de apoio** vinha preenchido de acento — o tratamento mais
+  forte da interface — num ajuste que é "só na edição" e nem chega ao quiz
+  publicado. Virou segmentado neutro: trilho acinzentado, o escolhido em branco.
+  De quebra, o rótulo saía da própria chave com `capitalize` e imprimia
+  **"Padrao"** sem til na tela.
+- No Fluxo, **todo** cartão trazia o número da etapa num selo cheio de acento.
+  Quando tudo tem acento, o acento marca "existe uma etapa aqui" — ou seja,
+  nada.
+
+Ficaram de fora, de propósito: o **anel de foco** (`focus-visible:ring-primary`),
+que é acessibilidade e não decoração, e o **botão de inserir etapa** no Fluxo,
+que é a única chamada para ação daquele canvas.
+
+Resultado medido no construtor, inspetor, editor de texto e Fluxo:
+**49 → 12 usos**, todos com o mesmo significado.
