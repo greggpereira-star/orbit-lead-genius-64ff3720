@@ -1,9 +1,9 @@
-import { createFileRoute, Link, useParams, useNavigate } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft,
   Save,
@@ -31,53 +31,84 @@ import {
   Sparkles,
   Trophy,
   ClipboardList,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/core/auth/hooks/useAuth';
-import { quizService } from '@/modules/quiz/services/quizService';
-import { useEditLock } from '@/modules/quiz/hooks/useEditLock';
-import { validarPublicacao } from '@/modules/quiz/lib/validarPublicacao';
-import { calcularConversaoPorEtapa, CORES_DE_FAIXA, MINIMO_PARA_NOTA, type ConversaoDaEtapa } from '@/modules/quiz/lib/stepConversion';
-import { EditLockBanner } from '@/modules/quiz/components/EditLockBanner';
-import { QuizPreview } from '@/modules/quiz/components/QuizPreview';
-import { QuizInspector } from '@/modules/quiz/components/QuizInspector';
-import { AccessRulesDialog } from '@/modules/quiz/components/AccessRulesDialog';
-import { QuizSettingsDialog } from '@/modules/quiz/components/QuizSettingsDialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { BLOCK_LIBRARY, BLOCK_CATEGORY_LABELS, type BlockCategory } from '@/modules/quiz/blocks-library';
-import { STEP_TEMPLATES } from '@/modules/quiz/step-templates';
-import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
-import { getSteps } from '@/modules/quiz/lib/steps';
-import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from '@/modules/quiz/types';
+  HelpCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import { quizService } from "@/modules/quiz/services/quizService";
+import { useEditLock } from "@/modules/quiz/hooks/useEditLock";
+import { validarPublicacao } from "@/modules/quiz/lib/validarPublicacao";
+import {
+  calcularConversaoPorEtapa,
+  CORES_DE_FAIXA,
+  MINIMO_PARA_NOTA,
+  type ConversaoDaEtapa,
+} from "@/modules/quiz/lib/stepConversion";
+import { EditLockBanner } from "@/modules/quiz/components/EditLockBanner";
+import { QuizPreview } from "@/modules/quiz/components/QuizPreview";
+import { QuizInspector } from "@/modules/quiz/components/QuizInspector";
+import { TutorialGuiado } from "@/modules/quiz/components/TutorialGuiado";
+import { useTutorial, PASSOS_DO_CONSTRUTOR } from "@/modules/quiz/hooks/useTutorial";
+import { AccessRulesDialog } from "@/modules/quiz/components/AccessRulesDialog";
+import { QuizSettingsDialog } from "@/modules/quiz/components/QuizSettingsDialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  BLOCK_LIBRARY,
+  BLOCK_CATEGORY_LABELS,
+  type BlockCategory,
+} from "@/modules/quiz/blocks-library";
+import { STEP_TEMPLATES } from "@/modules/quiz/step-templates";
+import { DEFAULT_DESIGN } from "@/modules/quiz/design-presets";
+import { getSteps } from "@/modules/quiz/lib/steps";
+import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from "@/modules/quiz/types";
 
 const CATEGORY_ORDER: BlockCategory[] = [
-  'captura', 'conteudo', 'interacao', 'oferta', 'gamificacao', 'midia', 'prova', 'resultado', 'layout', 'livre',
+  "captura",
+  "conteudo",
+  "interacao",
+  "oferta",
+  "gamificacao",
+  "midia",
+  "prova",
+  "resultado",
+  "layout",
+  "livre",
 ];
 
-export const Route = createFileRoute('/_app/quizzes_/$id/builder')({
+export const Route = createFileRoute("/_app/quizzes_/$id/builder")({
   component: QuizBuilderPage,
 });
 
 function QuizBuilderPage() {
-  const { id } = useParams({ from: '/_app/quizzes_/$id/builder' });
+  const { id } = useParams({ from: "/_app/quizzes_/$id/builder" });
   const { company, user } = useAuth();
   const navigate = useNavigate();
 
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
-  const [schema, setSchema] = useState<QuizSchema>({ blocks: [], design: DEFAULT_DESIGN, results: [] });
+  const [schema, setSchema] = useState<QuizSchema>({
+    blocks: [],
+    design: DEFAULT_DESIGN,
+    results: [],
+  });
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   /** Etapa escolhida na barra lateral como destino dos próximos componentes. */
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
-  const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("desktop");
   const [loading, setLoading] = useState(true);
+  const tutorial = useTutorial(!loading);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [accessRulesOpen, setAccessRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState<'blocks' | 'inspector' | null>(null);
+  const [mobilePanel, setMobilePanel] = useState<"blocks" | "inspector" | null>(null);
   const [isDesktop, setIsDesktop] = useState(true);
   const [autosave, setAutosave] = useState(true);
   const [publishing, setPublishing] = useState(false);
@@ -95,19 +126,25 @@ function QuizBuilderPage() {
 
   /* Conversão medida por etapa, dos últimos 30 dias. Carrega uma vez: é leitura
      de análise, não precisa acompanhar cada tecla digitada no construtor. */
-  const [eventosDeEtapa, setEventosDeEtapa] = useState<{ block_id: string | null; session_id: string | null }[]>([]);
+  const [eventosDeEtapa, setEventosDeEtapa] = useState<
+    { block_id: string | null; session_id: string | null }[]
+  >([]);
   useEffect(() => {
     let vivo = true;
-    quizService.getStepViewEvents(id, 30).then((e) => { if (vivo) setEventosDeEtapa(e); });
-    return () => { vivo = false; };
+    quizService.getStepViewEvents(id, 30).then((e) => {
+      if (vivo) setEventosDeEtapa(e);
+    });
+    return () => {
+      vivo = false;
+    };
   }, [id]);
 
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 1024px)');
+    const mql = window.matchMedia("(min-width: 1024px)");
     const onChange = () => setIsDesktop(mql.matches);
     onChange();
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {
@@ -125,13 +162,15 @@ function QuizBuilderPage() {
         setPublishedVersionId(pub.publishedVersionId);
         setLatestVersionId(pub.latestVersionId);
       } catch (e) {
-        console.error('Erro ao carregar quiz', e);
-        toast.error('Não foi possível carregar este quiz agora. Tente recarregar a página.');
+        console.error("Erro ao carregar quiz", e);
+        toast.error("Não foi possível carregar este quiz agora. Tente recarregar a página.");
       } finally {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   // `keepEmpty`: no builder uma etapa recém-criada vive vazia até ganhar o
@@ -159,7 +198,9 @@ function QuizBuilderPage() {
   const targetStep = useMemo(() => {
     const byPick = activeStepId ? steps.find((s) => s.id === activeStepId) : undefined;
     if (byPick) return byPick;
-    const byBlock = activeBlockId ? steps.find((s) => s.blockIds.includes(activeBlockId)) : undefined;
+    const byBlock = activeBlockId
+      ? steps.find((s) => s.blockIds.includes(activeBlockId))
+      : undefined;
     if (byBlock) return byBlock;
     return steps[0] ?? null;
   }, [steps, activeStepId, activeBlockId]);
@@ -168,7 +209,7 @@ function QuizBuilderPage() {
 
   const activeBlock = useMemo(
     () => schema.blocks.find((b) => b.id === activeBlockId) ?? null,
-    [schema.blocks, activeBlockId]
+    [schema.blocks, activeBlockId],
   );
 
   const updateSchema = (updater: (prev: QuizSchema) => QuizSchema) => {
@@ -212,14 +253,19 @@ function QuizBuilderPage() {
   const addStepTemplate = (templateId: string) => {
     const template = STEP_TEMPLATES.find((t) => t.id === templateId);
     if (!template) return;
-    const newBlocks: QuizBlock[] = template.create().map((b) => ({ id: crypto.randomUUID(), ...b }));
+    const newBlocks: QuizBlock[] = template
+      .create()
+      .map((b) => ({ id: crypto.randomUUID(), ...b }));
     updateSchema((prev) => ({
       ...prev,
       blocks: [...prev.blocks, ...newBlocks],
-      steps: [...(prev.steps ?? []), { id: `step-${newBlocks[0].id}`, blockIds: newBlocks.map((b) => b.id) }],
+      steps: [
+        ...(prev.steps ?? []),
+        { id: `step-${newBlocks[0].id}`, blockIds: newBlocks.map((b) => b.id) },
+      ],
     }));
     setActiveBlockId(newBlocks[0].id);
-    setMobilePanel('inspector');
+    setMobilePanel("inspector");
     toast.success(`Etapa "${template.name}" adicionada`);
   };
 
@@ -238,7 +284,7 @@ function QuizBuilderPage() {
     setActiveStepId(newStep.id);
     setActiveBlockId(null);
     setExpandedSteps((prev) => new Set(prev).add(newStep.id));
-    toast.success('Etapa criada — agora escolha os componentes dela');
+    toast.success("Etapa criada — agora escolha os componentes dela");
   };
 
   const addBlock = (defIndex: number) => {
@@ -280,7 +326,7 @@ function QuizBuilderPage() {
       setActiveStepId(targetId);
       setExpandedSteps((prev) => new Set(prev).add(targetId));
     }
-    setMobilePanel('inspector');
+    setMobilePanel("inspector");
   };
 
   /**
@@ -308,7 +354,11 @@ function QuizBuilderPage() {
         ...b,
         id: novoPorAntigo.get(b.id)!,
         childBlockIds: b.childBlockIds?.map((c) => novoPorAntigo.get(c) ?? c),
-        options: b.options?.map((o) => ({ ...o, id: crypto.randomUUID(), jumpToBlockId: undefined })),
+        options: b.options?.map((o) => ({
+          ...o,
+          id: crypto.randomUUID(),
+          jumpToBlockId: undefined,
+        })),
         logicRules: undefined,
       }));
 
@@ -331,7 +381,7 @@ function QuizBuilderPage() {
     });
     setActiveStepId(novaEtapa.id);
     setExpandedSteps((prev) => new Set(prev).add(novaEtapa.id));
-    toast.success('Etapa duplicada');
+    toast.success("Etapa duplicada");
   };
 
   /** Exclui a etapa inteira: a tela e todos os componentes dela. */
@@ -350,7 +400,10 @@ function QuizBuilderPage() {
     if (activeBlockId && idsToRemove.has(activeBlockId)) setActiveBlockId(null);
     if (activeStepId === stepId) setActiveStepId(null);
     toast(`Etapa excluída`, {
-      description: idsToRemove.size === 1 ? '1 componente removido' : `${idsToRemove.size} componentes removidos`,
+      description:
+        idsToRemove.size === 1
+          ? "1 componente removido"
+          : `${idsToRemove.size} componentes removidos`,
     });
   };
 
@@ -374,7 +427,7 @@ function QuizBuilderPage() {
     const posicaoNaEtapa = etapaDeOrigem ? etapaDeOrigem.blockIds.indexOf(target) : -1;
     // Excluir um Container leva seus filhos junto (como excluir uma pasta) — o
     // Desfazer restaura os dois, já que `removed.childBlockIds` continua intacto.
-    const cascadeIds = removed.type === 'container' ? (removed.childBlockIds ?? []) : [];
+    const cascadeIds = removed.type === "container" ? (removed.childBlockIds ?? []) : [];
     const removedCascade = cascadeIds
       .map((id) => schema.blocks.find((b) => b.id === id))
       .filter((b): b is QuizBlock => !!b);
@@ -384,54 +437,69 @@ function QuizBuilderPage() {
       blocks: prev.blocks
         .filter((b) => !idsToRemove.has(b.id))
         // se o bloco excluído era filho de outro Container, tira a referência de lá também
-        .map((b) => (b.childBlockIds?.includes(target) ? { ...b, childBlockIds: b.childBlockIds.filter((id) => id !== target) } : b)),
+        .map((b) =>
+          b.childBlockIds?.includes(target)
+            ? { ...b, childBlockIds: b.childBlockIds.filter((id) => id !== target) }
+            : b,
+        ),
       // A etapa fica, mesmo esvaziada: apagar um componente é apagar um
       // componente. Quem apaga a tela é o botão de excluir etapa.
       steps: getSteps(prev, { keepEmpty: true }).map((s) =>
-        s.blockIds.includes(target) ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) } : s,
+        s.blockIds.includes(target)
+          ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) }
+          : s,
       ),
     }));
     if (target === activeBlockId) setActiveBlockId(null);
-    toast(cascadeIds.length > 0 ? `Container e ${cascadeIds.length} componente(s) excluídos` : 'Bloco excluído', {
-      description: removed.title || removed.resultTitle || removed.type,
-      action: {
-        label: 'Desfazer',
-        onClick: () => {
-          updateSchema((prev) => {
-            const nextBlocks = Array.from(prev.blocks);
-            nextBlocks.splice(index, 0, removed, ...removedCascade);
+    toast(
+      cascadeIds.length > 0
+        ? `Container e ${cascadeIds.length} componente(s) excluídos`
+        : "Bloco excluído",
+      {
+        description: removed.title || removed.resultTitle || removed.type,
+        action: {
+          label: "Desfazer",
+          onClick: () => {
+            updateSchema((prev) => {
+              const nextBlocks = Array.from(prev.blocks);
+              nextBlocks.splice(index, 0, removed, ...removedCascade);
 
-            /* Devolve o bloco À ETAPA DE ONDE SAIU, na posição em que estava.
+              /* Devolve o bloco À ETAPA DE ONDE SAIU, na posição em que estava.
                Antes ele voltava como uma etapa NOVA: desfazer a exclusão de um
                componente de uma tela com três partia a tela em duas, e o
                `getSteps` sem `keepEmpty` ainda apagava as etapas vazias que
                existiam. Desfazer precisa devolver o estado anterior, não um
                parecido. */
-            const base = getSteps(prev, { keepEmpty: true });
-            const alvo = etapaDeOrigem ? base.findIndex((s) => s.id === etapaDeOrigem.id) : -1;
+              const base = getSteps(prev, { keepEmpty: true });
+              const alvo = etapaDeOrigem ? base.findIndex((s) => s.id === etapaDeOrigem.id) : -1;
 
-            if (alvo >= 0) {
-              const restoredSteps = base.map((s, i) => {
-                if (i !== alvo) return s;
-                const ids = Array.from(s.blockIds);
-                ids.splice(posicaoNaEtapa >= 0 ? Math.min(posicaoNaEtapa, ids.length) : ids.length, 0, removed.id);
-                return { ...s, blockIds: ids };
-              });
-              return { ...prev, blocks: nextBlocks, steps: restoredSteps };
-            }
+              if (alvo >= 0) {
+                const restoredSteps = base.map((s, i) => {
+                  if (i !== alvo) return s;
+                  const ids = Array.from(s.blockIds);
+                  ids.splice(
+                    posicaoNaEtapa >= 0 ? Math.min(posicaoNaEtapa, ids.length) : ids.length,
+                    0,
+                    removed.id,
+                  );
+                  return { ...s, blockIds: ids };
+                });
+                return { ...prev, blocks: nextBlocks, steps: restoredSteps };
+              }
 
-            // A etapa de origem sumiu junto (foi excluída inteira): recria uma
-            // para o bloco não ficar órfão.
-            return {
-              ...prev,
-              blocks: nextBlocks,
-              steps: [...base, { id: `step-${removed.id}`, blockIds: [removed.id] }],
-            };
-          });
-          setActiveBlockId(removed.id);
+              // A etapa de origem sumiu junto (foi excluída inteira): recria uma
+              // para o bloco não ficar órfão.
+              return {
+                ...prev,
+                blocks: nextBlocks,
+                steps: [...base, { id: `step-${removed.id}`, blockIds: [removed.id] }],
+              };
+            });
+            setActiveBlockId(removed.id);
+          },
         },
       },
-    });
+    );
   };
 
   // Move um bloco existente (de qualquer etapa) pra dentro de um Container — tira
@@ -440,10 +508,12 @@ function QuizBuilderPage() {
     updateSchema((prev) => ({
       ...prev,
       blocks: prev.blocks.map((b) =>
-        b.id === containerId ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), blockId] } : b
+        b.id === containerId ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), blockId] } : b,
       ),
       steps: getSteps(prev, { keepEmpty: true }).map((s) =>
-        s.blockIds.includes(blockId) ? { ...s, blockIds: s.blockIds.filter((id) => id !== blockId) } : s,
+        s.blockIds.includes(blockId)
+          ? { ...s, blockIds: s.blockIds.filter((id) => id !== blockId) }
+          : s,
       ),
     }));
   };
@@ -468,7 +538,9 @@ function QuizBuilderPage() {
       return {
         ...prev,
         blocks: prev.blocks.map((b) =>
-          b.id === containerId ? { ...b, childBlockIds: (b.childBlockIds ?? []).filter((id) => id !== blockId) } : b,
+          b.id === containerId
+            ? { ...b, childBlockIds: (b.childBlockIds ?? []).filter((id) => id !== blockId) }
+            : b,
         ),
         steps,
       };
@@ -496,7 +568,9 @@ function QuizBuilderPage() {
       ...prev,
       blocks: [
         ...prev.blocks.map((b) =>
-          b.id === containerId ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), newBlock.id] } : b
+          b.id === containerId
+            ? { ...b, childBlockIds: [...(b.childBlockIds ?? []), newBlock.id] }
+            : b,
         ),
         newBlock,
       ],
@@ -517,7 +591,8 @@ function QuizBuilderPage() {
        etapa. Normalizar aqui faz soltar no canvas e soltar no painel caírem
        nas mesmas regras — antes o canvas não batia com nenhum ramo e arrastar
        lá dentro simplesmente não fazia nada. */
-    const unprefix = (dropId: string) => (dropId.startsWith('canvas-step-') ? dropId.slice('canvas-'.length) : dropId);
+    const unprefix = (dropId: string) =>
+      dropId.startsWith("canvas-step-") ? dropId.slice("canvas-".length) : dropId;
     const result: DropResult = {
       ...rawResult,
       source: { ...rawResult.source, droppableId: unprefix(rawResult.source.droppableId) },
@@ -527,25 +602,32 @@ function QuizBuilderPage() {
     };
     const { destination, source, draggableId } = result;
     if (!destination) return;
-    if (destination.droppableId === 'palette') return;
+    if (destination.droppableId === "palette") return;
 
-    if (source.droppableId === 'palette') {
-      const type = draggableId.replace('palette-', '');
+    if (source.droppableId === "palette") {
+      const type = draggableId.replace("palette-", "");
       const defIndex = BLOCK_LIBRARY.findIndex((d) => d.type === type);
       if (defIndex === -1) return;
       const def = BLOCK_LIBRARY[defIndex];
       const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
 
-      if (destination.droppableId.startsWith('step-')) {
+      if (destination.droppableId.startsWith("step-")) {
         // Soltou dentro de uma etapa já expandida — só adiciona o componente a ela,
         // não cria uma etapa nova (pedido explícito: nova etapa só nasce por ação clara).
-        const targetStepId = destination.droppableId.slice('step-'.length);
+        const targetStepId = destination.droppableId.slice("step-".length);
         updateSchema((prev) => {
           const prevSteps = getSteps(prev, { keepEmpty: true });
           const nextSteps = prevSteps.map((s) =>
             s.id === targetStepId
-              ? { ...s, blockIds: [...s.blockIds.slice(0, destination.index), newBlock.id, ...s.blockIds.slice(destination.index)] }
-              : s
+              ? {
+                  ...s,
+                  blockIds: [
+                    ...s.blockIds.slice(0, destination.index),
+                    newBlock.id,
+                    ...s.blockIds.slice(destination.index),
+                  ],
+                }
+              : s,
           );
           return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
         });
@@ -553,17 +635,20 @@ function QuizBuilderPage() {
         // Soltou na lista de etapas (fora de uma expandida) — cria etapa nova.
         updateSchema((prev) => {
           const nextSteps = Array.from(getSteps(prev, { keepEmpty: true }));
-          nextSteps.splice(destination.index, 0, { id: `step-${newBlock.id}`, blockIds: [newBlock.id] });
+          nextSteps.splice(destination.index, 0, {
+            id: `step-${newBlock.id}`,
+            blockIds: [newBlock.id],
+          });
           return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
         });
       }
       setActiveBlockId(newBlock.id);
-      setMobilePanel('inspector');
+      setMobilePanel("inspector");
       return;
     }
 
     // Reordena as opções de uma pergunta (o painel vive dentro deste contexto).
-    if (source.droppableId.startsWith('options-')) {
+    if (source.droppableId.startsWith("options-")) {
       if (destination.droppableId !== source.droppableId) return;
       if (source.index === destination.index) return;
       const targetId = activeBlockId;
@@ -581,7 +666,7 @@ function QuizBuilderPage() {
       return;
     }
 
-    if (source.droppableId === 'steps') {
+    if (source.droppableId === "steps") {
       // Reordena etapas inteiras.
       if (source.index === destination.index) return;
       applySteps((prev) => {
@@ -593,9 +678,11 @@ function QuizBuilderPage() {
       return;
     }
 
-    if (source.droppableId.startsWith('step-')) {
-      const sourceStepId = source.droppableId.slice('step-'.length);
-      const destStepId = destination.droppableId.startsWith('step-') ? destination.droppableId.slice('step-'.length) : null;
+    if (source.droppableId.startsWith("step-")) {
+      const sourceStepId = source.droppableId.slice("step-".length);
+      const destStepId = destination.droppableId.startsWith("step-")
+        ? destination.droppableId.slice("step-".length)
+        : null;
       if (!destStepId) return; // não suportado: soltar um componente já existente fora de qualquer etapa
 
       if (sourceStepId === destStepId) {
@@ -607,7 +694,7 @@ function QuizBuilderPage() {
             const [moved] = ids.splice(source.index, 1);
             if (moved) ids.splice(destination.index, 0, moved);
             return { ...s, blockIds: ids };
-          })
+          }),
         );
         return;
       }
@@ -618,7 +705,9 @@ function QuizBuilderPage() {
         // A etapa de origem fica mesmo se esvaziar: tirar o último componente
         // dela não é o mesmo que dizer "quero apagar esta tela".
         const withoutMoved = getSteps(prev, { keepEmpty: true }).map((s) =>
-          s.id === sourceStepId ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) } : s,
+          s.id === sourceStepId
+            ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== movedId) }
+            : s,
         );
         return withoutMoved.map((s) => {
           if (s.id !== destStepId) return s;
@@ -638,21 +727,24 @@ function QuizBuilderPage() {
        justamente para a gravação deliberada, que é a pior de perder. */
     if (!trava.souDono) {
       if (!opts?.silent) {
-        toast.error('A edição deste quiz está com outra aba. Peça o controle para poder salvar.');
+        toast.error("A edição deste quiz está com outra aba. Peça o controle para poder salvar.");
       }
       return null;
     }
     setSaving(true);
     try {
       const versionId = await quizService.saveSchema({
-        quizId: id, companyId: company.id, userId: user.id, schema,
+        quizId: id,
+        companyId: company.id,
+        userId: user.id,
+        schema,
       });
       setLatestVersionId(versionId);
       if (!opts?.silent) {
         toast.success(
-          quiz?.status === 'published'
-            ? 'Rascunho salvo — publique para o link público mudar'
-            : 'Alterações salvas',
+          quiz?.status === "published"
+            ? "Rascunho salvo — publique para o link público mudar"
+            : "Alterações salvas",
         );
       }
       setDirty(false);
@@ -660,12 +752,14 @@ function QuizBuilderPage() {
       setLastSavedAt(new Date());
       return versionId;
     } catch (e) {
-      console.error('Erro ao salvar quiz', e);
+      console.error("Erro ao salvar quiz", e);
       // Mesmo num autosave silencioso, uma FALHA nunca pode passar despercebida —
       // senão o usuário acha que está tudo salvo e perde trabalho. Marca o estado de
       // erro (o indicador fica vermelho) e avisa uma vez por falha.
       setSaveError(true);
-      toast.error('Não foi possível salvar. Suas alterações ainda estão só nesta aba — tente salvar de novo.');
+      toast.error(
+        "Não foi possível salvar. Suas alterações ainda estão só nesta aba — tente salvar de novo.",
+      );
       return null;
     } finally {
       setSaving(false);
@@ -696,16 +790,19 @@ function QuizBuilderPage() {
      ainda há a janela de 1,5s em que o trabalho só existe nesta aba. */
   useEffect(() => {
     if (!dirty) return;
-    const avisar = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', avisar);
-    return () => window.removeEventListener('beforeunload', avisar);
+    const avisar = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
   }, [dirty]);
 
   /* Só um quiz publicado pode ter "alteração fora do ar": num rascunho, tudo
      ainda está por publicar e o aviso não significaria nada. `dirty` entra
      porque edição não salva também é mudança que o visitante não vê. */
   const hasUnpublishedChanges =
-    quiz?.status === 'published' &&
+    quiz?.status === "published" &&
     (dirty || (!!latestVersionId && latestVersionId !== publishedVersionId));
 
   /**
@@ -716,14 +813,15 @@ function QuizBuilderPage() {
    * Devolve `true` quando pode seguir.
    */
   const passouNaChecagem = (): boolean => {
-    const tiers = (quiz?.settings?.score_tiers as import('@/modules/quiz/types').ScoreTier[] | undefined) ?? [];
+    const tiers =
+      (quiz?.settings?.score_tiers as import("@/modules/quiz/types").ScoreTier[] | undefined) ?? [];
     const achados = validarPublicacao(schema, tiers);
-    const bloqueios = achados.filter((a) => a.nivel === 'bloqueia');
-    const avisos = achados.filter((a) => a.nivel === 'avisa');
+    const bloqueios = achados.filter((a) => a.nivel === "bloqueia");
+    const avisos = achados.filter((a) => a.nivel === "avisa");
 
     if (bloqueios.length) {
-      toast.error('Este quiz ainda não pode ir ao ar', {
-        description: bloqueios.map((b) => `• ${b.mensagem}`).join('\n'),
+      toast.error("Este quiz ainda não pode ir ao ar", {
+        description: bloqueios.map((b) => `• ${b.mensagem}`).join("\n"),
         duration: 12000,
       });
       return false;
@@ -731,8 +829,8 @@ function QuizBuilderPage() {
     if (avisos.length) {
       // Aviso não barra: faixa sem mensagem ou quiz sem tela de resultado são
       // escolhas legítimas, só raramente intencionais.
-      toast.warning('Publicado, mas vale conferir', {
-        description: avisos.map((a) => `• ${a.mensagem}`).join('\n'),
+      toast.warning("Publicado, mas vale conferir", {
+        description: avisos.map((a) => `• ${a.mensagem}`).join("\n"),
         duration: 10000,
       });
     }
@@ -753,10 +851,10 @@ function QuizBuilderPage() {
       const pub = await quizService.getPublishState(id);
       setPublishedVersionId(pub.publishedVersionId);
       setLatestVersionId(pub.latestVersionId);
-      toast.success('Alterações publicadas — o link público já mostra a versão nova.');
+      toast.success("Alterações publicadas — o link público já mostra a versão nova.");
     } catch (e) {
-      console.error('Erro ao publicar alterações', e);
-      toast.error('Não foi possível publicar agora. Seu rascunho está salvo.');
+      console.error("Erro ao publicar alterações", e);
+      toast.error("Não foi possível publicar agora. Seu rascunho está salvo.");
     } finally {
       setPublishing(false);
     }
@@ -764,21 +862,24 @@ function QuizBuilderPage() {
 
   const handleTogglePublish = async () => {
     if (!quiz) return;
-    if (quiz.status === 'published' && !window.confirm('Despublicar este quiz? O link público deixará de funcionar imediatamente.')) {
+    if (
+      quiz.status === "published" &&
+      !window.confirm("Despublicar este quiz? O link público deixará de funcionar imediatamente.")
+    ) {
       return;
     }
     // A checagem só vale para PUBLICAR. Despublicar um quiz quebrado é
     // justamente o que se quer poder fazer.
-    if (quiz.status !== 'published' && !passouNaChecagem()) return;
+    if (quiz.status !== "published" && !passouNaChecagem()) return;
     setPublishing(true);
     try {
       const target = dirty ? await handleSave({ silent: true }) : latestVersionId;
-      if (quiz.status === 'published') {
+      if (quiz.status === "published") {
         await quizService.unpublish(id);
-        toast.success('Quiz despublicado — o link público deixou de funcionar.');
+        toast.success("Quiz despublicado — o link público deixou de funcionar.");
       } else {
         await quizService.publish(id, target ?? undefined);
-        toast.success('Quiz publicado! O link público já está no ar.');
+        toast.success("Quiz publicado! O link público já está no ar.");
       }
       const [fresh, pub] = await Promise.all([
         quizService.getById(id),
@@ -788,8 +889,8 @@ function QuizBuilderPage() {
       setPublishedVersionId(pub.publishedVersionId);
       setLatestVersionId(pub.latestVersionId);
     } catch (e) {
-      console.error('Erro ao publicar/despublicar quiz', e);
-      toast.error('Não foi possível atualizar a publicação agora.');
+      console.error("Erro ao publicar/despublicar quiz", e);
+      toast.error("Não foi possível atualizar a publicação agora.");
     } finally {
       setPublishing(false);
     }
@@ -808,7 +909,7 @@ function QuizBuilderPage() {
     return CATEGORY_ORDER.map((category) => ({
       category,
       items: BLOCK_LIBRARY.map((def, defIndex) => ({ def, defIndex })).filter(
-        ({ def }) => def.category === category
+        ({ def }) => def.category === category,
       ),
     }))
       .filter((g) => g.items.length > 0)
@@ -822,7 +923,9 @@ function QuizBuilderPage() {
     <>
       <div className="p-3 border-b">
         <h3 className="font-bold text-sm mb-2">Modelos prontos</h3>
-        <p className="text-[11px] text-muted-foreground mb-3">Insere uma etapa completa, já montada — é só personalizar os textos.</p>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Insere uma etapa completa, já montada — é só personalizar os textos.
+        </p>
         <div className="space-y-1.5">
           {STEP_TEMPLATES.map((t) => (
             <button
@@ -834,7 +937,9 @@ function QuizBuilderPage() {
               <span className="text-base leading-none mt-0.5">{t.emoji}</span>
               <span className="min-w-0">
                 <span className="block text-xs font-semibold leading-tight">{t.name}</span>
-                <span className="block text-[10px] text-muted-foreground leading-tight mt-0.5">{t.description}</span>
+                <span className="block text-[10px] text-muted-foreground leading-tight mt-0.5">
+                  {t.description}
+                </span>
               </span>
             </button>
           ))}
@@ -857,7 +962,8 @@ function QuizBuilderPage() {
             <LayoutGrid className="h-3 w-3 shrink-0 text-primary" />
             <span className="min-w-0 flex-1 truncate">
               Adicionando na <strong className="font-semibold">Etapa {targetStepIndex + 1}</strong>
-              {targetStep.blockIds.length > 0 && ` · ${targetStep.blockIds.length} componente${targetStep.blockIds.length > 1 ? 's' : ''}`}
+              {targetStep.blockIds.length > 0 &&
+                ` · ${targetStep.blockIds.length} componente${targetStep.blockIds.length > 1 ? "s" : ""}`}
             </span>
           </button>
         ) : (
@@ -865,58 +971,70 @@ function QuizBuilderPage() {
             O primeiro bloco cria a Etapa 1. Depois, cada bloco entra na etapa selecionada.
           </p>
         )}
-        <p className="text-[11px] text-muted-foreground mb-3">Arraste até o canvas ou clique para adicionar</p>
-        <Droppable droppableId="palette" isDropDisabled>
-          {(provided) => (
-            <div ref={provided.innerRef} {...provided.droppableProps}>
-              <Accordion type="multiple" defaultValue={CATEGORY_ORDER} className="space-y-1">
-                {groupedBlocks.map(({ category, items }) => (
-                  <AccordionItem key={category} value={category} className="border-b-0">
-                    <AccordionTrigger className="py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:no-underline">
-                      {BLOCK_CATEGORY_LABELS[category]}
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-2 pt-0">
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {items.map(({ def, defIndex, paletteIndex }) => (
-                          <Draggable key={def.type} draggableId={`palette-${def.type}`} index={paletteIndex}>
-                            {(dragProvided, dragSnapshot) => (
-                              <div
-                                ref={dragProvided.innerRef}
-                                {...dragProvided.draggableProps}
-                                {...dragProvided.dragHandleProps}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => addBlock(defIndex)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') addBlock(defIndex);
-                                }}
-                                title={def.description}
-                                className={`relative text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing select-none ${
-                                  dragSnapshot.isDragging ? 'shadow-xl ring-2 ring-primary/40 bg-card' : ''
-                                }`}
-                              >
-                                <GripVertical className="absolute right-1 top-1 h-3 w-3 text-muted-foreground opacity-40" />
-                                <def.icon className="h-4 w-4 mb-1 text-primary" />
-                                <div className="text-xs font-semibold leading-tight pr-3">{def.label}</div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Arraste até o canvas ou clique para adicionar
+        </p>
+        <div data-tutorial="componentes">
+          <Droppable droppableId="palette" isDropDisabled>
+            {(provided) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}>
+                <Accordion type="multiple" defaultValue={CATEGORY_ORDER} className="space-y-1">
+                  {groupedBlocks.map(({ category, items }) => (
+                    <AccordionItem key={category} value={category} className="border-b-0">
+                      <AccordionTrigger className="py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:no-underline">
+                        {BLOCK_CATEGORY_LABELS[category]}
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-2 pt-0">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {items.map(({ def, defIndex, paletteIndex }) => (
+                            <Draggable
+                              key={def.type}
+                              draggableId={`palette-${def.type}`}
+                              index={paletteIndex}
+                            >
+                              {(dragProvided, dragSnapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  {...dragProvided.dragHandleProps}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => addBlock(defIndex)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") addBlock(defIndex);
+                                  }}
+                                  title={def.description}
+                                  className={`relative text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing select-none ${
+                                    dragSnapshot.isDragging
+                                      ? "shadow-xl ring-2 ring-primary/40 bg-card"
+                                      : ""
+                                  }`}
+                                >
+                                  <GripVertical className="absolute right-1 top-1 h-3 w-3 text-muted-foreground opacity-40" />
+                                  <def.icon className="h-4 w-4 mb-1 text-primary" />
+                                  <div className="text-xs font-semibold leading-tight pr-3">
+                                    {def.label}
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </div>
       </div>
-      <div className="p-3">
+      <div className="p-3" data-tutorial="etapas">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-sm">Etapas ({steps.length})</h3>
           <button
-            onClick={() => navigate({ to: '/quizzes/$id/design', params: { id } })}
+            onClick={() => navigate({ to: "/quizzes/$id/design", params: { id } })}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
             <Palette className="h-3 w-3" /> Design
@@ -931,11 +1049,19 @@ function QuizBuilderPage() {
         </Button>
         <Droppable droppableId="steps">
           {(stepsProvided) => (
-            <div className="space-y-1.5" ref={stepsProvided.innerRef} {...stepsProvided.droppableProps}>
+            <div
+              className="space-y-1.5"
+              ref={stepsProvided.innerRef}
+              {...stepsProvided.droppableProps}
+            >
               {steps.map((step, stepIdx) => {
-                const stepBlocks = step.blockIds.map((bid) => schema.blocks.find((b) => b.id === bid)).filter(Boolean) as QuizBlock[];
+                const stepBlocks = step.blockIds
+                  .map((bid) => schema.blocks.find((b) => b.id === bid))
+                  .filter(Boolean) as QuizBlock[];
                 const firstBlock = stepBlocks[0];
-                const firstDef = firstBlock ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type) : undefined;
+                const firstDef = firstBlock
+                  ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type)
+                  : undefined;
                 // TODA etapa expande — inclusive a de um componente só.
                 //
                 // Antes, etapa com 1 bloco virava "solo": sem seta, sem área de
@@ -953,8 +1079,10 @@ function QuizBuilderPage() {
                         {...stepDragProvided.draggableProps}
                         className={`rounded-xl border transition-all ${
                           stepDragSnapshot.isDragging
-                            ? 'shadow-lg bg-card ring-2 ring-primary/40'
-                            : isTarget ? 'border-primary/30 bg-primary/[0.03]' : 'border-transparent'
+                            ? "shadow-lg bg-card ring-2 ring-primary/40"
+                            : isTarget
+                              ? "border-primary/30 bg-primary/[0.03]"
+                              : "border-transparent"
                         }`}
                       >
                         <div
@@ -962,14 +1090,17 @@ function QuizBuilderPage() {
                           tabIndex={0}
                           /* Clicar na etapa a torna o destino dos próximos
                              componentes — é assim que se escolhe onde montar. */
-                          onClick={() => { setActiveStepId(step.id); toggleStepExpanded(step.id); }}
+                          onClick={() => {
+                            setActiveStepId(step.id);
+                            toggleStepExpanded(step.id);
+                          }}
                           onKeyDown={(e) => {
-                            if (e.key !== 'Enter') return;
+                            if (e.key !== "Enter") return;
                             setActiveStepId(step.id);
                             toggleStepExpanded(step.id);
                           }}
                           className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
-                            expanded ? 'bg-muted' : 'hover:bg-muted border border-transparent'
+                            expanded ? "bg-muted" : "hover:bg-muted border border-transparent"
                           }`}
                         >
                           <div
@@ -980,7 +1111,11 @@ function QuizBuilderPage() {
                             <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                            {firstDef ? <firstDef.icon className="h-3.5 w-3.5 text-primary" /> : <LayoutGrid className="h-3.5 w-3.5 text-primary" />}
+                            {firstDef ? (
+                              <firstDef.icon className="h-3.5 w-3.5 text-primary" />
+                            ) : (
+                              <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+                            )}
                           </div>
                           {/* Verificado na tela: o nome vinha cortado em ~10
                               caracteres ("Telefone ...", "Grade 2 ..."), porque
@@ -994,15 +1129,18 @@ function QuizBuilderPage() {
                             </div>
                             <div className="truncate text-[10px] text-muted-foreground">
                               {stepBlocks.length === 0
-                                ? 'Vazia — escolha um bloco'
-                                : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}`}
+                                ? "Vazia — escolha um bloco"
+                                : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ""}`}
                             </div>
                           </div>
                           <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
                           {/* Duplicar e excluir só aparecem com o ponteiro em
                               cima: quatro ícones permanentes espremiam o nome. */}
                           <button
-                            onClick={(e) => { e.stopPropagation(); duplicateStep(step.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateStep(step.id);
+                            }}
                             className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-foreground group-hover:block"
                             aria-label={`Duplicar ${step.name || `Etapa ${stepIdx + 1}`}`}
                             title="Duplicar etapa"
@@ -1010,7 +1148,10 @@ function QuizBuilderPage() {
                             <Copy className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteStep(step.id);
+                            }}
                             className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-destructive group-hover:block"
                             aria-label={`Excluir ${step.name || `Etapa ${stepIdx + 1}`} e seus componentes`}
                           >
@@ -1049,7 +1190,9 @@ function QuizBuilderPage() {
                             onChange={(patch) =>
                               applySteps((prev) =>
                                 getSteps(prev, { keepEmpty: true }).map((x) =>
-                                  x.id === step.id ? { ...x, design: { ...x.design, ...patch } } : x,
+                                  x.id === step.id
+                                    ? { ...x, design: { ...x.design, ...patch } }
+                                    : x,
                                 ),
                               )
                             }
@@ -1066,8 +1209,8 @@ function QuizBuilderPage() {
                                 {stepBlocks.length === 0 && (
                                   <p className="rounded-lg border border-dashed px-2 py-4 text-center text-[10px] text-muted-foreground">
                                     {isTarget
-                                      ? 'Clique num bloco da paleta — ele entra aqui.'
-                                      : 'Etapa vazia. Selecione-a para adicionar componentes.'}
+                                      ? "Clique num bloco da paleta — ele entra aqui."
+                                      : "Etapa vazia. Selecione-a para adicionar componentes."}
                                   </p>
                                 )}
                                 {stepBlocks.map((b, bi) => {
@@ -1080,13 +1223,22 @@ function QuizBuilderPage() {
                                           {...dragProvided.draggableProps}
                                           role="button"
                                           tabIndex={0}
-                                          onClick={() => { setActiveBlockId(b.id); setMobilePanel('inspector'); }}
+                                          onClick={() => {
+                                            setActiveBlockId(b.id);
+                                            setMobilePanel("inspector");
+                                          }}
                                           onKeyDown={(e) => {
-                                            if (e.key === 'Enter') { setActiveBlockId(b.id); setMobilePanel('inspector'); }
+                                            if (e.key === "Enter") {
+                                              setActiveBlockId(b.id);
+                                              setMobilePanel("inspector");
+                                            }
                                           }}
                                           className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
-                                            dragSnapshot.isDragging ? 'shadow-lg bg-card ring-2 ring-primary/40' :
-                                            activeBlockId === b.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-background border border-transparent'
+                                            dragSnapshot.isDragging
+                                              ? "shadow-lg bg-card ring-2 ring-primary/40"
+                                              : activeBlockId === b.id
+                                                ? "bg-primary/10 border border-primary/30"
+                                                : "hover:bg-background border border-transparent"
                                           }`}
                                         >
                                           <div
@@ -1097,14 +1249,25 @@ function QuizBuilderPage() {
                                             <GripVertical className="h-3 w-3 text-muted-foreground" />
                                           </div>
                                           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                                            {def ? <def.icon className="h-3 w-3 text-primary" /> : <LayoutGrid className="h-3 w-3 text-primary" />}
+                                            {def ? (
+                                              <def.icon className="h-3 w-3 text-primary" />
+                                            ) : (
+                                              <LayoutGrid className="h-3 w-3 text-primary" />
+                                            )}
                                           </div>
                                           <div className="min-w-0 flex-1">
-                                            <div className="text-xs font-medium truncate">{b.title || b.resultTitle || def?.label || b.type}</div>
-                                            <div className="text-[10px] text-muted-foreground truncate">{def?.label ?? b.type}</div>
+                                            <div className="text-xs font-medium truncate">
+                                              {b.title || b.resultTitle || def?.label || b.type}
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground truncate">
+                                              {def?.label ?? b.type}
+                                            </div>
                                           </div>
                                           <button
-                                            onClick={(e) => { e.stopPropagation(); deleteBlock(b.id); }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              deleteBlock(b.id);
+                                            }}
                                             className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                                             aria-label="Excluir componente"
                                           >
@@ -1143,215 +1306,300 @@ function QuizBuilderPage() {
 
   return createPortal(
     <DragDropContext onDragEnd={handleDragEnd}>
-    <div className="fixed inset-0 flex flex-col bg-background z-40">
-      {/* Topbar */}
-      <header className="h-14 border-b flex items-center justify-between gap-2 px-2 sm:px-4 shrink-0">
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-          <Button asChild variant="ghost" size="sm" className="shrink-0 px-2 sm:px-3">
-            <Link to="/quizzes">
-              <ArrowLeft className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Voltar</span>
-            </Link>
-          </Button>
-          <div className="border-l pl-2 sm:pl-3 min-w-0">
-            <h1 className="font-bold text-sm leading-none truncate max-w-[100px] min-[420px]:max-w-[160px] sm:max-w-[280px]">
-              {quiz?.name ?? 'Quiz'}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">Builder</p>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
-          <Button size="sm" variant={device === 'mobile' ? 'secondary' : 'ghost'} onClick={() => setDevice('mobile')} aria-label="Visualizar em celular" aria-pressed={device === 'mobile'}><Smartphone className="h-4 w-4" /></Button>
-          <Button size="sm" variant={device === 'tablet' ? 'secondary' : 'ghost'} onClick={() => setDevice('tablet')} aria-label="Visualizar em tablet" aria-pressed={device === 'tablet'}><Tablet className="h-4 w-4" /></Button>
-          <Button size="sm" variant={device === 'desktop' ? 'secondary' : 'ghost'} onClick={() => setDevice('desktop')} aria-label="Visualizar em desktop" aria-pressed={device === 'desktop'}><Monitor className="h-4 w-4" /></Button>
-        </div>
-
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="lg:hidden px-2"
-            onClick={() => setMobilePanel('blocks')}
-            aria-label="Blocos"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="lg:hidden px-2"
-            onClick={() => setMobilePanel('inspector')}
-            aria-label="Editar / Design"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-2 px-2 sm:px-3">
-            <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Configurações</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/design', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Design</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/results', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Resultados</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/responses', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Respostas</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/insights', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <Sparkles className="h-4 w-4" /> <span className="hidden sm:inline">Análise</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/flow', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <Workflow className="h-4 w-4" /> <span className="hidden sm:inline">Fluxo</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/leads', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <Users className="h-4 w-4" /> <span className="hidden sm:inline">Leads</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setAccessRulesOpen(true)} className="gap-2 px-2 sm:px-3">
-            <ShieldCheck className="h-4 w-4" /> <span className="hidden sm:inline">Regras de acesso</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/preview', params: { id } })} className="gap-2 px-2 sm:px-3">
-            <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Preview</span>
-          </Button>
-          <div className="hidden lg:flex items-center gap-1.5 border rounded-lg px-2 py-1 shrink-0">
-            <Switch id="autosave" checked={autosave} onCheckedChange={setAutosave} className="scale-90" />
-            <label htmlFor="autosave" className="text-xs font-medium text-muted-foreground cursor-pointer whitespace-nowrap">
-              Salvamento automático
-            </label>
-          </div>
-          {saveError ? (
-            <button
-              onClick={() => handleSave()}
-              className="flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive shrink-0 hover:bg-destructive/20 transition-colors"
-              title="Falha ao salvar — clique para tentar de novo"
-            >
-              <AlertCircle className="h-3.5 w-3.5" />
-              <span className="hidden min-[420px]:inline">Erro — tentar de novo</span>
-            </button>
-          ) : (
-            <div
-              className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
-                saving
-                  ? 'border-primary/40 bg-primary/10 text-primary'
-                  : dirty
-                    ? 'border-[var(--aviso-borda)] bg-[var(--aviso-suave)] text-[var(--aviso)]'
-                    : 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] text-[var(--sucesso)]'
-              }`}
-              aria-live="polite"
-            >
-              {saving ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-[var(--aviso)] animate-pulse' : 'bg-[var(--sucesso)]'}`} />
-              )}
-              {/* "Salvo" sozinho virou meia verdade num quiz publicado: o
-                  rascunho está salvo, mas o visitante continua vendo a versão
-                  antiga. O indicador precisa dizer as duas coisas. */}
-              <span className="hidden min-[420px]:inline">
-                {saving
-                  ? 'Salvando…'
-                  : dirty
-                    ? 'Não salvo'
-                    : hasUnpublishedChanges
-                      ? 'Salvo — fora do ar'
-                      : lastSavedAt
-                        ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                        : 'Salvo'}
-              </span>
+      <div className="fixed inset-0 flex flex-col bg-background z-40">
+        {/* Topbar */}
+        <header className="h-14 border-b flex items-center justify-between gap-2 px-2 sm:px-4 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+            <Button asChild variant="ghost" size="sm" className="shrink-0 px-2 sm:px-3">
+              <Link to="/quizzes">
+                <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Voltar</span>
+              </Link>
+            </Button>
+            <div className="border-l pl-2 sm:pl-3 min-w-0">
+              <h1 className="font-bold text-sm leading-none truncate max-w-[100px] min-[420px]:max-w-[160px] sm:max-w-[280px]">
+                {quiz?.name ?? "Quiz"}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">Builder</p>
             </div>
-          )}
-          <Button size="sm" onClick={() => handleSave()} disabled={saving || !dirty} variant="outline" className="gap-2 px-2 sm:px-3">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            <span className="hidden sm:inline">Salvar</span>
-          </Button>
-          {/* Publicar alterações só aparece quando há o que publicar. Enquanto
-              o rascunho é igual ao que está no ar, este botão seria ruído — e
-              pior, sugeriria que algo está pendente quando não está. */}
-          {hasUnpublishedChanges && (
+          </div>
+
+          <div className="hidden md:flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
             <Button
               size="sm"
-              onClick={handlePublishChanges}
-              disabled={publishing || saving}
-              className="gap-2 px-2 shadow-lg shadow-primary/20 sm:px-3"
+              variant={device === "mobile" ? "secondary" : "ghost"}
+              onClick={() => setDevice("mobile")}
+              aria-label="Visualizar em celular"
+              aria-pressed={device === "mobile"}
             >
-              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-              <span className="hidden sm:inline">Publicar alterações</span>
+              <Smartphone className="h-4 w-4" />
             </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={handleTogglePublish}
-            disabled={publishing}
-            variant={quiz?.status === 'published' ? 'outline' : 'default'}
-            className={`gap-2 px-2 sm:px-3 ${quiz?.status === 'published' ? 'border-[var(--sucesso-borda)] text-[var(--sucesso)]' : 'shadow-lg shadow-primary/20'}`}
-          >
-            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-            <span className="hidden sm:inline">{quiz?.status === 'published' ? 'Publicado' : 'Publicar'}</span>
-          </Button>
-        </div>
-      </header>
+            <Button
+              size="sm"
+              variant={device === "tablet" ? "secondary" : "ghost"}
+              onClick={() => setDevice("tablet")}
+              aria-label="Visualizar em tablet"
+              aria-pressed={device === "tablet"}
+            >
+              <Tablet className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant={device === "desktop" ? "secondary" : "ghost"}
+              onClick={() => setDevice("desktop")}
+              aria-label="Visualizar em desktop"
+              aria-pressed={device === "desktop"}
+            >
+              <Monitor className="h-4 w-4" />
+            </Button>
+          </div>
 
-      <EditLockBanner trava={trava} />
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="lg:hidden px-2"
+              onClick={() => setMobilePanel("blocks")}
+              aria-label="Blocos"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="lg:hidden px-2"
+              onClick={() => setMobilePanel("inspector")}
+              aria-label="Editar / Design"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+            {/* Reabre o passo a passo. Sem isto, quem pula na primeira visita
+                não tem como rever — o estado fica em localStorage e é só ida. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={tutorial.reabrir}
+              className="hidden px-2 lg:inline-flex"
+              aria-label="Rever o tutorial do construtor"
+              title="Rever o tutorial"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <Settings className="h-4 w-4" />{" "}
+              <span className="hidden sm:inline">Configurações</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/design", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+              data-tutorial="design"
+            >
+              <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Design</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/results", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Resultados</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/responses", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <ClipboardList className="h-4 w-4" />{" "}
+              <span className="hidden sm:inline">Respostas</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/insights", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <Sparkles className="h-4 w-4" /> <span className="hidden sm:inline">Análise</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/flow", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <Workflow className="h-4 w-4" /> <span className="hidden sm:inline">Fluxo</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/leads", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <Users className="h-4 w-4" /> <span className="hidden sm:inline">Leads</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccessRulesOpen(true)}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <ShieldCheck className="h-4 w-4" />{" "}
+              <span className="hidden sm:inline">Regras de acesso</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/preview", params: { id } })}
+              className="gap-2 px-2 sm:px-3"
+            >
+              <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Preview</span>
+            </Button>
+            <div className="hidden lg:flex items-center gap-1.5 border rounded-lg px-2 py-1 shrink-0">
+              <Switch
+                id="autosave"
+                checked={autosave}
+                onCheckedChange={setAutosave}
+                className="scale-90"
+              />
+              <label
+                htmlFor="autosave"
+                className="text-xs font-medium text-muted-foreground cursor-pointer whitespace-nowrap"
+              >
+                Salvamento automático
+              </label>
+            </div>
+            {saveError ? (
+              <button
+                onClick={() => handleSave()}
+                className="flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive shrink-0 hover:bg-destructive/20 transition-colors"
+                title="Falha ao salvar — clique para tentar de novo"
+              >
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span className="hidden min-[420px]:inline">Erro — tentar de novo</span>
+              </button>
+            ) : (
+              <div
+                className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
+                  saving
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : dirty
+                      ? "border-[var(--aviso-borda)] bg-[var(--aviso-suave)] text-[var(--aviso)]"
+                      : "border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] text-[var(--sucesso)]"
+                }`}
+                aria-live="polite"
+              >
+                {saving ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${dirty ? "bg-[var(--aviso)] animate-pulse" : "bg-[var(--sucesso)]"}`}
+                  />
+                )}
+                {/* "Salvo" sozinho virou meia verdade num quiz publicado: o
+                  rascunho está salvo, mas o visitante continua vendo a versão
+                  antiga. O indicador precisa dizer as duas coisas. */}
+                <span className="hidden min-[420px]:inline">
+                  {saving
+                    ? "Salvando…"
+                    : dirty
+                      ? "Não salvo"
+                      : hasUnpublishedChanges
+                        ? "Salvo — fora do ar"
+                        : lastSavedAt
+                          ? `Salvo ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                          : "Salvo"}
+                </span>
+              </div>
+            )}
+            <Button
+              size="sm"
+              onClick={() => handleSave()}
+              disabled={saving || !dirty}
+              variant="outline"
+              className="gap-2 px-2 sm:px-3"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span className="hidden sm:inline">Salvar</span>
+            </Button>
+            {/* Publicar alterações só aparece quando há o que publicar. Enquanto
+              o rascunho é igual ao que está no ar, este botão seria ruído — e
+              pior, sugeriria que algo está pendente quando não está. */}
+            {hasUnpublishedChanges && (
+              <Button
+                size="sm"
+                onClick={handlePublishChanges}
+                disabled={publishing || saving}
+                className="gap-2 px-2 shadow-lg shadow-primary/20 sm:px-3"
+              >
+                {publishing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UploadCloud className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">Publicar alterações</span>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={handleTogglePublish}
+              disabled={publishing}
+              variant={quiz?.status === "published" ? "outline" : "default"}
+              className={`gap-2 px-2 sm:px-3 ${quiz?.status === "published" ? "border-[var(--sucesso-borda)] text-[var(--sucesso)]" : "shadow-lg shadow-primary/20"}`}
+              data-tutorial="publicar"
+            >
+              {publishing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Rocket className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">
+                {quiz?.status === "published" ? "Publicado" : "Publicar"}
+              </span>
+            </Button>
+          </div>
+        </header>
 
-      {/* 3-column layout on desktop, single column + drawers on mobile/tablet */}
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="hidden lg:block w-72 border-r bg-card overflow-y-auto">
-          {isDesktop && BlocksPalette}
-        </aside>
+        <EditLockBanner trava={trava} />
 
-        <main className="flex-1 overflow-hidden">
-          <QuizPreview
-            schema={schema}
-            activeBlockId={activeBlockId}
-            onSelectBlock={(blockId) => { setActiveBlockId(blockId); setMobilePanel('inspector'); }}
-            device={device}
-            onRequestAddBlock={!isDesktop ? () => setMobilePanel('blocks') : undefined}
-            /* Canvas e painel olham pra mesma etapa: selecionar um bloco na
+        {tutorial.aberto && (
+          <TutorialGuiado passos={PASSOS_DO_CONSTRUTOR} onFechar={tutorial.fechar} />
+        )}
+
+        {/* 3-column layout on desktop, single column + drawers on mobile/tablet */}
+        <div className="flex-1 flex overflow-hidden">
+          <aside className="hidden lg:block w-72 border-r bg-card overflow-y-auto">
+            {isDesktop && BlocksPalette}
+          </aside>
+
+          <main className="flex-1 overflow-hidden" data-tutorial="canvas">
+            <QuizPreview
+              schema={schema}
+              activeBlockId={activeBlockId}
+              onSelectBlock={(blockId) => {
+                setActiveBlockId(blockId);
+                setMobilePanel("inspector");
+              }}
+              device={device}
+              onRequestAddBlock={!isDesktop ? () => setMobilePanel("blocks") : undefined}
+              /* Canvas e painel olham pra mesma etapa: selecionar um bloco na
                lista traz o canvas junto, e navegar no canvas muda o destino
                dos próximos componentes. */
-            currentStepId={targetStep?.id ?? null}
-            onChangeStep={(stepId) => {
-              setActiveStepId(stepId);
-              setActiveBlockId(null);
-              setExpandedSteps((prev) => new Set(prev).add(stepId));
-            }}
-          />
-        </main>
+              currentStepId={targetStep?.id ?? null}
+              onChangeStep={(stepId) => {
+                setActiveStepId(stepId);
+                setActiveBlockId(null);
+                setExpandedSteps((prev) => new Set(prev).add(stepId));
+              }}
+            />
+          </main>
 
-        <QuizInspector
-          quizId={id}
-          block={activeBlock}
-          blocks={schema.blocks}
-          steps={steps}
-          design={schema.design}
-          onChangeBlock={patchBlock}
-          onDeleteBlock={() => deleteBlock()}
-          onChangeDesign={(patch) => updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))}
-          onMoveBlockIntoContainer={moveBlockIntoContainer}
-          onRemoveChildFromContainer={removeChildFromContainer}
-          onReorderContainerChildren={reorderContainerChildren}
-          onAddChildToContainer={addChildToContainer}
-          onDeleteChildBlock={deleteBlock}
-          onSelectBlock={(blockId) => setActiveBlockId(blockId)}
-          className="hidden lg:block w-80 border-l bg-card overflow-y-auto"
-        />
-      </div>
-
-      {/* Mobile/tablet drawers */}
-      <Sheet open={!isDesktop && mobilePanel === 'blocks'} onOpenChange={(open) => !open && setMobilePanel(null)}>
-        <SheetContent side="left" className="w-[88vw] max-w-sm p-0 overflow-y-auto lg:hidden">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Blocos do quiz</SheetTitle>
-          </SheetHeader>
-          {BlocksPalette}
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={!isDesktop && mobilePanel === 'inspector'} onOpenChange={(open) => !open && setMobilePanel(null)}>
-        <SheetContent side="right" className="w-[88vw] max-w-sm p-0 overflow-y-auto lg:hidden">
-          <SheetHeader className="sr-only">
-            <SheetTitle>{activeBlock ? 'Editar bloco' : 'Design do quiz'}</SheetTitle>
-          </SheetHeader>
           <QuizInspector
             quizId={id}
             block={activeBlock}
@@ -1360,33 +1608,78 @@ function QuizBuilderPage() {
             design={schema.design}
             onChangeBlock={patchBlock}
             onDeleteBlock={() => deleteBlock()}
-            onChangeDesign={(patch) => updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))}
+            onChangeDesign={(patch) =>
+              updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))
+            }
             onMoveBlockIntoContainer={moveBlockIntoContainer}
             onRemoveChildFromContainer={removeChildFromContainer}
             onReorderContainerChildren={reorderContainerChildren}
             onAddChildToContainer={addChildToContainer}
             onDeleteChildBlock={deleteBlock}
             onSelectBlock={(blockId) => setActiveBlockId(blockId)}
-            dndScope="mobile"
-            className="w-full"
+            className="hidden lg:block w-80 border-l bg-card overflow-y-auto"
+            data-tutorial="inspetor"
           />
-        </SheetContent>
-      </Sheet>
+        </div>
 
-      <AccessRulesDialog quizId={id} open={accessRulesOpen} onOpenChange={setAccessRulesOpen} />
+        {/* Mobile/tablet drawers */}
+        <Sheet
+          open={!isDesktop && mobilePanel === "blocks"}
+          onOpenChange={(open) => !open && setMobilePanel(null)}
+        >
+          <SheetContent side="left" className="w-[88vw] max-w-sm p-0 overflow-y-auto lg:hidden">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Blocos do quiz</SheetTitle>
+            </SheetHeader>
+            {BlocksPalette}
+          </SheetContent>
+        </Sheet>
 
-      {company?.id && (
-        <QuizSettingsDialog
-          quizId={id}
-          companyId={company.id}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          onSaved={setQuiz}
-        />
-      )}
-    </div>
+        <Sheet
+          open={!isDesktop && mobilePanel === "inspector"}
+          onOpenChange={(open) => !open && setMobilePanel(null)}
+        >
+          <SheetContent side="right" className="w-[88vw] max-w-sm p-0 overflow-y-auto lg:hidden">
+            <SheetHeader className="sr-only">
+              <SheetTitle>{activeBlock ? "Editar bloco" : "Design do quiz"}</SheetTitle>
+            </SheetHeader>
+            <QuizInspector
+              quizId={id}
+              block={activeBlock}
+              blocks={schema.blocks}
+              steps={steps}
+              design={schema.design}
+              onChangeBlock={patchBlock}
+              onDeleteBlock={() => deleteBlock()}
+              onChangeDesign={(patch) =>
+                updateSchema((prev) => ({ ...prev, design: { ...prev.design, ...patch } }))
+              }
+              onMoveBlockIntoContainer={moveBlockIntoContainer}
+              onRemoveChildFromContainer={removeChildFromContainer}
+              onReorderContainerChildren={reorderContainerChildren}
+              onAddChildToContainer={addChildToContainer}
+              onDeleteChildBlock={deleteBlock}
+              onSelectBlock={(blockId) => setActiveBlockId(blockId)}
+              dndScope="mobile"
+              className="w-full"
+            />
+          </SheetContent>
+        </Sheet>
+
+        <AccessRulesDialog quizId={id} open={accessRulesOpen} onOpenChange={setAccessRulesOpen} />
+
+        {company?.id && (
+          <QuizSettingsDialog
+            quizId={id}
+            companyId={company.id}
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            onSaved={setQuiz}
+          />
+        )}
+      </div>
     </DragDropContext>,
-    document.body
+    document.body,
   );
 }
 
@@ -1406,7 +1699,7 @@ function SeloDeConversao({ dados }: { dados?: ConversaoDaEtapa }) {
         title={
           dados.visitantes < MINIMO_PARA_NOTA
             ? `${dados.visitantes} visitante(s) — precisa de ${MINIMO_PARA_NOTA} para uma taxa confiável`
-            : 'Última etapa: não existe etapa posterior para medir avanço'
+            : "Última etapa: não existe etapa posterior para medir avanço"
         }
       >
         {dados.visitantes}👤
@@ -1439,18 +1732,18 @@ function DesignDaEtapa({
   onChange,
 }: {
   step: QuizStep;
-  design: QuizSchema['design'];
-  onChange: (patch: Partial<QuizSchema['design']>) => void;
+  design: QuizSchema["design"];
+  onChange: (patch: Partial<QuizSchema["design"]>) => void;
 }) {
   const [aberto, setAberto] = useState(false);
   const proprio = !!step.design && Object.values(step.design).some((v) => v);
 
-  const cor = (rotulo: string, chave: 'background' | 'surface' | 'primary' | 'text') => (
+  const cor = (rotulo: string, chave: "background" | "surface" | "primary" | "text") => (
     <div className="flex items-center gap-1.5">
       <span className="w-16 shrink-0 text-[10px] text-muted-foreground">{rotulo}</span>
       <input
         type="color"
-        value={(step.design?.[chave] as string) ?? (design[chave] as string) ?? '#000000'}
+        value={(step.design?.[chave] as string) ?? (design[chave] as string) ?? "#000000"}
         onChange={(e) => onChange({ [chave]: e.target.value })}
         className="h-6 w-7 shrink-0 cursor-pointer rounded border bg-transparent p-0.5"
       />
@@ -1473,17 +1766,26 @@ function DesignDaEtapa({
       >
         <Palette className="h-3 w-3" />
         Design desta etapa
-        {proprio && <span className="rounded-full bg-primary/15 px-1 text-[9px] text-primary">próprio</span>}
+        {proprio && (
+          <span className="rounded-full bg-primary/15 px-1 text-[9px] text-primary">próprio</span>
+        )}
       </button>
       {aberto && (
         <div className="mt-1.5 space-y-1 rounded-lg border p-2">
-          {cor('Fundo', 'background')}
-          {cor('Superfície', 'surface')}
-          {cor('Destaque', 'primary')}
-          {cor('Texto', 'text')}
+          {cor("Fundo", "background")}
+          {cor("Superfície", "surface")}
+          {cor("Destaque", "primary")}
+          {cor("Texto", "text")}
           {proprio && (
             <button
-              onClick={() => onChange({ background: undefined, surface: undefined, primary: undefined, text: undefined })}
+              onClick={() =>
+                onChange({
+                  background: undefined,
+                  surface: undefined,
+                  primary: undefined,
+                  text: undefined,
+                })
+              }
               className="mt-1 w-full rounded border py-1 text-[10px] text-muted-foreground hover:text-foreground"
             >
               Herdar tudo do tema

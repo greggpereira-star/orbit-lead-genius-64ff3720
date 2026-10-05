@@ -1,44 +1,58 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { QuizFunnel, QuizTemplate, QuizSchema, AccessRules, SocialProofSettings, UrgencyBarSettings } from '../types';
-import { DEFAULT_DESIGN } from '../design-presets';
-import { DEFAULT_ACCESS_RULES } from '../types';
-import { parseSubdomain } from '../lib/tenant';
-import { resolveEntryStageId, newLeadBoardOrder } from '@/modules/crm/services/stageService';
+import { supabase } from "@/integrations/supabase/client";
+import { MODELOS_DE_QUIZ } from "../quiz-templates";
+import type {
+  QuizFunnel,
+  QuizTemplate,
+  QuizSchema,
+  AccessRules,
+  SocialProofSettings,
+  UrgencyBarSettings,
+} from "../types";
+import { DEFAULT_DESIGN } from "../design-presets";
+import { DEFAULT_ACCESS_RULES } from "../types";
+import { parseSubdomain } from "../lib/tenant";
+import { resolveEntryStageId, newLeadBoardOrder } from "@/modules/crm/services/stageService";
 
 function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 60) || 'quiz';
+  return (
+    input
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 60) || "quiz"
+  );
 }
 
 function parseUserAgent(ua: string): { device: string; browser: string } {
   const isTablet = /iPad|Tablet/i.test(ua);
   const isMobile = !isTablet && /Mobi|Android|iPhone|iPod/i.test(ua);
-  const device = isTablet ? 'Tablet' : isMobile ? 'Mobile' : 'Desktop';
-  let browser = 'Outro';
-  if (/Edg\//i.test(ua)) browser = 'Edge';
-  else if (/OPR\/|Opera/i.test(ua)) browser = 'Opera';
-  else if (/Chrome\//i.test(ua)) browser = 'Chrome';
-  else if (/Firefox\//i.test(ua)) browser = 'Firefox';
-  else if (/Safari\//i.test(ua)) browser = 'Safari';
+  const device = isTablet ? "Tablet" : isMobile ? "Mobile" : "Desktop";
+  let browser = "Outro";
+  if (/Edg\//i.test(ua)) browser = "Edge";
+  else if (/OPR\/|Opera/i.test(ua)) browser = "Opera";
+  else if (/Chrome\//i.test(ua)) browser = "Chrome";
+  else if (/Firefox\//i.test(ua)) browser = "Firefox";
+  else if (/Safari\//i.test(ua)) browser = "Safari";
   return { device, browser };
 }
 
-async function findUniqueSlug(companyId: string, baseSlug: string, excludeId?: string): Promise<string> {
+async function findUniqueSlug(
+  companyId: string,
+  baseSlug: string,
+  excludeId?: string,
+): Promise<string> {
   let finalSlug = baseSlug;
   for (let i = 2; i < 20; i++) {
     let query = supabase
-      .from('quiz_funnels')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('slug', finalSlug);
-    if (excludeId) query = query.neq('id', excludeId);
+      .from("quiz_funnels")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("slug", finalSlug);
+    if (excludeId) query = query.neq("id", excludeId);
     const { data: exists } = await query.maybeSingle();
     if (!exists) break;
     finalSlug = `${baseSlug}-${i}`;
@@ -66,7 +80,7 @@ export async function captureQuizLead(params: {
   phone?: string;
   name?: string;
   score?: number;
-  temperature?: 'hot' | 'warm' | 'cold';
+  temperature?: "hot" | "warm" | "cold";
   tracking?: Record<string, string>;
   responses?: Record<string, unknown>;
   submissionId?: string | null;
@@ -74,14 +88,14 @@ export async function captureQuizLead(params: {
   tags?: string[];
 }): Promise<string | null> {
   if (!params.email && !params.phone) return null;
-  const { data, error } = await (supabase as any).rpc('quiz_capture_lead', {
+  const { data, error } = await (supabase as any).rpc("quiz_capture_lead", {
     p_quiz_id: params.quizId,
     p_session_id: params.sessionId,
     p_email: params.email ?? null,
     p_phone: params.phone ?? null,
     p_name: params.name ?? null,
     p_score: params.score ?? 0,
-    p_temperature: params.temperature ?? 'cold',
+    p_temperature: params.temperature ?? "cold",
     p_tracking: params.tracking ?? {},
     p_responses: params.responses ?? {},
     p_submission_id: params.submissionId ?? null,
@@ -91,7 +105,7 @@ export async function captureQuizLead(params: {
   if (error) {
     // Sem log, uma falha aqui volta a ser invisível — foi assim que nenhum
     // lead de quiz entrou na base por meses.
-    console.error('Falha ao capturar lead do quiz', error);
+    console.error("Falha ao capturar lead do quiz", error);
     return null;
   }
   return (data as string | null) ?? null;
@@ -100,22 +114,54 @@ export async function captureQuizLead(params: {
 export const quizService = {
   async list(companyId: string): Promise<QuizFunnel[]> {
     const { data, error } = await supabase
-      .from('quiz_funnels')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('updated_at', { ascending: false });
+      .from("quiz_funnels")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("updated_at", { ascending: false });
     if (error) throw error;
     return (data ?? []) as unknown as QuizFunnel[];
   },
 
+  /**
+   * Os modelos vêm do CÓDIGO, não da tabela.
+   *
+   * As seis linhas que existiam em `quiz_templates` tinham `blocks: []`: "Usar
+   * Template" criava um quiz vazio com nome bonito e nada avisava. Em código o
+   * tipo confere na compilação e o teste roda o validador de publicação em cima
+   * de cada um — a tabela não oferece nenhum dos dois.
+   *
+   * A tabela continua sendo lida, para o dia em que houver modelo próprio de
+   * cliente, mas linha SEM bloco é descartada aqui: é exatamente o defeito que
+   * motivou a mudança, e não queremos que volte por outro caminho.
+   */
   async listTemplates(): Promise<QuizTemplate[]> {
+    const doCodigo: QuizTemplate[] = MODELOS_DE_QUIZ.map((m, i) => ({
+      id: `codigo:${m.slug}`,
+      slug: m.slug,
+      name: m.name,
+      niche: m.niche,
+      description: m.description,
+      cover_url: null,
+      schema: m.build() as unknown as Record<string, unknown>,
+      sort_order: (i + 1) * 10,
+      emoji: m.emoji,
+    }));
+
     const { data, error } = await supabase
-      .from('quiz_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true });
-    if (error) throw error;
-    return (data ?? []) as unknown as QuizTemplate[];
+      .from("quiz_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+    // Falha de rede aqui não deve esconder os modelos do código.
+    if (error) return doCodigo;
+
+    const doBanco = ((data ?? []) as unknown as QuizTemplate[]).filter((t) => {
+      const blocos = (t.schema as { blocks?: unknown[] } | null)?.blocks;
+      return Array.isArray(blocos) && blocos.length > 0;
+    });
+
+    const slugsDoCodigo = new Set(doCodigo.map((t) => t.slug));
+    return [...doCodigo, ...doBanco.filter((t) => !slugsDoCodigo.has(t.slug))];
   },
 
   async create(params: {
@@ -130,33 +176,33 @@ export const quizService = {
     let finalSlug = baseSlug;
     for (let i = 2; i < 20; i++) {
       const { data: exists } = await supabase
-        .from('quiz_funnels')
-        .select('id')
-        .eq('company_id', params.companyId)
-        .eq('slug', finalSlug)
+        .from("quiz_funnels")
+        .select("id")
+        .eq("company_id", params.companyId)
+        .eq("slug", finalSlug)
         .maybeSingle();
       if (!exists) break;
       finalSlug = `${baseSlug}-${i}`;
     }
 
     const { data, error } = await supabase
-      .from('quiz_funnels')
+      .from("quiz_funnels")
       .insert({
         company_id: params.companyId,
         created_by: params.userId,
         name: params.name,
         slug: finalSlug,
         niche: params.niche ?? null,
-        status: 'draft',
+        status: "draft",
         design: ((params.templateSchema?.design as Record<string, unknown>) ?? {}) as never,
         settings: {} as never,
       })
-      .select('*')
+      .select("*")
       .single();
     if (error) throw error;
 
     // Create initial version with template schema
-    await supabase.from('quiz_versions').insert({
+    await supabase.from("quiz_versions").insert({
       quiz_id: (data as { id: string }).id,
       company_id: params.companyId,
       version: 1,
@@ -168,7 +214,7 @@ export const quizService = {
   },
 
   async remove(id: string): Promise<void> {
-    const { error } = await supabase.from('quiz_funnels').delete().eq('id', id);
+    const { error } = await supabase.from("quiz_funnels").delete().eq("id", id);
     if (error) throw error;
   },
 
@@ -188,7 +234,7 @@ export const quizService = {
     /** Etapa do pipeline onde o lead deste quiz entra. `null` = padrão do funil. */
     defaultStageId?: string | null;
     /* Medição só deste funil. Em branco = herda o pixel da empresa. */
-    scoreTiers?: import('../types').ScoreTier[];
+    scoreTiers?: import("../types").ScoreTier[];
     metaPixelId?: string;
     googleConversionId?: string;
     googleLeadLabel?: string;
@@ -200,7 +246,7 @@ export const quizService = {
 
     if (params.name !== undefined) {
       const trimmed = params.name.trim();
-      if (!trimmed) throw new Error('Nome do quiz não pode ficar vazio');
+      if (!trimmed) throw new Error("Nome do quiz não pode ficar vazio");
       patch.name = trimmed;
     }
 
@@ -210,18 +256,18 @@ export const quizService = {
     }
 
     const settingsFields: [keyof typeof params, string][] = [
-      ['customDomain', 'custom_domain'],
-      ['webhookUrl', 'webhook_url'],
-      ['customHeadScript', 'custom_head_script'],
-      ['seoTitle', 'seo_title'],
-      ['seoDescription', 'seo_description'],
-      ['seoOgImage', 'seo_og_image'],
-      ['scoreTiers', 'score_tiers'],
-      ['metaPixelId', 'meta_pixel_id'],
-      ['googleConversionId', 'google_conversion_id'],
-      ['googleLeadLabel', 'google_lead_label'],
-      ['googleCompleteLabel', 'google_complete_label'],
-      ['mostrarAssinatura', 'mostrar_assinatura'],
+      ["customDomain", "custom_domain"],
+      ["webhookUrl", "webhook_url"],
+      ["customHeadScript", "custom_head_script"],
+      ["seoTitle", "seo_title"],
+      ["seoDescription", "seo_description"],
+      ["seoOgImage", "seo_og_image"],
+      ["scoreTiers", "score_tiers"],
+      ["metaPixelId", "meta_pixel_id"],
+      ["googleConversionId", "google_conversion_id"],
+      ["googleLeadLabel", "google_lead_label"],
+      ["googleCompleteLabel", "google_complete_label"],
+      ["mostrarAssinatura", "mostrar_assinatura"],
     ];
     const touchedSettings =
       settingsFields.some(([key]) => params[key] !== undefined) ||
@@ -230,9 +276,9 @@ export const quizService = {
       params.defaultStageId !== undefined;
     if (touchedSettings) {
       const { data: current, error: fetchError } = await supabase
-        .from('quiz_funnels')
-        .select('settings')
-        .eq('id', params.quizId)
+        .from("quiz_funnels")
+        .select("settings")
+        .eq("id", params.quizId)
         .single();
       if (fetchError) throw fetchError;
       const settings = { ...((current?.settings as Record<string, unknown>) ?? {}) };
@@ -256,10 +302,10 @@ export const quizService = {
     }
 
     const { data, error } = await supabase
-      .from('quiz_funnels')
+      .from("quiz_funnels")
       .update(patch as never)
-      .eq('id', params.quizId)
-      .select('*')
+      .eq("id", params.quizId)
+      .select("*")
       .single();
     if (error) throw error;
     return data as unknown as QuizFunnel;
@@ -274,17 +320,21 @@ export const quizService = {
    */
   async setArchived(quizId: string, arquivado: boolean): Promise<void> {
     const { error } = await supabase
-      .from('quiz_funnels')
-      .update({ status: arquivado ? 'archived' : 'draft' } as never)
-      .eq('id', quizId);
+      .from("quiz_funnels")
+      .update({ status: arquivado ? "archived" : "draft" } as never)
+      .eq("id", quizId);
     if (error) throw error;
   },
 
-  async duplicate(params: { quizId: string; companyId: string; userId: string }): Promise<QuizFunnel> {
+  async duplicate(params: {
+    quizId: string;
+    companyId: string;
+    userId: string;
+  }): Promise<QuizFunnel> {
     const { data: source, error: sourceError } = await supabase
-      .from('quiz_funnels')
-      .select('*')
-      .eq('id', params.quizId)
+      .from("quiz_funnels")
+      .select("*")
+      .eq("id", params.quizId)
       .single();
     if (sourceError) throw sourceError;
     const original = source as unknown as QuizFunnel;
@@ -294,33 +344,33 @@ export const quizService = {
     let finalSlug = baseSlug;
     for (let i = 2; i < 20; i++) {
       const { data: exists } = await supabase
-        .from('quiz_funnels')
-        .select('id')
-        .eq('company_id', params.companyId)
-        .eq('slug', finalSlug)
+        .from("quiz_funnels")
+        .select("id")
+        .eq("company_id", params.companyId)
+        .eq("slug", finalSlug)
         .maybeSingle();
       if (!exists) break;
       finalSlug = `${baseSlug}-${i}`;
     }
 
     const { data, error } = await supabase
-      .from('quiz_funnels')
+      .from("quiz_funnels")
       .insert({
         company_id: params.companyId,
         created_by: params.userId,
         name: `${original.name} (cópia)`,
         slug: finalSlug,
         niche: original.niche ?? null,
-        status: 'draft',
+        status: "draft",
         design: (schema.design ?? {}) as never,
         settings: {} as never,
       })
-      .select('*')
+      .select("*")
       .single();
     if (error) throw error;
 
     const newQuiz = data as unknown as QuizFunnel;
-    await supabase.from('quiz_versions').insert({
+    await supabase.from("quiz_versions").insert({
       quiz_id: newQuiz.id,
       company_id: params.companyId,
       version: 1,
@@ -332,16 +382,20 @@ export const quizService = {
   },
 
   async getById(id: string): Promise<QuizFunnel | null> {
-    const { data, error } = await supabase.from('quiz_funnels').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase
+      .from("quiz_funnels")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
     if (error) throw error;
     return (data as unknown as QuizFunnel) ?? null;
   },
 
   async getAccessRules(quizId: string): Promise<AccessRules> {
     const { data, error } = await supabase
-      .from('quiz_funnels')
-      .select('settings')
-      .eq('id', quizId)
+      .from("quiz_funnels")
+      .select("settings")
+      .eq("id", quizId)
       .maybeSingle();
     if (error) throw error;
     const settings = (data?.settings ?? {}) as { accessRules?: Partial<AccessRules> };
@@ -350,25 +404,28 @@ export const quizService = {
 
   async saveAccessRules(quizId: string, rules: AccessRules): Promise<void> {
     const { data, error: fetchError } = await supabase
-      .from('quiz_funnels')
-      .select('settings')
-      .eq('id', quizId)
+      .from("quiz_funnels")
+      .select("settings")
+      .eq("id", quizId)
       .maybeSingle();
     if (fetchError) throw fetchError;
     const settings = (data?.settings ?? {}) as Record<string, unknown>;
     const { error } = await supabase
-      .from('quiz_funnels')
-      .update({ settings: { ...settings, accessRules: rules } as never, updated_at: new Date().toISOString() })
-      .eq('id', quizId);
+      .from("quiz_funnels")
+      .update({
+        settings: { ...settings, accessRules: rules } as never,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", quizId);
     if (error) throw error;
   },
 
   async getLatestSchema(quizId: string): Promise<QuizSchema> {
     const { data, error } = await supabase
-      .from('quiz_versions')
-      .select('schema')
-      .eq('quiz_id', quizId)
-      .order('version', { ascending: false })
+      .from("quiz_versions")
+      .select("schema")
+      .eq("quiz_id", quizId)
+      .order("version", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (error) throw error;
@@ -389,16 +446,16 @@ export const quizService = {
     schema: QuizSchema;
   }): Promise<string> {
     const { data: latest } = await supabase
-      .from('quiz_versions')
-      .select('version')
-      .eq('quiz_id', params.quizId)
-      .order('version', { ascending: false })
+      .from("quiz_versions")
+      .select("version")
+      .eq("quiz_id", params.quizId)
+      .order("version", { ascending: false })
       .limit(1)
       .maybeSingle();
     const nextVersion = ((latest as { version?: number } | null)?.version ?? 0) + 1;
 
     const { data: inserted, error } = await supabase
-      .from('quiz_versions')
+      .from("quiz_versions")
       .insert({
         quiz_id: params.quizId,
         company_id: params.companyId,
@@ -406,14 +463,14 @@ export const quizService = {
         schema: params.schema as never,
         created_by: params.userId,
       })
-      .select('id')
+      .select("id")
       .single();
     if (error) throw error;
 
     await supabase
-      .from('quiz_funnels')
+      .from("quiz_funnels")
       .update({ design: params.schema.design as never, updated_at: new Date().toISOString() })
-      .eq('id', params.quizId);
+      .eq("id", params.quizId);
 
     // Salvar NÃO publica. Antes, cada save num quiz publicado — inclusive o
     // autosave de 1,5s — virava a versão ao vivo na hora. Somado à exclusão de
@@ -430,17 +487,18 @@ export const quizService = {
     latestVersionId: string | null;
   }> {
     const [{ data: quiz }, { data: latest }] = await Promise.all([
-      supabase.from('quiz_funnels').select('published_version_id').eq('id', quizId).maybeSingle(),
+      supabase.from("quiz_funnels").select("published_version_id").eq("id", quizId).maybeSingle(),
       supabase
-        .from('quiz_versions')
-        .select('id')
-        .eq('quiz_id', quizId)
-        .order('version', { ascending: false })
+        .from("quiz_versions")
+        .select("id")
+        .eq("quiz_id", quizId)
+        .order("version", { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
     return {
-      publishedVersionId: (quiz as { published_version_id?: string | null } | null)?.published_version_id ?? null,
+      publishedVersionId:
+        (quiz as { published_version_id?: string | null } | null)?.published_version_id ?? null,
       latestVersionId: (latest as { id?: string } | null)?.id ?? null,
     };
   },
@@ -448,15 +506,19 @@ export const quizService = {
   // RLS de leitura pública (anon) em quiz_versions depende de is_published=true,
   // independente do published_version_id em quiz_funnels — os dois precisam ficar em sincronia.
   async markVersionPublished(quizId: string, versionId: string): Promise<void> {
-    await supabase.from('quiz_versions').update({ is_published: false }).eq('quiz_id', quizId).neq('id', versionId);
     await supabase
-      .from('quiz_versions')
+      .from("quiz_versions")
+      .update({ is_published: false })
+      .eq("quiz_id", quizId)
+      .neq("id", versionId);
+    await supabase
+      .from("quiz_versions")
       .update({ is_published: true, published_at: new Date().toISOString() })
-      .eq('id', versionId);
+      .eq("id", versionId);
   },
 
   async unpublishAllVersions(quizId: string): Promise<void> {
-    await supabase.from('quiz_versions').update({ is_published: false }).eq('quiz_id', quizId);
+    await supabase.from("quiz_versions").update({ is_published: false }).eq("quiz_id", quizId);
   },
 
   async promoteVariant(params: {
@@ -468,9 +530,9 @@ export const quizService = {
   }): Promise<void> {
     const schema = await this.getLatestSchema(params.quizId);
     const block = schema.blocks.find((b) => b.id === params.blockId);
-    if (!block || !block.abTest) throw new Error('Bloco ou teste A/B não encontrado');
+    if (!block || !block.abTest) throw new Error("Bloco ou teste A/B não encontrado");
     const variant = block.abTest.variants.find((v) => v.id === params.variantId);
-    if (!variant) throw new Error('Variação não encontrada');
+    if (!variant) throw new Error("Variação não encontrada");
 
     const updatedBlocks = schema.blocks.map((b) =>
       b.id === params.blockId
@@ -482,7 +544,7 @@ export const quizService = {
             imageUrl: variant.imageUrl ?? b.imageUrl,
             abTest: { enabled: false, variants: [] },
           }
-        : b
+        : b,
     );
 
     await this.saveSchema({
@@ -497,35 +559,46 @@ export const quizService = {
   async getCompanyIdByHost(host: string): Promise<string | null> {
     const subdomain = parseSubdomain(host);
     if (!subdomain) return null;
-    const { data } = await supabase.from('companies').select('id').eq('subdomain', subdomain).maybeSingle();
+    const { data } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("subdomain", subdomain)
+      .maybeSingle();
     return (data as { id: string } | null)?.id ?? null;
   },
 
-  async getPublishedBySlug(slug: string, host?: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
+  async getPublishedBySlug(
+    slug: string,
+    host?: string,
+  ): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
     let companyId: string | null = null;
     if (host && parseSubdomain(host)) {
       companyId = await this.getCompanyIdByHost(host);
       if (!companyId) return null; // subdomínio não corresponde a nenhuma empresa
     }
     let quizQuery = supabase
-      .from('quiz_funnels')
-      .select('*')
-      .eq('slug', slug)
-      .eq('status', 'published');
-    if (companyId) quizQuery = quizQuery.eq('company_id', companyId);
+      .from("quiz_funnels")
+      .select("*")
+      .eq("slug", slug)
+      .eq("status", "published");
+    if (companyId) quizQuery = quizQuery.eq("company_id", companyId);
     const { data: quiz, error } = await quizQuery.maybeSingle();
     if (error) throw error;
     if (!quiz) return null;
 
-    const publishedVersionId = (quiz as { published_version_id: string | null }).published_version_id;
-    let versionQuery = supabase.from('quiz_versions').select('schema').eq('quiz_id', (quiz as { id: string }).id);
+    const publishedVersionId = (quiz as { published_version_id: string | null })
+      .published_version_id;
+    let versionQuery = supabase
+      .from("quiz_versions")
+      .select("schema")
+      .eq("quiz_id", (quiz as { id: string }).id);
     if (publishedVersionId) {
-      versionQuery = versionQuery.eq('id', publishedVersionId);
+      versionQuery = versionQuery.eq("id", publishedVersionId);
     } else {
-      versionQuery = versionQuery.order('version', { ascending: false }).limit(1);
+      versionQuery = versionQuery.order("version", { ascending: false }).limit(1);
     }
     const { data: version } = await versionQuery.maybeSingle();
-    const raw = ((version?.schema ?? {}) as Partial<QuizSchema>);
+    const raw = (version?.schema ?? {}) as Partial<QuizSchema>;
     const schema: QuizSchema = {
       blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
       steps: Array.isArray(raw.steps) ? raw.steps : undefined,
@@ -535,25 +608,28 @@ export const quizService = {
     return { quiz: quiz as unknown as QuizFunnel, schema };
   },
 
-  async getDraftBySlug(slug: string, host?: string): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
+  async getDraftBySlug(
+    slug: string,
+    host?: string,
+  ): Promise<{ quiz: QuizFunnel; schema: QuizSchema } | null> {
     let companyId: string | null = null;
     if (host && parseSubdomain(host)) {
       companyId = await this.getCompanyIdByHost(host);
       if (!companyId) return null; // subdomínio não corresponde a nenhuma empresa
     }
-    let quizQuery = supabase.from('quiz_funnels').select('*').eq('slug', slug);
-    if (companyId) quizQuery = quizQuery.eq('company_id', companyId);
+    let quizQuery = supabase.from("quiz_funnels").select("*").eq("slug", slug);
+    if (companyId) quizQuery = quizQuery.eq("company_id", companyId);
     const { data: quiz, error } = await quizQuery.maybeSingle();
     if (error) throw error;
     if (!quiz) return null;
     const { data: version } = await supabase
-      .from('quiz_versions')
-      .select('schema')
-      .eq('quiz_id', (quiz as { id: string }).id)
-      .order('version', { ascending: false })
+      .from("quiz_versions")
+      .select("schema")
+      .eq("quiz_id", (quiz as { id: string }).id)
+      .order("version", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const raw = ((version?.schema ?? {}) as Partial<QuizSchema>);
+    const raw = (version?.schema ?? {}) as Partial<QuizSchema>;
     const schema: QuizSchema = {
       blocks: Array.isArray(raw.blocks) ? raw.blocks : [],
       steps: Array.isArray(raw.steps) ? raw.steps : undefined,
@@ -577,10 +653,10 @@ export const quizService = {
     let target = versionId ?? null;
     if (!target) {
       const { data: latest } = await supabase
-        .from('quiz_versions')
-        .select('id')
-        .eq('quiz_id', quizId)
-        .order('version', { ascending: false })
+        .from("quiz_versions")
+        .select("id")
+        .eq("quiz_id", quizId)
+        .order("version", { ascending: false })
         .limit(1)
         .maybeSingle();
       target = (latest as { id?: string } | null)?.id ?? null;
@@ -593,21 +669,18 @@ export const quizService = {
     if (target) await this.markVersionPublished(quizId, target);
 
     const { error } = await supabase
-      .from('quiz_funnels')
+      .from("quiz_funnels")
       .update({
-        status: 'published',
+        status: "published",
         published_version_id: target,
         published_at: new Date().toISOString(),
       })
-      .eq('id', quizId);
+      .eq("id", quizId);
     if (error) throw error;
   },
 
   async unpublish(quizId: string): Promise<void> {
-    await supabase
-      .from('quiz_funnels')
-      .update({ status: 'draft' })
-      .eq('id', quizId);
+    await supabase.from("quiz_funnels").update({ status: "draft" }).eq("id", quizId);
     await this.unpublishAllVersions(quizId);
   },
 
@@ -617,7 +690,7 @@ export const quizService = {
     responses: Record<string, unknown>;
     score: number;
     tags: string[];
-    temperature: 'hot' | 'warm' | 'cold';
+    temperature: "hot" | "warm" | "cold";
     email?: string;
     phone?: string;
     name?: string;
@@ -649,20 +722,20 @@ export const quizService = {
       score: params.score,
       tags: params.tags,
       temperature: params.temperature,
-      status: 'completed',
+      status: "completed",
       completed_at: new Date().toISOString(),
       tracking,
     } as never;
-    const { error } = await supabase.from('quiz_submissions').insert(payload);
+    const { error } = await supabase.from("quiz_submissions").insert(payload);
     if (error) throw error;
 
     // Configurações do funil, lidas uma vez só: o webhook e a etapa de entrada
     // moram na mesma coluna `settings`, e antes o webhook fazia essa consulta
     // sozinho dentro do fire-and-forget.
     const { data: quizRow } = await supabase
-      .from('quiz_funnels')
-      .select('settings')
-      .eq('id', params.quizId)
+      .from("quiz_funnels")
+      .select("settings")
+      .eq("id", params.quizId)
       .maybeSingle();
     const quizSettings = (quizRow?.settings as Record<string, unknown> | undefined) ?? {};
     const defaultStageId = (quizSettings.default_stage_id as string | undefined) ?? null;
@@ -673,16 +746,20 @@ export const quizService = {
         const webhookUrl = quizSettings.webhook_url as string | undefined;
         if (!webhookUrl) return;
         await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            event: 'quiz.submission.completed',
+            event: "quiz.submission.completed",
             quiz_id: params.quizId,
             submission_id: submissionId,
             score: params.score,
             temperature: params.temperature,
             tags: params.tags,
-            contact: { email: params.email ?? null, phone: params.phone ?? null, name: params.name ?? null },
+            contact: {
+              email: params.email ?? null,
+              phone: params.phone ?? null,
+              name: params.name ?? null,
+            },
             responses: params.responses,
             tracking,
             completed_at: new Date().toISOString(),
@@ -719,7 +796,7 @@ export const quizService = {
         // logou o motivo) e quiz sem contato nenhum, onde não existe lead a
         // criar. Também é o que estreita o tipo para o resto do bloco.
         if (!leadId) {
-          console.warn('Quiz concluído sem lead — sem contato ou captura falhou');
+          console.warn("Quiz concluído sem lead — sem contato ou captura falhou");
         } else {
           /* O vínculo submissão→lead e as etiquetas ficavam aqui, como escrita
              direta de um cliente anônimo que não tem grant para nenhuma das
@@ -736,13 +813,12 @@ export const quizService = {
           void leadId;
         }
       } catch (e) {
-        console.warn('Lead capture from quiz failed', e);
+        console.warn("Lead capture from quiz failed", e);
       }
     }
 
     return submissionId;
   },
-
 
   async trackEvent(params: {
     quizId: string;
@@ -756,7 +832,7 @@ export const quizService = {
     sessionId?: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
-    await supabase.from('quiz_events').insert({
+    await supabase.from("quiz_events").insert({
       quiz_id: params.quizId,
       company_id: params.companyId,
       submission_id: params.submissionId ?? null,
@@ -774,17 +850,20 @@ export const quizService = {
    * `block_advance` existe, mas só dispara em bloco com teste A/B ligado —
    * medido na base: zero linhas em toda a história da tabela.
    */
-  async getStepViewEvents(quizId: string, days = 30): Promise<{ block_id: string | null; session_id: string | null }[]> {
+  async getStepViewEvents(
+    quizId: string,
+    days = 30,
+  ): Promise<{ block_id: string | null; session_id: string | null }[]> {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const { data, error } = await supabase
-      .from('quiz_events')
-      .select('block_id, session_id')
-      .eq('quiz_id', quizId)
-      .eq('event_type', 'block_view')
-      .gte('created_at', since)
+      .from("quiz_events")
+      .select("block_id, session_id")
+      .eq("quiz_id", quizId)
+      .eq("event_type", "block_view")
+      .gte("created_at", since)
       .limit(50000);
     if (error) {
-      console.warn('Falha ao ler eventos de etapa', error);
+      console.warn("Falha ao ler eventos de etapa", error);
       return [];
     }
     return (data as { block_id: string | null; session_id: string | null }[] | null) ?? [];
@@ -801,11 +880,11 @@ export const quizService = {
   async getSubmissionsParaExport(quizId: string, days = 90) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const { data, error } = await supabase
-      .from('quiz_submissions')
-      .select('created_at, status, score, temperature, answers, tracking')
-      .eq('quiz_id', quizId)
-      .gte('created_at', since)
-      .order('created_at', { ascending: false })
+      .from("quiz_submissions")
+      .select("created_at, status, score, temperature, answers, tracking")
+      .eq("quiz_id", quizId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
       .limit(20000);
     if (error) throw error;
     return (data ?? []) as unknown as Array<{
@@ -825,12 +904,23 @@ export const quizService = {
    * contaminam a análise e não há como separá-los depois. Não toca no esquema
    * nem nas versões — o funil continua igual, só sem histórico.
    */
-  async resetarDados(quizId: string): Promise<{ submissoes: number; eventos: number; leads: number }> {
+  async resetarDados(
+    quizId: string,
+  ): Promise<{ submissoes: number; eventos: number; leads: number }> {
     // Contado antes de apagar, para o aviso dizer o que de fato saiu.
     const [subs, evs, lds] = await Promise.all([
-      supabase.from('quiz_submissions').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId),
-      supabase.from('quiz_events').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId),
-      supabase.from('leads').select('id', { count: 'exact', head: true }).eq('quiz_id' as never, quizId),
+      supabase
+        .from("quiz_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("quiz_id", quizId),
+      supabase
+        .from("quiz_events")
+        .select("id", { count: "exact", head: true })
+        .eq("quiz_id", quizId),
+      supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("quiz_id" as never, quizId),
     ]);
     const antes = {
       submissoes: subs.count ?? 0,
@@ -838,9 +928,12 @@ export const quizService = {
       leads: lds.count ?? 0,
     };
     // Leads primeiro: as submissões apontam para eles.
-    await supabase.from('leads').delete().eq('quiz_id' as never, quizId);
-    await supabase.from('quiz_events').delete().eq('quiz_id', quizId);
-    await supabase.from('quiz_submissions').delete().eq('quiz_id', quizId);
+    await supabase
+      .from("leads")
+      .delete()
+      .eq("quiz_id" as never, quizId);
+    await supabase.from("quiz_events").delete().eq("quiz_id", quizId);
+    await supabase.from("quiz_submissions").delete().eq("quiz_id", quizId);
     return antes;
   },
 
@@ -848,19 +941,31 @@ export const quizService = {
   async getDadosAvancados(quizId: string, days = 30) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const [{ data: eventos }, { data: submissoes }] = await Promise.all([
-      supabase.from('quiz_events').select('event_type, block_id, session_id, created_at')
-        .eq('quiz_id', quizId).gte('created_at', since).limit(50000),
-      supabase.from('quiz_submissions').select('created_at, status, tracking')
-        .eq('quiz_id', quizId).gte('created_at', since).limit(5000),
+      supabase
+        .from("quiz_events")
+        .select("event_type, block_id, session_id, created_at")
+        .eq("quiz_id", quizId)
+        .gte("created_at", since)
+        .limit(50000),
+      supabase
+        .from("quiz_submissions")
+        .select("created_at, status, tracking")
+        .eq("quiz_id", quizId)
+        .gte("created_at", since)
+        .limit(5000),
     ]);
     return {
-      eventos: (eventos ?? []) as unknown as import('../lib/metricasAvancadas').EventoBruto[],
-      submissoes: (submissoes ?? []) as unknown as import('../lib/metricasAvancadas').SubmissaoBruta[],
+      eventos: (eventos ?? []) as unknown as import("../lib/metricasAvancadas").EventoBruto[],
+      submissoes: (submissoes ??
+        []) as unknown as import("../lib/metricasAvancadas").SubmissaoBruta[],
     };
   },
 
   // ============ ANALYTICS ============
-  async getMetrics(quizId: string, days = 30): Promise<{
+  async getMetrics(
+    quizId: string,
+    days = 30,
+  ): Promise<{
     starts: number;
     completions: number;
     submissions: number;
@@ -879,19 +984,23 @@ export const quizService = {
 
     const [{ data: events }, { data: subs }, schema] = await Promise.all([
       supabase
-        .from('quiz_events')
-        .select('event_type, block_id, created_at')
-        .eq('quiz_id', quizId)
-        .gte('created_at', since),
+        .from("quiz_events")
+        .select("event_type, block_id, created_at")
+        .eq("quiz_id", quizId)
+        .gte("created_at", since),
       supabase
-        .from('quiz_submissions')
-        .select('id, score, temperature, answers, status, created_at, tracking')
-        .eq('quiz_id', quizId)
-        .gte('created_at', since),
+        .from("quiz_submissions")
+        .select("id, score, temperature, answers, status, created_at, tracking")
+        .eq("quiz_id", quizId)
+        .gte("created_at", since),
       this.getLatestSchema(quizId),
     ]);
 
-    const evs = (events ?? []) as Array<{ event_type: string; block_id: string | null; created_at: string }>;
+    const evs = (events ?? []) as Array<{
+      event_type: string;
+      block_id: string | null;
+      created_at: string;
+    }>;
     const subsData = (subs ?? []) as unknown as Array<{
       score: number | null;
       temperature: string | null;
@@ -901,22 +1010,23 @@ export const quizService = {
       tracking: Record<string, string> | null;
     }>;
 
-    const starts = evs.filter((e) => e.event_type === 'start').length;
-    const completions = evs.filter((e) => e.event_type === 'complete').length;
+    const starts = evs.filter((e) => e.event_type === "start").length;
+    const completions = evs.filter((e) => e.event_type === "complete").length;
     const submissions = subsData.length;
     const leadsCaptured = subsData.filter((s) => {
       const c = (s.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
       return !!(c.email || c.phone);
     }).length;
     const conversionRate = starts > 0 ? (completions / starts) * 100 : 0;
-    const scored = subsData.filter((s) => typeof s.score === 'number');
-    const avgScore = scored.length > 0 ? scored.reduce((a, b) => a + (b.score ?? 0), 0) / scored.length : 0;
+    const scored = subsData.filter((s) => typeof s.score === "number");
+    const avgScore =
+      scored.length > 0 ? scored.reduce((a, b) => a + (b.score ?? 0), 0) / scored.length : 0;
 
     const temperature = { hot: 0, warm: 0, cold: 0 };
     for (const s of subsData) {
-      if (s.temperature === 'hot') temperature.hot++;
-      else if (s.temperature === 'warm') temperature.warm++;
-      else if (s.temperature === 'cold') temperature.cold++;
+      if (s.temperature === "hot") temperature.hot++;
+      else if (s.temperature === "warm") temperature.warm++;
+      else if (s.temperature === "cold") temperature.cold++;
     }
 
     const dayMap = new Map<string, { starts: number; completions: number }>();
@@ -928,20 +1038,21 @@ export const quizService = {
       const d = e.created_at.slice(0, 10);
       const bucket = dayMap.get(d);
       if (!bucket) continue;
-      if (e.event_type === 'start') bucket.starts++;
-      else if (e.event_type === 'complete') bucket.completions++;
+      if (e.event_type === "start") bucket.starts++;
+      else if (e.event_type === "complete") bucket.completions++;
     }
     const dailySeries = Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v }));
 
     const blockViews = new Map<string, number>();
     for (const e of evs) {
-      if (e.event_type !== 'block_view' || !e.block_id) continue;
+      if (e.event_type !== "block_view" || !e.block_id) continue;
       blockViews.set(e.block_id, (blockViews.get(e.block_id) ?? 0) + 1);
     }
     let previousViews = starts;
     const dropOffByBlock = schema.blocks.map((block) => {
       const views = blockViews.get(block.id) ?? 0;
-      const dropRate = previousViews > 0 ? Math.max(0, ((previousViews - views) / previousViews) * 100) : 0;
+      const dropRate =
+        previousViews > 0 ? Math.max(0, ((previousViews - views) / previousViews) * 100) : 0;
       previousViews = views;
       return {
         blockId: block.id,
@@ -951,15 +1062,23 @@ export const quizService = {
       };
     });
 
-    const utmMap = new Map<string, { campaign: string; source: string; submissions: number; completions: number }>();
+    const utmMap = new Map<
+      string,
+      { campaign: string; source: string; submissions: number; completions: number }
+    >();
     for (const s of subsData) {
       const t = s.tracking ?? {};
-      const campaign = t.utm_campaign || '';
-      const source = t.utm_source || 'Direto';
+      const campaign = t.utm_campaign || "";
+      const source = t.utm_source || "Direto";
       const key = `${campaign}::${source}`;
-      const entry = utmMap.get(key) ?? { campaign: campaign || 'Sem campanha', source, submissions: 0, completions: 0 };
+      const entry = utmMap.get(key) ?? {
+        campaign: campaign || "Sem campanha",
+        source,
+        submissions: 0,
+        completions: 0,
+      };
       entry.submissions++;
-      if (s.status === 'completed') entry.completions++;
+      if (s.status === "completed") entry.completions++;
       utmMap.set(key, entry);
     }
     const utmBreakdown = Array.from(utmMap.values()).sort((a, b) => b.submissions - a.submissions);
@@ -1005,21 +1124,26 @@ export const quizService = {
     };
   },
 
-  async listSubmissions(quizId: string, limit = 100): Promise<Array<{
-    id: string;
-    name: string | null;
-    email: string | null;
-    phone: string | null;
-    score: number | null;
-    temperature: string | null;
-    completed: boolean;
-    created_at: string;
-  }>> {
+  async listSubmissions(
+    quizId: string,
+    limit = 100,
+  ): Promise<
+    Array<{
+      id: string;
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      score: number | null;
+      temperature: string | null;
+      completed: boolean;
+      created_at: string;
+    }>
+  > {
     const { data, error } = await supabase
-      .from('quiz_submissions')
-      .select('id, answers, score, temperature, status, created_at')
-      .eq('quiz_id', quizId)
-      .order('created_at', { ascending: false })
+      .from("quiz_submissions")
+      .select("id, answers, score, temperature, status, created_at")
+      .eq("quiz_id", quizId)
+      .order("created_at", { ascending: false })
       .limit(limit);
     if (error) throw error;
     const rows = (data ?? []) as unknown as Array<{
@@ -1031,7 +1155,11 @@ export const quizService = {
       created_at: string;
     }>;
     return rows.map((r) => {
-      const c = (r.answers?._contact ?? {}) as { email?: string | null; phone?: string | null; name?: string | null };
+      const c = (r.answers?._contact ?? {}) as {
+        email?: string | null;
+        phone?: string | null;
+        name?: string | null;
+      };
       return {
         id: r.id,
         name: c.name ?? null,
@@ -1039,7 +1167,7 @@ export const quizService = {
         phone: c.phone ?? null,
         score: r.score,
         temperature: r.temperature,
-        completed: r.status === 'completed',
+        completed: r.status === "completed",
         created_at: r.created_at,
       };
     });
@@ -1065,8 +1193,17 @@ export const quizService = {
   ): Promise<Record<string, { total: number; completed: number; leadsCaptured: number }>> {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const [{ data, error }, { data: inicios }] = await Promise.all([
-      supabase.from('quiz_submissions').select('quiz_id, status, answers').eq('company_id', companyId).gte('created_at', since),
-      supabase.from('quiz_events').select('quiz_id').eq('company_id', companyId).eq('event_type', 'start').gte('created_at', since),
+      supabase
+        .from("quiz_submissions")
+        .select("quiz_id, status, answers")
+        .eq("company_id", companyId)
+        .gte("created_at", since),
+      supabase
+        .from("quiz_events")
+        .select("quiz_id")
+        .eq("company_id", companyId)
+        .eq("event_type", "start")
+        .gte("created_at", since),
     ]);
     if (error) throw error;
     const rows = (data ?? []) as unknown as Array<{
@@ -1082,7 +1219,7 @@ export const quizService = {
     }
     for (const r of rows) {
       const entry = garantir(r.quiz_id);
-      if (r.status === 'completed') entry.completed++;
+      if (r.status === "completed") entry.completed++;
       const c = (r.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
       if (c.email || c.phone) entry.leadsCaptured++;
       /* Quiz antigo, de antes de `start` ser gravado: sem nenhum início, a
@@ -1093,20 +1230,31 @@ export const quizService = {
     return stats;
   },
 
-  async getAbTestStats(quizId: string, days = 30): Promise<Array<{
-    blockId: string;
-    blockLabel: string;
-    variants: Array<{ id: string; label: string; views: number; advances: number; conversionRate: number }>;
-  }>> {
+  async getAbTestStats(
+    quizId: string,
+    days = 30,
+  ): Promise<
+    Array<{
+      blockId: string;
+      blockLabel: string;
+      variants: Array<{
+        id: string;
+        label: string;
+        views: number;
+        advances: number;
+        conversionRate: number;
+      }>;
+    }>
+  > {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const [schema, { data: events, error }] = await Promise.all([
       this.getLatestSchema(quizId),
       supabase
-        .from('quiz_events')
-        .select('event_type, block_id, payload, created_at')
-        .eq('quiz_id', quizId)
-        .in('event_type', ['block_view', 'block_advance'])
-        .gte('created_at', since),
+        .from("quiz_events")
+        .select("event_type, block_id, payload, created_at")
+        .eq("quiz_id", quizId)
+        .in("event_type", ["block_view", "block_advance"])
+        .gte("created_at", since),
     ]);
     if (error) throw error;
     const evs = (events ?? []) as Array<{
@@ -1118,25 +1266,37 @@ export const quizService = {
     const results: Array<{
       blockId: string;
       blockLabel: string;
-      variants: Array<{ id: string; label: string; views: number; advances: number; conversionRate: number }>;
+      variants: Array<{
+        id: string;
+        label: string;
+        views: number;
+        advances: number;
+        conversionRate: number;
+      }>;
     }> = [];
 
     for (const block of schema.blocks) {
       if (!block.abTest?.enabled || block.abTest.variants.length === 0) continue;
       const allVariants = [
-        { id: 'control', title: block.title },
+        { id: "control", title: block.title },
         ...block.abTest.variants.map((v) => ({ id: v.id, title: v.title })),
       ];
       const variantStats = allVariants.map((v) => {
         const views = evs.filter(
-          (e) => e.block_id === block.id && e.event_type === 'block_view' && (e.payload?.variant_id ?? 'control') === v.id
+          (e) =>
+            e.block_id === block.id &&
+            e.event_type === "block_view" &&
+            (e.payload?.variant_id ?? "control") === v.id,
         ).length;
         const advances = evs.filter(
-          (e) => e.block_id === block.id && e.event_type === 'block_advance' && (e.payload?.variant_id ?? 'control') === v.id
+          (e) =>
+            e.block_id === block.id &&
+            e.event_type === "block_advance" &&
+            (e.payload?.variant_id ?? "control") === v.id,
         ).length;
         return {
           id: v.id,
-          label: v.id === 'control' ? 'Original' : v.title || 'Variação',
+          label: v.id === "control" ? "Original" : v.title || "Variação",
           views,
           advances,
           conversionRate: views > 0 ? (advances / views) * 100 : 0,

@@ -39,9 +39,9 @@ Verificado por busca no código — nenhum destes existe:
 | 8 | **Camada de IA** (análise redigida e Editar com IA) | bloqueada: sem chave no servidor |
 | 9 | `Exportar leads` com link de validade | — |
 | 9 | `Resetar dados` | — |
-| 9 | Passo a passo guiado no primeiro uso | — |
+| ~~9~~ | ~~Passo a passo guiado no primeiro uso~~ | ✅ seis cartões ancorados no construtor, só em tela ≥1024 |
 | ~~9~~ | ~~`Auto-organizar` no Fluxo~~ | **falso achado**: já existia como "Organizar layout" (`handleReorganize`). Minha auditoria buscou pelo nome do inlead e não encontrou o nosso |
-| 9 | Biblioteca pública de modelos | os `STEP_TEMPLATES` existem, a galeria não |
+| ~~9~~ | ~~Biblioteca pública de modelos~~ | ✅ galeria com filtro por nicho e prévia das etapas |
 | 9 | Rodapé "Criado via" com UTM de indicação | — |
 
 **Decisão consciente, não esquecimento:** arrastar-para-qualquer-ponto (posição
@@ -215,8 +215,8 @@ pelo cliente do nosso cliente; carimbar nossa marca na página dele sem ele pedi
 | **Painel de camadas** | O posicionamento fora do fluxo foi entregue na Onda 7; o painel em si é interface de canvas livre, que decidimos não perseguir |
 | `Encaixe` (snap) | Depende do canvas livre acima |
 | ~~Itens de paleta~~ | ✅ `18e7326` — Grade, Cards, Sumário, Indicador, Seta, Emoji, Marca/Logo e Redes sociais |
-| Biblioteca pública de modelos | Os `STEP_TEMPLATES` existem; falta a galeria |
-| Passo a passo guiado no primeiro uso | Não entrou |
+| ~~Biblioteca pública de modelos~~ | ✅ seis modelos escritos em código + galeria. **A tabela `quiz_templates` tinha os seis com `blocks: []`** — "Usar Template" criava um quiz vazio com nome bonito |
+| ~~Passo a passo guiado no primeiro uso~~ | ✅ `TutorialGuiado`, reabrível pelo botão de ajuda |
 
 ## 3. Sim, ainda há falhas conhecidas
 
@@ -256,3 +256,39 @@ Antes de abrir mais frentes, duas coisas:
    visual no que não foi aberto não é baixa.
 2. **Os quatro defeitos laranja**, que são perda silenciosa de trabalho do
    usuário (desfazer, container, autosave) e questão de LGPD (geo).
+
+## Biblioteca de modelos e tutorial — 05/10/2026
+
+**O defeito que isto corrigiu.** A tabela `quiz_templates` tinha seis linhas
+ativas e todas com `schema.blocks = []`. O diálogo "Usar Template" listava as
+seis, criava o quiz e entregava uma tela em branco com nome bonito. Nada acusava:
+não havia tipo, não havia teste, e o validador de publicação nunca era chamado
+sobre elas.
+
+**Onde os modelos passam a morar.** Em `src/modules/quiz/quiz-templates.ts`, não
+na tabela. A tabela continua sendo lida — para o dia em que houver modelo próprio
+de cliente — mas `listTemplates` descarta linha sem bloco, para que o mesmo
+defeito não volte por outro caminho. Nada foi apagado no banco.
+
+Cada modelo tem 8 etapas: abertura, quatro perguntas que pontuam, tela de
+análise, captura e resultado. A captura nunca é a primeira etapa. O teste roda
+`validarPublicacao` em cima dos seis — um modelo que não publicaria quebra a
+suíte.
+
+**O que o navegador pegou e a compilação não.** Três coisas, todas invisíveis ao
+`tsc`:
+
+1. `rose-luxe` não existe entre os presets; o `?? DEFAULT_DESIGN` engolia em
+   silêncio e o modelo de estética saía com o tema errado.
+2. O campo do corpo do resultado é `resultBody`, não `resultDescription`. Os
+   casts `as QuizBlock` aceitavam o nome errado e o texto seria descartado.
+3. O tutorial abria direto no **passo 3 de 6**: o efeito que pula alvo ausente
+   lia o `pos` inicial do mesmo render em que a medição ainda não tinha sido
+   aplicada. Resolvido com três estados — ainda não medi / medi e não achei /
+   achei.
+
+**Véu do tutorial.** A primeira versão usava `box-shadow` com espalhamento de
+9999px. Com o alvo alto (o painel lateral, 852px) não pintava nada. Trocado por
+quatro faixas ao redor do alvo, com a aritmética em teste. Durante o diagnóstico
+também confundi build antigo com defeito de CSS — registrado para não repetir:
+**conferir qual build a tela está mostrando antes de culpar o estilo.**

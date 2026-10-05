@@ -1,11 +1,11 @@
-import type { RichDoc } from './lib/richdoc';
-import type { BlockStyle } from './lib/blockStyle';
+import type { RichDoc } from "./lib/richdoc";
+import type { BlockStyle } from "./lib/blockStyle";
 export type { RichDoc };
 export type { BlockStyle };
 
-export type QuizStatus = 'draft' | 'published' | 'archived';
-export type QuizLayoutMode = 'fullscreen' | 'card' | 'split' | 'story' | 'inline' | 'modal';
-export type QuizTemperature = 'hot' | 'warm' | 'cold';
+export type QuizStatus = "draft" | "published" | "archived";
+export type QuizLayoutMode = "fullscreen" | "card" | "split" | "story" | "inline" | "modal";
+export type QuizTemperature = "hot" | "warm" | "cold";
 
 export interface QuizFunnel {
   id: string;
@@ -37,60 +37,62 @@ export interface QuizTemplate {
   cover_url: string | null;
   schema: Record<string, unknown>;
   sort_order: number;
+  /** Ícone do cartão na galeria. Ausente nos modelos próprios de cliente. */
+  emoji?: string | null;
 }
 
 // ============ Builder schema ============
 
 export type BlockType =
-  | 'intro'
-  | 'single-choice'
-  | 'multi-choice'
-  | 'short-text'
-  | 'long-text'
-  | 'email'
-  | 'phone'
-  | 'rating'
-  | 'cta'
-  | 'result'
-  | 'video'
-  | 'audio'
-  | 'image'
-  | 'before-after'
-  | 'testimonial'
-  | 'countdown'
-  | 'divider'
+  | "intro"
+  | "single-choice"
+  | "multi-choice"
+  | "short-text"
+  | "long-text"
+  | "email"
+  | "phone"
+  | "rating"
+  | "cta"
+  | "result"
+  | "video"
+  | "audio"
+  | "image"
+  | "before-after"
+  | "testimonial"
+  | "countdown"
+  | "divider"
   // Fase B (Funilix parity)
-  | 'argument'
-  | 'argument-progress'
-  | 'level'
-  | 'loading'
-  | 'notification'
-  | 'faq'
-  | 'form'
-  | 'weight'
-  | 'height'
-  | 'pricing'
-  | 'reveal'
-  | 'ios-notification'
-  | 'audio-call'
-  | 'carousel'
-  | 'comparison'
-  | 'chart'
-  | 'custom'
+  | "argument"
+  | "argument-progress"
+  | "level"
+  | "loading"
+  | "notification"
+  | "faq"
+  | "form"
+  | "weight"
+  | "height"
+  | "pricing"
+  | "reveal"
+  | "ios-notification"
+  | "audio-call"
+  | "carousel"
+  | "comparison"
+  | "chart"
+  | "custom"
   // Layout (Funilix parity)
-  | 'container'
-  | 'spacer'
+  | "container"
+  | "spacer"
   // Onda 4 (paridade inlead)
-  | 'scheduling'
+  | "scheduling"
   // Componentes de conteúdo (paridade inlead)
-  | 'grid'
-  | 'cards'
-  | 'summary'
-  | 'indicator'
-  | 'arrow'
-  | 'emoji'
-  | 'brand'
-  | 'social';
+  | "grid"
+  | "cards"
+  | "summary"
+  | "indicator"
+  | "arrow"
+  | "emoji"
+  | "brand"
+  | "social";
 
 export interface BlockOption {
   id: string;
@@ -98,16 +100,16 @@ export interface BlockOption {
   value?: string;
   score?: number;
   emoji?: string;
-  imageUrl?: string;      // mídia alternativa ao emoji (uma exclui a outra)
+  imageUrl?: string; // mídia alternativa ao emoji (uma exclui a outra)
   tag?: string;
-  preselected?: boolean;  // já vem marcada quando a etapa abre
-  actionUrl?: string;     // ao clicar, abre esta URL em vez de avançar o fluxo
+  preselected?: boolean; // já vem marcada quando a etapa abre
+  actionUrl?: string; // ao clicar, abre esta URL em vez de avançar o fluxo
   jumpToBlockId?: string; // conditional branching
 }
 
 /* Os mesmos sete de `ShowIfOp`. Eram só cinco aqui, sem motivo técnico: uma
    regra de salto configurada com `gte` simplesmente nunca batia, em silêncio. */
-export type BlockLogicOp = 'eq' | 'neq' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'between';
+export type BlockLogicOp = "eq" | "neq" | "contains" | "gt" | "gte" | "lt" | "lte" | "between";
 
 /**
  * Sobre o que a regra decide.
@@ -121,28 +123,28 @@ export type BlockLogicOp = 'eq' | 'neq' | 'contains' | 'gt' | 'gte' | 'lt' | 'lt
  * dezenas de regras: "quem marcou ansiedade em pelo menos metade das perguntas"
  * é uma regra só aqui, e seria uma combinação inteira em `resposta`.
  */
-export type BlockLogicKind = 'resposta' | 'quantidade' | 'porcentagem' | 'pontuacao';
+export type BlockLogicKind = "resposta" | "quantidade" | "porcentagem" | "pontuacao";
 
 export interface BlockLogicRule {
   /** Ausente = `resposta`, que é como toda regra gravada até hoje se comporta. */
   kind?: BlockLogicKind;
-  fieldBlockId?: string;  // em `resposta`: o bloco cuja resposta é testada
-  tag?: string;           // em `quantidade`/`porcentagem`: a etiqueta contada
+  fieldBlockId?: string; // em `resposta`: o bloco cuja resposta é testada
+  tag?: string; // em `quantidade`/`porcentagem`: a etiqueta contada
   op: BlockLogicOp;
   value: string | number;
-  value2?: number;        // limite superior do `between`
-  jumpToBlockId: string;  // para onde ir quando bate
+  value2?: number; // limite superior do `between`
+  jumpToBlockId: string; // para onde ir quando bate
 }
 
 // ============ Exibição condicional (Funilix parity) ============
 // Mostra o bloco somente quando a condição sobre uma resposta anterior é verdadeira.
-export type ShowIfOp = 'eq' | 'neq' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'between';
+export type ShowIfOp = "eq" | "neq" | "contains" | "gt" | "gte" | "lt" | "lte" | "between";
 export interface BlockShowIf {
   enabled: boolean;
-  fieldBlockId: string;      // bloco cuja resposta é testada
+  fieldBlockId: string; // bloco cuja resposta é testada
   op: ShowIfOp;
   value: string | number;
-  value2?: string | number;  // usado só quando op === 'between' (faixa)
+  value2?: string | number; // usado só quando op === 'between' (faixa)
   // Motor de variáveis/fórmulas (Funilix parity): quando true, a condição compara o
   // RESULTADO de `expression` (ex.: "peso/(altura/100)^2" pra IMC) em vez da resposta
   // crua de `fieldBlockId` — permite cruzar várias respostas numa única condição.
@@ -201,7 +203,7 @@ export interface QuizBlock {
   resultBodyRich?: RichDoc;
   // Rich media (Phase 3)
   mediaUrl?: string;
-  mediaProvider?: 'youtube' | 'vimeo' | 'mp4' | 'file';
+  mediaProvider?: "youtube" | "vimeo" | "mp4" | "file";
   posterUrl?: string;
   autoplay?: boolean;
   beforeUrl?: string;
@@ -220,7 +222,7 @@ export interface QuizBlock {
    * permite barra de oferta sempre visível, aviso no topo e botão flutuante
    * sem depender de rolagem.
    */
-  posicao?: 'fluxo' | 'topo-fixo' | 'rodape-fixo' | 'flutuante' | 'tela-cheia';
+  posicao?: "fluxo" | "topo-fixo" | "rodape-fixo" | "flutuante" | "tela-cheia";
   /**
    * JavaScript executado ao clicar no bloco.
    *
@@ -231,9 +233,14 @@ export interface QuizBlock {
   onClickScript?: string;
   /** Canto da janela, só para `flutuante`. */
   ancora?:
-    | 'topo-esquerda' | 'topo-centro' | 'topo-direita'
-    | 'centro-esquerda' | 'centro-direita'
-    | 'abaixo-esquerda' | 'abaixo-centro' | 'abaixo-direita';
+    | "topo-esquerda"
+    | "topo-centro"
+    | "topo-direita"
+    | "centro-esquerda"
+    | "centro-direita"
+    | "abaixo-esquerda"
+    | "abaixo-centro"
+    | "abaixo-direita";
 
   /**
    * Cores próprias do bloco, sobrescrevendo o tema.
@@ -252,7 +259,7 @@ export interface QuizBlock {
   /** Colunas da Grade. */
   colunas?: 2 | 3 | 4;
   /** Para onde a Seta aponta. */
-  direcaoDaSeta?: 'baixo' | 'cima' | 'direita' | 'esquerda';
+  direcaoDaSeta?: "baixo" | "cima" | "direita" | "esquerda";
   /** Tamanho em px do Emoji e da Seta. */
   tamanhoDoSimbolo?: number;
   /** Texto do Indicador (ex.: "Você está aqui"). */
@@ -269,10 +276,10 @@ export interface QuizBlock {
   resumirBlocos?: string[];
 
   /** Disposição das opções. Lista é o padrão de sempre. */
-  optionsLayout?: 'lista' | 'grade-2' | 'grade-3' | 'grade-4';
+  optionsLayout?: "lista" | "grade-2" | "grade-3" | "grade-4";
   /** Forma do cartão. 'cartao' põe a imagem grande em cima e o rótulo embaixo —
    *  é o formato de escolha por foto, que só faz sentido com imagem na opção. */
-  optionCardStyle?: 'linha' | 'cartao';
+  optionCardStyle?: "linha" | "cartao";
   logicRules?: BlockLogicRule[];
   scoreWeight?: number; // multiplier for rating/choice blocks
   // A/B test (Fase 3)
@@ -313,7 +320,7 @@ export interface QuizBlock {
   comparisonLeftItems?: string[];
   comparisonRightLabel?: string;
   comparisonRightItems?: string[];
-  chartType?: 'bar' | 'line' | 'area' | 'pie' | 'radial';
+  chartType?: "bar" | "line" | "area" | "pie" | "radial";
   chartData?: ChartPoint[];
   /** Eixos e grade. Ausente = mostra, que é o comportamento de antes. */
   chartShowX?: boolean;
@@ -324,14 +331,14 @@ export interface QuizBlock {
 
   // ---- Preço com moeda ----
   /** Quando definido, o valor é formatado pela moeda em vez de sair como texto cru. */
-  pricingCurrency?: 'BRL' | 'USD' | 'EUR';
+  pricingCurrency?: "BRL" | "USD" | "EUR";
   pricingAmount?: number;
   pricingPrefix?: string;
   pricingSuffix?: string;
 
   // ---- Máscara de campo ----
   /** Formata enquanto digita. `livre` é o comportamento de sempre. */
-  fieldMask?: 'livre' | 'telefone' | 'cpf' | 'cnpj' | 'cep' | 'data' | 'moeda' | 'numero';
+  fieldMask?: "livre" | "telefone" | "cpf" | "cnpj" | "cep" | "data" | "moeda" | "numero";
   maxLength?: number;
 
   // ---- Agendamento ----
@@ -362,11 +369,11 @@ export interface QuizBlock {
   // NÃO aparecem em nenhum QuizStep.blockIds — o Container é a única referência a
   // eles, e é ele quem entra no blockIds da etapa.
   childBlockIds?: string[];
-  containerLayoutMode?: 'flex' | 'grid';
+  containerLayoutMode?: "flex" | "grid";
   containerColumns?: number; // usado só no modo grid: 1 | 2 | 3 | 4 | 6
   containerGap?: number; // px
-  containerAlign?: 'start' | 'center' | 'end' | 'stretch'; // align-items
-  containerJustify?: 'start' | 'center' | 'end' | 'stretch'; // justify-content
+  containerAlign?: "start" | "center" | "end" | "stretch"; // align-items
+  containerJustify?: "start" | "center" | "end" | "stretch"; // justify-content
   // Layout Responsivo (Funilix parity): as propriedades containerX acima são a base
   // "Mobile (padrão)" — Tablet/Desktop só precisam declarar o que muda; qualquer
   // campo ausente herda em cascata (Desktop herda de Tablet, que herda de Mobile).
@@ -384,11 +391,11 @@ export interface QuizBlock {
 }
 
 export interface ContainerBreakpointLayout {
-  layoutMode?: 'flex' | 'grid';
+  layoutMode?: "flex" | "grid";
   columns?: number;
   gap?: number;
-  align?: 'start' | 'center' | 'end' | 'stretch';
-  justify?: 'start' | 'center' | 'end' | 'stretch';
+  align?: "start" | "center" | "end" | "stretch";
+  justify?: "start" | "center" | "end" | "stretch";
 }
 
 /** Item de Grade e de Cards: um ícone, um título e uma linha de apoio. */
@@ -403,8 +410,7 @@ export interface ItemDeConteudo {
 }
 
 export type RedeSocial =
-  | 'instagram' | 'whatsapp' | 'facebook' | 'youtube'
-  | 'tiktok' | 'linkedin' | 'site' | 'email';
+  "instagram" | "whatsapp" | "facebook" | "youtube" | "tiktok" | "linkedin" | "site" | "email";
 
 export interface LinkSocial {
   id: string;
@@ -443,7 +449,7 @@ export interface QuizDesign {
   fontHeading: string;
   fontBody: string;
   buttonStyle: ButtonStyle;
-  progressStyle: 'bar' | 'dots' | 'steps' | 'none';
+  progressStyle: "bar" | "dots" | "steps" | "none";
 
   /* Identidade do funil, editável na aba Design.
      `titleColor` existe separado de `text` porque título e corpo quase nunca
@@ -457,7 +463,7 @@ export interface QuizDesign {
   /** Altura de botão e campo. Uma medida só comanda a densidade da tela toda. */
   elementSize?: number;
   /** Como a etapa distribui o espaço vertical quando sobra altura. */
-  verticalAlign?: 'start' | 'center' | 'between';
+  verticalAlign?: "start" | "center" | "between";
   /** Largura máxima do conteúdo. */
   contentWidth?: number;
   /** Cores que o usuário guardou, para reusar sem redigitar o hexadecimal. */
@@ -467,9 +473,21 @@ export interface QuizDesign {
 // Galeria de estilos de botão (Funilix parity): 4 estilos básicos + variantes com
 // mais "efeito" (brilho, elevação, relevo 3D) — ver getButtonStyle() em lib/buttonStyles.ts.
 export type ButtonStyle =
-  | 'solid' | 'outline' | 'ghost' | 'gradient'
-  | 'neon' | 'glow' | 'lift' | 'shimmer' | 'pulse'
-  | 'soft-shadow' | 'relief' | 'capsule' | 'brutalist' | 'soft-3d' | 'tilt';
+  | "solid"
+  | "outline"
+  | "ghost"
+  | "gradient"
+  | "neon"
+  | "glow"
+  | "lift"
+  | "shimmer"
+  | "pulse"
+  | "soft-shadow"
+  | "relief"
+  | "capsule"
+  | "brutalist"
+  | "soft-3d"
+  | "tilt";
 
 export interface QuizStep {
   id: string;
@@ -527,23 +545,23 @@ export interface AccessRules {
   enabled: boolean;
   utmSource?: string;
   utmCampaign?: string;
-  devices?: Array<'mobile' | 'desktop'>;
+  devices?: Array<"mobile" | "desktop">;
   countries?: string[]; // ISO 3166-1 alpha-2 codes, uppercase
   fallbackUrl: string;
 }
 
 export const DEFAULT_ACCESS_RULES: AccessRules = {
   enabled: false,
-  utmSource: '',
-  utmCampaign: '',
+  utmSource: "",
+  utmCampaign: "",
   devices: [],
   countries: [],
-  fallbackUrl: '',
+  fallbackUrl: "",
 };
 
 // ============ Engajamento: prova social flutuante + barra de urgência ============
 
-export type SocialProofIcon = 'check' | 'gift' | 'users' | 'star' | 'fire' | 'bell';
+export type SocialProofIcon = "check" | "gift" | "users" | "star" | "fire" | "bell";
 
 export interface SocialProofMessage {
   id: string;
@@ -552,7 +570,7 @@ export interface SocialProofMessage {
   body?: string;
 }
 
-export type SocialProofPosition = 'bottom-left' | 'bottom-right' | 'bottom-center' | 'top-center';
+export type SocialProofPosition = "bottom-left" | "bottom-right" | "bottom-center" | "top-center";
 
 export interface SocialProofSettings {
   enabled: boolean;
@@ -565,14 +583,14 @@ export interface SocialProofSettings {
 
 export const DEFAULT_SOCIAL_PROOF: SocialProofSettings = {
   enabled: false,
-  position: 'bottom-left',
+  position: "bottom-left",
   messages: [],
   startDelaySeconds: 4,
   displaySeconds: 6,
   intervalSeconds: 14,
 };
 
-export type UrgencyBarExpireBehavior = 'restart' | 'freeze' | 'hide';
+export type UrgencyBarExpireBehavior = "restart" | "freeze" | "hide";
 
 export interface UrgencyBarSettings {
   enabled: boolean;
@@ -583,7 +601,7 @@ export interface UrgencyBarSettings {
 
 export const DEFAULT_URGENCY_BAR: UrgencyBarSettings = {
   enabled: false,
-  label: 'Oferta especial expira em:',
+  label: "Oferta especial expira em:",
   minutes: 15,
-  onExpire: 'restart',
+  onExpire: "restart",
 };
