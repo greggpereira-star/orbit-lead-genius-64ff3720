@@ -7,6 +7,7 @@ import type { QuizBlock, QuizSchema, AccessRules, QuizDesign, BlockOption } from
 import { getSteps } from '../lib/steps';
 import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
+import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
@@ -547,11 +548,24 @@ function PlayerRunner({
   return (
     <div
       className="min-h-screen w-full flex justify-center"
-      style={{ background: design.background, color: design.text, fontFamily: design.fontBody }}
+      style={{
+        ...designVars(design),
+        background: design.background,
+        color: design.text,
+        fontFamily: design.fontBody,
+      }}
     >
-      <div className="w-full flex flex-col sm:my-auto" style={{ maxWidth: QUIZ_MAX_WIDTH }}>
+      <div className="w-full flex flex-col sm:my-auto" style={{ maxWidth: contentWidth(design) }}>
         {!done && <UrgencyBar quizId={quizId} settings={urgencyBar} design={design} />}
-        <div className="flex-1 flex flex-col" style={{ padding: '24px 16px' }}>
+        <div className={`flex-1 flex flex-col ${verticalAlignClass(design)}`} style={{ padding: '24px 16px' }}>
+          {design.logoUrl && (
+            <img
+              src={design.logoUrl}
+              alt=""
+              className="mx-auto mb-5 h-auto object-contain"
+              style={{ width: design.logoWidth ?? 120 }}
+            />
+          )}
           <ProgressBar
             value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
             current={done ? steps.length - 1 : state.currentStepIndex}

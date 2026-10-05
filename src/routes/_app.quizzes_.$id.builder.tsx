@@ -744,7 +744,7 @@ function QuizBuilderPage() {
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-sm">Etapas ({steps.length})</h3>
           <button
-            onClick={() => { setActiveBlockId(null); setMobilePanel(null); }}
+            onClick={() => navigate({ to: '/quizzes/$id/design', params: { id } })}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
           >
             <Palette className="h-3 w-3" /> Design
@@ -967,6 +967,9 @@ function QuizBuilderPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-2 px-2 sm:px-3">
             <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Configurações</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/design', params: { id } })} className="gap-2 px-2 sm:px-3">
+            <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Design</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/flow', params: { id } })} className="gap-2 px-2 sm:px-3">
             <Workflow className="h-4 w-4" /> <span className="hidden sm:inline">Fluxo</span>

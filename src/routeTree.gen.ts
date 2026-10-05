@@ -61,6 +61,7 @@ import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/publi
 import { Route as FunctionsV1OauthCallbackRouteImport } from './routes/functions.v1.oauth-callback'
 import { Route as IntegrationsMetaCallbackRouteImport } from './routes/integrations.meta.callback'
 import { Route as AppQuizzesIdBuilderRouteImport } from './routes/_app.quizzes_.$id.builder'
+import { Route as AppQuizzesIdDesignRouteImport } from './routes/_app.quizzes_.$id.design'
 import { Route as AppQuizzesIdFlowRouteImport } from './routes/_app.quizzes_.$id.flow'
 import { Route as AppQuizzesIdLeadsRouteImport } from './routes/_app.quizzes_.$id.leads'
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
@@ -334,6 +335,11 @@ const AppQuizzesIdBuilderRoute = AppQuizzesIdBuilderRouteImport.update({
   path: '/quizzes/$id/builder',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuizzesIdDesignRoute = AppQuizzesIdDesignRouteImport.update({
+  id: '/quizzes_/$id/design',
+  path: '/quizzes/$id/design',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppQuizzesIdFlowRoute = AppQuizzesIdFlowRouteImport.update({
   id: '/quizzes_/$id/flow',
   path: '/quizzes/$id/flow',
@@ -434,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/quizzes/$id/design': typeof AppQuizzesIdDesignRoute
   '/quizzes/$id/flow': typeof AppQuizzesIdFlowRoute
   '/quizzes/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
@@ -494,6 +501,7 @@ export interface FileRoutesByTo {
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/settings': typeof AppSettingsIndexRoute
   '/quizzes/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/quizzes/$id/design': typeof AppQuizzesIdDesignRoute
   '/quizzes/$id/flow': typeof AppQuizzesIdFlowRoute
   '/quizzes/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
@@ -558,6 +566,7 @@ export interface FileRoutesById {
   '/integrations/meta/callback': typeof IntegrationsMetaCallbackRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/quizzes_/$id/builder': typeof AppQuizzesIdBuilderRoute
+  '/_app/quizzes_/$id/design': typeof AppQuizzesIdDesignRoute
   '/_app/quizzes_/$id/flow': typeof AppQuizzesIdFlowRoute
   '/_app/quizzes_/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/integrations/meta/callback'
     | '/settings/'
     | '/quizzes/$id/builder'
+    | '/quizzes/$id/design'
     | '/quizzes/$id/flow'
     | '/quizzes/$id/leads'
     | '/quizzes/$id/performance'
@@ -681,6 +691,7 @@ export interface FileRouteTypes {
     | '/integrations/meta/callback'
     | '/settings'
     | '/quizzes/$id/builder'
+    | '/quizzes/$id/design'
     | '/quizzes/$id/flow'
     | '/quizzes/$id/leads'
     | '/quizzes/$id/performance'
@@ -744,6 +755,7 @@ export interface FileRouteTypes {
     | '/integrations/meta/callback'
     | '/_app/settings/'
     | '/_app/quizzes_/$id/builder'
+    | '/_app/quizzes_/$id/design'
     | '/_app/quizzes_/$id/flow'
     | '/_app/quizzes_/$id/leads'
     | '/_app/quizzes_/$id/performance'
@@ -1148,6 +1160,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdBuilderRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/quizzes_/$id/design': {
+      id: '/_app/quizzes_/$id/design'
+      path: '/quizzes/$id/design'
+      fullPath: '/quizzes/$id/design'
+      preLoaderRoute: typeof AppQuizzesIdDesignRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/quizzes_/$id/flow': {
       id: '/_app/quizzes_/$id/flow'
       path: '/quizzes/$id/flow'
@@ -1285,6 +1304,7 @@ interface AppRouteChildren {
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRoute
   AppQuizzesIdBuilderRoute: typeof AppQuizzesIdBuilderRoute
+  AppQuizzesIdDesignRoute: typeof AppQuizzesIdDesignRoute
   AppQuizzesIdFlowRoute: typeof AppQuizzesIdFlowRoute
   AppQuizzesIdLeadsRoute: typeof AppQuizzesIdLeadsRoute
   AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
@@ -1307,6 +1327,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWhatsappRoute: AppWhatsappRoute,
   AppIntegrationsMetaRoute: AppIntegrationsMetaRoute,
   AppQuizzesIdBuilderRoute: AppQuizzesIdBuilderRoute,
+  AppQuizzesIdDesignRoute: AppQuizzesIdDesignRoute,
   AppQuizzesIdFlowRoute: AppQuizzesIdFlowRoute,
   AppQuizzesIdLeadsRoute: AppQuizzesIdLeadsRoute,
   AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,

@@ -301,6 +301,24 @@ export interface QuizDesign {
   fontBody: string;
   buttonStyle: ButtonStyle;
   progressStyle: 'bar' | 'dots' | 'steps' | 'none';
+
+  /* Identidade do funil, editável na aba Design.
+     `titleColor` existe separado de `text` porque título e corpo quase nunca
+     querem a mesma cor: o corpo pede contraste menor para não cansar a leitura,
+     e hoje os dois saem do mesmo campo. */
+  logoUrl?: string;
+  logoWidth?: number;
+  titleColor?: string;
+  titleSize?: number;
+  contentSize?: number;
+  /** Altura de botão e campo. Uma medida só comanda a densidade da tela toda. */
+  elementSize?: number;
+  /** Como a etapa distribui o espaço vertical quando sobra altura. */
+  verticalAlign?: 'start' | 'center' | 'between';
+  /** Largura máxima do conteúdo. */
+  contentWidth?: number;
+  /** Cores que o usuário guardou, para reusar sem redigitar o hexadecimal. */
+  savedColors?: string[];
 }
 
 // Galeria de estilos de botão (Funilix parity): 4 estilos básicos + variantes com
