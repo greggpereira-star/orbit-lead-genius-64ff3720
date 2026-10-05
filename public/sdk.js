@@ -198,11 +198,32 @@
          função direto nenhum ouvinte era instalado. Aceita as duas. */
       var trigger = options.trigger || 'exit_intent';
       if (trigger === 'exit' || trigger === 'exit_intent') {
-        document.addEventListener('mouseleave', (e) => {
-          if (e.clientY < 0) {
-            this.showModal(formId);
+        var self = this;
+        var jaAbriu = false;
+        /* `<= 0` e não `< 0`.
+         *
+         * A intenção de saída é o cursor deixando a página POR CIMA, rumo à
+         * aba ou à barra de endereço. Dependendo do sistema e do zoom, o
+         * último ponto registrado é 0 — não um número negativo. Com `< 0` o
+         * gatilho simplesmente não disparava nesses casos, e o cliente
+         * configurava o pop-up achando que estava ativo.
+         *
+         * `relatedTarget` nulo confirma que o ponteiro saiu da janela, e não
+         * entrou num iframe ou num elemento filho.
+         */
+        var aoSair = function (e) {
+          if (jaAbriu) return;
+          if (e.clientY <= 0 && !e.relatedTarget) {
+            jaAbriu = true;
+            document.removeEventListener('mouseleave', aoSair);
+            document.documentElement.removeEventListener('mouseleave', aoSair);
+            self.showModal(formId);
           }
-        }, { once: true });
+        };
+        // Nos dois: navegadores divergem sobre qual dispara `mouseleave` ao
+        // sair da janela. O `jaAbriu` garante uma abertura só.
+        document.addEventListener('mouseleave', aoSair);
+        document.documentElement.addEventListener('mouseleave', aoSair);
       } else if (trigger === 'delay') {
         setTimeout(() => this.showModal(formId), (options.delay || 5) * 1000);
       } else if (trigger === 'scroll') {
