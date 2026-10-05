@@ -232,3 +232,29 @@ Resultado: **o construtor e o inspetor não têm mais nenhuma classe crua de
 acento.** Sobraram duas no Fluxo, e as duas são de propósito — o anel de foco,
 que é acessibilidade, e o botão de inserir etapa, única chamada para ação
 daquele canvas.
+
+### 5.2 Achado ao aferir: o modo escuro não está ligado
+
+Ao conferir se o `--selecao` seguia o tema, medi que **o app não tem modo
+escuro**. Não há provedor de tema, nada em `src/` adiciona a classe `dark`, e
+não existe `@media (prefers-color-scheme)` no `styles.css`. O bloco `.dark`
+inteiro — com os comentários sobre luminância, o `--sucesso` clareado e o
+`--aviso` — é código morto hoje.
+
+Isso **corrige** uma afirmação minha anterior nesta mesma sessão, de que o
+escuro em produção estaria sem alguns tokens: ele não está sem tokens, ele não
+é alcançável.
+
+O `--selecao: oklch(0.70 0.16 264)` do escuro fica, pelo mesmo motivo que os
+vizinhos ficam: no dia em que o tema for ligado, seleção se comporta como os
+outros estados. Aferido com a classe na raiz, que é o mecanismo padrão:
+
+| Modo | Fundo computado |
+|---|---|
+| claro | `oklch(0.50999 … / 0.12)` |
+| escuro | `oklch(0.699992 … / 0.12)` |
+
+A primeira medição que fiz deu igual nos dois, e estava errada por duas razões
+que vale registrar: a prova punha `.dark` numa `div` filha (propriedade herdada
+chega já substituída, então o override não propaga), e a leitura acontecia no
+mesmo tique da troca de classe, antes do recálculo.
