@@ -6,6 +6,9 @@ import { ArrowLeft, TrendingUp, Users, Target, Flame, Download, FlaskConical, Tr
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { quizService } from '@/modules/quiz/services/quizService';
+import { getSteps } from '@/modules/quiz/lib/steps';
+import { calcularConversaoPorEtapa, CORES_DE_FAIXA, MINIMO_PARA_NOTA } from '@/modules/quiz/lib/stepConversion';
+import type { QuizStep } from '@/modules/quiz/types';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
   ResponsiveContainer,
@@ -39,6 +42,8 @@ function QuizPerformancePage() {
   const [abTests, setAbTests] = useState<AbTestStats>([]);
   const [loading, setLoading] = useState(true);
   const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [steps, setSteps] = useState<QuizStep[]>([]);
+  const [eventosDeEtapa, setEventosDeEtapa] = useState<{ block_id: string | null; session_id: string | null }[]>([]);
 
   const refreshAbTests = () => {
     quizService.getAbTestStats(id, days).then(setAbTests).catch(() => {});
@@ -60,6 +65,15 @@ function QuizPerformancePage() {
         });
     };
     fetchData(true);
+    /* A nota por etapa precisa do esquema (quais blocos formam cada etapa) e
+       dos eventos com sessão — nenhum dos dois vem de `getMetrics`. */
+    Promise.all([quizService.getLatestSchema(id), quizService.getStepViewEvents(id, days)])
+      .then(([sch, ev]) => {
+        if (cancelled) return;
+        setSteps(getSteps(sch));
+        setEventosDeEtapa(ev);
+      })
+      .catch(() => {});
     const interval = window.setInterval(() => fetchData(false), 30_000);
     return () => {
       cancelled = true;
@@ -192,7 +206,16 @@ function QuizPerformancePage() {
             </Card>
 
             <Card className="p-6">
-              <h3 className="font-semibold mb-4">Funil por etapa</h3>
+              <h3 className="font-semibold mb-1">Conversão por etapa</h3>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Quantos dos que viram a etapa seguiram adiante. Contado por visitante,
+                não por visualização.
+              </p>
+              <ConversaoPorEtapa steps={steps} eventos={eventosDeEtapa} />
+            </Card>
+
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">Funil por etapa (blocos)</h3>
               {metrics.dropOffByBlock.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sem eventos de bloco ainda.</p>
               ) : (
@@ -435,5 +458,65 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
       </div>
       <div className="text-2xl font-bold tracking-tight">{value}</div>
     </Card>
+  );
+}
+
+/** Lista de etapas com a nota de conversão e a barra proporcional. */
+function ConversaoPorEtapa({
+  steps,
+  eventos,
+}: {
+  steps: QuizStep[];
+  eventos: { block_id: string | null; session_id: string | null }[];
+}) {
+  const linhas = calcularConversaoPorEtapa(steps, eventos);
+  const maiorVisitantes = Math.max(1, ...linhas.map((l) => l.visitantes));
+
+  if (!steps.length || linhas.every((l) => l.visitantes === 0)) {
+    return <p className="text-sm text-muted-foreground">Sem visitas registradas no período.</p>;
+  }
+
+  return (
+    <div className="max-h-56 space-y-2.5 overflow-auto">
+      {linhas.map((l, i) => {
+        const step = steps[i];
+        const { cor, rotulo } = CORES_DE_FAIXA[l.faixa];
+        const semNota = l.taxa === null;
+        return (
+          <div key={l.stepId} className="text-xs">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="truncate text-muted-foreground">
+                #{i + 1} {step?.name || `Etapa ${i + 1}`}
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="tabular-nums text-muted-foreground">{l.visitantes}</span>
+                <span
+                  className="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
+                  style={semNota ? undefined : { background: `${cor}22`, color: cor }}
+                  title={
+                    semNota
+                      ? i === linhas.length - 1
+                        ? 'Última etapa: não existe etapa posterior para medir avanço'
+                        : `Precisa de ${MINIMO_PARA_NOTA} visitantes para uma taxa confiável`
+                      : `${rotulo} — ${l.avancaram} de ${l.visitantes} avançaram`
+                  }
+                >
+                  {semNota ? '—' : `${Math.round(l.taxa! * 100)}%`}
+                </span>
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded bg-muted">
+              <div
+                className="h-full"
+                style={{
+                  width: `${(l.visitantes / maiorVisitantes) * 100}%`,
+                  background: semNota ? 'var(--muted-foreground)' : cor,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -317,7 +317,7 @@ function PlayerRunner({
 
   useEffect(() => {
     if (preview) return;
-    quizService.trackEvent({ quizId, companyId, eventType: 'start' }).catch(() => {});
+    quizService.trackEvent({ quizId, companyId, eventType: 'start', sessionId: sessionId.current }).catch(() => {});
   }, [quizId, companyId, preview]);
 
   // Cada etapa vista vira um ViewContent. Junto com o Lead e a conclusão, é o
@@ -339,6 +339,7 @@ function PlayerRunner({
           submissionId,
           eventType: 'block_view',
           blockId: b.id,
+          sessionId: sessionId.current,
           metadata: { variant_id: variantAssignments.current.get(b.id) ?? 'control' },
         })
         .catch(() => {});
@@ -392,6 +393,7 @@ function PlayerRunner({
             submissionId,
             eventType: 'block_advance',
             blockId: b.id,
+            sessionId: sessionId.current,
             metadata: { variant_id: variantAssignments.current.get(b.id) ?? 'control' },
           })
           .catch(() => {});
@@ -507,6 +509,7 @@ function PlayerRunner({
           companyId,
           submissionId: id,
           eventType: 'complete',
+          sessionId: sessionId.current,
           metadata: { score: finalState.score, temperature },
         })
         .catch(() => {});

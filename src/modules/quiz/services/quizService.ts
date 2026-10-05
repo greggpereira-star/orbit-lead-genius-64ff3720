@@ -732,6 +732,10 @@ export const quizService = {
     submissionId?: string | null;
     eventType: string;
     blockId?: string;
+    /* Sem a sessão, só dá para contar visualização bruta: quem volta uma etapa
+       e avança de novo conta duas vezes, e a taxa de conversão por etapa sai
+       errada. A coluna sempre existiu na tabela e nunca era preenchida. */
+    sessionId?: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
     await supabase.from('quiz_events').insert({
@@ -740,8 +744,32 @@ export const quizService = {
       submission_id: params.submissionId ?? null,
       event_type: params.eventType,
       block_id: params.blockId ?? null,
+      session_id: params.sessionId ?? null,
       payload: params.metadata ?? {},
     } as never);
+  },
+
+  /**
+   * Visualizações de bloco com a sessão, para a nota de conversão por etapa.
+   *
+   * Só traz `block_view`: é o único evento emitido para TODA etapa. O
+   * `block_advance` existe, mas só dispara em bloco com teste A/B ligado —
+   * medido na base: zero linhas em toda a história da tabela.
+   */
+  async getStepViewEvents(quizId: string, days = 30): Promise<{ block_id: string | null; session_id: string | null }[]> {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const { data, error } = await supabase
+      .from('quiz_events')
+      .select('block_id, session_id')
+      .eq('quiz_id', quizId)
+      .eq('event_type', 'block_view')
+      .gte('created_at', since)
+      .limit(50000);
+    if (error) {
+      console.warn('Falha ao ler eventos de etapa', error);
+      return [];
+    }
+    return (data as { block_id: string | null; session_id: string | null }[] | null) ?? [];
   },
 
   // ============ ANALYTICS ============

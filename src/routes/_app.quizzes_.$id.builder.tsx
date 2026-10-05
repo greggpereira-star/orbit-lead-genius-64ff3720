@@ -31,6 +31,9 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { quizService } from '@/modules/quiz/services/quizService';
+import { useEditLock } from '@/modules/quiz/hooks/useEditLock';
+import { calcularConversaoPorEtapa, CORES_DE_FAIXA, MINIMO_PARA_NOTA, type ConversaoDaEtapa } from '@/modules/quiz/lib/stepConversion';
+import { EditLockBanner } from '@/modules/quiz/components/EditLockBanner';
 import { QuizPreview } from '@/modules/quiz/components/QuizPreview';
 import { QuizInspector } from '@/modules/quiz/components/QuizInspector';
 import { AccessRulesDialog } from '@/modules/quiz/components/AccessRulesDialog';
@@ -80,6 +83,20 @@ function QuizBuilderPage() {
   const [publishedVersionId, setPublishedVersionId] = useState<string | null>(null);
   const [latestVersionId, setLatestVersionId] = useState<string | null>(null);
 
+  /* Posse da edição. Duas abas no mesmo quiz se sobrescreviam em silêncio: cada
+     uma tem o seu `schema` em memória e o autosave grava o estado INTEIRO, então
+     quem salvasse por último apagava o trabalho do outro sem aviso nenhum. */
+  const trava = useEditLock(id, user?.name || user?.email || undefined);
+
+  /* Conversão medida por etapa, dos últimos 30 dias. Carrega uma vez: é leitura
+     de análise, não precisa acompanhar cada tecla digitada no construtor. */
+  const [eventosDeEtapa, setEventosDeEtapa] = useState<{ block_id: string | null; session_id: string | null }[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    quizService.getStepViewEvents(id, 30).then((e) => { if (vivo) setEventosDeEtapa(e); });
+    return () => { vivo = false; };
+  }, [id]);
+
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 1024px)');
     const onChange = () => setIsDesktop(mql.matches);
@@ -115,6 +132,11 @@ function QuizBuilderPage() {
   // `keepEmpty`: no builder uma etapa recém-criada vive vazia até ganhar o
   // primeiro componente. Preview e player continuam podando as vazias.
   const steps = useMemo(() => getSteps(schema, { keepEmpty: true }), [schema]);
+
+  const conversaoPorEtapa = useMemo(() => {
+    const lista = calcularConversaoPorEtapa(steps, eventosDeEtapa);
+    return new Map(lista.map((c) => [c.stepId, c]));
+  }, [steps, eventosDeEtapa]);
 
   /**
    * Etapa onde o próximo bloco vai cair.
@@ -523,6 +545,15 @@ function QuizBuilderPage() {
   /** Devolve o id da versão gravada — quem publica precisa publicar ESTA. */
   const handleSave = async (opts?: { silent?: boolean }): Promise<string | null> => {
     if (!company?.id || !user?.id) return null;
+    /* A guarda fica aqui, e não só no autosave, porque Salvar e Publicar também
+       gravam o schema inteiro: barrar só o automático deixaria a porta aberta
+       justamente para a gravação deliberada, que é a pior de perder. */
+    if (!trava.souDono) {
+      if (!opts?.silent) {
+        toast.error('A edição deste quiz está com outra aba. Peça o controle para poder salvar.');
+      }
+      return null;
+    }
     setSaving(true);
     try {
       const versionId = await quizService.saveSchema({
@@ -556,13 +587,13 @@ function QuizBuilderPage() {
   // Salvamento automático: evita que o Preview e o link público fiquem desatualizados
   // em relação ao que está sendo editado (padrão já validado por concorrentes).
   useEffect(() => {
-    if (!autosave || !dirty || loading) return;
+    if (!autosave || !dirty || loading || !trava.souDono) return;
     const timer = setTimeout(() => {
       handleSave({ silent: true });
     }, 1500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, dirty, autosave, loading]);
+  }, [schema, dirty, autosave, loading, trava.souDono]);
 
   /* Só um quiz publicado pode ter "alteração fora do ar": num rascunho, tudo
      ainda está por publicar e o aviso não significaria nada. `dirty` entra
@@ -821,6 +852,7 @@ function QuizBuilderPage() {
                                 : `${stepBlocks.length} componente${stepBlocks.length > 1 ? 's' : ''}`}
                             </div>
                           </div>
+                          <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}
                             className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
@@ -1061,6 +1093,8 @@ function QuizBuilderPage() {
         </div>
       </header>
 
+      <EditLockBanner trava={trava} />
+
       {/* 3-column layout on desktop, single column + drawers on mobile/tablet */}
       <div className="flex-1 flex overflow-hidden">
         <aside className="hidden lg:block w-72 border-r bg-card overflow-y-auto">
@@ -1155,5 +1189,41 @@ function QuizBuilderPage() {
     </div>
     </DragDropContext>,
     document.body
+  );
+}
+
+/**
+ * Nota de conversão da etapa.
+ *
+ * Fica silencioso quando não há visitante suficiente: uma etapa com 3 visitas e
+ * um desistente daria "33%" e pintaria de vermelho algo que não foi medido.
+ */
+function SeloDeConversao({ dados }: { dados?: ConversaoDaEtapa }) {
+  if (!dados || dados.visitantes === 0) return null;
+
+  if (dados.taxa === null) {
+    return (
+      <span
+        className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-muted-foreground"
+        title={
+          dados.visitantes < MINIMO_PARA_NOTA
+            ? `${dados.visitantes} visitante(s) — precisa de ${MINIMO_PARA_NOTA} para uma taxa confiável`
+            : 'Última etapa: não existe etapa posterior para medir avanço'
+        }
+      >
+        {dados.visitantes}👤
+      </span>
+    );
+  }
+
+  const { cor, rotulo } = CORES_DE_FAIXA[dados.faixa];
+  return (
+    <span
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums"
+      style={{ background: `${cor}22`, color: cor }}
+      title={`${rotulo} — ${dados.avancaram} de ${dados.visitantes} visitantes avançaram (30 dias)`}
+    >
+      {Math.round(dados.taxa * 100)}%
+    </span>
   );
 }
