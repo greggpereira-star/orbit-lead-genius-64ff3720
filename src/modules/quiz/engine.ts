@@ -1,6 +1,6 @@
-import type { BlockOption, QuizBlock, QuizSchema, QuizStep } from './types';
+import type { BlockLogicOp, BlockOption, QuizBlock, QuizSchema, QuizStep } from './types';
 import { findStepIndexForBlock } from './lib/steps';
-import { evaluateExpression, type VariableScope } from './lib/variables';
+import { evaluateExpression, resolveScope, type VariableScope } from './lib/variables';
 
 export type QuizResponses = Record<string, unknown>;
 
@@ -58,29 +58,94 @@ export function evaluateResponse(
  * Evaluate logic rules attached to `block` against accumulated responses.
  * Returns the first matching jumpToBlockId, else undefined.
  */
-export function evaluateLogic(block: QuizBlock, responses: QuizResponses): string | undefined {
-  for (const rule of block.logicRules ?? []) {
-    const value = responses[rule.fieldBlockId];
-    const target = rule.value;
-    let ok = false;
-    switch (rule.op) {
-      case 'eq':
-        ok = String(value) === String(target);
-        break;
-      case 'neq':
-        ok = String(value) !== String(target);
-        break;
-      case 'contains':
-        ok = Array.isArray(value) ? (value as unknown[]).map(String).includes(String(target)) : String(value ?? '').includes(String(target));
-        break;
-      case 'gt':
-        ok = Number(value) > Number(target);
-        break;
-      case 'lt':
-        ok = Number(value) < Number(target);
-        break;
+export interface LogicContext {
+  responses: QuizResponses;
+  /** Todos os blocos do quiz — necessário para contar etiquetas já ganhas. */
+  blocks: QuizBlock[];
+  score: number;
+  maxScore: number;
+}
+
+/** Compara dois valores pelo operador, com a semântica de `isBlockVisible`. */
+function compara(bruto: unknown, op: BlockLogicOp, alvo: string | number, alvo2?: number): boolean {
+  const comoNumero = (v: unknown): number => (Array.isArray(v) ? Number.NaN : Number(v));
+  const igual = Array.isArray(bruto)
+    ? (bruto as unknown[]).map(String).includes(String(alvo))
+    : String(bruto ?? '') === String(alvo);
+  switch (op) {
+    case 'eq': return igual;
+    case 'neq': return !igual;
+    case 'contains':
+      return Array.isArray(bruto)
+        ? (bruto as unknown[]).map(String).includes(String(alvo))
+        : String(bruto ?? '').toLowerCase().includes(String(alvo).toLowerCase());
+    case 'gt': return comoNumero(bruto) > Number(alvo);
+    case 'gte': return comoNumero(bruto) >= Number(alvo);
+    case 'lt': return comoNumero(bruto) < Number(alvo);
+    case 'lte': return comoNumero(bruto) <= Number(alvo);
+    case 'between': {
+      const n = comoNumero(bruto);
+      const lo = Number(alvo);
+      const hi = Number(alvo2 ?? alvo);
+      return n >= Math.min(lo, hi) && n <= Math.max(lo, hi);
     }
-    if (ok) return rule.jumpToBlockId;
+    default: return false;
+  }
+}
+
+/**
+ * Quantas vezes a etiqueta foi ganha, e sobre quantas perguntas respondidas.
+ *
+ * O denominador são as perguntas RESPONDIDAS, não todas as do quiz: com salto
+ * condicional ninguém vê o funil inteiro, e dividir pelo total faria a regra
+ * por porcentagem nunca bater para quem pulou etapas.
+ */
+function contarEtiqueta(ctx: LogicContext, tag: string): { vezes: number; de: number } {
+  let vezes = 0;
+  let de = 0;
+  for (const b of ctx.blocks) {
+    if (!(b.id in ctx.responses)) continue;
+    const r = evaluateResponse(b, ctx.responses[b.id]);
+    // Só conta como "pergunta respondida" o que pode carregar etiqueta; um
+    // campo de texto no meio do caminho não deve diluir a porcentagem.
+    if (b.type === 'single-choice' || b.type === 'multi-choice' || b.type === 'rating') de += 1;
+    vezes += r.tags.filter((t) => t === tag).length;
+  }
+  return { vezes, de };
+}
+
+/**
+ * Primeira regra de salto que bate, ou `undefined`.
+ *
+ * Aceita o contexto inteiro (e não só as respostas) porque as regras por
+ * quantidade, porcentagem e pontuação não olham uma resposta isolada — elas
+ * olham o acumulado da pessoa até aqui.
+ */
+export function evaluateLogic(block: QuizBlock, ctx: LogicContext): string | undefined {
+  for (const rule of block.logicRules ?? []) {
+    const kind = rule.kind ?? 'resposta';
+    let bruto: unknown;
+
+    if (kind === 'resposta') {
+      if (!rule.fieldBlockId) continue;
+      bruto = ctx.responses[rule.fieldBlockId];
+    } else if (kind === 'pontuacao') {
+      if (ctx.maxScore <= 0) continue;
+      bruto = (ctx.score / ctx.maxScore) * 100;
+    } else {
+      if (!rule.tag) continue;
+      const { vezes, de } = contarEtiqueta(ctx, rule.tag);
+      if (kind === 'quantidade') {
+        bruto = vezes;
+      } else {
+        // Sem pergunta pontuável respondida ainda, a porcentagem não existe —
+        // devolver 0 faria "menor que 30%" bater logo na primeira etapa.
+        if (de === 0) continue;
+        bruto = (vezes / de) * 100;
+      }
+    }
+
+    if (compara(bruto, rule.op, rule.value, rule.value2)) return rule.jumpToBlockId;
   }
   return undefined;
 }
@@ -182,9 +247,25 @@ export function classifyTemperature(score: number, max: number): 'hot' | 'warm' 
   return 'cold';
 }
 
-export function maxPossibleScore(schema: QuizSchema): number {
+/**
+ * Pontuação máxima alcançável.
+ *
+ * Com `responses`, ignora os blocos que a exibição condicional esconde deste
+ * visitante. Sem elas, soma o quiz inteiro — que é o teto absoluto e o
+ * comportamento de sempre.
+ *
+ * Isto importa mais do que parece: contar pontos inalcançáveis infla o
+ * denominador, o percentual sai menor que o real e o lead cai numa faixa mais
+ * baixa — e é a faixa que decide qual mensagem de WhatsApp é enviada. Medido
+ * num quiz em produção: 6 dos 20 blocos pontuáveis são condicionais.
+ */
+export function maxPossibleScore(schema: QuizSchema, responses?: QuizResponses): number {
   let max = 0;
+  // Escopo real, não `{}`: condição escrita como fórmula (ex. IMC) precisa das
+  // variáveis resolvidas para dizer se o bloco aparece.
+  const scope = responses ? resolveScope(schema.blocks, responses) : undefined;
   for (const b of schema.blocks) {
+    if (responses && !isBlockVisible(b, responses, scope)) continue;
     const w = b.scoreWeight ?? 1;
     if (b.type === 'single-choice') {
       const best = Math.max(0, ...(b.options ?? []).map((o) => o.score ?? 0));

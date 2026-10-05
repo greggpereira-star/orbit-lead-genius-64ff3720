@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp, BlockLogicOp, BlockLogicRule } from '../types';
 import { MASCARAS, tamanhoDaMascara } from '../lib/fieldMask';
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from '../lib/blockStyle';
 import type { BlockStyle, TextStyle, TextSlot } from '../lib/blockStyle';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
-import { GripVertical, Copy } from 'lucide-react';
+import { GripVertical, Copy, Workflow } from 'lucide-react';
 import { Rows3, AlignCenter as AlignCenterIcon } from 'lucide-react';
 import { Baseline } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1043,6 +1043,8 @@ function BlockInspector({
       )}
 
       <ShowIfSection block={block} allBlocks={allBlocks} onChange={onChange} />
+
+      <LogicRulesSection block={block} allBlocks={allBlocks} onChange={onChange} />
 
       {block.type !== 'result' && (
         <AbTestSection quizId={quizId} block={block} onChange={onChange} />
@@ -2466,5 +2468,195 @@ function CarouselEditor({
         <Plus className="h-3.5 w-3.5" /> Adicionar imagem
       </Button>
     </div>
+  );
+}
+
+const ROTULO_DO_OPERADOR: Record<BlockLogicOp, string> = {
+  eq: 'é igual a',
+  neq: 'é diferente de',
+  contains: 'contém',
+  gt: 'é maior que',
+  gte: 'é maior ou igual a',
+  lt: 'é menor que',
+  lte: 'é menor ou igual a',
+  between: 'está entre',
+};
+
+const ROTULO_DO_MODO: Record<NonNullable<BlockLogicRule['kind']>, { titulo: string; ajuda: string }> = {
+  resposta: { titulo: 'Resposta', ajuda: 'O que a pessoa marcou numa pergunta específica' },
+  quantidade: { titulo: 'Quantidade', ajuda: 'Quantas vezes uma etiqueta apareceu nas respostas' },
+  porcentagem: { titulo: 'Porcentagem', ajuda: 'A mesma contagem, como fatia das perguntas respondidas' },
+  pontuacao: { titulo: 'Pontuação', ajuda: 'O percentual da pontuação sobre o máximo alcançável' },
+};
+
+/**
+ * Regras de salto do bloco.
+ *
+ * O motor já avaliava `logicRules` desde sempre; o que nunca existiu foi uma
+ * interface para escrevê-las — o único desvio configurável era o salto por
+ * opção, que não dá conta de "quem marcou X em pelo menos metade das perguntas".
+ */
+function LogicRulesSection({
+  block,
+  allBlocks,
+  onChange,
+}: {
+  block: QuizBlock;
+  allBlocks: QuizBlock[];
+  onChange: (p: Partial<QuizBlock>) => void;
+}) {
+  const regras = block.logicRules ?? [];
+
+  /* Só blocos que carregam resposta servem de origem. Oferecer um parágrafo
+     como campo de teste criaria uma regra que nunca bate, sem nenhum aviso. */
+  const origens = allBlocks.filter((b) =>
+    ['single-choice', 'multi-choice', 'rating', 'short-text', 'long-text', 'email', 'phone', 'weight', 'height'].includes(b.type),
+  );
+  const destinos = allBlocks.filter((b) => b.id !== block.id);
+
+  const etiquetas = [...new Set(
+    allBlocks.flatMap((b) => (b.options ?? []).map((o) => o.tag).filter((t): t is string => !!t?.trim())),
+  )].sort();
+
+  const atualizar = (i: number, patch: Partial<BlockLogicRule>) =>
+    onChange({ logicRules: regras.map((r, k) => (k === i ? { ...r, ...patch } : r)) });
+
+  const remover = (i: number) => onChange({ logicRules: regras.filter((_, k) => k !== i) });
+
+  const adicionar = () =>
+    onChange({
+      logicRules: [
+        ...regras,
+        { kind: 'resposta', fieldBlockId: origens[0]?.id, op: 'eq', value: '', jumpToBlockId: destinos[0]?.id ?? '' },
+      ],
+    });
+
+  return (
+    <Section title="Regras de salto" icon={Workflow}>
+      {regras.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Sem regra, o quiz segue para a etapa seguinte. Uma regra desvia quem bate na condição.
+        </p>
+      )}
+
+      {regras.map((regra, i) => {
+        const modo = regra.kind ?? 'resposta';
+        return (
+          <div key={i} className="space-y-2 rounded-lg border p-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Regra {i + 1}</span>
+              <button
+                onClick={() => remover(i)}
+                className="text-muted-foreground transition-colors hover:text-destructive"
+                aria-label={`Remover regra ${i + 1}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5">
+              {(Object.keys(ROTULO_DO_MODO) as NonNullable<BlockLogicRule['kind']>[]).map((k) => (
+                <Button
+                  key={k}
+                  type="button"
+                  size="sm"
+                  variant={modo === k ? 'default' : 'outline'}
+                  className="h-7 text-[11px]"
+                  title={ROTULO_DO_MODO[k].ajuda}
+                  onClick={() => atualizar(i, { kind: k })}
+                >
+                  {ROTULO_DO_MODO[k].titulo}
+                </Button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">{ROTULO_DO_MODO[modo].ajuda}</p>
+
+            {modo === 'resposta' && (
+              <select
+                value={regra.fieldBlockId ?? ''}
+                onChange={(e) => atualizar(i, { fieldBlockId: e.target.value })}
+                className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+              >
+                <option value="">Escolha a pergunta…</option>
+                {origens.map((b) => (
+                  <option key={b.id} value={b.id}>{b.title || b.type}</option>
+                ))}
+              </select>
+            )}
+
+            {(modo === 'quantidade' || modo === 'porcentagem') && (
+              <>
+                <select
+                  value={regra.tag ?? ''}
+                  onChange={(e) => atualizar(i, { tag: e.target.value })}
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                >
+                  <option value="">Escolha a etiqueta…</option>
+                  {etiquetas.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                {etiquetas.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                    Nenhuma opção do quiz tem etiqueta ainda — sem etiqueta esta regra nunca bate.
+                  </p>
+                )}
+              </>
+            )}
+
+            <div className="flex gap-1.5">
+              <select
+                value={regra.op}
+                onChange={(e) => atualizar(i, { op: e.target.value as BlockLogicOp })}
+                className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
+              >
+                {(Object.keys(ROTULO_DO_OPERADOR) as BlockLogicOp[]).map((op) => (
+                  <option key={op} value={op}>{ROTULO_DO_OPERADOR[op]}</option>
+                ))}
+              </select>
+              <Input
+                value={String(regra.value ?? '')}
+                onChange={(e) => atualizar(i, { value: e.target.value })}
+                className="h-8 w-20 text-xs"
+                placeholder={modo === 'resposta' ? 'valor' : modo === 'quantidade' ? 'nº' : '%'}
+              />
+              {regra.op === 'between' && (
+                <Input
+                  type="number"
+                  value={regra.value2 ?? ''}
+                  onChange={(e) => atualizar(i, { value2: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="h-8 w-20 text-xs"
+                  placeholder="até"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="shrink-0 text-[10px] text-muted-foreground">então vai para</span>
+              <select
+                value={regra.jumpToBlockId}
+                onChange={(e) => atualizar(i, { jumpToBlockId: e.target.value })}
+                className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
+              >
+                <option value="">Escolha o destino…</option>
+                {destinos.map((b) => (
+                  <option key={b.id} value={b.id}>{b.title || b.resultTitle || b.type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        );
+      })}
+
+      <Button type="button" variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={adicionar}>
+        <Plus className="h-3.5 w-3.5" />Adicionar regra
+      </Button>
+
+      {regras.length > 1 && (
+        <p className="text-[10px] text-muted-foreground">
+          Quando mais de uma regra bate, vale a última da lista.
+        </p>
+      )}
+    </Section>
   );
 }

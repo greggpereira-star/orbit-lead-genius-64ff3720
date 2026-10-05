@@ -423,14 +423,28 @@ function PlayerRunner({
           })
           .catch(() => {});
       }
-      const logicJump = evaluateLogic(b, nextResponses);
-      if (logicJump) jumpToBlockId = logicJump;
     }
     /* Recalculado, não acumulado: com o botão voltar, somar o delta a cada
        avanço contaria a mesma resposta duas vezes e deixaria o visitante
        inflar a própria pontuação indo e voltando. `scoreDelta` e `tags` ainda
        existem acima porque o salto condicional depende deles nesta passagem. */
     const recalculado = recomputeScore(blocks, nextResponses);
+
+    /* As regras de salto são avaliadas DEPOIS do laço, e não dentro dele.
+       Dentro, cada bloco só enxergava as respostas dos anteriores — e uma regra
+       por quantidade ou porcentagem precisa do acumulado fechado desta etapa.
+       Vence a última regra que bate, na ordem dos blocos, que é o que
+       `nextStepIndex` já documentava esperar. */
+    const ctxLogica = {
+      responses: nextResponses,
+      blocks,
+      score: recalculado.score,
+      maxScore: maxPossibleScore(schema, nextResponses),
+    };
+    for (const b of flatAnswerableBlocks) {
+      const salto = evaluateLogic(b, ctxLogica);
+      if (salto) jumpToBlockId = salto;
+    }
     const nextState: QuizRunState = {
       ...state,
       responses: nextResponses,

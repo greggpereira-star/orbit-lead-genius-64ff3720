@@ -96,12 +96,33 @@ export interface BlockOption {
   jumpToBlockId?: string; // conditional branching
 }
 
-export type BlockLogicOp = 'eq' | 'neq' | 'contains' | 'gt' | 'lt';
+/* Os mesmos sete de `ShowIfOp`. Eram só cinco aqui, sem motivo técnico: uma
+   regra de salto configurada com `gte` simplesmente nunca batia, em silêncio. */
+export type BlockLogicOp = 'eq' | 'neq' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'between';
+
+/**
+ * Sobre o que a regra decide.
+ *
+ * - `resposta`: o que a pessoa marcou num bloco específico (o de sempre).
+ * - `quantidade`: quantas vezes uma etiqueta apareceu nas respostas até aqui.
+ * - `porcentagem`: a mesma contagem, como fatia das perguntas já respondidas.
+ * - `pontuacao`: o percentual da pontuação sobre o máximo alcançável.
+ *
+ * Os três últimos existem porque perfilar por resposta isolada obriga a montar
+ * dezenas de regras: "quem marcou ansiedade em pelo menos metade das perguntas"
+ * é uma regra só aqui, e seria uma combinação inteira em `resposta`.
+ */
+export type BlockLogicKind = 'resposta' | 'quantidade' | 'porcentagem' | 'pontuacao';
+
 export interface BlockLogicRule {
-  fieldBlockId: string;   // block whose response we test
+  /** Ausente = `resposta`, que é como toda regra gravada até hoje se comporta. */
+  kind?: BlockLogicKind;
+  fieldBlockId?: string;  // em `resposta`: o bloco cuja resposta é testada
+  tag?: string;           // em `quantidade`/`porcentagem`: a etiqueta contada
   op: BlockLogicOp;
   value: string | number;
-  jumpToBlockId: string;  // where to go if true
+  value2?: number;        // limite superior do `between`
+  jumpToBlockId: string;  // para onde ir quando bate
 }
 
 // ============ Exibição condicional (Funilix parity) ============

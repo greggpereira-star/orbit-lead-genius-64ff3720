@@ -180,7 +180,16 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         // como isso acontece; agora existe uma só.
         const { maxPossibleScore } = await import('@/modules/quiz/engine');
         const schema = (versao as { schema?: unknown } | null)?.schema;
-        const max = schema ? maxPossibleScore(schema as never) : 0;
+        /* As RESPOSTAS entram no cálculo do máximo: sem elas, o teto inclui
+           blocos que a exibição condicional escondeu deste visitante, o
+           percentual sai menor que o real e o lead cai numa faixa mais baixa —
+           justamente a faixa que decide a mensagem enviada aqui embaixo.
+           Elas vêm do metadata do lead, gravado por `quiz_capture_lead`; sem
+           lead resolvido, resta o teto absoluto, que é o comportamento antigo. */
+        const respostasDoLead = (leadDoQuiz?.metadata?.responses ?? null) as Record<string, unknown> | null;
+        const max = schema
+          ? maxPossibleScore(schema as never, respostasDoLead ?? undefined)
+          : 0;
         if (max <= 0) return json({ status: 'sem_pontuacao' });
 
         const pct = ((body.score ?? 0) / max) * 100;
