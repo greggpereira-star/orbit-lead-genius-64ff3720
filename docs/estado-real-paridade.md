@@ -128,16 +128,39 @@ autenticação, e **nada** cobre o quiz.
 
 ---
 
+## 2b. Fechamento dos achados — 05/10, 13h
+
+Tudo abaixo foi **exercitado no navegador**, não só compilado.
+
+| Item | Como foi verificado |
+|---|---|
+| Números contraditórios (100% × 12%) | Cartão e Análise mostram **10%** os dois, com "ÚLTIMOS 30 DIAS" escrito na tela |
+| Máscara não capturava | Quiz publicado (antes era barrado) e percorrido: **lead criado** com `(27) 96655-4433` |
+| Desfazer partia a etapa | Excluí um bloco de uma etapa de dois e desfiz: voltou **na mesma etapa, na posição original**, e seguem 5 etapas |
+| Geo por terceiro | `performance` na página pública: **0 chamadas** a `ipapi`; externos só Google Fonts e o Pixel |
+| Container colapsava etapas | Só código e typecheck — não encontrei quiz legado sem `steps` para exercitar |
+| Autosave sem nova tentativa | Só código — exigiria derrubar a rede no meio do salvamento |
+
+**Defeito novo achado durante esse teste e corrigido:** o lead criado pelo campo
+mascarado nasceu com `name = "(27) 98877-5544"`. O nome sai do primeiro
+`Texto curto` do quiz, e o campo mascarado passou a ser esse primeiro. Campo com
+máscara é telefone, CPF ou CEP — nunca nome; agora é excluído da busca pelo nome.
+Reconferido no ar: o lead seguinte nasceu com nome vazio e telefone certo.
+
+**Também confirmado funcionando nesta passada:** o controle "Mostrar botão voltar
+nesta etapa" aparece ao expandir a etapa, e o selo de visitantes por etapa
+atualiza (6👤, 4👤, 3👤, 2👤).
+
 ## 3. Sim, ainda há falhas conhecidas
 
 Da auditoria de 05/10, confirmadas ainda presentes no código:
 
 | Gravidade | Falha | Onde |
 |---|---|---|
-| 🟠 | **Desfazer a exclusão de um bloco** devolve ele como etapa NOVA, partindo uma tela de 3 componentes em duas. O mesmo trecho chama `getSteps` sem `keepEmpty` e apaga etapas vazias | `builder.tsx:398-401` |
-| 🟠 | **`removeChildFromContainer`** usa `prev.steps ?? []` em vez de `getSteps(..., {keepEmpty:true})`; num quiz legado sem `steps` gravado, zera o agrupamento | `builder.tsx` |
-| 🟠 | **Autosave não tenta de novo** depois de falhar: `dirty` continua `true`, nada muda nas dependências, e sem nova edição o trabalho fica só na aba | `builder.tsx` |
-| 🟠 | **Geolocalização por terceiro** (`ipapi.co`) a cada carga pública, antes de qualquer aceite — e no teste voltou bloqueada | `QuizPlayer.tsx` |
+| ✅ | ~~Desfazer devolvia o bloco como etapa NOVA~~ — corrigido e verificado em 05/10 |
+| ✅ | ~~`removeChildFromContainer` com `prev.steps ?? []`~~ — corrigido em 05/10 |
+| ✅ | ~~Autosave não tentava de novo~~ — corrigido em 05/10 (recuo até 1 min) |
+| ✅ | ~~Geolocalização por terceiro no enriquecimento~~ — removida em 05/10. A outra chamada ao mesmo serviço fica: só dispara quando o dono configurou restrição por país, e é a única forma de cumpri-la |
 | 🟡 | Pontuação pode ficar **negativa**; o máximo usa `Math.max(0, …)` e o percentual negativo não é tratado | `engine.ts` |
 | 🟡 | **Progresso não é persistido**: recarregar perde tudo, e a recuperação de abandono não retoma | `QuizPlayer.tsx` |
 | 🟡 | Arquivos grandes, e **pioraram** nesta semana: `QuizPlayer` 2.284 → **2.666**, `QuizInspector` 2.246 → **2.725**, `builder` 1.156 → **1.359** | — |
