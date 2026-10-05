@@ -297,6 +297,7 @@
 
       function encerrar() {
         if (!overlay.parentNode) return;
+        clearTimeout(prazoDaEspera);
         document.removeEventListener('keydown', aoTeclar);
         window.removeEventListener('message', aoReceber);
         window.removeEventListener('resize', aoRedimensionar);
@@ -333,6 +334,8 @@
         if (!e.data) return;
         // A altura vem do próprio formulário, como no modo inline.
         if (e.data.type === 'LEADFLOW_RESIZE' && e.data.height) {
+          clearTimeout(prazoDaEspera);
+          esconderEspera();
           ultimaAltura = e.data.height;
           ajustarAltura(e.data.height);
         }
@@ -368,13 +371,27 @@
         estilo.textContent = '@keyframes lf-gira{to{transform:rotate(360deg)}}';
         document.head.appendChild(estilo);
       }
-      iframe.addEventListener('load', function () {
+      /* Sai quando o FORMULÁRIO aparece, não no `load` do iframe.
+       *
+       * O `load` dispara quando o HTML e os scripts terminam — o React ainda
+       * precisa montar e buscar o formulário depois disso. Medido: o indicador
+       * sumia e sobrava uma janela branca sem aviso nenhum. O primeiro
+       * `LEADFLOW_RESIZE` só é enviado com o formulário já na tela, então é
+       * esse o sinal certo.
+       */
+      var saiuDaEspera = false;
+      function esconderEspera() {
+        if (saiuDaEspera) return;
+        saiuDaEspera = true;
         carregando.style.transition = 'opacity .2s ease';
         carregando.style.opacity = '0';
         setTimeout(function () {
           if (carregando.parentNode) carregando.parentNode.removeChild(carregando);
         }, 220);
-      });
+      }
+      // Rede de segurança: se a mensagem nunca vier (formulário despublicado,
+      // erro de rede), o indicador não pode girar para sempre.
+      var prazoDaEspera = setTimeout(esconderEspera, 12000);
 
       content.appendChild(fechar);
       content.appendChild(carregando);
