@@ -68,6 +68,47 @@ quase nada do painel foi.
 - Beco sem saída da etapa final oculta (lead gravado no fim)
 - Quiz da cliente, sem regressão, após cada deploy
 
+### Passada de verificação com sessão autenticada — 05/10, 12h
+
+Feita no Chrome do usuário, sobre o quiz de teste arquivado `teste-onda-4`.
+
+**Dois defeitos encontrados e corrigidos (`e180e3d`):**
+
+1. 🔴 **Aba Design estourava inteira** — "Cannot read properties of null
+   (reading 'store')". O `QuizPreview` tem um `Droppable` dentro e exige um
+   `DragDropContext` acima; o construtor tem um, a rota nova não tinha.
+2. 🟠 **Nome de etapa cortado em ~10 caracteres** ("Telefone ...", "Grade 2 ...",
+   "Agenda..."), impossível distinguir uma etapa da outra. Nome e descrição do
+   bloco disputavam uma linha com quatro ícones num painel de 240px.
+
+**Verificado funcionando:**
+
+- Aba Design completa, com troca de cor propagando ao vivo e autosave gravando
+- Aba Análise: achou "Nenhuma etapa de captura identificada" e "2 conclusões
+  geraram só 0 leads" — ambos corretos para aquele quiz
+- Validação ao publicar: **bloqueou** com a mensagem certa
+- Contagem de visitantes por etapa na lista (4👤, 3👤, 2👤)
+- Editor de regras de salto, com os quatro modos
+- Seção "Posição na tela" com as cinco opções
+- Trava de edição: segunda aba mostrou "Edição em uso por gregg.pereira"
+- Arquivar: filtro "Mostrar arquivados (3)" e selo "Arquivado"
+- Botão duplicar etapa presente na linha
+
+**Ainda não verificado:** cartão com foto nas opções (nenhum quiz de teste usa
+imagem), aviso ao sair sem salvar, e o fluxo de pedir/assumir controle além do
+aviso inicial.
+
+**Achado novo, não corrigido:** o cartão do quiz na lista mostra **100%
+Conclusão** enquanto a Análise calcula **12%** para o mesmo funil. São
+denominadores diferentes (`getListStats` usa submissões, a Análise usa `start`),
+mas o usuário vê dois números contraditórios na mesma sessão.
+
+**Armadilha de produto, não corrigida:** um `Texto curto` com máscara de telefone
+**não** conta como captura — `extrairContato` procura por TIPO de bloco. Quem
+mascarar um campo de texto como telefone não vai gerar lead nenhum, e hoje nada
+avisa isso no construtor. A validação ao publicar pega o caso, mas só na hora de
+publicar.
+
 ### **Nunca aberto** numa tela
 
 | O quê | O que existe de verificação |
