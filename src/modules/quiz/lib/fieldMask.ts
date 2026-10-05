@@ -108,16 +108,26 @@ const SIMBOLO: Record<'BRL' | 'USD' | 'EUR', { locale: string; moeda: string }> 
  * texto livre de sempre continua mandando — assim nenhum quiz publicado, que
  * escreveu "R$ 97" na mão, muda de aparência.
  */
-export function formatarPreco(block: Pick<QuizBlock, 'pricingCurrency' | 'pricingAmount' | 'pricingPrice' | 'pricingPrefix' | 'pricingSuffix'>): string {
+export function formatarPreco(
+  block: Pick<QuizBlock, 'pricingCurrency' | 'pricingAmount' | 'pricingPrice' | 'pricingPrefix' | 'pricingSuffix'>,
+): { valor: string; prefixo?: string; sufixo?: string } {
   const { pricingCurrency, pricingAmount } = block;
+  /* Prefixo e sufixo voltam SEPARADOS do valor, e não concatenados numa
+     string só: na tela o valor é o número grande e eles são a letra miúda em
+     volta. Juntos, "por apenas" sairia do mesmo tamanho do preço e roubaria
+     dele a atenção — foi o que aconteceu no primeiro teste. */
   if (!pricingCurrency || typeof pricingAmount !== 'number' || Number.isNaN(pricingAmount)) {
-    return block.pricingPrice ?? '';
+    return { valor: block.pricingPrice ?? '' };
   }
   const { locale, moeda } = SIMBOLO[pricingCurrency];
-  const base = pricingAmount.toLocaleString(locale, {
+  const valor = pricingAmount.toLocaleString(locale, {
     style: 'currency',
     currency: moeda,
     minimumFractionDigits: Number.isInteger(pricingAmount) ? 0 : 2,
   });
-  return [block.pricingPrefix, base, block.pricingSuffix].filter(Boolean).join(' ');
+  return {
+    valor,
+    prefixo: block.pricingPrefix?.trim() || undefined,
+    sufixo: block.pricingSuffix?.trim() || undefined,
+  };
 }

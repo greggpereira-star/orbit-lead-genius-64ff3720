@@ -2184,9 +2184,15 @@ function BlockView({
       return (
         <div className="text-center space-y-5">
           {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-semibold" style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })} />)}
-          {formatarPreco(block).trim() && (
-            <div className="flex items-end justify-center gap-2">
-              <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{formatarPreco(block)}</span>
+          {formatarPreco(block).valor.trim() && (
+            <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
+              {formatarPreco(block).prefixo && (
+                <span className="text-sm opacity-70">{formatarPreco(block).prefixo}</span>
+              )}
+              <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{formatarPreco(block).valor}</span>
+              {formatarPreco(block).sufixo && (
+                <span className="text-sm opacity-70">{formatarPreco(block).sufixo}</span>
+              )}
               {block.pricingPeriod && <span className="text-base opacity-70">{block.pricingPeriod}</span>}
             </div>
           )}
@@ -2510,7 +2516,9 @@ function ChartBlock({ block, design }: { block: QuizBlock; design: QuizDesign })
     grade ? <CartesianGrid key="g" strokeDasharray="3 3" stroke={withAlpha(design.text, 0.12)} /> : null,
     eixoX ? <XAxis key="x" dataKey="name" tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} /> : null,
     eixoY ? <YAxis key="y" tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} /> : null,
-    <Tooltip key="t" contentStyle={estiloDaDica} />,
+    // Sem `formatter`, a dica mostra a chave crua ("value : 20") em vez do
+    // número sozinho — foi o que apareceu no teste.
+    <Tooltip key="t" contentStyle={estiloDaDica} formatter={(v: number) => [v, '']} />,
     legenda ? <Legend key="l" wrapperStyle={{ fontSize: 11 }} /> : null,
   ];
 
@@ -2529,7 +2537,7 @@ function ChartBlock({ block, design }: { block: QuizBlock; design: QuizDesign })
           </AreaChart>
         ) : block.chartType === 'pie' ? (
           <PieChart>
-            <Tooltip contentStyle={estiloDaDica} />
+            <Tooltip contentStyle={estiloDaDica} formatter={(v: number, n: string) => [v, n]} />
             {legenda && <Legend wrapperStyle={{ fontSize: 11 }} />}
             <Pie data={pontos} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="80%" paddingAngle={2}>
               {pontos.map((p, i) => (
