@@ -1041,6 +1041,19 @@ function QuizBuilderPage() {
                           </label>
                         )}
                         {expanded && (
+                          <DesignDaEtapa
+                            step={step}
+                            design={schema.design}
+                            onChange={(patch) =>
+                              applySteps((prev) =>
+                                getSteps(prev, { keepEmpty: true }).map((x) =>
+                                  x.id === step.id ? { ...x, design: { ...x.design, ...patch } } : x,
+                                ),
+                              )
+                            }
+                          />
+                        )}
+                        {expanded && (
                           <Droppable droppableId={`step-${step.id}`}>
                             {(moduleProvided) => (
                               <div
@@ -1402,5 +1415,74 @@ function SeloDeConversao({ dados }: { dados?: ConversaoDaEtapa }) {
     >
       {Math.round(dados.taxa * 100)}%
     </span>
+  );
+}
+
+/**
+ * Sobrescrita de design de UMA etapa.
+ *
+ * Fica recolhido por padrão: a imensa maioria das etapas segue o funil, e um
+ * painel de cores aberto em todas elas afogaria a lista. Cada campo vazio
+ * significa "herda" — e o botão devolve a etapa inteira ao tema.
+ */
+function DesignDaEtapa({
+  step,
+  design,
+  onChange,
+}: {
+  step: QuizStep;
+  design: QuizSchema['design'];
+  onChange: (patch: Partial<QuizSchema['design']>) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const proprio = !!step.design && Object.values(step.design).some((v) => v);
+
+  const cor = (rotulo: string, chave: 'background' | 'surface' | 'primary' | 'text') => (
+    <div className="flex items-center gap-1.5">
+      <span className="w-16 shrink-0 text-[10px] text-muted-foreground">{rotulo}</span>
+      <input
+        type="color"
+        value={(step.design?.[chave] as string) ?? (design[chave] as string) ?? '#000000'}
+        onChange={(e) => onChange({ [chave]: e.target.value })}
+        className="h-6 w-7 shrink-0 cursor-pointer rounded border bg-transparent p-0.5"
+      />
+      {step.design?.[chave] && (
+        <button
+          onClick={() => onChange({ [chave]: undefined })}
+          className="text-[10px] text-muted-foreground hover:text-foreground"
+        >
+          herdar
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="ml-6 mb-1" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setAberto((v) => !v)}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+      >
+        <Palette className="h-3 w-3" />
+        Design desta etapa
+        {proprio && <span className="rounded-full bg-primary/15 px-1 text-[9px] text-primary">próprio</span>}
+      </button>
+      {aberto && (
+        <div className="mt-1.5 space-y-1 rounded-lg border p-2">
+          {cor('Fundo', 'background')}
+          {cor('Superfície', 'surface')}
+          {cor('Destaque', 'primary')}
+          {cor('Texto', 'text')}
+          {proprio && (
+            <button
+              onClick={() => onChange({ background: undefined, surface: undefined, primary: undefined, text: undefined })}
+              className="mt-1 w-full rounded border py-1 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Herdar tudo do tema
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

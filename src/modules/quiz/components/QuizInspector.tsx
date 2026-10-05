@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp, BlockLogicOp, BlockLogicRule } from '../types';
 import { MASCARAS, tamanhoDaMascara } from '../lib/fieldMask';
 import { POSICOES, ANCORAS } from '../lib/blockPosition';
+import { temCorPropria, coresDoDocumento, VOLTAR_AO_TEMA } from '../lib/temaDoBloco';
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from '../lib/blockStyle';
 import type { BlockStyle, TextStyle, TextSlot } from '../lib/blockStyle';
 import { getSteps } from '../lib/steps';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
-import { GripVertical, Copy, Workflow } from 'lucide-react';
+import { GripVertical, Copy, Workflow, RotateCcw } from 'lucide-react';
 import { Rows3, AlignCenter as AlignCenterIcon } from 'lucide-react';
 import { Baseline } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -62,6 +63,7 @@ export function QuizInspector({
         <BlockInspector
           quizId={quizId}
           block={block}
+          design={design}
           allBlocks={blocks ?? []}
           allSteps={steps ?? []}
           onChange={onChangeBlock}
@@ -95,9 +97,12 @@ function BlockInspector({
   onDeleteChildBlock,
   dndScope = 'desktop',
   onSelectBlock,
+  design,
 }: {
   quizId: string;
   block: QuizBlock;
+  /** Tema do funil — serve de referência para as cores próprias do bloco. */
+  design?: QuizDesign;
   allBlocks: QuizBlock[];
   allSteps: QuizStep[];
   onChange: (p: Partial<QuizBlock>) => void;
@@ -1044,6 +1049,8 @@ function BlockInspector({
       )}
 
       <ShowIfSection block={block} allBlocks={allBlocks} onChange={onChange} />
+
+      <CoresDoBlocoSection block={block} allBlocks={allBlocks} design={design} onChange={onChange} />
 
       <PosicaoSection block={block} onChange={onChange} />
 
@@ -2719,6 +2726,110 @@ function PosicaoSection({
           Fora do fluxo, este bloco não recebe o botão que avança a etapa — deixe
           pelo menos um bloco no fluxo para o visitante poder seguir.
         </p>
+      )}
+    </Section>
+  );
+}
+
+/**
+ * Cores próprias do bloco.
+ *
+ * O botão "Herdar do tema" existe porque, sem ele, desfazer uma customização
+ * exigia apagar cada campo à mão e torcer para não esquecer nenhum — e um
+ * campo esquecido deixa o bloco fora do tema sem que se perceba.
+ *
+ * As cores já usadas no funil aparecem para reaproveitar em vez de redigitar
+ * o hexadecimal.
+ */
+function CoresDoBlocoSection({
+  block,
+  allBlocks,
+  design,
+  onChange,
+}: {
+  block: QuizBlock;
+  allBlocks: QuizBlock[];
+  design?: QuizDesign;
+  onChange: (p: Partial<QuizBlock>) => void;
+}) {
+  const proprias = temCorPropria(block);
+  const doDocumento = design ? coresDoDocumento(design, allBlocks, []) : [];
+
+  const campo = (
+    rotulo: string,
+    chave: 'corDeFundo' | 'corDoTexto' | 'corDeDestaque',
+    herdaDe: string | undefined,
+  ) => (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold">{rotulo}</Label>
+        {block[chave] && (
+          <button
+            onClick={() => onChange({ [chave]: undefined })}
+            className="text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            herdar
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={block[chave] ?? herdaDe ?? '#000000'}
+          onChange={(e) => onChange({ [chave]: e.target.value })}
+          className="h-8 w-9 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
+        />
+        <Input
+          value={block[chave] ?? ''}
+          placeholder={herdaDe ? `${herdaDe} (do tema)` : 'do tema'}
+          onChange={(e) => onChange({ [chave]: e.target.value || undefined })}
+          className="h-8 flex-1 font-mono text-[11px]"
+          spellCheck={false}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <Section title="Cores do bloco" icon={Palette}>
+      {!proprias && (
+        <p className="text-[11px] text-muted-foreground">
+          Este bloco segue o tema do funil. Defina uma cor para destoar só aqui.
+        </p>
+      )}
+
+      {campo('Fundo', 'corDeFundo', design?.surface)}
+      {campo('Texto', 'corDoTexto', design?.text)}
+      {campo('Destaque', 'corDeDestaque', design?.primary)}
+
+      {!!doDocumento.length && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground">Cores do documento</Label>
+          <div className="flex flex-wrap gap-1">
+            {doDocumento.slice(0, 16).map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={`${c} — usar como destaque`}
+                onClick={() => onChange({ corDeDestaque: c })}
+                className="h-5 w-5 rounded-md border transition-transform hover:scale-110"
+                style={{ background: c }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {proprias && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full gap-1.5 text-xs"
+          onClick={() => onChange({ ...VOLTAR_AO_TEMA })}
+        >
+          <RotateCcw className="h-3.5 w-3.5" />Herdar do tema
+        </Button>
       )}
     </Section>
   );

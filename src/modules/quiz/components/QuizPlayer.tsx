@@ -9,6 +9,7 @@ import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
 import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
+import { designDaEtapa, varsDoBloco } from '../lib/temaDoBloco';
 import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
 import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
@@ -243,7 +244,6 @@ function PlayerRunner({
   const [saving, setSaving] = useState(false);
   const [stepValidity, setStepValidity] = useState<Record<string, boolean>>({});
 
-  const design = schema.design;
   const blocks = schema.blocks;
   const steps = useMemo(() => getSteps(schema), [schema]);
 
@@ -273,6 +273,10 @@ function PlayerRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, done, saving, preview, quizId]);
   const currentStep = steps[state.currentStepIndex];
+  /* O design pode ser sobrescrito pela ETAPA: é o que permite uma tela de
+     oferta em fundo escuro sem reconfigurar o funil inteiro. Só as chaves que
+     a etapa define mandam; o resto continua herdando. */
+  const design = useMemo(() => designDaEtapa(schema.design, currentStep), [schema.design, currentStep]);
   const stepBlocks = useMemo(
     () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
     [currentStep, blocks]
@@ -801,7 +805,7 @@ function PlayerRunner({
                   <div
                     key={b.id}
                     ref={b.posicao === 'topo-fixo' ? refTopo : b.posicao === 'rodape-fixo' ? refRodape : undefined}
-                    style={{ ...resolveBlockStyle(b), ...posicao }}
+                    style={{ ...resolveBlockStyle(b), ...varsDoBloco(b), ...posicao }}
                   >
                   <BlockView
                     block={b}

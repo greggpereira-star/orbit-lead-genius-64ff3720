@@ -218,6 +218,17 @@ export interface QuizBlock {
     | 'centro-esquerda' | 'centro-direita'
     | 'abaixo-esquerda' | 'abaixo-centro' | 'abaixo-direita';
 
+  /**
+   * Cores próprias do bloco, sobrescrevendo o tema.
+   *
+   * `herdaDoTema` é o estado padrão e o botão que devolve o bloco ao tema sem
+   * precisar apagar cada campo à mão — era o que faltava para o usuário
+   * conseguir desfazer uma customização.
+   */
+  corDeFundo?: string;
+  corDoTexto?: string;
+  corDeDestaque?: string;
+
   /** Disposição das opções. Lista é o padrão de sempre. */
   optionsLayout?: 'lista' | 'grade-2' | 'grade-3' | 'grade-4';
   /** Forma do cartão. 'cartao' põe a imagem grande em cima e o rótulo embaixo —
@@ -408,6 +419,14 @@ export interface QuizStep {
   /** Botão voltar desta etapa. Ausente = mostra, que é o padrão dos funis que
    *  convertem; desligar é para a tela de resultado, onde voltar não faz sentido. */
   showBack?: boolean;
+  /**
+   * Sobrescreve o design do funil só nesta tela.
+   *
+   * Serve para a etapa que precisa destoar de propósito — a oferta num fundo
+   * escuro, o resultado numa cor de celebração. Só as chaves presentes mandam;
+   * o resto continua herdando do funil.
+   */
+  design?: Partial<QuizDesign>;
 }
 
 /**
