@@ -323,6 +323,31 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   const subtituloPublico =
     ((form?.settings as Record<string, any> | undefined)?.subtitulo_publico as string | undefined) || '';
 
+  /* Cor de destaque do formulário, para ele não destoar do site do cliente.
+     Entra como variável de tema e não só no botão: a barra de progresso, o anel
+     de foco e a borda do campo ativo usam a mesma cor. Botão de uma cor e foco
+     de outra parece erro de montagem. */
+  const corDoBotao = (
+    (form?.settings as Record<string, any> | undefined)?.cor_botao as string | undefined
+  )?.trim();
+  const corValida = corDoBotao && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(corDoBotao)
+    ? corDoBotao
+    : null;
+  /* Texto do botão: preto sobre cor clara, branco sobre cor escura. Branco
+     sobre amarelo é ilegível, e é o tipo de cor que um cliente escolhe. */
+  const textoSobreACor = (() => {
+    if (!corValida) return '#ffffff';
+    const h = corValida.length === 4
+      ? corValida.slice(1).split('').map((c) => c + c).join('')
+      : corValida.slice(1);
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+    // Luminância relativa da WCAG.
+    const canal = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const L = 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b);
+    // Contraste contra branco vs contra preto; vence o maior.
+    return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.05) ? '#ffffff' : '#0e172c';
+  })();
+
   const onSubmit = async (values: any) => {
     /* A checagem também existe no servidor (`form_submit_publico` recusa com
        `consentimento_obrigatorio`). Aqui é só para a pessoa ver o motivo sem
@@ -499,7 +524,10 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   };
 
   return (
-    <div className="w-full h-full overflow-hidden flex flex-col">
+    <div
+      className="w-full h-full overflow-hidden flex flex-col"
+      style={corValida ? ({ ['--primary' as any]: corValida } as React.CSSProperties) : undefined}
+    >
       <form 
         onSubmit={handleSubmit(onSubmit)}
         className="w-full mx-auto p-0 animate-in fade-in duration-700 flex-1 min-h-0 flex flex-col" 
@@ -674,6 +702,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   handleNext();
                 } : undefined}
                 disabled={isSubmitting}
+                style={corValida ? { backgroundColor: corValida, color: textoSobreACor } : undefined}
                 className="flex-1 h-12 text-[15px] font-semibold tracking-[-0.01em] shadow-lg shadow-primary/20 transition-all hover:brightness-[1.06] active:scale-[0.99] bg-primary text-white"
               >
                 {isSubmitting ? (

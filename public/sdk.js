@@ -302,7 +302,13 @@
 
       var content = document.createElement('div');
       content.style.cssText = 'position:relative;width:100%;max-height:92vh;background:#fff;' +
-        'border-radius:18px;overflow:hidden;box-shadow:0 24px 60px -16px rgba(15,23,42,.45)';
+        'border-radius:18px;overflow:hidden';
+      /* Sem sombra.
+       *
+       * O escurecido do fundo JÁ separa o cartão da página — a sombra por cima
+       * dele só somava cinza, e a 45% de opacidade com 60px de desfoque virava
+       * uma faixa suja embaixo do cartão, que é o que apareceu na tela da
+       * Exata. Elevação sobre fundo escurecido é redundante. */
 
       var fechar = document.createElement('button');
       fechar.type = 'button';

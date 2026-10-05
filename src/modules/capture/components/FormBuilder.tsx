@@ -984,6 +984,51 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                       </p>
                     </div>
 
+                    {/* Cor de destaque, para o formulário não destoar do site
+                        do cliente. Vale para o botão, a barra de progresso e o
+                        foco dos campos — botão de uma cor e foco de outra
+                        parece erro de montagem. */}
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cor do botão</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={(formConfig.settings as any)?.cor_botao || '#2563eb'}
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev,
+                            settings: { ...(prev.settings as any), cor_botao: e.target.value },
+                          }))}
+                          className="h-9 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
+                          aria-label="Escolher a cor do botão"
+                        />
+                        <Input
+                          value={(formConfig.settings as any)?.cor_botao ?? ''}
+                          placeholder="#2563eb — vazio usa a cor padrão"
+                          onChange={(e) => setFormConfig(prev => ({
+                            ...prev,
+                            settings: { ...(prev.settings as any), cor_botao: e.target.value },
+                          }))}
+                          className="font-mono text-sm"
+                        />
+                        {(formConfig.settings as any)?.cor_botao && (
+                          <Button
+                            type="button" variant="ghost" size="sm" className="h-9 shrink-0 text-xs"
+                            onClick={() => setFormConfig(prev => {
+                              const s = { ...(prev.settings as any) };
+                              delete s.cor_botao;
+                              return { ...prev, settings: s };
+                            })}
+                          >
+                            Limpar
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        A cor do texto do botão é escolhida sozinha, pelo contraste — branco
+                        sobre cor escura, preto sobre cor clara.
+                      </p>
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-xs">Linha de apoio (opcional)</Label>
                       <Input
