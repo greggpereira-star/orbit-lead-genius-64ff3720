@@ -254,8 +254,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     setErroDeConsentimento(false);
     try {
       const params = new URLSearchParams(window.location.search);
+      /* `landing_page` e `page_url` vêm da página que EMBUTIU o formulário —
+         o SDK os passa na URL do iframe. O `tracker` grava
+         `window.location.pathname`, que dentro do iframe é
+         `/embed-form/<id>`: foi o que o teste no site da Exata gravou, e com
+         isso o cliente não consegue saber de qual página do site veio o lead.
+         Os parâmetros da URL vencem. */
       const trackingData = {
         ...tracker.getTrackingParams(),
+        landing_page: params.get('landing_page') || params.get('page_url')
+          || tracker.getTrackingParams().landing_page,
         utm_source: params.get('utm_source') || undefined,
         utm_medium: params.get('utm_medium') || undefined,
         utm_campaign: params.get('utm_campaign') || undefined,
@@ -441,12 +449,19 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
               )}
             </div>
           ) : (
-            <div className="bg-primary px-6 py-8 rounded-xl mb-6 shadow-lg">
-              <CardTitle className="text-[22px] md:text-[26px] font-semibold tracking-[-0.02em] text-center text-white">{form.name}</CardTitle>
-              {form.description && (
-                <CardDescription className="text-center text-sm md:text-base font-medium text-white/80 mt-2">{form.description}</CardDescription>
-              )}
-            </div>
+            /* O NOME do formulário é rótulo interno — "TESTE WORDPRESS - pode
+               apagar" foi o que apareceu para o visitante no site do cliente,
+               num bloco azul do tamanho de um cabeçalho. Quem quiser título
+               visível escreve na DESCRIÇÃO; sem descrição, o formulário entra
+               direto nos campos, que é o que uma página já contextualizou
+               espera. */
+            form.description ? (
+              <div className="text-center space-y-1">
+                <CardTitle className="text-[22px] font-semibold tracking-[-0.02em] text-foreground">
+                  {form.description}
+                </CardTitle>
+              </div>
+            ) : null
           )}
         </CardHeader>
         <CardContent className="pb-8 pt-0 px-6 sm:px-8">
