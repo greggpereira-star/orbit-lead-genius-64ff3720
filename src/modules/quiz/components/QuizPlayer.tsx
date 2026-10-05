@@ -2495,23 +2495,24 @@ function ChartBlock({ block, design }: { block: QuizBlock; design: QuizDesign })
      brigaria com o tema, giram-se opacidades da cor do funil. */
   const corDaFatia = (i: number) => withAlpha(cor, 1 - (i % 5) * 0.16);
 
-  const comum = (
-    <>
-      {grade && <CartesianGrid strokeDasharray="3 3" stroke={withAlpha(design.text, 0.12)} />}
-      {eixoX && <XAxis dataKey="name" tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} />}
-      {eixoY && <YAxis tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} />}
-      <Tooltip
-        contentStyle={{
-          background: design.surface,
-          border: `1px solid ${withAlpha(design.text, 0.15)}`,
-          borderRadius: 10,
-          color: design.text,
-          fontSize: 12,
-        }}
-      />
-      {legenda && <Legend wrapperStyle={{ fontSize: 11 }} />}
-    </>
-  );
+  const estiloDaDica = {
+    background: design.surface,
+    border: `1px solid ${withAlpha(design.text, 0.15)}`,
+    borderRadius: 10,
+    color: design.text,
+    fontSize: 12,
+  };
+
+  /* Array, e não Fragment: o recharts procura eixo, grade e legenda entre os
+     filhos DIRETOS do gráfico. Dentro de um `<>...</>` ele não acha nenhum, e
+     some tudo em silêncio — o gráfico desenha só a série. */
+  const comum = [
+    grade ? <CartesianGrid key="g" strokeDasharray="3 3" stroke={withAlpha(design.text, 0.12)} /> : null,
+    eixoX ? <XAxis key="x" dataKey="name" tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} /> : null,
+    eixoY ? <YAxis key="y" tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} /> : null,
+    <Tooltip key="t" contentStyle={estiloDaDica} />,
+    legenda ? <Legend key="l" wrapperStyle={{ fontSize: 11 }} /> : null,
+  ];
 
   return (
     <div className="mb-6" style={{ height: altura }}>
@@ -2528,15 +2529,7 @@ function ChartBlock({ block, design }: { block: QuizBlock; design: QuizDesign })
           </AreaChart>
         ) : block.chartType === 'pie' ? (
           <PieChart>
-            <Tooltip
-              contentStyle={{
-                background: design.surface,
-                border: `1px solid ${withAlpha(design.text, 0.15)}`,
-                borderRadius: 10,
-                color: design.text,
-                fontSize: 12,
-              }}
-            />
+            <Tooltip contentStyle={estiloDaDica} />
             {legenda && <Legend wrapperStyle={{ fontSize: 11 }} />}
             <Pie data={pontos} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="80%" paddingAngle={2}>
               {pontos.map((p, i) => (
