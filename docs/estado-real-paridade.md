@@ -147,6 +147,27 @@ mascarado nasceu com `name = "(27) 98877-5544"`. O nome sai do primeiro
 máscara é telefone, CPF ou CEP — nunca nome; agora é excluído da busca pelo nome.
 Reconferido no ar: o lead seguinte nasceu com nome vazio e telefone certo.
 
+### Amarelos fechados — 05/10, 14h
+
+**Pontuação negativa.** O percentual passou a ser normalizado sobre a faixa
+alcançável (`minPossibleScore` simétrico do máximo). Medido num quiz com
+penalidade: quem acertou METADE saía com 0% e caía no fundo da escala, igual a
+quem errou tudo; agora sai com 50%. Em quiz sem negativos nada muda.
+
+**Progresso.** Verificado no ar, em três passagens: grava a cada resposta, retoma
+na etapa certa com a **mesma sessão** (para não virar um lead novo), e limpa ao
+gravar a submissão. Descarta quando o quiz foi editado ou passam 24h.
+
+Duas correções foram necessárias depois do primeiro teste, as duas achadas no ar:
+a limpeza dependia de `done`, que nunca vira verdadeiro quando a última etapa tem
+resultado visível; e, corrigido isso, o efeito de gravação disparava logo em
+seguida e regravava por cima — a limpeza durava um instante.
+
+**Limitação conhecida, deixada de propósito:** ao retomar, o botão "Voltar"
+some até a pessoa avançar de novo. O histórico de etapas não é persistido, e
+reconstruí-lo seria inventar um caminho que o visitante pode não ter percorrido
+— com salto condicional, isso o mandaria para uma tela que ele nunca viu.
+
 **Também confirmado funcionando nesta passada:** o controle "Mostrar botão voltar
 nesta etapa" aparece ao expandir a etapa, e o selo de visitantes por etapa
 atualiza (6👤, 4👤, 3👤, 2👤).
@@ -161,8 +182,8 @@ Da auditoria de 05/10, confirmadas ainda presentes no código:
 | ✅ | ~~`removeChildFromContainer` com `prev.steps ?? []`~~ — corrigido em 05/10 |
 | ✅ | ~~Autosave não tentava de novo~~ — corrigido em 05/10 (recuo até 1 min) |
 | ✅ | ~~Geolocalização por terceiro no enriquecimento~~ — removida em 05/10. A outra chamada ao mesmo serviço fica: só dispara quando o dono configurou restrição por país, e é a única forma de cumpri-la |
-| 🟡 | Pontuação pode ficar **negativa**; o máximo usa `Math.max(0, …)` e o percentual negativo não é tratado | `engine.ts` |
-| 🟡 | **Progresso não é persistido**: recarregar perde tudo, e a recuperação de abandono não retoma | `QuizPlayer.tsx` |
+| ✅ | ~~Pontuação podia ficar negativa~~ — corrigido em 05/10: percentual normalizado sobre a faixa alcançável |
+| ✅ | ~~Progresso não persistido~~ — corrigido e verificado em 05/10: retoma no `localStorage` por 24h, com a mesma sessão |
 | 🟡 | Arquivos grandes, e **pioraram** nesta semana: `QuizPlayer` 2.284 → **2.666**, `QuizInspector` 2.246 → **2.725**, `builder` 1.156 → **1.359** | — |
 
 ### Falhas introduzidas e corrigidas nesta semana
