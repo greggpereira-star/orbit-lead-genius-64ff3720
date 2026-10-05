@@ -28,24 +28,8 @@ test.describe('player público', () => {
     'defina E2E_QUIZ_SLUG (veja `npm run e2e:fixture criar`) — o player carrega o quiz no servidor e não dá para simular pelo navegador',
   );
 
-  /**
-   * Esconde a sobreposição de erro do Vite.
-   *
-   * O servidor de desenvolvimento deste projeto não compila `src/styles.css`
-   * (lightningcss: "Invalid qualified rule" na saída expandida do Tailwind).
-   * É anterior a estes testes e NÃO afeta o build de produção, mas a
-   * sobreposição fica por cima da página e intercepta todo clique.
-   *
-   * Seguro aqui porque nada nestes testes depende de estilo: as asserções são
-   * sobre texto, papel, placeholder e `localStorage`.
-   */
-  const semOverlay = async (page: Page) => {
-    await page.addStyleTag({ content: 'vite-error-overlay{display:none!important}' }).catch(() => {});
-  };
-
   const abrir = async (page: Page, sufixo = '') => {
     await page.goto(`/q/${SLUG}${sufixo}`);
-    await semOverlay(page);
     await expect(page.getByText('Qual seu interesse?')).toBeVisible({ timeout: 20_000 });
   };
 
@@ -118,7 +102,6 @@ test.describe('player público', () => {
     expect(antes).toBeTruthy();
 
     await page.reload();
-    await semOverlay(page);
 
     // Volta direto para o telefone, não para o começo.
     await expect(page.getByPlaceholder(TELEFONE)).toBeVisible({ timeout: 20_000 });
@@ -133,7 +116,6 @@ test.describe('player público', () => {
     await expect(page.getByPlaceholder(TELEFONE)).toBeVisible();
 
     await page.goto(`/q/${SLUG}?preview=1`);
-    await semOverlay(page);
     await expect(page.getByText('Qual seu interesse?')).toBeVisible({ timeout: 20_000 });
   });
 });

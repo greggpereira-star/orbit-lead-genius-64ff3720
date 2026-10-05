@@ -41,15 +41,17 @@ npm run e2e:fixture remover
 Sem `E2E_QUIZ_SLUG` a suíte **pula com o motivo escrito**, em vez de passar sem
 ter testado nada — teste verde que não rodou é pior do que teste nenhum.
 
-## Dois problemas de ambiente encontrados ao montar isto
+## Problemas de ambiente encontrados ao montar isto
 
 1. **A porta do Playwright estava errada** (`5173`; o `vite dev` deste projeto
    usa `8080`). A suíte existente nunca rodou: esperava 60s e abortava.
-2. **O servidor de desenvolvimento não compila `src/styles.css`** —
-   lightningcss: "Invalid qualified rule", na saída já expandida do Tailwind. O
-   build de produção passa. Enquanto isso não for resolvido, o dev serve a
-   aplicação sem estilo e com uma sobreposição de erro que intercepta cliques;
-   os testes a escondem para poder interagir.
-3. O `.env` local aponta para um Supabase **diferente** do de produção
-   (`nckxdcocmwvgevazyuac.supabase.co`, o hospedado antigo). Por isso o e2e roda
-   contra o ambiente publicado por padrão nas instruções acima.
+   Corrigido.
+2. **O servidor de desenvolvimento não compilava `src/styles.css`** —
+   nove declarações de tema escuro ficavam soltas dentro de `@layer base`, sem
+   seletor, depois do fechamento do bloco `.dark`. Corrigido; o mesmo defeito
+   deixava o tema escuro sem esses tokens em produção.
+3. **O `.env` local aponta para um Supabase diferente do de produção**
+   (`nckxdcocmwvgevazyuac.supabase.co`, o hospedado antigo). Por isso as
+   instruções acima rodam o e2e contra o ambiente publicado. **Ainda em
+   aberto** — resolver exige decidir para onde o desenvolvimento local deve
+   apontar.
