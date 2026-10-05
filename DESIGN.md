@@ -200,5 +200,35 @@ pedia. As sete variantes que sobraram são: `ring-primary/40` e `ring-primary`
 (bloco selecionado), `border-primary` e `border-primary/30` (escolha entre
 opções), `bg-primary/5`, `bg-primary/10` e `bg-primary/[0.03]` (etapa corrente).
 
-Vale uma próxima mão: três tons de fundo para dizer a mesma coisa — "é esta a
-etapa" — ainda é mais do que a regra justifica.
+### 5.1 Os três tons, unificados — e uma correção
+
+Escrevi acima que os três tons de fundo diziam "é esta a etapa". **Estava
+errado.** Medindo cada um no contexto, são três seleções diferentes:
+
+| Onde | Condição | O que marca | Tom que usava |
+|---|---|---|---|
+| lista de etapas | `isTarget` | etapa que recebe o próximo componente | `bg-primary/[0.03]` |
+| lista de etapas | `activeBlockId === b.id` | bloco selecionado | `bg-primary/10` |
+| painel de design | `design.buttonStyle === opt.id` | estilo de botão escolhido | `bg-primary/5` |
+
+O defeito não era dizer a mesma coisa de três jeitos — era **o mesmo
+significado ("este está selecionado") com três valores**, um por lugar,
+conforme quem escreveu. É exatamente o que já tinha acontecido com `sucesso`,
+que estava de sete jeitos, e a solução aqui é a mesma: token semântico.
+
+```css
+--selecao: var(--primary);   /* no escuro, oklch(0.70 0.16 264) */
+--selecao-suave: color-mix(in oklch, var(--selecao) 12%, transparent);
+--selecao-borda: color-mix(in oklch, var(--selecao) 28%, transparent);
+--selecao-anel:  color-mix(in oklch, var(--selecao) 40%, transparent);
+```
+
+As proporções 12/28 são as mesmas de `--sucesso` e `--aviso`; o 40 do anel é o
+valor que já estava nos quatro lugares de arraste, agora com nome. No escuro o
+azul sobe de L=0.51 para 0.70 pelo mesmo motivo que o verde e o âmbar sobem:
+a 12% sobre `#0B0F17` o tingido some.
+
+Resultado: **o construtor e o inspetor não têm mais nenhuma classe crua de
+acento.** Sobraram duas no Fluxo, e as duas são de propósito — o anel de foco,
+que é acessibilidade, e o botão de inserir etapa, única chamada para ação
+daquele canvas.

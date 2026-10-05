@@ -135,6 +135,19 @@
   --aviso: oklch(0.555 0.137 62);        /* #B45309 */
   --aviso-suave: color-mix(in oklch, var(--aviso) 12%, transparent);
   --aviso-borda: color-mix(in oklch, var(--aviso) 28%, transparent);
+
+  /* Seleção — "é isto que você está editando".
+     Mesmo problema que o `sucesso` tinha: estava escrito de três jeitos nas
+     telas de construção (`bg-primary/[0.03]`, `/5` e `/10`), um por lugar,
+     conforme quem escreveu. Significado idêntico, valor diferente.
+     Deriva do `--primary` porque seleção É o acento, nas mesmas proporções
+     12/28 dos outros estados. */
+  --selecao: var(--primary);
+  --selecao-suave: color-mix(in oklch, var(--selecao) 12%, transparent);
+  --selecao-borda: color-mix(in oklch, var(--selecao) 28%, transparent);
+  /* O anel do que está sendo arrastado pede mais presença que a borda tingida;
+     40% é o valor que já estava nos quatro lugares, agora com nome. */
+  --selecao-anel: color-mix(in oklch, var(--selecao) 40%, transparent);
   --elevacao-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px rgb(15 23 42 / 0.04);
   --elevacao-2: 0 8px 24px rgb(15 23 42 / 0.08), 0 2px 6px rgb(15 23 42 / 0.04);
 
@@ -193,6 +206,9 @@
    sobre fundo fundo — o mesmo verde do claro vira mancha ilegível. */
    --sucesso: oklch(0.78 0.145 163);      /* #34D399 */
    --aviso: oklch(0.82 0.145 80);         /* #FBBF24 */
+   /* O azul do claro tem L=0.51: a 12% sobre #0B0F17 o tingido some. Clareado
+      pelo mesmo motivo e na mesma medida que o verde e o âmbar acima. */
+   --selecao: oklch(0.70 0.16 264);
    --elevacao-1: 0 1px 2px rgb(0 0 0 / 0.3);
    --elevacao-2: 0 10px 30px rgb(0 0 0 / 0.45);
  }

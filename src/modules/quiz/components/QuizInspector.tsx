@@ -1352,7 +1352,7 @@ function BlockInspector({
                             {...dragProvided.draggableProps}
                             className={
                               dragSnapshot.isDragging
-                                ? "rounded-lg shadow-lg ring-2 ring-primary/40"
+                                ? "rounded-lg shadow-lg ring-2 ring-[var(--selecao-anel)]"
                                 : ""
                             }
                           >
@@ -2269,7 +2269,7 @@ const ALIGN_LABELS: Record<"start" | "center" | "end" | "stretch", string> = {
 function miniChip(active: boolean) {
   return `rounded-md border px-2 py-1 text-[10.5px] font-medium text-center transition-colors ${
     active
-      ? "border-primary text-primary"
+      ? "border-[var(--selecao)] text-[var(--selecao)]"
       : "border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground"
   }`;
 }
@@ -2602,7 +2602,7 @@ function ShowIfSection({
   const chipClass = (active: boolean) =>
     `rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors text-left ${
       active
-        ? "border-primary text-primary"
+        ? "border-[var(--selecao)] text-[var(--selecao)]"
         : "border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground"
     }`;
 
@@ -2996,7 +2996,7 @@ function DesignInspector({
                 onClick={() => onChange(p.design)}
                 className={`text-left p-2 rounded-lg border-2 transition-all ${
                   design.presetId === p.id
-                    ? "border-primary"
+                    ? "border-[var(--selecao)]"
                     : "border-transparent hover:border-border"
                 }`}
               >
@@ -3061,7 +3061,7 @@ function DesignInspector({
                     onClick={() => onChange({ buttonStyle: opt.id })}
                     className={`text-left p-2 rounded-lg border-2 transition-all ${
                       active
-                        ? "border-primary bg-primary/5"
+                        ? "border-[var(--selecao)] bg-[var(--selecao-suave)]"
                         : "border-transparent hover:border-border"
                     }`}
                   >

@@ -1015,7 +1015,7 @@ function QuizBuilderPage() {
                                   title={def.description}
                                   className={`relative text-left p-2 rounded-lg border hover:border-foreground/20 hover:bg-muted/60 transition-all cursor-grab active:cursor-grabbing select-none ${
                                     dragSnapshot.isDragging
-                                      ? "shadow-xl ring-2 ring-primary/40 bg-card"
+                                      ? "shadow-xl ring-2 ring-[var(--selecao-anel)] bg-card"
                                       : ""
                                   }`}
                                 >
@@ -1088,9 +1088,9 @@ function QuizBuilderPage() {
                         {...stepDragProvided.draggableProps}
                         className={`rounded-xl border transition-all ${
                           stepDragSnapshot.isDragging
-                            ? "shadow-lg bg-card ring-2 ring-primary/40"
+                            ? "shadow-lg bg-card ring-2 ring-[var(--selecao-anel)]"
                             : isTarget
-                              ? "border-primary/30 bg-primary/[0.03]"
+                              ? "border-[var(--selecao-borda)] bg-[var(--selecao-suave)]"
                               : "border-transparent"
                         }`}
                       >
@@ -1244,9 +1244,9 @@ function QuizBuilderPage() {
                                           }}
                                           className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
                                             dragSnapshot.isDragging
-                                              ? "shadow-lg bg-card ring-2 ring-primary/40"
+                                              ? "shadow-lg bg-card ring-2 ring-[var(--selecao-anel)]"
                                               : activeBlockId === b.id
-                                                ? "bg-primary/10 border border-primary/30"
+                                                ? "border border-[var(--selecao-borda)] bg-[var(--selecao-suave)]"
                                                 : "hover:bg-background border border-transparent"
                                           }`}
                                         >
