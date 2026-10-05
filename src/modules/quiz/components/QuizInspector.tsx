@@ -189,6 +189,7 @@ function BlockInspector({
   })();
 
   const ctaEligible = [
+    "button",
     "intro",
     "cta",
     "result",
@@ -298,26 +299,36 @@ function BlockInspector({
               </>
             ) : block.type === "custom" ||
               block.type === "container" ||
-              block.type === "spacer" ? null : (
+              block.type === "spacer" ||
+              block.type === "button" ? null : (
+              /* Cada bloco mostra só o campo que ele DESENHA. O `Título` não
+                 tem subtítulo e o `Texto` não tem título: deixar os dois
+                 sempre visíveis dava um campo que aceita digitação e não
+                 aparece em lugar nenhum, que é o jeito mais rápido de o
+                 construtor parecer quebrado. */
               <>
-                <RichTextEditor
-                  key={`${block.id}-title`}
-                  label="Título"
-                  value={block.titleRich}
-                  fallbackText={block.title}
-                  variables={availableVariables}
-                  minHeight={68}
-                  onChange={(doc, text) => onChange({ titleRich: doc, title: text })}
-                />
-                <RichTextEditor
-                  key={`${block.id}-subtitle`}
-                  label="Subtítulo"
-                  value={block.subtitleRich}
-                  fallbackText={block.subtitle}
-                  variables={availableVariables}
-                  minHeight={68}
-                  onChange={(doc, text) => onChange({ subtitleRich: doc, subtitle: text })}
-                />
+                {block.type !== "paragraph" && (
+                  <RichTextEditor
+                    key={`${block.id}-title`}
+                    label="Título"
+                    value={block.titleRich}
+                    fallbackText={block.title}
+                    variables={availableVariables}
+                    minHeight={68}
+                    onChange={(doc, text) => onChange({ titleRich: doc, title: text })}
+                  />
+                )}
+                {block.type !== "heading" && (
+                  <RichTextEditor
+                    key={`${block.id}-subtitle`}
+                    label={block.type === "paragraph" ? "Texto" : "Subtítulo"}
+                    value={block.subtitleRich}
+                    fallbackText={block.subtitle}
+                    variables={availableVariables}
+                    minHeight={block.type === "paragraph" ? 120 : 68}
+                    onChange={(doc, text) => onChange({ subtitleRich: doc, subtitle: text })}
+                  />
+                )}
               </>
             )}
 
