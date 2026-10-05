@@ -239,9 +239,50 @@ export function recomputeScore(
   return { score, tags: [...tags] };
 }
 
-export function classifyTemperature(score: number, max: number): 'hot' | 'warm' | 'cold' {
-  if (max <= 0) return 'cold';
-  const pct = score / max;
+/**
+ * Percentual da pontuação dentro da faixa ALCANÇÁVEL.
+ *
+ * Opção com pontuação negativa é legítima — serve para penalizar resposta
+ * ruim —, mas `maxPossibleScore` ignora negativos (`Math.max(0, …)`), então
+ * `score / max` saía negativo. E percentual negativo não bate em nenhuma
+ * faixa: `classifyTier` devolvia `null` e o lead ficava sem classificação e
+ * sem mensagem, em silêncio.
+ *
+ * Normalizar sobre `[min, max]` resolve e NÃO muda nada em quiz sem negativos:
+ * ali `min` é 0 e a conta volta a ser `score / max`.
+ */
+export function scorePercent(score: number, max: number, min = 0): number {
+  const amplitude = max - min;
+  if (amplitude <= 0) return 0;
+  const pct = ((score - min) / amplitude) * 100;
+  // Resposta fora da faixa não deveria acontecer, mas se acontecer é melhor
+  // grudar nos limites do que produzir um percentual impossível.
+  return Math.min(100, Math.max(0, pct));
+}
+
+/** Pior pontuação alcançável — simétrica de `maxPossibleScore`. */
+export function minPossibleScore(schema: QuizSchema, responses?: QuizResponses): number {
+  let min = 0;
+  const scope = responses ? resolveScope(schema.blocks, responses) : undefined;
+  for (const b of schema.blocks) {
+    if (responses && !isBlockVisible(b, responses, scope)) continue;
+    const w = b.scoreWeight ?? 1;
+    if (b.type === 'single-choice') {
+      // Escolha única obriga a marcar uma: o piso é a PIOR opção, não zero.
+      const pior = Math.min(0, ...(b.options ?? []).map((o) => o.score ?? 0));
+      min += pior * w;
+    } else if (b.type === 'multi-choice') {
+      // Múltipla deixa não marcar nada, então o piso é a soma só das negativas.
+      min += (b.options ?? []).reduce((acc, o) => acc + Math.min(0, o.score ?? 0), 0) * w;
+    }
+    // `rating` nunca é negativo: o piso é zero, já contado.
+  }
+  return min;
+}
+
+export function classifyTemperature(score: number, max: number, min = 0): 'hot' | 'warm' | 'cold' {
+  if (max - min <= 0) return 'cold';
+  const pct = scorePercent(score, max, min) / 100;
   if (pct >= 0.7) return 'hot';
   if (pct >= 0.4) return 'warm';
   return 'cold';
@@ -289,9 +330,10 @@ export function classifyTier(
   score: number,
   max: number,
   tiers: import('./types').ScoreTier[] | undefined,
+  min = 0,
 ): import('./types').ScoreTier | null {
-  if (!tiers?.length || max <= 0) return null;
-  const pct = (score / max) * 100;
+  if (!tiers?.length || max - min <= 0) return null;
+  const pct = scorePercent(score, max, min);
   // Da faixa mais alta para a mais baixa: a primeira que o lead alcança é a dele.
   return [...tiers].sort((a, b) => b.minPercent - a.minPercent).find((t) => pct >= t.minPercent) ?? null;
 }

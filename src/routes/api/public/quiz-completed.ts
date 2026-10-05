@@ -178,7 +178,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         // ficava com percentual inflado e subia de faixa indevidamente — um
         // lead de 34% aparecia como 57%. Duas implementações da mesma regra é
         // como isso acontece; agora existe uma só.
-        const { maxPossibleScore } = await import('@/modules/quiz/engine');
+        const { maxPossibleScore, minPossibleScore, scorePercent } = await import('@/modules/quiz/engine');
         const schema = (versao as { schema?: unknown } | null)?.schema;
         /* As RESPOSTAS entram no cálculo do máximo: sem elas, o teto inclui
            blocos que a exibição condicional escondeu deste visitante, o
@@ -192,7 +192,12 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
           : 0;
         if (max <= 0) return json({ status: 'sem_pontuacao' });
 
-        const pct = ((body.score ?? 0) / max) * 100;
+        /* O piso entra na conta: com opção de pontuação negativa, dividir só
+           pelo máximo produz percentual negativo, que não bate em faixa
+           nenhuma — o lead ficava sem classificação e sem mensagem, calado.
+           Em quiz sem negativos o piso é 0 e a conta não muda. */
+        const min = schema ? minPossibleScore(schema as never, respostasDoLead ?? undefined) : 0;
+        const pct = scorePercent(body.score ?? 0, max, min);
         const faixa = [...tiers].sort((a, b) => b.minPercent - a.minPercent).find((t) => pct >= t.minPercent);
         if (!faixa) return json({ status: 'sem_faixa_correspondente' });
 

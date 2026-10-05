@@ -9,6 +9,7 @@ import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
 import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
+import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
 import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
@@ -29,6 +30,7 @@ import {
   nextStepIndex,
   isBlockVisible,
   classifyTemperature,
+  minPossibleScore,
   maxPossibleScore,
   type QuizRunState,
 } from '../engine';
@@ -211,8 +213,11 @@ function PlayerRunner({
   const [state, setState] = useState<QuizRunState>(createInitialState);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   /* Identidade da RESPOSTA, não da pessoa: é o que amarra a captura
-     antecipada à conclusão para não virarem dois leads. Vive só nesta aba. */
+     antecipada à conclusão para não virarem dois leads. */
   const sessionId = useRef<string>(crypto.randomUUID());
+  /* Fica `true` quando o visitante retomou de onde parou — serve para não
+     regravar imediatamente o que acabou de ser lido. */
+  const retomou = useRef(false);
   /* Contato já enviado — evita repetir a mesma chamada a cada etapa. */
   const capturedContact = useRef<string | null>(null);
   /* A submissão é gravada UMA vez, venha o gatilho de onde vier. */
@@ -241,6 +246,28 @@ function PlayerRunner({
   const design = schema.design;
   const blocks = schema.blocks;
   const steps = useMemo(() => getSteps(schema), [schema]);
+
+  /* Retomada: lê UMA vez, na montagem. Em preview não retoma — quem está
+     editando quer ver o quiz do começo a cada olhada, não de onde parou. */
+  useEffect(() => {
+    if (preview) return;
+    const salvo = lerProgresso(quizId, blocks, steps.length);
+    if (!salvo) return;
+    sessionId.current = salvo.sessionId;
+    retomou.current = true;
+    setState(salvo.state);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Grava a cada mudança de estado. Não grava depois de concluir: o progresso
+     já virou submissão e lead, e retomar um quiz terminado só confundiria. */
+  useEffect(() => {
+    if (preview) return;
+    if (done) { limparProgresso(quizId); return; }
+    if (retomou.current) { retomou.current = false; return; }
+    salvarProgresso(quizId, sessionId.current, state);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, done, preview, quizId]);
   const currentStep = steps[state.currentStepIndex];
   const stepBlocks = useMemo(
     () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
@@ -602,7 +629,7 @@ function PlayerRunner({
         return;
       }
       const max = maxPossibleScore(schema);
-      const temperature = classifyTemperature(finalState.score, max);
+      const temperature = classifyTemperature(finalState.score, max, minPossibleScore(schema, finalState.responses));
       const { email, phone, name } = extrairContato(finalState.responses, blocks);
       const enrichedTracking: Record<string, string> = {
         ...tracking,
@@ -2538,7 +2565,7 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
   const design = schema.design;
   const resultBlock = schema.blocks.find((b) => b.type === 'result');
   const max = maxPossibleScore(schema);
-  const temperature = classifyTemperature(state.score, max);
+  const temperature = classifyTemperature(state.score, max, minPossibleScore(schema, state.responses));
   const pct = max > 0 ? Math.round((state.score / max) * 100) : 0;
   // A tela de resultado é o lugar de maior valor pra personalização dinâmica —
   // "Baseado no seu peso de {{peso}}kg e IMC {{calc(peso/(altura/100)^2)}}...".
