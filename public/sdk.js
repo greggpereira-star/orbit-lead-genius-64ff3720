@@ -343,7 +343,7 @@
 
       function aoTeclar(e) { if (e.key === 'Escape') encerrar(); }
 
-      function ajustarAltura(conteudo) {
+      function ajustarAltura() {
         /* O teto da janela vence o piso.
          *
          * A primeira versão fazia `Math.max(alturaLimitada, minHeight)`, e numa
@@ -353,15 +353,13 @@
          */
         // 22px de folga em cima e embaixo, mais 13px da saliência do botão.
         var teto = Math.max(window.innerHeight - 70, 240);
-        var piso = Math.min(options.minHeight || 420, teto);
-        var altura = Math.max(Math.min(conteudo || piso, teto), piso);
-        iframe.style.height = altura + 'px';
-        /* Quando o conteúdo não cabe no teto, a rolagem passa a ser do iframe —
-         * com `scrolling="no"` o fim do formulário ficaria inalcançável em tela
-         * baixa, que é justamente onde isso acontece. */
-        var precisaRolar = (conteudo || 0) > teto;
-        iframe.setAttribute('scrolling', precisaRolar ? 'auto' : 'no');
-        iframe.style.overflow = precisaRolar ? 'auto' : 'hidden';
+        /* O modal SEMPRE ocupa o teto da janela, e a rolagem é sempre do
+           iframe. Lá dentro a barra de ação já fica presa no rodapé, então
+           rolar move só os campos — não há motivo para a altura depender do
+           conteúdo, e é justamente essa dependência que criava o laço. */
+        iframe.style.height = teto + 'px';
+        iframe.setAttribute('scrolling', 'auto');
+        iframe.style.overflow = 'auto';
       }
 
       function aoReceber(e) {
@@ -377,7 +375,7 @@
         if (e.data.type === 'LEADFLOW_READY') {
           clearTimeout(prazoDaEspera);
           esconderEspera();
-          ajustarAltura(0);
+          ajustarAltura();
         }
         if (e.data.type === 'LEADFLOW_FORM_SUBMITTED' && options.closeOnSubmit !== false) {
           // Tempo de ler a confirmação antes de fechar.
@@ -385,7 +383,7 @@
         }
       }
 
-      var aoRedimensionar = function() { ajustarAltura(0); };
+      var aoRedimensionar = function() { ajustarAltura(); };
 
       overlay.onclick = encerrar;
       fechar.onclick = encerrar;
