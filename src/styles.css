@@ -238,6 +238,21 @@
   animation: quiz-pulse 1.8s ease-out infinite;
 }
 
+/* Deriva vertical da Seta que aponta para a próxima etapa.
+   Não é o `animate-bounce` do Tailwind: aquele alterna duas curvas abruptas e
+   dá um salto duro, que envelhece a página. Objeto real desacelera suave, e um
+   deslocamento de 6px com ease-in-out guia o olho sem chamar atenção para si. */
+@keyframes quiz-deriva {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+.quiz-seta-deriva {
+  animation: quiz-deriva 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quiz-seta-deriva { animation: none; }
+}
+
 /* ---------------------------------------------------------------------------
    Barra de rolagem discreta — usada no pipeline (colunas e board).
    Fina, arredondada e sem setas: some no fundo até o usuário passar o mouse,

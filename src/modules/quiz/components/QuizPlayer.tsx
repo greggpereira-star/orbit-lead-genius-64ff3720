@@ -2624,17 +2624,21 @@ function BlockView({
 
     case 'arrow': {
       const giro = { baixo: 0, cima: 180, direita: 270, esquerda: 90 }[block.direcaoDaSeta ?? 'baixo'];
+      /* A deriva fica no contêiner e a rotação no ícone: no mesmo elemento, o
+         `transform` da animação sobrescreveria o `rotate` e a seta apontaria
+         sempre para baixo. */
       return (
         <div className="flex justify-center" aria-hidden>
-          <ArrowDown
-            className="animate-bounce motion-reduce:animate-none"
-            style={{
-              width: block.tamanhoDoSimbolo ?? 32,
-              height: block.tamanhoDoSimbolo ?? 32,
-              color: design.primary,
-              transform: `rotate(${giro}deg)`,
-            }}
-          />
+          <span className="quiz-seta-deriva inline-flex">
+            <ArrowDown
+              style={{
+                width: block.tamanhoDoSimbolo ?? 32,
+                height: block.tamanhoDoSimbolo ?? 32,
+                color: design.primary,
+                transform: `rotate(${giro}deg)`,
+              }}
+            />
+          </span>
         </div>
       );
     }
