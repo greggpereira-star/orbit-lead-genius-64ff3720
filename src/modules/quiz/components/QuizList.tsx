@@ -144,10 +144,13 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
             const completionPct = s && s.total > 0 ? `${((s.completed / s.total) * 100).toFixed(0)}%` : '—';
             const conversionPct = s && s.total > 0 ? `${((s.leadsCaptured / s.total) * 100).toFixed(0)}%` : '—';
             return (
-              <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4 rounded-lg bg-muted/40 py-3">
+              <div className="mb-4 rounded-lg bg-muted/40 py-3 text-center text-xs">
+                <div className="mb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">Últimos 30 dias</div>
+                <div className="grid grid-cols-3 gap-2">
                 <div><div className="font-bold text-base sm:text-lg">{s?.leadsCaptured ?? '—'}</div><div className="text-muted-foreground">Leads</div></div>
                 <div><div className="font-bold text-base sm:text-lg">{completionPct}</div><div className="text-muted-foreground">Conclusão</div></div>
                 <div><div className="font-bold text-base sm:text-lg">{conversionPct}</div><div className="text-muted-foreground">Conversão</div></div>
+                </div>
               </div>
             );
           })()}

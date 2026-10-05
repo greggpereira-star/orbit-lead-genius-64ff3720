@@ -982,12 +982,19 @@ export const quizService = {
    * para um funil em que a Análise media 12%. Dois números contraditórios na
    * mesma sessão, e o otimista era o que não significava nada.
    *
-   * `starts` vem de `quiz_events`, a mesma fonte que `getMetrics` usa.
+   * `starts` vem de `quiz_events`, a mesma fonte que `getMetrics` usa, e a
+   * janela é a MESMA de 30 dias — senão o cartão diz 9% e a Análise 10% para o
+   * mesmo funil, que é a mesma contradição de antes, só menor. O cartão diz na
+   * tela que são 30 dias.
    */
-  async getListStats(companyId: string): Promise<Record<string, { total: number; completed: number; leadsCaptured: number }>> {
+  async getListStats(
+    companyId: string,
+    days = 30,
+  ): Promise<Record<string, { total: number; completed: number; leadsCaptured: number }>> {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
     const [{ data, error }, { data: inicios }] = await Promise.all([
-      supabase.from('quiz_submissions').select('quiz_id, status, answers').eq('company_id', companyId),
-      supabase.from('quiz_events').select('quiz_id').eq('company_id', companyId).eq('event_type', 'start'),
+      supabase.from('quiz_submissions').select('quiz_id, status, answers').eq('company_id', companyId).gte('created_at', since),
+      supabase.from('quiz_events').select('quiz_id').eq('company_id', companyId).eq('event_type', 'start').gte('created_at', since),
     ]);
     if (error) throw error;
     const rows = (data ?? []) as unknown as Array<{
