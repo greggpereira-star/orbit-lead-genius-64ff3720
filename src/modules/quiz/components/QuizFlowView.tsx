@@ -4,7 +4,6 @@ import {
   Background,
   Controls,
   MiniMap,
-  Panel,
   MarkerType,
   BaseEdge,
   EdgeLabelRenderer,
@@ -380,21 +379,6 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
   // ficou "grudado" na coordenada calculada pra um índice que já não é mais o dele.
   const draggedIds = useRef(new Set<string>());
 
-  /**
-   * Devolve todas as etapas ao layout calculado.
-   *
-   * Limpa o registro de quem foi arrastado — sem isso o `useEffect` de
-   * sincronia reporia as posições manuais na próxima mudança de schema, e o
-   * botão pareceria não funcionar.
-   */
-  const autoOrganizar = useCallback(() => {
-    draggedIds.current.clear();
-    setNodes(initialNodes);
-    // Depois de reposicionar, enquadra: senão o grafo reorganizado pode ficar
-    // fora da área visível e dá a impressão de que sumiu.
-    window.setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 50);
-  }, [initialNodes, setNodes, fitView]);
-
   const onNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChangeRaw>[0]) => {
       for (const change of changes) {
@@ -453,17 +437,6 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="opacity-40" />
         <Controls showInteractive={false} />
-        <Panel position="top-right">
-          <button
-            type="button"
-            onClick={autoOrganizar}
-            title="Devolve todas as etapas ao layout calculado"
-            className="flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors hover:bg-muted"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Auto-organizar
-          </button>
-        </Panel>
         <MiniMap pannable zoomable className="!bg-card !border !rounded-lg" nodeColor="var(--primary)" maskColor="rgba(0,0,0,0.06)" />
       </ReactFlow>
 

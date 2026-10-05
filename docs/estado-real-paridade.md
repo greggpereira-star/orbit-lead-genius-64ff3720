@@ -40,7 +40,7 @@ Verificado por busca no código — nenhum destes existe:
 | 9 | `Exportar leads` com link de validade | — |
 | 9 | `Resetar dados` | — |
 | 9 | Passo a passo guiado no primeiro uso | — |
-| 9 | `Auto-organizar` no Fluxo | — |
+| ~~9~~ | ~~`Auto-organizar` no Fluxo~~ | **falso achado**: já existia como "Organizar layout" (`handleReorganize`). Minha auditoria buscou pelo nome do inlead e não encontrou o nosso |
 | 9 | Biblioteca pública de modelos | os `STEP_TEMPLATES` existem, a galeria não |
 | 9 | Rodapé "Criado via" com UTM de indicação | — |
 
