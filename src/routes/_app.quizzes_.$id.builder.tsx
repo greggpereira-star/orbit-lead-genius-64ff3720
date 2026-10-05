@@ -940,21 +940,28 @@ function QuizBuilderPage() {
                           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                             {firstDef ? <firstDef.icon className="h-3.5 w-3.5 text-primary" /> : <LayoutGrid className="h-3.5 w-3.5 text-primary" />}
                           </div>
+                          {/* Verificado na tela: o nome vinha cortado em ~10
+                              caracteres ("Telefone ...", "Grade 2 ..."), porque
+                              nome e descrição do primeiro bloco disputavam UMA
+                              linha com quatro ícones num painel de 240px. Agora
+                              o nome da etapa fica sozinho na primeira linha e o
+                              bloco desce para a segunda, junto da contagem. */}
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold truncate">
+                            <div className="truncate text-xs font-semibold">
                               {step.name || `Etapa ${stepIdx + 1}`}
-                              {firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}
                             </div>
-                            <div className="text-[10px] text-muted-foreground truncate">
+                            <div className="truncate text-[10px] text-muted-foreground">
                               {stepBlocks.length === 0
-                                ? 'Vazia — escolha um bloco na paleta'
-                                : `${stepBlocks.length} componente${stepBlocks.length > 1 ? 's' : ''}`}
+                                ? 'Vazia — escolha um bloco'
+                                : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ''}`}
                             </div>
                           </div>
                           <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
+                          {/* Duplicar e excluir só aparecem com o ponteiro em
+                              cima: quatro ícones permanentes espremiam o nome. */}
                           <button
                             onClick={(e) => { e.stopPropagation(); duplicateStep(step.id); }}
-                            className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                            className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-foreground group-hover:block"
                             aria-label={`Duplicar ${step.name || `Etapa ${stepIdx + 1}`}`}
                             title="Duplicar etapa"
                           >
@@ -962,7 +969,7 @@ function QuizBuilderPage() {
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}
-                            className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                            className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-destructive group-hover:block"
                             aria-label={`Excluir ${step.name || `Etapa ${stepIdx + 1}`} e seus componentes`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />

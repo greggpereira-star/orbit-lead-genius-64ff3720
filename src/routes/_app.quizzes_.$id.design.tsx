@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { DragDropContext } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -254,9 +255,16 @@ function QuizDesignPage() {
             <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Pré-visualização
             </p>
-            <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
-              <QuizPreview schema={schema} device="mobile" />
-            </div>
+            {/* O QuizPreview tem um `Droppable` dentro: no construtor ele vive
+                sob o `DragDropContext` da página, e sem um acima ele estoura com
+                "Cannot read properties of null (reading 'store')" e derruba a
+                aba inteira. Aqui não se arrasta nada, então o contexto existe só
+                para satisfazer essa dependência. */}
+            <DragDropContext onDragEnd={() => {}}>
+              <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
+                <QuizPreview schema={schema} device="mobile" />
+              </div>
+            </DragDropContext>
           </div>
         </main>
       </div>
