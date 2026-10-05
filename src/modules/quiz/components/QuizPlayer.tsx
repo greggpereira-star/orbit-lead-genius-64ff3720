@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService, captureQuizLead } from '../services/quizService';
@@ -350,6 +350,61 @@ function PlayerRunner({
     });
   }, [visibleStepBlocks]);
 
+  /**
+   * Altura das barras fixas, medida no DOM e devolvida como espaçamento.
+   *
+   * Fora do fluxo elas não ocupam espaço, e a barra do topo cobria o título da
+   * pergunta. Medir é o único jeito honesto: a altura depende do bloco que o
+   * usuário pôs ali, e chutar um valor daria tanto sobra quanto sobreposição.
+   *
+   * Os dois `ref` são `useCallback` com dependência vazia DE PROPÓSITO. Na
+   * primeira versão eles eram recriados a cada render; o React reanexa um ref
+   * de callback sempre que a identidade muda, cada reanexo media e chamava
+   * `setState`, e isso renderizava de novo — laço infinito, erro React #185 na
+   * cara do visitante. O observador antigo também precisa ser desconectado,
+   * senão cada reanexo deixava mais um observando o mesmo elemento.
+   */
+  const [alturaFixa, setAlturaFixa] = useState({ topo: 0, rodape: 0 });
+  const obsTopo = useRef<ResizeObserver | null>(null);
+  const obsRodape = useRef<ResizeObserver | null>(null);
+
+  const refTopo = useCallback((el: HTMLDivElement | null) => {
+    obsTopo.current?.disconnect();
+    obsTopo.current = null;
+    if (!el) {
+      setAlturaFixa((a) => (a.topo === 0 ? a : { ...a, topo: 0 }));
+      return;
+    }
+    const medir = () => {
+      const h = el.getBoundingClientRect().height;
+      setAlturaFixa((a) => (Math.abs(a.topo - h) < 1 ? a : { ...a, topo: h }));
+    };
+    medir();
+    obsTopo.current = new ResizeObserver(medir);
+    obsTopo.current.observe(el);
+  }, []);
+
+  const refRodape = useCallback((el: HTMLDivElement | null) => {
+    obsRodape.current?.disconnect();
+    obsRodape.current = null;
+    if (!el) {
+      setAlturaFixa((a) => (a.rodape === 0 ? a : { ...a, rodape: 0 }));
+      return;
+    }
+    const medir = () => {
+      const h = el.getBoundingClientRect().height;
+      setAlturaFixa((a) => (Math.abs(a.rodape - h) < 1 ? a : { ...a, rodape: h }));
+    };
+    medir();
+    obsRodape.current = new ResizeObserver(medir);
+    obsRodape.current.observe(el);
+  }, []);
+
+  useEffect(() => () => {
+    obsTopo.current?.disconnect();
+    obsRodape.current?.disconnect();
+  }, []);
+
   /* Último bloco que de fato está no fluxo da etapa. É dele o botão que avança;
      um bloco fixo ou flutuante nunca deve assumir esse papel. */
   const ultimoNoFluxo = useMemo(() => {
@@ -654,7 +709,10 @@ function PlayerRunner({
             total={steps.length}
             design={design}
           />
-          <div className="mt-6 flex-1 flex flex-col gap-6">
+          <div
+            className="mt-6 flex-1 flex flex-col gap-6"
+            style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape }}
+          >
             {done ? (
               <ResultView schema={schema} state={state} />
             ) : (
@@ -694,7 +752,11 @@ function PlayerRunner({
                 return (
                   // Mesmo embrulho de estilo do canvas — um resolvedor só, para
                   // o que é ajustado no Builder ser o que o visitante vê.
-                  <div key={b.id} style={{ ...resolveBlockStyle(b), ...posicao }}>
+                  <div
+                    key={b.id}
+                    ref={b.posicao === 'topo-fixo' ? refTopo : b.posicao === 'rodape-fixo' ? refRodape : undefined}
+                    style={{ ...resolveBlockStyle(b), ...posicao }}
+                  >
                   <BlockView
                     block={b}
                     design={design}
