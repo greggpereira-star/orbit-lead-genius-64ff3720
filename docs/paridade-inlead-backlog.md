@@ -177,16 +177,23 @@ rodapé "Criado via" com UTM de indicação.
 
 ## Ordem de execução
 
-| Onda | Conteúdo | Peso |
+| Onda | Conteúdo | Situação |
 |---|---|---|
-| **0** | 4 defeitos graves + validação ao publicar | pequeno |
-| **1** | **Aba Design** completa (§2) | médio |
-| **2** | **Nota de conversão por etapa** (§6) + trava de edição (§7) | médio |
-| **3** | Grade de colunas, opção com imagem, botão voltar por etapa, duplicar/arquivar (§3 parcial, §9) | médio |
-| **4** | Componentes novos (§4) | grande |
-| **5** | Lógica por porcentagem/quantidade + editor de regras (§5) | médio |
-| **6** | Análise IA → Editar com IA (§8) | grande |
-| **7** | Camadas e posicionamento livre (§3 completo) | grande |
+| **0** | Defeitos graves + validação ao publicar | ✅ 05/10 — `d5aefc3` |
+| **1** | **Aba Design** completa (§2) | ✅ 05/10 — `f04fffd` |
+| **2** | **Nota de conversão por etapa** (§6) + trava de edição (§7) | ✅ 05/10 — `f38b99b` |
+| **3** | Grade de colunas, opção com imagem, botão voltar, duplicar/arquivar | ✅ 05/10 — `da07437` |
+| **4** | Componentes novos (§4) | ✅ 05/10 — `ec67d23` |
+| **5** | Lógica por porcentagem/quantidade + editor de regras (§5) | ✅ 05/10 — `74a568d` |
+| **6** | Análise IA → Editar com IA (§8) | ⬜ próxima |
+| **7** | Camadas e posicionamento livre (§3 completo) | ⬜ |
+
+### O que ficou de fora das ondas entregues
+
+- **Medidor/Régua** (§4): o bloco `level` já cobria; não foi duplicado.
+- **Som e gamificação** (contador com som de dinheiro, conquista, comparativo
+  de nota): **não vêm do inlead**, que não tem nada disso. Vieram dos cases
+  `isack` e `guisalezze` e seguem pendentes, em paralelo às ondas.
 
 Som, gamificação e gatilhos (contador com som de dinheiro, conquista, comparativo
 de nota) **não vêm do inlead** — ele não tem. Entram em paralelo quando você quiser,
