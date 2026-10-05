@@ -212,6 +212,14 @@ export interface QuizBlock {
    * sem depender de rolagem.
    */
   posicao?: 'fluxo' | 'topo-fixo' | 'rodape-fixo' | 'flutuante' | 'tela-cheia';
+  /**
+   * JavaScript executado ao clicar no bloco.
+   *
+   * Serve para disparar um evento de rastreamento próprio, abrir um widget de
+   * terceiro ou chamar uma função que o script do cabeçalho já definiu. Roda
+   * com `bloco` e `resposta` no escopo.
+   */
+  onClickScript?: string;
   /** Canto da janela, só para `flutuante`. */
   ancora?:
     | 'topo-esquerda' | 'topo-centro' | 'topo-direita'

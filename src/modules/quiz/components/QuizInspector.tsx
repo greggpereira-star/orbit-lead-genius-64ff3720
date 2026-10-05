@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
-import { GripVertical, Copy, Workflow, RotateCcw } from 'lucide-react';
+import { GripVertical, Copy, Workflow, RotateCcw, Code2 } from 'lucide-react';
 import { Rows3, AlignCenter as AlignCenterIcon } from 'lucide-react';
 import { Baseline } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1053,6 +1053,21 @@ function BlockInspector({
       <CoresDoBlocoSection block={block} allBlocks={allBlocks} design={design} onChange={onChange} />
 
       <PosicaoSection block={block} onChange={onChange} />
+
+      <Section title="Script no clique" icon={Code2}>
+        <Textarea
+          value={block.onClickScript ?? ''}
+          onChange={(e) => onChange({ onClickScript: e.target.value || undefined })}
+          rows={3}
+          placeholder={"// roda ao clicar neste bloco\n// disponíveis: bloco, resposta\nwindow.dataLayer?.push({ event: 'quiz_clique', id: bloco.id });"}
+          className="font-mono text-[11px]"
+          spellCheck={false}
+        />
+        <p className="text-[10px] text-muted-foreground">
+          Roda também no preview, para você poder testar sem publicar. Um erro aqui é
+          registrado no console e não derruba o funil do visitante.
+        </p>
+      </Section>
 
       <LogicRulesSection block={block} allBlocks={allBlocks} onChange={onChange} />
 

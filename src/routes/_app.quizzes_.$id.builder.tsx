@@ -29,6 +29,8 @@ import {
   ChevronRight,
   AlertCircle,
   Sparkles,
+  Trophy,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -1189,6 +1191,12 @@ function QuizBuilderPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/design', params: { id } })} className="gap-2 px-2 sm:px-3">
             <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Design</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/results', params: { id } })} className="gap-2 px-2 sm:px-3">
+            <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Resultados</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/responses', params: { id } })} className="gap-2 px-2 sm:px-3">
+            <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Respostas</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/quizzes/$id/insights', params: { id } })} className="gap-2 px-2 sm:px-3">
             <Sparkles className="h-4 w-4" /> <span className="hidden sm:inline">Análise</span>

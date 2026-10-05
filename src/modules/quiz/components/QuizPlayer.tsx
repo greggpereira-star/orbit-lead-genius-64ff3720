@@ -806,6 +806,7 @@ function PlayerRunner({
                     key={b.id}
                     ref={b.posicao === 'topo-fixo' ? refTopo : b.posicao === 'rodape-fixo' ? refRodape : undefined}
                     style={{ ...resolveBlockStyle(b), ...varsDoBloco(b), ...posicao }}
+                    onClick={b.onClickScript ? () => executarScriptDoBloco(b, state.responses[b.id]) : undefined}
                   >
                   <BlockView
                     block={b}
@@ -2764,4 +2765,26 @@ function AssinaturaDoRodape({
       </a>
     </div>
   );
+}
+
+/**
+ * Executa o script que o autor pendurou no clique do bloco.
+ *
+ * Em `preview` também roda, de propósito: quem escreve o script precisa poder
+ * testá-lo sem publicar.
+ *
+ * O erro é capturado e só registrado no console. Um script do autor que estoura
+ * não pode derrubar o funil do visitante — o pior caso aceitável é o rastreio
+ * dele não disparar, nunca a pessoa perder a resposta que já deu.
+ */
+function executarScriptDoBloco(bloco: QuizBlock, resposta: unknown): void {
+  if (!bloco.onClickScript?.trim()) return;
+  try {
+    // `Function` em vez de `eval`: o escopo é só o que passamos, e não todas as
+    // variáveis locais deste arquivo.
+    const fn = new Function('bloco', 'resposta', bloco.onClickScript);
+    fn(bloco, resposta);
+  } catch (e) {
+    console.error('[quiz] script do bloco falhou', bloco.id, e);
+  }
 }

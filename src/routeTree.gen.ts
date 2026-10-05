@@ -68,6 +68,8 @@ import { Route as AppQuizzesIdLeadsRouteImport } from './routes/_app.quizzes_.$i
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
 import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
+import { Route as AppQuizzesIdResponsesRouteImport } from './routes/_app.quizzes_.$id.responses'
+import { Route as AppQuizzesIdResultsRouteImport } from './routes/_app.quizzes_.$id.results'
 import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/api/public/cron/automation-dispatch'
 import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
 import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/api/public/cron/meta-reprocess-failed'
@@ -371,6 +373,16 @@ const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
   path: '/quizzes/$id/publish',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQuizzesIdResponsesRoute = AppQuizzesIdResponsesRouteImport.update({
+  id: '/quizzes_/$id/responses',
+  path: '/quizzes/$id/responses',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuizzesIdResultsRoute = AppQuizzesIdResultsRouteImport.update({
+  id: '/quizzes_/$id/results',
+  path: '/quizzes/$id/results',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiPublicCronAutomationDispatchRoute =
   ApiPublicCronAutomationDispatchRouteImport.update({
     id: '/api/public/cron/automation-dispatch',
@@ -453,6 +465,8 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
+  '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
@@ -515,6 +529,8 @@ export interface FileRoutesByTo {
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
+  '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
@@ -581,6 +597,8 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
+  '/_app/quizzes_/$id/responses': typeof AppQuizzesIdResponsesRoute
+  '/_app/quizzes_/$id/results': typeof AppQuizzesIdResultsRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
@@ -646,6 +664,8 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/quizzes/$id/responses'
+    | '/quizzes/$id/results'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
@@ -708,6 +728,8 @@ export interface FileRouteTypes {
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
     | '/quizzes/$id/publish'
+    | '/quizzes/$id/responses'
+    | '/quizzes/$id/results'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
@@ -773,6 +795,8 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/performance'
     | '/_app/quizzes_/$id/preview'
     | '/_app/quizzes_/$id/publish'
+    | '/_app/quizzes_/$id/responses'
+    | '/_app/quizzes_/$id/results'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
@@ -1221,6 +1245,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/quizzes_/$id/responses': {
+      id: '/_app/quizzes_/$id/responses'
+      path: '/quizzes/$id/responses'
+      fullPath: '/quizzes/$id/responses'
+      preLoaderRoute: typeof AppQuizzesIdResponsesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quizzes_/$id/results': {
+      id: '/_app/quizzes_/$id/results'
+      path: '/quizzes/$id/results'
+      fullPath: '/quizzes/$id/results'
+      preLoaderRoute: typeof AppQuizzesIdResultsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/public/cron/automation-dispatch': {
       id: '/api/public/cron/automation-dispatch'
       path: '/api/public/cron/automation-dispatch'
@@ -1330,6 +1368,8 @@ interface AppRouteChildren {
   AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
   AppQuizzesIdPreviewRoute: typeof AppQuizzesIdPreviewRoute
   AppQuizzesIdPublishRoute: typeof AppQuizzesIdPublishRoute
+  AppQuizzesIdResponsesRoute: typeof AppQuizzesIdResponsesRoute
+  AppQuizzesIdResultsRoute: typeof AppQuizzesIdResultsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1354,6 +1394,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,
   AppQuizzesIdPreviewRoute: AppQuizzesIdPreviewRoute,
   AppQuizzesIdPublishRoute: AppQuizzesIdPublishRoute,
+  AppQuizzesIdResponsesRoute: AppQuizzesIdResponsesRoute,
+  AppQuizzesIdResultsRoute: AppQuizzesIdResultsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
