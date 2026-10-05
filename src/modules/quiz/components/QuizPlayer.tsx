@@ -200,6 +200,8 @@ function PlayerRunner({
   const sessionId = useRef<string>(crypto.randomUUID());
   /* Contato já enviado — evita repetir a mesma chamada a cada etapa. */
   const capturedContact = useRef<string | null>(null);
+  /* A submissão é gravada UMA vez, venha o gatilho de onde vier. */
+  const jaSalvou = useRef(false);
 
   const funnelPixels = useMemo(
     () => ({
@@ -407,8 +409,7 @@ function PlayerRunner({
     // que a pessoa feche a página no meio. É exatamente esse visitante que
     // vale recuperar por e-mail depois.
     if (!preview) {
-      const emailNow = extract(nextResponses, blocks, 'email');
-      const phoneNow = extract(nextResponses, blocks, 'phone');
+      const { email: emailNow, phone: phoneNow, name: nomeNow } = extrairContato(nextResponses, blocks);
       const chave = `${emailNow ?? ''}|${phoneNow ?? ''}`;
       if ((emailNow || phoneNow) && capturedContact.current !== chave) {
         capturedContact.current = chave;
@@ -421,7 +422,7 @@ function PlayerRunner({
           sessionId: sessionId.current,
           email: emailNow,
           phone: phoneNow,
-          name: extract(nextResponses, blocks, 'short-text'),
+          name: nomeNow,
           score: nextState.score,
           tracking,
           responses: nextResponses,
@@ -441,26 +442,44 @@ function PlayerRunner({
       await finish(nextState);
       return;
     }
-    setState({ ...nextState, currentStepIndex: idx });
+    const estadoFinal = { ...nextState, currentStepIndex: idx };
+    setState(estadoFinal);
+    /* Chegou na última etapa: grava agora. Se esta etapa tiver um bloco de
+       resultado sem botão de avanço, não haverá um próximo clique — e esperar
+       por ele é o que fazia o quiz perder todo mundo. */
+    if (idx >= steps.length - 1 && !preview) {
+      void finish(estadoFinal, false);
+    }
   };
 
-  const finish = async (finalState: QuizRunState) => {
+  /**
+   * Grava a submissão.
+   *
+   * `mostrarTelaFinal` separa duas coisas que estavam juntas: SALVAR e trocar a
+   * tela pela conclusão do sistema. Um quiz que termina num bloco `result`
+   * desenhado pelo cliente — como o "diagnostico-beleza-natural", cujo último
+   * bloco só tem o botão do WhatsApp — nunca chama o avanço de novo, então
+   * `finish` jamais rodava e NADA era salvo: 7 pessoas percorreram o quiz
+   * inteiro, preencheram nome, e-mail e telefone, e o CRM não registrou uma
+   * linha. Agora a gravação acontece ao CHEGAR no fim, e a tela do cliente
+   * continua sendo a que aparece.
+   */
+  const finish = async (finalState: QuizRunState, mostrarTelaFinal = true) => {
+    if (jaSalvou.current) {
+      if (mostrarTelaFinal) { setState(finalState); setDone(true); }
+      return;
+    }
+    jaSalvou.current = true;
     setSaving(true);
     try {
       if (preview) {
         setState(finalState);
-        setDone(true);
+        if (mostrarTelaFinal) setDone(true);
         return;
       }
       const max = maxPossibleScore(schema);
       const temperature = classifyTemperature(finalState.score, max);
-      const formBlock = blocks.find((b) => b.type === 'form');
-      const formResponse = formBlock
-        ? (finalState.responses[formBlock.id] as { name?: string; email?: string; phone?: string } | undefined)
-        : undefined;
-      const email = extract(finalState.responses, blocks, 'email') ?? formResponse?.email;
-      const phone = extract(finalState.responses, blocks, 'phone') ?? formResponse?.phone;
-      const name = extract(finalState.responses, blocks, 'short-text') ?? formResponse?.name;
+      const { email, phone, name } = extrairContato(finalState.responses, blocks);
       const enrichedTracking: Record<string, string> = {
         ...tracking,
         user_agent: navigator.userAgent,
@@ -514,7 +533,12 @@ function PlayerRunner({
         lead_temperature: temperature,
       });
       setState(finalState);
-      setDone(true);
+      if (mostrarTelaFinal) setDone(true);
+    } catch (e) {
+      /* Sem isto a exceção subia para o manipulador do clique e sumia. A trava
+         volta atrás para a próxima tentativa poder gravar. */
+      jaSalvou.current = false;
+      console.error('Falha ao gravar a submissão do quiz', e);
     } finally {
       setSaving(false);
     }
@@ -752,6 +776,33 @@ function extract(responses: Record<string, unknown>, blocks: QuizBlock[], type: 
   if (!b) return undefined;
   const v = responses[b.id];
   return typeof v === 'string' && v.length > 0 ? v : undefined;
+}
+
+/**
+ * Contato do visitante, venha de onde vier.
+ *
+ * `extract` só procura blocos SOLTOS de e-mail e telefone. Um quiz que colhe o
+ * contato num bloco `form` — cuja resposta é um objeto `{name, email, phone}` —
+ * ficava invisível para ela. Medido no "diagnostico-beleza-natural": 7 pessoas
+ * começaram, nenhuma virou lead, porque a captura antecipada só olhava
+ * `extract` e nunca encontrava nada.
+ */
+function extrairContato(responses: Record<string, unknown>, blocks: QuizBlock[]) {
+  const doForm = blocks
+    .filter((b) => b.type === 'form')
+    .map((b) => responses[b.id] as { name?: string; email?: string; phone?: string } | undefined)
+    .find((r) => r && (r.email || r.phone));
+
+  const limpar = (v?: string | null) => {
+    const t = typeof v === 'string' ? v.trim() : '';
+    return t || undefined;
+  };
+
+  return {
+    email: extract(responses, blocks, 'email') ?? limpar(doForm?.email),
+    phone: extract(responses, blocks, 'phone') ?? limpar(doForm?.phone),
+    name: extract(responses, blocks, 'short-text') ?? limpar(doForm?.name),
+  };
 }
 
 function ProgressBar({
