@@ -621,6 +621,12 @@ function PlayerRunner({
       return;
     }
     jaSalvou.current = true;
+    /* Limpa o progresso guardado AQUI, e não só quando `done` vira verdadeiro.
+       Quando a última etapa tem um bloco de resultado visível, o quiz termina
+       sem passar pela tela final interna: a submissão e o lead são gravados,
+       mas `done` continua falso — e o progresso ficava no navegador as 24h
+       inteiras. O sinal honesto de "acabou" é ter gravado, não a tela. */
+    if (!preview) limparProgresso(quizId);
     setSaving(true);
     try {
       if (preview) {
