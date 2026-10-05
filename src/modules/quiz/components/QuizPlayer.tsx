@@ -296,7 +296,16 @@ function PlayerRunner({
     if (done || stepBlocks.length === 0 || visibleStepBlocks.length > 0) return;
     let idx = state.currentStepIndex + 1;
     while (idx < steps.length && !stepHasVisibleBlocks(idx, state.responses)) idx += 1;
-    if (idx < steps.length) setState((s) => ({ ...s, currentStepIndex: idx }));
+    if (idx < steps.length) {
+      setState((s) => ({ ...s, currentStepIndex: idx }));
+      return;
+    }
+    /* Não existe etapa adiante com conteúdo visível: isto é o fim do quiz, e
+       não um lugar para ficar. Antes o `if` acima simplesmente não fazia nada
+       e o visitante parava numa tela sem bloco, sem botão e sem conclusão —
+       um beco sem saída que nem erro gerava. Encerrar aqui também garante que
+       a resposta seja gravada, que é o que de fato importa. */
+    void finish(state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentStepIndex, done, visibleStepBlocks.length]);
 

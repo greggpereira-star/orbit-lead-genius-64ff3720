@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { quizService } from '@/modules/quiz/services/quizService';
 import { useEditLock } from '@/modules/quiz/hooks/useEditLock';
+import { validarPublicacao } from '@/modules/quiz/lib/validarPublicacao';
 import { calcularConversaoPorEtapa, CORES_DE_FAIXA, MINIMO_PARA_NOTA, type ConversaoDaEtapa } from '@/modules/quiz/lib/stepConversion';
 import { EditLockBanner } from '@/modules/quiz/components/EditLockBanner';
 import { QuizPreview } from '@/modules/quiz/components/QuizPreview';
@@ -647,6 +648,16 @@ function QuizBuilderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema, dirty, autosave, loading, trava.souDono]);
 
+  /* Fechar a aba com alteração pendente não pode ser silencioso. Com o
+     autosave desligado não existe rede de proteção nenhuma; com ele ligado,
+     ainda há a janela de 1,5s em que o trabalho só existe nesta aba. */
+  useEffect(() => {
+    if (!dirty) return;
+    const avisar = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', avisar);
+    return () => window.removeEventListener('beforeunload', avisar);
+  }, [dirty]);
+
   /* Só um quiz publicado pode ter "alteração fora do ar": num rascunho, tudo
      ainda está por publicar e o aviso não significaria nada. `dirty` entra
      porque edição não salva também é mudança que o visitante não vê. */
@@ -654,9 +665,41 @@ function QuizBuilderPage() {
     quiz?.status === 'published' &&
     (dirty || (!!latestVersionId && latestVersionId !== publishedVersionId));
 
+  /**
+   * Checa o quiz antes de ir ao ar.
+   *
+   * Vale para publicar E para republicar alterações: um quiz que já está no ar
+   * pode perder o bloco de captura numa edição, e aí a falha nasce de novo.
+   * Devolve `true` quando pode seguir.
+   */
+  const passouNaChecagem = (): boolean => {
+    const tiers = (quiz?.settings?.score_tiers as import('@/modules/quiz/types').ScoreTier[] | undefined) ?? [];
+    const achados = validarPublicacao(schema, tiers);
+    const bloqueios = achados.filter((a) => a.nivel === 'bloqueia');
+    const avisos = achados.filter((a) => a.nivel === 'avisa');
+
+    if (bloqueios.length) {
+      toast.error('Este quiz ainda não pode ir ao ar', {
+        description: bloqueios.map((b) => `• ${b.mensagem}`).join('\n'),
+        duration: 12000,
+      });
+      return false;
+    }
+    if (avisos.length) {
+      // Aviso não barra: faixa sem mensagem ou quiz sem tela de resultado são
+      // escolhas legítimas, só raramente intencionais.
+      toast.warning('Publicado, mas vale conferir', {
+        description: avisos.map((a) => `• ${a.mensagem}`).join('\n'),
+        duration: 10000,
+      });
+    }
+    return true;
+  };
+
   /** Leva o rascunho atual para o ar, sem mexer no status do quiz. */
   const handlePublishChanges = async () => {
     if (!quiz) return;
+    if (!passouNaChecagem()) return;
     setPublishing(true);
     try {
       // Publica exatamente a versão que acabou de ser gravada. Reler "a última
@@ -681,6 +724,9 @@ function QuizBuilderPage() {
     if (quiz.status === 'published' && !window.confirm('Despublicar este quiz? O link público deixará de funcionar imediatamente.')) {
       return;
     }
+    // A checagem só vale para PUBLICAR. Despublicar um quiz quebrado é
+    // justamente o que se quer poder fazer.
+    if (quiz.status !== 'published' && !passouNaChecagem()) return;
     setPublishing(true);
     try {
       const target = dirty ? await handleSave({ silent: true }) : latestVersionId;
