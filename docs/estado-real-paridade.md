@@ -194,6 +194,7 @@ Dos 17 listados, um era **falso achado** (`Auto-organizar` já existia como
 | Aba **Resultados** própria | ✅ `1f7c480` |
 | Aba **Respostas** separada | ✅ `1f7c480` |
 | Script `onClick` por bloco | ✅ `1f7c480` |
+| 8 componentes de conteúdo | ✅ `18e7326` |
 | Camada de IA | ⛔ sem chave no servidor |
 
 ### Dois desvios conscientes
@@ -213,7 +214,7 @@ pelo cliente do nosso cliente; carimbar nossa marca na página dele sem ele pedi
 |---|---|
 | **Painel de camadas** | O posicionamento fora do fluxo foi entregue na Onda 7; o painel em si é interface de canvas livre, que decidimos não perseguir |
 | `Encaixe` (snap) | Depende do canvas livre acima |
-| Itens de paleta (Grade, Cards, Sumário, Indicador, Seta, Emoji, Marca/Logo, Redes sociais) | São 8 componentes de conteúdo. Não entraram neste lote — é trabalho de catálogo, não de arquitetura |
+| ~~Itens de paleta~~ | ✅ `18e7326` — Grade, Cards, Sumário, Indicador, Seta, Emoji, Marca/Logo e Redes sociais |
 | Biblioteca pública de modelos | Os `STEP_TEMPLATES` existem; falta a galeria |
 | Passo a passo guiado no primeiro uso | Não entrou |
 
