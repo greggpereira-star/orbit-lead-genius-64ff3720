@@ -138,3 +138,35 @@ nomeada.
 **A tipografia de display.** Space Grotesk e Urbanist são escolhas daqueles
 projetos. Trocar a família do app inteiro é decisão de marca com custo de
 carregamento, não refinamento de tela.
+
+---
+
+## 5. O acento no construtor de quiz — regra, 05/10/2026
+
+A seção 1.2 diz que o acento marca a coisa mais importante da tela e some no
+resto. No construtor isso estava invertido: medidos **49 usos de `primary` em 10
+variantes** (`bg-primary`, `/5`, `/10`, `/15`, `/[0.03]`, `border-primary`,
+`/30`, `/40`, `ring/40`, `shadow/20`) espalhados por barra, paleta e inspetor.
+Com dez variantes não existe regra — existe deriva.
+
+**Num editor, a coisa mais importante da tela é o que você está editando.** Daí
+a regra, que vale para toda tela de construção:
+
+> O acento diz **"é isto que você está editando"**. Seleção, e nada mais.
+
+O que perdeu o acento, e por quê:
+
+| Era | Virou | Por quê |
+|---|---|---|
+| `hover:border-primary hover:bg-primary/5` | `hover:border-foreground/20 hover:bg-muted/60` | a cor da marca não pode seguir o mouse: tudo que o cursor toca vira destaque |
+| azulejo de ícone `bg-primary/10` + `text-primary` | `bg-muted` + `text-foreground` | é o §1.5 literal — ícone monocromático em círculo neutro |
+| dica "Adicionando na Etapa N" | `border-border bg-muted/50` | informação não é ação |
+| selo "próprio" | `bg-muted text-muted-foreground` | rótulo não é destaque |
+| ponto de "tem ajuste próprio" | `bg-foreground/40` | estado, não seleção |
+| chip ativo em 3 canais (borda+fundo+texto) | 2 canais (borda+texto) | vários grupos ficam visíveis ao mesmo tempo; com preenchimento o painel inteiro virava um campo azul |
+
+O que **manteve** o acento, porque é seleção: o anel do bloco selecionado no
+canvas, a etapa corrente na lista, o chip ativo, o preset escolhido e o estilo
+de botão escolhido. Na barra, só `Publicar`.
+
+Resultado medido: **49 → 10 usos**, todos com o mesmo significado.

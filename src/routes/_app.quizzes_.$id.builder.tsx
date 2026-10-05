@@ -941,7 +941,7 @@ function QuizBuilderPage() {
               key={t.id}
               type="button"
               onClick={() => addStepTemplate(t.id)}
-              className="w-full flex items-start gap-2.5 rounded-lg border p-2 text-left transition-all hover:border-primary hover:bg-primary/5"
+              className="w-full flex items-start gap-2.5 rounded-lg border p-2 text-left transition-all hover:border-foreground/20 hover:bg-muted/60"
             >
               <span className="text-base leading-none mt-0.5">{t.emoji}</span>
               <span className="min-w-0">
@@ -966,9 +966,9 @@ function QuizBuilderPage() {
               setActiveStepId(targetStep.id);
               setExpandedSteps((prev) => new Set(prev).add(targetStep.id));
             }}
-            className="mb-3 flex w-full items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-2 py-1.5 text-left text-[11px] transition-colors hover:bg-primary/10"
+            className="mb-3 flex w-full items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-left text-[11px] transition-colors hover:bg-muted"
           >
-            <LayoutGrid className="h-3 w-3 shrink-0 text-primary" />
+            <LayoutGrid className="h-3 w-3 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
               Adicionando na <strong className="font-semibold">Etapa {targetStepIndex + 1}</strong>
               {targetStep.blockIds.length > 0 &&
@@ -1013,14 +1013,14 @@ function QuizBuilderPage() {
                                     if (e.key === "Enter") addBlock(defIndex);
                                   }}
                                   title={def.description}
-                                  className={`relative text-left p-2 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all cursor-grab active:cursor-grabbing select-none ${
+                                  className={`relative text-left p-2 rounded-lg border hover:border-foreground/20 hover:bg-muted/60 transition-all cursor-grab active:cursor-grabbing select-none ${
                                     dragSnapshot.isDragging
                                       ? "shadow-xl ring-2 ring-primary/40 bg-card"
                                       : ""
                                   }`}
                                 >
                                   <GripVertical className="absolute right-1 top-1 h-3 w-3 text-muted-foreground opacity-40" />
-                                  <def.icon className="h-4 w-4 mb-1 text-primary" />
+                                  <def.icon className="h-4 w-4 mb-1 text-foreground" />
                                   <div className="text-xs font-semibold leading-tight pr-3">
                                     {def.label}
                                   </div>
@@ -1119,11 +1119,11 @@ function QuizBuilderPage() {
                           >
                             <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
                             {firstDef ? (
-                              <firstDef.icon className="h-3.5 w-3.5 text-primary" />
+                              <firstDef.icon className="h-3.5 w-3.5 text-foreground" />
                             ) : (
-                              <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+                              <LayoutGrid className="h-3.5 w-3.5 text-foreground" />
                             )}
                           </div>
                           {/* Verificado na tela: o nome vinha cortado em ~10
@@ -1257,11 +1257,11 @@ function QuizBuilderPage() {
                                           >
                                             <GripVertical className="h-3 w-3 text-muted-foreground" />
                                           </div>
-                                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted">
                                             {def ? (
-                                              <def.icon className="h-3 w-3 text-primary" />
+                                              <def.icon className="h-3 w-3 text-foreground" />
                                             ) : (
-                                              <LayoutGrid className="h-3 w-3 text-primary" />
+                                              <LayoutGrid className="h-3 w-3 text-foreground" />
                                             )}
                                           </div>
                                           <div className="min-w-0 flex-1">
@@ -1753,7 +1753,9 @@ function DesignDaEtapa({
         <Palette className="h-3 w-3" />
         Design desta etapa
         {proprio && (
-          <span className="rounded-full bg-primary/15 px-1 text-[11px] text-primary">próprio</span>
+          <span className="rounded-full bg-muted px-1 text-[11px] text-muted-foreground">
+            próprio
+          </span>
         )}
       </button>
       {aberto && (

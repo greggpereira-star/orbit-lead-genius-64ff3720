@@ -219,17 +219,17 @@ function BlockInspector({
         <button
           type="button"
           onClick={() => onSelectBlock?.(parentContainer.id)}
-          className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary"
+          className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
         >
           <ChevronRight className="h-3 w-3 rotate-180" /> Dentro do Container
         </button>
       )}
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
           {def ? (
-            <def.icon className="h-4 w-4 text-primary" />
+            <def.icon className="h-4 w-4 text-foreground" />
           ) : (
-            <LayoutGrid className="h-4 w-4 text-primary" />
+            <LayoutGrid className="h-4 w-4 text-foreground" />
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -1581,7 +1581,7 @@ function TextSlotFields({
         {configurado && (
           <span
             aria-label="tem ajuste próprio"
-            className="ml-auto h-1.5 w-1.5 rounded-full bg-primary"
+            className="ml-auto h-1.5 w-1.5 rounded-full bg-foreground/40"
           />
         )}
       </button>
@@ -2010,7 +2010,7 @@ function ContainerChildrenSection({
               <button
                 type="button"
                 onClick={() => onSelectBlock?.(child.id)}
-                className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-primary"
+                className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground"
                 title="Editar este componente"
               >
                 {def && <def.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
@@ -2269,8 +2269,8 @@ const ALIGN_LABELS: Record<"start" | "center" | "end" | "stretch", string> = {
 function miniChip(active: boolean) {
   return `rounded-md border px-2 py-1 text-[10.5px] font-medium text-center transition-colors ${
     active
-      ? "border-primary bg-primary/10 text-primary"
-      : "border-input text-muted-foreground hover:border-primary/40 hover:text-foreground"
+      ? "border-primary text-primary"
+      : "border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground"
   }`;
 }
 
@@ -2602,8 +2602,8 @@ function ShowIfSection({
   const chipClass = (active: boolean) =>
     `rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors text-left ${
       active
-        ? "border-primary bg-primary/10 text-primary"
-        : "border-input text-muted-foreground hover:border-primary/40 hover:text-foreground"
+        ? "border-primary text-primary"
+        : "border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground"
     }`;
 
   return (
@@ -2961,8 +2961,8 @@ function DesignInspector({
   return (
     <div className="p-4 space-y-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <Palette className="h-4 w-4 text-primary" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+          <Palette className="h-4 w-4 text-foreground" />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-bold text-sm">Design</h3>
