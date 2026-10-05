@@ -2,7 +2,7 @@ import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, TrendingUp, Users, Target, Flame, Download, FlaskConical, Trophy, Loader2, Megaphone, Smartphone, Globe2 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Target, Flame, Download, FlaskConical, Trophy, Loader2, Megaphone, Smartphone, Globe2, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { quizService } from '@/modules/quiz/services/quizService';
@@ -107,27 +107,72 @@ function QuizPerformancePage() {
     }
   };
 
-  const exportCsv = () => {
-    const rows = [
-      ['data', 'nome', 'email', 'telefone', 'score', 'temperatura', 'completo'],
-      ...subs.map((s) => [
-        s.created_at,
-        s.name ?? '',
-        s.email ?? '',
-        s.phone ?? '',
-        String(s.score ?? ''),
-        s.temperature ?? '',
-        s.completed ? 'sim' : 'não',
-      ]),
-    ];
-    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `quiz-${id}-submissions.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const [exportando, setExportando] = useState(false);
+
+  /**
+   * Exporta TODAS as submissões do período, não as 100 da tela.
+   *
+   * O CSV saía de `subs`, que é a lista visível limitada a 100: quem tivesse
+   * 500 respostas exportava 100 e não era avisado de nada. Agora a consulta é
+   * própria, e traz as UTMs — que são o motivo de alguém exportar.
+   */
+  const exportCsv = async () => {
+    setExportando(true);
+    try {
+      const linhas = await quizService.getSubmissionsParaExport(id, 90);
+      const contato = (a: Record<string, unknown> | null) =>
+        (a?._contact ?? {}) as { name?: string; email?: string; phone?: string };
+      const rows = [
+        ['data', 'nome', 'email', 'telefone', 'score', 'temperatura', 'completo',
+         'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'],
+        ...linhas.map((l) => {
+          const c = contato(l.answers);
+          const t = (l.tracking ?? {}) as Record<string, string>;
+          return [
+            l.created_at, c.name ?? '', c.email ?? '', c.phone ?? '',
+            String(l.score ?? ''), l.temperature ?? '', l.status === 'completed' ? 'sim' : 'não',
+            t.utm_source ?? '', t.utm_medium ?? '', t.utm_campaign ?? '', t.utm_content ?? '', t.utm_term ?? '',
+          ];
+        }),
+      ];
+      const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      // BOM: sem ele o Excel no Windows abre os acentos quebrados.
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quiz-${id}-respostas.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${linhas.length} resposta(s) exportada(s)`);
+    } catch (e) {
+      console.error('Erro ao exportar', e);
+      toast.error('Não foi possível exportar agora.');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const [resetando, setResetando] = useState(false);
+  const resetarDados = async () => {
+    const frase = 'APAGAR';
+    const digitado = window.prompt(
+      'Isto apaga TODAS as respostas, eventos e leads deste quiz. O funil continua igual; só o histórico some. Não dá para desfazer.\n\nDigite ' + frase + ' para confirmar:',
+    );
+    if (digitado !== frase) return;
+    setResetando(true);
+    try {
+      const r = await quizService.resetarDados(id);
+      toast.success('Dados apagados', {
+        description: `${r.submissoes} resposta(s), ${r.eventos} evento(s) e ${r.leads} lead(s).`,
+      });
+      window.location.reload();
+    } catch (e) {
+      console.error('Erro ao resetar', e);
+      toast.error('Não foi possível apagar os dados agora.');
+    } finally {
+      setResetando(false);
+    }
   };
 
   const tempData = useMemo(
@@ -157,8 +202,18 @@ function QuizPerformancePage() {
               {d}d
             </Button>
           ))}
-          <Button size="sm" variant="outline" onClick={exportCsv} className="gap-2">
-            <Download className="h-4 w-4" /> CSV
+          <Button size="sm" variant="outline" onClick={() => void exportCsv()} disabled={exportando} className="gap-2">
+            <Download className="h-4 w-4" /> {exportando ? 'Exportando…' : 'CSV'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void resetarDados()}
+            disabled={resetando}
+            className="gap-2 text-destructive hover:text-destructive"
+            title="Apaga respostas, eventos e leads deste quiz"
+          >
+            <Trash2 className="h-4 w-4" /> Resetar dados
           </Button>
         </div>
       </div>

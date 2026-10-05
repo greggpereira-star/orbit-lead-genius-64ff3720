@@ -832,6 +832,7 @@ function PlayerRunner({
         </div>
       </div>
       {!done && <SocialProofToasts settings={socialProof} design={design} />}
+      <AssinaturaDoRodape settings={settings} design={design} />
     </div>
   );
 }
@@ -2730,6 +2731,37 @@ function ChartBlock({ block, design }: { block: QuizBlock; design: QuizDesign })
           </BarChart>
         )}
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * "Criado via altleadflow" no rodapé do funil público, com UTM de indicação.
+ *
+ * É o laço de crescimento que o inlead usa em todo funil de cliente. Aqui vem
+ * DESLIGADO por padrão, e isso é deliberado: o funil é do cliente do nosso
+ * cliente, e carimbar a nossa marca na página dele sem ele pedir é decisão
+ * dele, não nossa. Quem quiser liga em Configurações.
+ */
+function AssinaturaDoRodape({
+  settings,
+  design,
+}: {
+  settings: Record<string, unknown> | undefined;
+  design: QuizDesign;
+}) {
+  if (settings?.mostrar_assinatura !== true) return null;
+  return (
+    <div className="pb-4 pt-2 text-center">
+      <a
+        href="https://altleadflow.com.br/?utm_source=rodape_do_funil&utm_medium=referral&utm_campaign=criado_via"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[10px] opacity-40 transition-opacity hover:opacity-70"
+        style={{ color: design.text }}
+      >
+        Criado via altleadflow
+      </a>
     </div>
   );
 }

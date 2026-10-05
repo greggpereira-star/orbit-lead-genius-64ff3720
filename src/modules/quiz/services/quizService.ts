@@ -193,6 +193,8 @@ export const quizService = {
     googleConversionId?: string;
     googleLeadLabel?: string;
     googleCompleteLabel?: string;
+    /** Assinatura no rodapé do funil público. Desligada por padrão. */
+    mostrarAssinatura?: boolean;
   }): Promise<QuizFunnel> {
     const patch: Record<string, unknown> = {};
 
@@ -219,6 +221,7 @@ export const quizService = {
       ['googleConversionId', 'google_conversion_id'],
       ['googleLeadLabel', 'google_lead_label'],
       ['googleCompleteLabel', 'google_complete_label'],
+      ['mostrarAssinatura', 'mostrar_assinatura'],
     ];
     const touchedSettings =
       settingsFields.some(([key]) => params[key] !== undefined) ||
@@ -785,6 +788,60 @@ export const quizService = {
       return [];
     }
     return (data as { block_id: string | null; session_id: string | null }[] | null) ?? [];
+  },
+
+  /**
+   * TODAS as submissões do período, para exportar.
+   *
+   * A tela usa `listSubmissions(id, 100)` para a lista visível, e o CSV saía
+   * desse mesmo recorte: quem tivesse 500 respostas exportava 100 e não era
+   * avisado de nada. Aqui não há limite de 100 — e vêm as UTMs junto, que são
+   * o motivo de exportar.
+   */
+  async getSubmissionsParaExport(quizId: string, days = 90) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const { data, error } = await supabase
+      .from('quiz_submissions')
+      .select('created_at, status, score, temperature, answers, tracking')
+      .eq('quiz_id', quizId)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(20000);
+    if (error) throw error;
+    return (data ?? []) as unknown as Array<{
+      created_at: string;
+      status: string | null;
+      score: number | null;
+      temperature: string | null;
+      answers: Record<string, unknown> | null;
+      tracking: Record<string, unknown> | null;
+    }>;
+  },
+
+  /**
+   * Apaga TODOS os dados de resposta de um quiz, preservando o quiz.
+   *
+   * Existe para o funil que foi testado antes de ir ao ar: os números do teste
+   * contaminam a análise e não há como separá-los depois. Não toca no esquema
+   * nem nas versões — o funil continua igual, só sem histórico.
+   */
+  async resetarDados(quizId: string): Promise<{ submissoes: number; eventos: number; leads: number }> {
+    // Contado antes de apagar, para o aviso dizer o que de fato saiu.
+    const [subs, evs, lds] = await Promise.all([
+      supabase.from('quiz_submissions').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId),
+      supabase.from('quiz_events').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId),
+      supabase.from('leads').select('id', { count: 'exact', head: true }).eq('quiz_id' as never, quizId),
+    ]);
+    const antes = {
+      submissoes: subs.count ?? 0,
+      eventos: evs.count ?? 0,
+      leads: lds.count ?? 0,
+    };
+    // Leads primeiro: as submissões apontam para eles.
+    await supabase.from('leads').delete().eq('quiz_id' as never, quizId);
+    await supabase.from('quiz_events').delete().eq('quiz_id', quizId);
+    await supabase.from('quiz_submissions').delete().eq('quiz_id', quizId);
+    return antes;
   },
 
   /** Eventos e submissões crus para as métricas avançadas da Performance. */

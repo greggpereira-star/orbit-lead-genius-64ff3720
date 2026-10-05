@@ -54,6 +54,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
   const [webhookUrl, setWebhookUrl] = useState('');
   const [customHeadScript, setCustomHeadScript] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
+  const [mostrarAssinatura, setMostrarAssinatura] = useState(false);
   const [seoDescription, setSeoDescription] = useState('');
   const [seoOgImage, setSeoOgImage] = useState('');
   const [socialProof, setSocialProof] = useState<SocialProofSettings>(DEFAULT_SOCIAL_PROOF);
@@ -90,6 +91,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         setWebhookUrl((settings.webhook_url as string) ?? '');
         setCustomHeadScript((settings.custom_head_script as string) ?? '');
         setSeoTitle((settings.seo_title as string) ?? '');
+        setMostrarAssinatura(settings.mostrar_assinatura === true);
         setSeoDescription((settings.seo_description as string) ?? '');
         setSeoOgImage((settings.seo_og_image as string) ?? '');
         setSocialProof({ ...DEFAULT_SOCIAL_PROOF, ...(settings.social_proof as Partial<SocialProofSettings> | undefined) });
@@ -138,6 +140,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         googleConversionId,
         googleLeadLabel,
         googleCompleteLabel,
+        mostrarAssinatura,
       });
       setSlug(updated.slug);
       setPublicSlug(updated.slug);
@@ -511,6 +514,23 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   rows={3}
                 />
               </div>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-lg border p-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-current"
+                  checked={mostrarAssinatura}
+                  onChange={(e) => setMostrarAssinatura(e.target.checked)}
+                />
+                <span>
+                  <span className="block text-sm font-medium">Mostrar "Criado via altleadflow" no rodapé</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Aparece discreto no fim do funil público, com link de indicação. Desligado por
+                    padrão: o funil é visto pelo cliente do seu cliente, e a marca na página dele é
+                    decisão sua.
+                  </span>
+                </span>
+              </label>
               <div className="space-y-1.5">
                 <Label htmlFor="quiz-settings-seo-image">Imagem de compartilhamento (OG image)</Label>
                 <Input
