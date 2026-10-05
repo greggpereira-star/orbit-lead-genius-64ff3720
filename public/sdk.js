@@ -287,7 +287,15 @@
       overlay.id = 'lf-modal-overlay';
       overlay.setAttribute('role', 'dialog');
       overlay.setAttribute('aria-modal', 'true');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);' +
+      /* Escurecido mais forte, com desfoque.
+       *
+       * A 55% a página atrás ainda se lia: no site da Exata havia OUTRO
+       * formulário embutido logo abaixo do modal, e o cartão branco dele
+       * aparecia como uma faixa clara com uma linha — exatamente onde o modal
+       * terminava. Dava a impressão de erro, de que o modal deveria acabar
+       * ali. Mais escuro e desfocado, a página atrás vira fundo sem ambiguidade. */
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(11,17,33,.74);' +
+        '-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);' +
         'display:flex;align-items:center;justify-content:center;z-index:2147483000;' +
         'padding:22px 20px;opacity:0;transition:opacity .18s ease';
 

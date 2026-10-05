@@ -588,7 +588,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             ) : null
           )}
         </CardHeader>
-        <CardContent className="pb-8 pt-0 px-6 sm:px-8">
+        <CardContent className="pb-5 pt-0 px-6 sm:px-8">
           <div className="space-y-6 max-w-2xl mx-auto">
             {currentStepFields.map((field) => (
               <div key={field.id} className="space-y-2.5 animate-in fade-in slide-in-from-right-2 duration-300">
@@ -661,16 +661,6 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 </div>
               )}
 
-              {/* A assinatura fica ANTES da barra, dentro do que rola: depois
-                  dela sobrava um vão esquisito embaixo do rodapé fixo, e a
-                  barra parecia um divisor no meio do cartão em vez do fim
-                  dele. */}
-              <div className="pt-1 text-center">
-                <span className="text-[11px] text-muted-foreground/70">
-                  Formulário por <span className="font-medium text-foreground/60">LeadFlow</span>
-                </span>
-              </div>
-
           </div>
         </CardContent>
       </Card>
@@ -684,40 +674,55 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             O que funciona é tirá-la do que rola: a coluna é flex, os campos
             ficam em `flex-1 overflow-y-auto` e a barra é irmã, com `shrink-0`.
             Assim ela não depende de rolagem para estar visível. */}
-        <div data-lf-barra className="shrink-0 flex gap-3 border-t border-[var(--linha-sutil)] bg-background px-6 sm:px-8 py-4">
-              {isMultiStep && currentStep > 0 && (
-                <Button 
-                  variant="outline"
-                  onClick={handleBack}
-                  className="h-12 px-6 font-medium"
-                >
-                  <ArrowLeft className="mr-2 h-5 w-5" /> Voltar
-                </Button>
-              )}
-              
-              <Button 
-                type={isMultiStep ? "button" : "submit"}
-                onClick={isMultiStep ? (e) => {
-                  e.preventDefault();
-                  handleNext();
-                } : undefined}
-                disabled={isSubmitting}
-                style={corValida ? { backgroundColor: corValida, color: textoSobreACor } : undefined}
-                className="flex-1 h-12 text-[15px] font-semibold tracking-[-0.01em] shadow-lg shadow-primary/20 transition-all hover:brightness-[1.06] active:scale-[0.99] bg-primary text-white"
+        {/* Rodapé fixo: botões e, abaixo, a assinatura.
+            Ela ficava ACIMA da barra, dentro do que rola — subia e descia com o
+            conteúdo e disputava atenção com o botão. Embaixo e pequena, sai do
+            caminho sem sumir.
+            O espaçamento aperta: o botão já tem 48px de altura própria, então
+            `py-4` em volta deixava a folga dobrada. */}
+        <div
+          data-lf-barra
+          className="shrink-0 border-t border-[var(--linha-sutil)] bg-background px-6 sm:px-8 pt-3.5 pb-3"
+        >
+          <div className="flex gap-2.5">
+            {isMultiStep && currentStep > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                className="h-12 px-5 font-medium shrink-0"
               >
-                {isSubmitting ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : (
-                  <>
-                    {isMultiStep 
-                      ? (currentStep === sortedSteps.length - 1 ? form.settings.submit_label : sortedSteps[currentStep].button_text || 'Próximo')
-                      : form.settings.submit_label
-                    }
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </>
-                )}
+                <ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar
               </Button>
-            </div>
+            )}
+
+            <Button
+              type={isMultiStep ? "button" : "submit"}
+              onClick={isMultiStep ? (e) => {
+                e.preventDefault();
+                handleNext();
+              } : undefined}
+              disabled={isSubmitting}
+              style={corValida ? { backgroundColor: corValida, color: textoSobreACor } : undefined}
+              className="flex-1 h-12 text-[15px] font-semibold tracking-[-0.01em] shadow-md shadow-primary/15 transition-all hover:brightness-[1.06] active:scale-[0.99] bg-primary text-white"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  {isMultiStep
+                    ? (currentStep === sortedSteps.length - 1 ? form.settings.submit_label : sortedSteps[currentStep].button_text || 'Próximo')
+                    : form.settings.submit_label
+                  }
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
+
+          <p className="mt-2.5 text-center text-[10.5px] leading-none text-muted-foreground/60">
+            Formulário por <span className="font-medium text-muted-foreground/80">LeadFlow</span>
+          </p>
+        </div>
       </form>
     </div>
   );
