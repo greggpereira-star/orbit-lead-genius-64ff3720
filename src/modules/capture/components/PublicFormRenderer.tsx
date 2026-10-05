@@ -46,6 +46,11 @@ function origemDoEmbutidor(): string {
  * nomeado os campos exatamente assim. O servidor resolve do mesmo jeito dentro
  * de `form_submit_publico`; aqui é para a correspondência avançada do Pixel.
  */
+/** A chave com que a resposta é registrada no formulário. */
+function chaveDoCampo(field: { name?: string; label: string }) {
+  return field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
 function contatoDasRespostas(
   campos: Array<{ name: string; type: string }> | undefined,
   valores: Record<string, any>,
@@ -145,12 +150,55 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('lf_modo') === 'modal';
 
+  /* Altura NATURAL do conteúdo, para o modal não ficar com uma área branca
+     enorme quando o formulário é curto.
+     
+     Medir `#root` não serve: no modal ele tem `100dvh`, então devolveria a
+     altura do próprio iframe e o laço voltaria. O `scrollHeight` da área que
+     rola é a altura que o conteúdo TERIA se coubesse — não muda quando o
+     iframe cresce, e é por isso que pode ser reportada sem realimentar. */
+  /* Foco no primeiro campo assim que o formulário aparece.
+     É um toque a menos em todo preenchimento, e no modal a pessoa acabou de
+     clicar num botão dizendo que quer falar — fazê-la clicar de novo para
+     começar a digitar é atrito puro.
+     Só quando NÃO é toque: no celular o foco automático abre o teclado por
+     cima do formulário antes de a pessoa ver o que vai preencher. */
+  useEffect(() => {
+    if (!form || resumePrompt || submitted) return;
+    const ehToque = window.matchMedia('(pointer: coarse)').matches;
+    if (ehToque) return;
+    const t = setTimeout(() => {
+      const primeiro = document.querySelector<HTMLElement>(
+        'form input:not([type=hidden]), form select, form textarea',
+      );
+      primeiro?.focus({ preventScroll: true });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [form, currentStep, resumePrompt, submitted]);
+
   useEffect(() => {
     if (!noModal || !form) return;
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'LEADFLOW_READY' }, origemDoEmbutidor());
-    }
-  }, [noModal, form]);
+
+    const medirEEnviar = () => {
+      if (!(window.parent && window.parent !== window)) return;
+      const rolagem = document.querySelector('[data-lf-rolagem]') as HTMLElement | null;
+      const barra = document.querySelector('[data-lf-barra]') as HTMLElement | null;
+      const altura = (rolagem?.scrollHeight ?? 0) + (barra?.offsetHeight ?? 0);
+      window.parent.postMessage(
+        { type: 'LEADFLOW_READY', height: altura || undefined },
+        origemDoEmbutidor(),
+      );
+    };
+
+    medirEEnviar();
+    /* Trocar de etapa muda a altura. O observador olha o CONTEÚDO da área que
+       rola, não a área em si — a área acompanha o iframe, o conteúdo não. */
+    const alvo = document.querySelector('[data-lf-rolagem]')?.firstElementChild;
+    if (!alvo) return;
+    const obs = new ResizeObserver(() => requestAnimationFrame(medirEEnviar));
+    obs.observe(alvo);
+    return () => obs.disconnect();
+  }, [noModal, form, currentStep, submitted, resumePrompt]);
 
   // Altura automática — só no modo embutido, onde o conteúdo é que manda.
   useEffect(() => {
@@ -275,6 +323,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
        qualquer um chama a API direto. */
     if (exigeConsentimento && !consentimentos.dados) {
       setErroDeConsentimento(true);
+      /* Leva a pessoa até o motivo. Sem isto, num formulário mais longo, ela
+         clica em enviar, nada acontece na parte visível, e a mensagem de erro
+         fica fora da tela. */
+      document.querySelector('[data-lf-consentimento]')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     setErroDeConsentimento(false);
@@ -446,7 +499,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         style={{ color: 'var(--foreground)' }}
       >
         {/* Só esta parte rola; a barra de ação fica fora dela. */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div data-lf-rolagem className="flex-1 min-h-0 overflow-y-auto">
         <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep && (
           /* `pr-12`: dentro do modal o botão de fechar fica no canto superior
@@ -529,7 +582,12 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                       pattern: field.type === 'email' ? /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i : undefined
                     })}
                     placeholder={field.placeholder}
-                    className="h-12 rounded-[10px] border border-input bg-background px-3.5 text-[15px] transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
+                    className={`h-12 rounded-[10px] border bg-background px-3.5 text-[15px] transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:ring-[3px] ${
+                      errors[chaveDoCampo(field)]
+                        ? 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/15'
+                        : 'border-input focus-visible:border-primary focus-visible:ring-primary/15'
+                    }`}
+                    aria-invalid={!!errors[chaveDoCampo(field)]}
                   />
                 )}
                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
@@ -546,7 +604,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   pessoa saber o que está preenchendo, reduz a conversão e não
                   melhora em nada a qualidade do consentimento. */}
               {(!isMultiStep || currentStep === sortedSteps.length - 1) && (exigeConsentimento || pedirMarketing) && (
-                <div className="w-full">
+                <div className="w-full" data-lf-consentimento>
                   <ConsentimentoLGPD
                     valor={consentimentos}
                     onMudar={(v) => { setConsentimentos(v); if (v.dados) setErroDeConsentimento(false); }}
@@ -581,7 +639,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
             O que funciona é tirá-la do que rola: a coluna é flex, os campos
             ficam em `flex-1 overflow-y-auto` e a barra é irmã, com `shrink-0`.
             Assim ela não depende de rolagem para estar visível. */}
-        <div className="shrink-0 flex gap-3 border-t border-[var(--linha-sutil)] bg-background px-6 sm:px-8 py-4">
+        <div data-lf-barra className="shrink-0 flex gap-3 border-t border-[var(--linha-sutil)] bg-background px-6 sm:px-8 py-4">
               {isMultiStep && currentStep > 0 && (
                 <Button 
                   variant="outline"

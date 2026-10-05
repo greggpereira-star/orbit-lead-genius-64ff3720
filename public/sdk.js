@@ -307,7 +307,13 @@
       var fechar = document.createElement('button');
       fechar.type = 'button';
       fechar.setAttribute('aria-label', 'Fechar');
-      fechar.innerHTML = '&times;';
+      /* SVG em vez do caractere `&times;`: o glifo herda a métrica da fonte do
+         site do cliente e nunca fica centrado no círculo — na Exata ele saiu
+         encostado na borda de cima. Um traço desenhado é sempre o mesmo. */
+      fechar.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
+        + 'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+        + '<path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.8" '
+        + 'stroke-linecap="round"/></svg>';
       // Fora do fluxo do conteúdo: com `top:8px` ele cobria o "100% completo"
       // do cabeçalho do formulário.
       fechar.style.cssText = 'position:absolute;top:10px;right:10px;z-index:2;width:30px;' +
@@ -343,7 +349,7 @@
 
       function aoTeclar(e) { if (e.key === 'Escape') encerrar(); }
 
-      function ajustarAltura() {
+      function ajustarAltura(conteudo) {
         /* O teto da janela vence o piso.
          *
          * A primeira versão fazia `Math.max(alturaLimitada, minHeight)`, e numa
@@ -353,13 +359,20 @@
          */
         // 22px de folga em cima e embaixo, mais 13px da saliência do botão.
         var teto = Math.max(window.innerHeight - 70, 240);
-        /* O modal SEMPRE ocupa o teto da janela, e a rolagem é sempre do
-           iframe. Lá dentro a barra de ação já fica presa no rodapé, então
-           rolar move só os campos — não há motivo para a altura depender do
-           conteúdo, e é justamente essa dependência que criava o laço. */
-        iframe.style.height = teto + 'px';
-        iframe.setAttribute('scrolling', 'auto');
-        iframe.style.overflow = 'auto';
+        /* Acompanha o conteúdo até o teto da janela.
+         *
+         * Fixar sempre no teto deixava uma área branca enorme num formulário
+         * curto. E usar a altura do DOCUMENTO criava laço, porque no modal ele
+         * tem a altura do iframe. O número que chega aqui é a altura NATURAL
+         * do conteúdo, medida pelo formulário sem olhar para o iframe — por
+         * isso pode mandar na altura sem realimentar. */
+        if (conteudo && conteudo > 0) ultimaAltura = conteudo;
+        var alvo = ultimaAltura || (options.minHeight || 420);
+        var altura = Math.max(Math.min(alvo, teto), 240);
+        iframe.style.height = altura + 'px';
+        var precisaRolar = alvo > teto;
+        iframe.setAttribute('scrolling', precisaRolar ? 'auto' : 'no');
+        iframe.style.overflow = precisaRolar ? 'auto' : 'hidden';
       }
 
       function aoReceber(e) {
@@ -375,7 +388,7 @@
         if (e.data.type === 'LEADFLOW_READY') {
           clearTimeout(prazoDaEspera);
           esconderEspera();
-          ajustarAltura();
+          ajustarAltura(e.data.height);
         }
         if (e.data.type === 'LEADFLOW_FORM_SUBMITTED' && options.closeOnSubmit !== false) {
           // Tempo de ler a confirmação antes de fechar.
@@ -383,6 +396,7 @@
         }
       }
 
+      var ultimaAltura = 0;
       var aoRedimensionar = function() { ajustarAltura(); };
 
       overlay.onclick = encerrar;
