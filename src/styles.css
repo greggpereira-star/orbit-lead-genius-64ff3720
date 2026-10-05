@@ -173,6 +173,28 @@
    --sidebar-accent-foreground: oklch(0.98 0.01 264); /* #F8FAFC */
    --sidebar-border: oklch(0.24 0.03 264); /* #1F2937 */
    --sidebar-ring: oklch(0.51 0.21 264);
+
+   /* Estas declarações estavam DEPOIS do fechamento deste bloco, soltas
+      dentro de @layer base, sem seletor nenhum. Isso é CSS inválido: o
+      lightningcss recusava o arquivo inteiro no servidor de
+      desenvolvimento ("Invalid qualified rule") e a aplicação rodava sem
+      estilo. No build ele recuperava parte, mas nem tudo — o tema escuro
+      perdia tokens também no ar. */
+   /* No escuro a inversão continua valendo, com os papéis trocados: a página é
+   mais FUNDA que o cartão. Sombra quase não existe aqui — quem separa é a
+   diferença de luminância. */
+   --superficie-tonal: oklch(0.19 0.015 258);
+   --superficie-cartao: oklch(0.235 0.016 258);
+   --linha-sutil: oklch(0.30 0.018 258);
+   --linha-firme: oklch(0.36 0.02 258);
+   --poco: oklch(0.175 0.014 258);
+
+   /* No escuro o estado precisa subir de luminância para continuar legível
+   sobre fundo fundo — o mesmo verde do claro vira mancha ilegível. */
+   --sucesso: oklch(0.78 0.145 163);      /* #34D399 */
+   --aviso: oklch(0.82 0.145 80);         /* #FBBF24 */
+   --elevacao-1: 0 1px 2px rgb(0 0 0 / 0.3);
+   --elevacao-2: 0 10px 30px rgb(0 0 0 / 0.45);
  }
 
 @layer base {
@@ -184,21 +206,6 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
-  /* No escuro a inversão continua valendo, com os papéis trocados: a página é
-     mais FUNDA que o cartão. Sombra quase não existe aqui — quem separa é a
-     diferença de luminância. */
-  --superficie-tonal: oklch(0.19 0.015 258);
-  --superficie-cartao: oklch(0.235 0.016 258);
-  --linha-sutil: oklch(0.30 0.018 258);
-  --linha-firme: oklch(0.36 0.02 258);
-  --poco: oklch(0.175 0.014 258);
-
-  /* No escuro o estado precisa subir de luminância para continuar legível
-     sobre fundo fundo — o mesmo verde do claro vira mancha ilegível. */
-  --sucesso: oklch(0.78 0.145 163);      /* #34D399 */
-  --aviso: oklch(0.82 0.145 80);         /* #FBBF24 */
-  --elevacao-1: 0 1px 2px rgb(0 0 0 / 0.3);
-  --elevacao-2: 0 10px 30px rgb(0 0 0 / 0.45);
 
 }
 
