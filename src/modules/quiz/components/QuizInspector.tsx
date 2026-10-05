@@ -18,6 +18,7 @@ import { MASCARAS, tamanhoDaMascara } from "../lib/fieldMask";
 import { POSICOES, ANCORAS } from "../lib/blockPosition";
 import { temCorPropria, coresDoDocumento, VOLTAR_AO_TEMA } from "../lib/temaDoBloco";
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from "../lib/blockStyle";
+import { LARGURAS } from "../lib/larguraDoBloco";
 import type { BlockStyle, TextStyle, TextSlot } from "../lib/blockStyle";
 import { getSteps } from "../lib/steps";
 import { Input } from "@/components/ui/input";
@@ -1765,6 +1766,47 @@ function LayoutTab({
       </Section>
 
       <Section title="Largura e alinhamento" icon={AlignCenterIcon}>
+        {/* Fração da linha — é o que põe dois blocos lado a lado. Vem antes da
+            largura máxima porque é a escolha que se faz primeiro, e a que mais
+            muda o arranjo da tela. */}
+        <Field label="Largura na linha">
+          <div className="grid grid-cols-4 gap-1.5">
+            {LARGURAS.map((l) => {
+              const ativo = (s.width ?? 100) === l.valor;
+              return (
+                <Button
+                  key={l.valor}
+                  size="sm"
+                  variant={ativo ? "secondary" : "outline"}
+                  className="h-8 text-[11px]"
+                  onClick={() =>
+                    onChange(patchStyle(block, { width: l.valor === 100 ? undefined : l.valor }))
+                  }
+                >
+                  {l.rotulo}
+                </Button>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            Dois blocos de <strong>Metade</strong> dividem a mesma linha. No celular cada um volta a
+            ocupar a linha inteira.
+          </p>
+          {s.width && s.width < 100 && (
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={!!s.widthMobile}
+                onChange={(e) =>
+                  onChange(patchStyle(block, { widthMobile: e.target.checked || undefined }))
+                }
+                className="h-3.5 w-3.5 accent-[var(--selecao)]"
+              />
+              Manter lado a lado no celular
+            </label>
+          )}
+        </Field>
+
         <PxField
           label="Largura máxima"
           value={s.maxWidth}

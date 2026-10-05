@@ -10,8 +10,8 @@
  * nada de valor "padrão" gravado no schema, que é o que costuma travar mudança
  * de tema depois.
  */
-import type { CSSProperties } from 'react';
-import type { QuizBlock } from '../types';
+import type { CSSProperties } from "react";
+import type { QuizBlock } from "../types";
 
 export interface BlockStyle {
   /** Espaço acima e abaixo do bloco, em px. */
@@ -22,8 +22,17 @@ export interface BlockStyle {
   paddingY?: number;
   /** Largura máxima em px. Ausente = ocupa a largura disponível. */
   maxWidth?: number;
+  /**
+   * Fração da linha que o bloco ocupa, em % (25, 33, 50, 100).
+   *
+   * É o que permite dois blocos lado a lado. Diferente de `maxWidth`, que é um
+   * teto em pixels: este divide a linha e se adapta à tela.
+   */
+  width?: number;
+  /** Manter a fração no celular. Ausente = volta a ocupar a linha inteira. */
+  widthMobile?: boolean;
   /** Alinhamento do conteúdo e — quando há largura máxima — do próprio bloco. */
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   background?: string;
   textColor?: string;
   borderWidth?: number;
@@ -67,13 +76,13 @@ export interface TextStyle {
 
 /** Os elementos que aceitam tipografia própria, na ordem em que aparecem na tela. */
 export const TEXT_SLOTS = [
-  { key: 'title', label: 'Título' },
-  { key: 'subtitle', label: 'Subtítulo' },
-  { key: 'options', label: 'Opções' },
-  { key: 'button', label: 'Botão' },
+  { key: "title", label: "Título" },
+  { key: "subtitle", label: "Subtítulo" },
+  { key: "options", label: "Opções" },
+  { key: "button", label: "Botão" },
 ] as const;
 
-export type TextSlot = (typeof TEXT_SLOTS)[number]['key'];
+export type TextSlot = (typeof TEXT_SLOTS)[number]["key"];
 
 /**
  * Resolve a tipografia de um elemento na ordem elemento → bloco → tema.
@@ -114,23 +123,23 @@ export function resolveTextStyle(
 /** Algum elemento deste bloco tem tipografia própria? Usado pelo inspetor. */
 export function hasTextStyle(block: QuizBlock, slot: TextSlot): boolean {
   const el = block.blockStyle?.[slot];
-  return !!el && Object.values(el).some((v) => v !== undefined && v !== '' && v !== null);
+  return !!el && Object.values(el).some((v) => v !== undefined && v !== "" && v !== null);
 }
 
 /** Fontes já carregadas globalmente pelo app — não adianta oferecer outras. */
 export const BLOCK_FONTS = [
-  'Inter',
-  'Space Grotesk',
-  'Playfair Display',
-  'Fraunces',
-  'Fredoka',
+  "Inter",
+  "Space Grotesk",
+  "Playfair Display",
+  "Fraunces",
+  "Fredoka",
 ] as const;
 
 /** Há algo configurado? Serve pra não criar um <div> de embrulho à toa. */
 export function hasBlockStyle(block: QuizBlock): boolean {
   const s = block.blockStyle;
   if (!s) return false;
-  return Object.values(s).some((v) => v !== undefined && v !== '' && v !== null);
+  return Object.values(s).some((v) => v !== undefined && v !== "" && v !== null);
 }
 
 export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
@@ -155,16 +164,20 @@ export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
   if (s.align) style.textAlign = s.align;
   if (s.maxWidth) {
     style.maxWidth = s.maxWidth;
-    if (s.align === 'center') { style.marginLeft = 'auto'; style.marginRight = 'auto'; }
-    else if (s.align === 'right') { style.marginLeft = 'auto'; }
+    if (s.align === "center") {
+      style.marginLeft = "auto";
+      style.marginRight = "auto";
+    } else if (s.align === "right") {
+      style.marginLeft = "auto";
+    }
   }
 
   if (s.background) style.background = s.background;
   if (s.textColor) style.color = s.textColor;
   if (s.borderWidth) {
     style.borderWidth = s.borderWidth;
-    style.borderStyle = 'solid';
-    style.borderColor = s.borderColor || 'currentColor';
+    style.borderStyle = "solid";
+    style.borderColor = s.borderColor || "currentColor";
   }
   if (s.radius !== undefined) style.borderRadius = s.radius;
 

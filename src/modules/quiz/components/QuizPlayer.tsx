@@ -15,6 +15,7 @@ import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMas
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
+import { larguraDoBloco } from '../lib/larguraDoBloco';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
 import {
@@ -460,6 +461,8 @@ function PlayerRunner({
     [blocks, state.responses],
   );
 
+  const breakpointDaTela = useBreakpoint();
+
   const ultimoNoFluxo = useMemo(() => {
     const noFluxo = effectiveBlocks.filter(estaNoFluxo);
     /* Um bloco Botão EXPLÍCITO declara onde fica o avanço, e ganha do último
@@ -505,10 +508,6 @@ function PlayerRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep?.id, quizId, companyId, submissionId, preview]);
 
-  if (stepBlocks.length === 0) {
-    return <EmptyState message="Quiz sem blocos" />;
-  }
-
   // Blocos "filhos" de um Container não aparecem em visibleStepBlocks (só o
   // Container aparece) — "achata" a lista trocando cada Container pelos seus
   // filhos visíveis, pra validação, pontuação e persistência de resposta
@@ -528,6 +527,15 @@ function PlayerRunner({
     }
     return out;
   }, [visibleStepBlocks, blocks, state.responses, scope]);
+
+  /* A saída antecipada mora AQUI, depois dos hooks, e não antes deles.
+     Estava acima do `useMemo` logo acima: numa etapa que passa a ter zero
+     blocos entre uma renderização e outra, a contagem de hooks mudava e o
+     React quebrava com o erro #310. Defeito antigo, encontrado ao acrescentar
+     um hook neste componente. */
+  if (stepBlocks.length === 0) {
+    return <EmptyState message="Quiz sem blocos" />;
+  }
 
   const allStepValid = flatAnswerableBlocks.every((b) => stepValidity[b.id] !== false);
 
@@ -774,8 +782,12 @@ function PlayerRunner({
             total={steps.length}
             design={design}
           />
+          {/* `flex-wrap` no lugar de `flex-col`: com todo bloco em 100% o
+              resultado é idêntico ao empilhamento de antes, e quem escolhe uma
+              fração passa a dividir a linha. O `gap-6` é o mesmo 24px que a
+              conta de `larguraDoBloco` desconta. */}
           <div
-            className="mt-6 flex-1 flex flex-col gap-6"
+            className="mt-6 flex-1 flex flex-wrap content-start gap-6"
             style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape }}
           >
             {done ? (
@@ -820,7 +832,12 @@ function PlayerRunner({
                   <div
                     key={b.id}
                     ref={b.posicao === 'topo-fixo' ? refTopo : b.posicao === 'rodape-fixo' ? refRodape : undefined}
-                    style={{ ...resolveBlockStyle(b), ...varsDoBloco(b), ...posicao }}
+                    style={{
+                      ...larguraDoBloco(b, breakpointDaTela, GAP_DA_ETAPA),
+                      ...resolveBlockStyle(b),
+                      ...varsDoBloco(b),
+                      ...posicao,
+                    }}
                     onClick={b.onClickScript ? () => executarScriptDoBloco(b, state.responses[b.id]) : undefined}
                   >
                   <BlockView
@@ -1274,6 +1291,10 @@ const CONTAINER_JUSTIFY_CSS: Record<string, React.CSSProperties['justifyContent'
 
 // Breakpoints do layout responsivo do Container — mesmos limiares usados no resto
 // do app pra distinguir mobile/tablet/desktop (ver device toggle do Builder).
+/** O mesmo 24px da classe `gap-6` da linha da etapa. Duas fontes para o mesmo
+ *  número divergem na primeira vez que alguém mexe numa delas. */
+const GAP_DA_ETAPA = 24;
+
 const MOBILE_MAX = 640;
 const TABLET_MAX = 1024;
 

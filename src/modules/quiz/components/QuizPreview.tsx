@@ -24,6 +24,7 @@ import { parseRichText } from "../lib/richtext";
 import { evaluatePercent } from "../lib/variables";
 import { resolveBlockStyle, resolveTextStyle } from "../lib/blockStyle";
 import { resolveContainerLayout, type Breakpoint } from "../lib/containerLayout";
+import { larguraDoBloco } from "../lib/larguraDoBloco";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import { CountdownTimer } from "./CountdownTimer";
 
@@ -280,7 +281,12 @@ export function QuizPreview({
                       </p>
                     </div>
                   ) : (
-                    <div className="flex flex-col">
+                    /* Mesma linha que o player: `flex-wrap` com todo bloco
+                       em 100% empilha igual a antes, e quem escolhe uma fração
+                       divide a linha. Aqui o espaçamento é zero — cada bloco
+                       traz o próprio `p-3` —, então a conta de largura recebe
+                       gap 0 e as frações fecham cravadas. */
+                    <div className="flex flex-wrap content-start">
                       {stepBlocks.map((b, i) => {
                         return (
                           <Draggable key={b.id} draggableId={b.id} index={i}>
@@ -293,6 +299,7 @@ export function QuizPreview({
                                   activeBlockId === b.id ? "" : hoverTintClass
                                 } ${dragSnapshot.isDragging ? "shadow-2xl bg-[var(--q-bg)]" : ""}`}
                                 style={{
+                                  ...larguraDoBloco(b, device, 0),
                                   ...dragProvided.draggableProps.style,
                                   ...(activeBlockId === b.id
                                     ? { boxShadow: `0 0 0 2px ${design.primary}` }
