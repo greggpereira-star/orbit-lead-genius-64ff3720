@@ -263,11 +263,15 @@ function PlayerRunner({
      já virou submissão e lead, e retomar um quiz terminado só confundiria. */
   useEffect(() => {
     if (preview) return;
-    if (done) { limparProgresso(quizId); return; }
+    /* `jaSalvou` e não só `done`: o `finish` limpa o progresso ao gravar, mas
+       logo depois ele chama `setState`, este efeito dispara de novo e
+       regravava tudo — a limpeza durava um instante. Verificado no ar: a chave
+       continuava no navegador depois de concluir. */
+    if (done || jaSalvou.current) { limparProgresso(quizId); return; }
     if (retomou.current) { retomou.current = false; return; }
     salvarProgresso(quizId, sessionId.current, state);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, done, preview, quizId]);
+  }, [state, done, saving, preview, quizId]);
   const currentStep = steps[state.currentStepIndex];
   const stepBlocks = useMemo(
     () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
