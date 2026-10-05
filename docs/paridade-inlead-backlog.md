@@ -185,8 +185,20 @@ rodapé "Criado via" com UTM de indicação.
 | **3** | Grade de colunas, opção com imagem, botão voltar, duplicar/arquivar | ✅ 05/10 — `da07437` |
 | **4** | Componentes novos (§4) | ✅ 05/10 — `ec67d23` |
 | **5** | Lógica por porcentagem/quantidade + editor de regras (§5) | ✅ 05/10 — `74a568d` |
-| **6** | Análise IA → Editar com IA (§8) | ⬜ próxima |
-| **7** | Camadas e posicionamento livre (§3 completo) | ⬜ |
+| **6a** | Análise de conversão (determinística) | ✅ 05/10 — `99319d5` |
+| **6b** | Camada de IA (Análise redigida + Editar com IA) | ⛔ **bloqueada**: não há chave de IA no servidor. Decisão do cliente em 05/10 foi adiar |
+| **7** | Posicionamento fora do fluxo | ✅ 05/10 — `7746905` |
+
+### Observações das ondas entregues
+
+- **Onda 6b (IA)** precisa de uma `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` ou
+  `GEMINI_API_KEY` no `.env` de `/opt/altleadflow-app`. A análise determinística
+  já entrega os achados; a IA entraria por cima só para redigir e priorizar.
+- **Onda 7**: feito o posicionamento fora do fluxo (topo fixo, rodapé fixo,
+  flutuante com oito cantos, tela inteira). **Não** foi feito arrastar-para-
+  qualquer-ponto: num funil que é lido no celular, posição absoluta livre
+  quebra mais do que resolve, e o Container já cobre grade e colunas com
+  sobrescrita por breakpoint.
 
 ### O que ficou de fora das ondas entregues
 
