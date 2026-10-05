@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { DayPicker } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
+import type { DayPicker } from 'react-day-picker';
 import { ptBR } from 'date-fns/locale';
 import type { QuizBlock, QuizDesign } from '../types';
 import { getContrastText, withAlpha } from '../lib/color';
@@ -84,19 +85,24 @@ export function SchedulingField({
   return (
     <div className="space-y-4">
       <div
-        className="overflow-hidden p-2"
+        className="overflow-hidden"
         style={{
           borderRadius: design.radius,
           background: design.surface,
           border: `1px solid ${withAlpha(design.text, 0.12)}`,
-          // O react-day-picker lê estas variáveis; assim o calendário segue o
-          // tema do funil em vez da cor do painel do aplicativo.
-          ['--rdp-accent-color' as string]: design.primary,
-          ['--rdp-accent-background-color' as string]: withAlpha(design.primary, 0.12),
+          /* O calendário é o `Calendar` da casa (react-day-picker estilizado
+             com Tailwind). A alternativa seria importar a folha de estilo do
+             pacote, mas ela é global e reestilizaria também os calendários que
+             já existem no painel. Estas variáveis pintam o dia selecionado com
+             a cor do FUNIL, não com a do aplicativo. */
+          ['--primary' as string]: design.primary,
+          ['--primary-foreground' as string]: getContrastText(design.primary),
+          ['--accent' as string]: withAlpha(design.primary, 0.12),
+          color: design.text,
         }}
       >
         {block.schedulingAllowRange ? (
-          <DayPicker
+          <Calendar
             mode="range"
             locale={ptBR}
             month={mes}
@@ -112,7 +118,7 @@ export function SchedulingField({
             }
           />
         ) : (
-          <DayPicker
+          <Calendar
             mode="single"
             locale={ptBR}
             month={mes}
