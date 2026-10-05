@@ -71,6 +71,7 @@ export async function captureQuizLead(params: {
   responses?: Record<string, unknown>;
   submissionId?: string | null;
   completed?: boolean;
+  tags?: string[];
 }): Promise<string | null> {
   if (!params.email && !params.phone) return null;
   const { data, error } = await (supabase as any).rpc('quiz_capture_lead', {
@@ -85,6 +86,7 @@ export async function captureQuizLead(params: {
     p_responses: params.responses ?? {},
     p_submission_id: params.submissionId ?? null,
     p_completed: params.completed ?? false,
+    p_tags: params.tags ?? [],
   });
   if (error) {
     // Sem log, uma falha aqui volta a ser invisível — foi assim que nenhum
@@ -614,7 +616,15 @@ export const quizService = {
         name: params.name ?? null,
       },
     };
+    /* O id vem daqui, e não do banco, por um motivo de autorização: com
+       `.select('id')` o PostgREST faz `insert ... returning`, e o Postgres
+       aplica também a política de SELECT da tabela — que para `anon` não
+       existe. O insert passava e o retorno derrubava tudo com 42501, o que
+       parecia erro de WITH CHECK. Gerando o id antes, a submissão grava sem
+       precisar ler nada de volta. */
+    const submissionId = crypto.randomUUID();
     const payload = {
+      id: submissionId,
       quiz_id: params.quizId,
       company_id: params.companyId,
       answers,
@@ -625,13 +635,8 @@ export const quizService = {
       completed_at: new Date().toISOString(),
       tracking,
     } as never;
-    const { data, error } = await supabase
-      .from('quiz_submissions')
-      .insert(payload)
-      .select('id')
-      .maybeSingle();
+    const { error } = await supabase.from('quiz_submissions').insert(payload);
     if (error) throw error;
-    const submissionId = (data as { id?: string } | null)?.id ?? null;
 
     // Configurações do funil, lidas uma vez só: o webhook e a etapa de entrada
     // moram na mesma coluna `settings`, e antes o webhook fazia essa consulta
@@ -690,6 +695,7 @@ export const quizService = {
           responses: params.responses,
           submissionId,
           completed: true,
+          tags: params.tags,
         });
         // `!leadId` cobre os dois casos de uma vez: falha na função (que já
         // logou o motivo) e quiz sem contato nenhum, onde não existe lead a
@@ -697,16 +703,12 @@ export const quizService = {
         if (!leadId) {
           console.warn('Quiz concluído sem lead — sem contato ou captura falhou');
         } else {
-          if (submissionId) {
-            await supabase.from('quiz_submissions').update({ lead_id: leadId } as never).eq('id', submissionId);
-          }
-
-          // Etiquetas na tabela certa, como o formulário público já faz.
-          if (params.tags.length) {
-            await supabase
-              .from('lead_tags')
-              .insert(params.tags.map((tag) => ({ lead_id: leadId, tag_name: tag })) as never);
-          }
+          /* O vínculo submissão→lead e as etiquetas ficavam aqui, como escrita
+             direta de um cliente anônimo que não tem grant para nenhuma das
+             duas tabelas. A primeira estourava e o catch abaixo engolia a
+             segunda junto com o roteamento: o lead nascia sem etiqueta, sem
+             responsável e sem vínculo, em silêncio. Agora as duas acontecem
+             dentro de `quiz_capture_lead`, que já é SECURITY DEFINER. */
 
           // Auto-assign to sales rep via routing engine
           try {
