@@ -459,13 +459,13 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   <Textarea 
                     {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
                     placeholder={field.placeholder}
-                     className="min-h-[120px] bg-background/50 border-2 focus-visible:ring-primary/20"
+                     className="min-h-[116px] rounded-[10px] border border-input bg-background px-3.5 py-3 text-[15px] transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
                   />
                 ) : field.type === 'select' ? (
                   <div className="relative group">
                     <select
                       {...register(field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_'), { required: field.required })}
-                       className="w-full h-12 rounded-md border-2 bg-background/50 px-3 py-1 text-base shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 appearance-none"
+                       className="w-full h-12 rounded-[10px] border border-input bg-background px-3.5 text-[15px] transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15 appearance-none pr-10"
                     >
                       <option value="">Selecione uma opção...</option>
                       {(field.options || []).map((option: any, i: number) => {
@@ -474,7 +474,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                         return <option key={option.id || value || i} value={value}>{label}</option>;
                       })}
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
                       <ChevronRight className="h-4 w-4 rotate-90" />
                     </div>
                   </div>
@@ -486,7 +486,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                       pattern: field.type === 'email' ? /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i : undefined
                     })}
                     placeholder={field.placeholder}
-                    className="h-12 bg-background/50 border-2 text-base transition-all focus-visible:ring-primary/20"
+                    className="h-12 rounded-[10px] border border-input bg-background px-3.5 text-[15px] transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
                   />
                 )}
                 {errors[field.name || field.label.toLowerCase().replace(/[^a-z0-9]/g, '_')] && (
@@ -515,7 +515,15 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 </div>
               )}
 
-              <div className="flex gap-4 pt-4">
+              {/* Barra de ação GRUDADA no rodapé.
+                  Numa etapa com vários campos — e principalmente com o bloco de
+                  consentimento —, os botões ficavam abaixo da dobra: a pessoa
+                  preenchia tudo e precisava descobrir que havia rolagem para
+                  achar o "Enviar". Agora eles acompanham a tela.
+                  O recuo negativo e o preenchimento devolvem a margem lateral do
+                  corpo, para a barra encostar nas bordas e o desfoque cobrir o
+                  conteúdo que passa por baixo. */}
+              <div className="sticky bottom-0 z-10 -mx-6 sm:-mx-8 mt-2 flex gap-3 border-t border-[var(--linha-sutil)] bg-background/95 px-6 sm:px-8 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               {isMultiStep && currentStep > 0 && (
                 <Button 
                   variant="outline"

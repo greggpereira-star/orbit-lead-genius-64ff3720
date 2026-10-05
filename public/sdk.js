@@ -289,14 +289,20 @@
       overlay.setAttribute('aria-modal', 'true');
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);' +
         'display:flex;align-items:center;justify-content:center;z-index:2147483000;' +
-        'padding:16px;opacity:0;transition:opacity .18s ease';
+        'padding:22px 20px;opacity:0;transition:opacity .18s ease';
+
+      /* A `caixa` existe só para o botão de fechar poder sair PARA FORA do
+         cartão. Ele ficava dentro, no canto superior direito, colado na barra
+         de rolagem do formulário — dois elementos disputando os mesmos 14
+         pixels. Fora do cartão não há o que disputar. */
+      var caixa = document.createElement('div');
+      caixa.style.cssText = 'position:relative;width:100%;max-width:' +
+        (options.maxWidth || 520) + 'px;transform:translateY(8px);transition:transform .18s ease';
+      caixa.onclick = function(e) { e.stopPropagation(); };
 
       var content = document.createElement('div');
-      content.style.cssText = 'position:relative;width:100%;max-width:' +
-        (options.maxWidth || 520) + 'px;max-height:92vh;background:#fff;' +
-        'border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);' +
-        'transform:translateY(8px);transition:transform .18s ease';
-      content.onclick = function(e) { e.stopPropagation(); };
+      content.style.cssText = 'position:relative;width:100%;max-height:92vh;background:#fff;' +
+        'border-radius:18px;overflow:hidden;box-shadow:0 24px 60px -16px rgba(15,23,42,.45)';
 
       var fechar = document.createElement('button');
       fechar.type = 'button';
@@ -339,7 +345,8 @@
          * piso de 420px passava por cima do teto e o modal ficava MAIOR que o
          * espaço disponível. O piso agora é ele próprio limitado pela janela.
          */
-        var teto = Math.max(Math.round(window.innerHeight * 0.92) - 32, 220);
+        // 22px de folga em cima e embaixo, mais 13px da saliência do botão.
+        var teto = Math.max(window.innerHeight - 70, 240);
         var piso = Math.min(options.minHeight || 420, teto);
         var altura = Math.max(Math.min(conteudo || piso, teto), piso);
         iframe.style.height = altura + 'px';
@@ -414,16 +421,17 @@
       // erro de rede), o indicador não pode girar para sempre.
       var prazoDaEspera = setTimeout(esconderEspera, 12000);
 
-      content.appendChild(fechar);
       content.appendChild(carregando);
       content.appendChild(iframe);
-      overlay.appendChild(content);
+      caixa.appendChild(fechar);
+      caixa.appendChild(content);
+      overlay.appendChild(caixa);
       document.body.appendChild(overlay);
       document.body.style.overflow = 'hidden';
 
       requestAnimationFrame(function() {
         overlay.style.opacity = '1';
-        content.style.transform = 'translateY(0)';
+        caixa.style.transform = 'translateY(0)';
       });
 
       self.debug('Modal aberto para o formulário ' + formId);

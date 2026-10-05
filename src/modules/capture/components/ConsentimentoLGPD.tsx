@@ -37,15 +37,15 @@ export function ConsentimentoLGPD({
   erro?: boolean;
 }) {
   return (
-    <div className="space-y-3 border-t pt-4">
-      <label className="flex items-start gap-3 cursor-pointer">
+    <div className="space-y-3.5 border-t border-[var(--linha-sutil)] pt-5 mt-1">
+      <label className="flex items-start gap-2.5 cursor-pointer">
         <Checkbox
           checked={valor.dados}
           onCheckedChange={(c) => onMudar({ ...valor, dados: !!c })}
           aria-invalid={erro || undefined}
           className={erro ? 'border-destructive' : undefined}
         />
-        <span className="text-xs leading-relaxed text-foreground">
+        <span className="text-[13px] leading-[1.55] text-foreground">
           {texto?.trim() || TEXTO_PADRAO_LGPD}
           {politicaUrl?.trim() ? (
             <>
@@ -65,12 +65,12 @@ export function ConsentimentoLGPD({
       </label>
 
       {pedirMarketing && (
-        <label className="flex items-start gap-3 cursor-pointer">
+        <label className="flex items-start gap-2.5 cursor-pointer">
           <Checkbox
             checked={valor.marketing}
             onCheckedChange={(c) => onMudar({ ...valor, marketing: !!c })}
           />
-          <span className="text-xs leading-relaxed text-muted-foreground">
+          <span className="text-[13px] leading-[1.55] text-muted-foreground">
             Também quero receber novidades e promoções. (opcional)
           </span>
         </label>
@@ -82,7 +82,7 @@ export function ConsentimentoLGPD({
         </p>
       )}
 
-      <p className="text-[11px] leading-relaxed text-muted-foreground">
+      <p className="text-[11.5px] leading-[1.5] text-muted-foreground pt-0.5">
         Você pode revogar este consentimento a qualquer momento pelos canais de
         contato.
       </p>
