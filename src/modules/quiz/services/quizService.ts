@@ -708,30 +708,14 @@ export const quizService = {
              duas tabelas. A primeira estourava e o catch abaixo engolia a
              segunda junto com o roteamento: o lead nascia sem etiqueta, sem
              responsável e sem vínculo, em silêncio. Agora as duas acontecem
-             dentro de `quiz_capture_lead`, que já é SECURITY DEFINER. */
+             dentro de `quiz_capture_lead`, que já é SECURITY DEFINER.
 
-          // Auto-assign to sales rep via routing engine
-          try {
-            const { leadRoutingEngine } = await import('@/modules/intelligence/services/leadRoutingEngine');
-            await leadRoutingEngine.assignLead(leadId, params.companyId, params.temperature);
-          } catch (e) {
-            console.warn('Lead routing failed', e);
-          }
-
-          // Check if CV.CRM is connected and dispatch (fire-and-forget)
-          const { data: integ } = await supabase
-            .from('cvcrm_integrations')
-            .select('is_active, connection_status')
-            .eq('company_id', params.companyId)
-            .maybeSingle();
-          const active = (integ as { is_active?: boolean; connection_status?: string } | null);
-          if (active?.is_active && active.connection_status === 'connected') {
-            supabase.functions
-              .invoke('send-cvcrm-lead', {
-                body: { lead_id: leadId, tenant_id: params.companyId, trace_id: crypto.randomUUID() },
-              })
-              .catch((e) => console.warn('CV.CRM dispatch failed', e));
-          }
+             O roteamento e o despacho para o CV.CRM também moravam aqui, e
+             também nunca rodaram: `routing_configs` e `cvcrm_integrations`
+             voltavam 401 para o visitante anônimo. Os dois passaram para
+             `/api/public/quiz-completed`, que já roda com a chave de serviço
+             e já encontra o lead pela sessão. */
+          void leadId;
         }
       } catch (e) {
         console.warn('Lead capture from quiz failed', e);

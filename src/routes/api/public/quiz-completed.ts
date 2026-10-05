@@ -37,6 +37,50 @@ function interpolar(texto: string, vars: Record<string, string>): string {
   return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => vars[k] ?? '');
 }
 
+/**
+ * Atribui responsável ao lead do quiz.
+ *
+ * Isto rodava no navegador, dentro de `submitPublic`, e nunca funcionou uma
+ * vez sequer: `routing_configs` e `lead_events` não têm grant para `anon`, e
+ * as duas leituras voltavam 401. Como estavam dentro de um try/catch que só
+ * avisava no console, o sintoma era um lead de quiz que simplesmente nascia
+ * sem dono — sem erro visível em lugar nenhum.
+ */
+async function atribuirResponsavel(
+  admin: { from: (t: string) => any; rpc: (f: string, a: unknown) => Promise<{ data: unknown }> },
+  leadId: string,
+  companyId: string,
+  temperature: string | null,
+): Promise<string | null> {
+  const { data: cfg } = await admin
+    .from('routing_configs')
+    .select('id, strategy, fallback_user_id')
+    .eq('company_id', companyId)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!cfg) return null;
+
+  const c = cfg as { id: string; strategy: string; fallback_user_id: string | null };
+  const preferTop = c.strategy === 'performance' || (c.strategy === 'hybrid' && temperature === 'hot');
+
+  const { data: escolhido } = await admin.rpc('pick_next_routing_member', {
+    p_config_id: c.id,
+    p_prefer_top: preferTop,
+  });
+
+  const assignee = (escolhido as string | null) ?? c.fallback_user_id;
+  if (!assignee) return null;
+
+  await admin.from('leads').update({ assigned_to: assignee }).eq('id', leadId);
+  await admin.from('lead_events').insert({
+    lead_id: leadId,
+    event_type: 'lead_assigned',
+    description: `Lead atribuído (${c.strategy}${temperature ? ` · ${temperature}` : ''})`,
+    metadata: { assigned_to: assignee, strategy: c.strategy, temperature },
+  });
+  return assignee;
+}
+
 export const Route = createFileRoute('/api/public/quiz-completed')({
   server: {
     handlers: {
@@ -58,6 +102,62 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         if (!quiz) return json({ error: 'unknown_quiz' }, 404);
 
         const q = quiz as { company_id: string; settings: Record<string, unknown>; published_version_id: string | null };
+
+        /* O lead é resolvido aqui em cima, e não lá embaixo junto da faixa,
+           porque os três `return` de faixa que vêm a seguir são saídas
+           legítimas — um quiz sem faixas configuradas não deve custar o
+           responsável do lead. */
+        let leadDoQuiz: { id: string; metadata: Record<string, unknown> | null } | null = null;
+        if (body.sessionId) {
+          const { data: lead } = await supabaseAdmin
+            .from('leads')
+            // `quiz_id` e o filtro por metadata não estão no `types.ts` gerado
+            // com essa forma; o cast é só de tipagem, a consulta é válida.
+            .select('id, metadata, temperature, assigned_to')
+            .eq('quiz_id' as never, body.quizId)
+            .eq('metadata->>session_id' as never, body.sessionId)
+            .maybeSingle();
+          if (lead) {
+            const l = lead as { id: string; metadata: Record<string, unknown> | null; temperature: string | null; assigned_to: string | null };
+            leadDoQuiz = { id: l.id, metadata: l.metadata };
+            // `assigned_to` já preenchido: a captura antecipada e a conclusão
+            // chamam esta rota na mesma sessão, e trocar o dono no meio do
+            // atendimento é pior do que não rodear de novo.
+            if (!l.assigned_to) {
+              try {
+                await atribuirResponsavel(supabaseAdmin as never, l.id, q.company_id, l.temperature);
+              } catch (err) {
+                console.error(JSON.stringify({
+                  scope: 'quiz-completed', msg: 'roteamento_falhou',
+                  lead_id: l.id, erro: err instanceof Error ? err.message : String(err),
+                }));
+              }
+            }
+
+            // Despacho para o CV.CRM, pelo mesmo motivo: `cvcrm_integrations`
+            // devolvia 401 para o visitante, então o lead do quiz nunca chegou
+            // ao CRM do cliente.
+            try {
+              const { data: integ } = await supabaseAdmin
+                .from('cvcrm_integrations')
+                .select('is_active, connection_status')
+                .eq('company_id', q.company_id)
+                .maybeSingle();
+              const i = integ as { is_active?: boolean; connection_status?: string } | null;
+              if (i?.is_active && i.connection_status === 'connected') {
+                await supabaseAdmin.functions.invoke('send-cvcrm-lead', {
+                  body: { lead_id: l.id, tenant_id: q.company_id, trace_id: crypto.randomUUID() },
+                });
+              }
+            } catch (err) {
+              console.error(JSON.stringify({
+                scope: 'quiz-completed', msg: 'cvcrm_falhou',
+                lead_id: l.id, erro: err instanceof Error ? err.message : String(err),
+              }));
+            }
+          }
+        }
+
         const tiers = (q.settings?.score_tiers ?? []) as Array<{
           id: string; label: string; minPercent: number; whatsappTemplate?: string;
         }>;
@@ -89,24 +189,13 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
 
         // Registrado no lead antes do envio: a classificação vale mesmo que o
         // WhatsApp falhe, e é ela que o time comercial usa para priorizar.
-        if (body.sessionId) {
-          const { data: lead } = await supabaseAdmin
+        if (leadDoQuiz) {
+          await supabaseAdmin
             .from('leads')
-            .select('id, metadata')
-            // `quiz_id` e o filtro por metadata não estão no `types.ts` gerado
-            // com essa forma; o cast é só de tipagem, a consulta é válida.
-            .eq('quiz_id' as never, body.quizId)
-            .eq('metadata->>session_id' as never, body.sessionId)
-            .maybeSingle();
-          if (lead) {
-            const l = lead as { id: string; metadata: Record<string, unknown> | null };
-            await supabaseAdmin
-              .from('leads')
-              .update({
-                metadata: { ...(l.metadata ?? {}), quiz_tier: faixa.label, quiz_score_pct: Math.round(pct) },
-              } as never)
-              .eq('id', l.id);
-          }
+            .update({
+              metadata: { ...(leadDoQuiz.metadata ?? {}), quiz_tier: faixa.label, quiz_score_pct: Math.round(pct) },
+            } as never)
+            .eq('id', leadDoQuiz.id);
         }
 
         if (!faixa.whatsappTemplate?.trim() || !body.telefone) {
