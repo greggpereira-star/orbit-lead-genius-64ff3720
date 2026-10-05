@@ -366,12 +366,18 @@
 
       function aoReceber(e) {
         if (!e.data) return;
-        // A altura vem do próprio formulário, como no modo inline.
-        if (e.data.type === 'LEADFLOW_RESIZE' && e.data.height) {
+        /* `LEADFLOW_RESIZE` é IGNORADO aqui.
+         *
+         * No modal quem manda na altura é a janela. Deixar o conteúdo mandar
+         * criava laço: o documento dentro do iframe tem a altura do iframe,
+         * então reportar essa altura de volta fazia o modal crescer sozinho —
+         * medido, 1.915 mensagens em 12 segundos, 1 pixel por volta, com o
+         * modal piscando. O formulário em modo modal agora manda só um
+         * `LEADFLOW_READY`, uma vez. */
+        if (e.data.type === 'LEADFLOW_READY') {
           clearTimeout(prazoDaEspera);
           esconderEspera();
-          ultimaAltura = e.data.height;
-          ajustarAltura(e.data.height);
+          ajustarAltura(0);
         }
         if (e.data.type === 'LEADFLOW_FORM_SUBMITTED' && options.closeOnSubmit !== false) {
           // Tempo de ler a confirmação antes de fechar.
@@ -379,8 +385,7 @@
         }
       }
 
-      var ultimaAltura = 0;
-      var aoRedimensionar = function() { ajustarAltura(ultimaAltura); };
+      var aoRedimensionar = function() { ajustarAltura(0); };
 
       overlay.onclick = encerrar;
       fechar.onclick = encerrar;

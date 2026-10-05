@@ -128,8 +128,34 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     enabled: !!form,
   });
 
-  // Iframe auto-resize notification
+  /* No modal o formulário NÃO reporta altura.
+   *
+   * Medido no site da Exata: 1.915 mensagens em 12 segundos, com a altura
+   * subindo de 1 em 1 pixel — o modal crescia sozinho e piscava. É laço de
+   * realimentação, e foi a mudança `h-[100dvh]` do modo modal que o criou: com
+   * o documento ocupando exatamente a altura do iframe, `root.scrollHeight`
+   * passa a reportar a altura do PRÓPRIO IFRAME. Aí o `+20` e o arredondamento
+   * do navegador fazem cada volta devolver um número maior, o modal cresce, o
+   * documento acompanha, e começa de novo.
+   *
+   * No modal quem manda na altura é a janela, não o conteúdo. Então sai só um
+   * aviso de "pronto", uma vez, para o indicador de carregamento sumir.
+   */
+  const noModal =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('lf_modo') === 'modal';
+
   useEffect(() => {
+    if (!noModal || !form) return;
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'LEADFLOW_READY' }, origemDoEmbutidor());
+    }
+  }, [noModal, form]);
+
+  // Altura automática — só no modo embutido, onde o conteúdo é que manda.
+  useEffect(() => {
+    if (noModal) return;
+
     const updateHeight = () => {
       const root = document.getElementById('root');
       const height = root ? root.scrollHeight : document.body.scrollHeight;
@@ -159,7 +185,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       window.removeEventListener('resize', updateHeight);
       clearTimeout(timeout);
     };
-  }, [currentStep, submitted, resumePrompt, form, isLoading]);
+  }, [currentStep, submitted, resumePrompt, form, isLoading, noModal]);
 
   useEffect(() => {
     localStorage.setItem(`lf_session_${slug}`, sessionId);
