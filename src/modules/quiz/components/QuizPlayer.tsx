@@ -977,10 +977,16 @@ function extrairContato(responses: Record<string, unknown>, blocks: QuizBlock[])
     return t || undefined;
   };
 
+  /* O nome sai do primeiro `Texto curto` do quiz — mas NÃO de um que tenha
+     máscara: um campo mascarado é um telefone, um CPF, um CEP, nunca um nome.
+     Sem esta exclusão o lead nascia chamado "(27) 98877-5544", porque o mesmo
+     campo servia de telefone e de nome ao mesmo tempo. */
+  const semMascara = blocks.filter((b) => !b.fieldMask || b.fieldMask === 'livre');
+
   return {
     email: extract(responses, blocks, 'email') ?? limpar(doForm?.email),
     phone: extract(responses, blocks, 'phone') ?? limpar(doForm?.phone),
-    name: extract(responses, blocks, 'short-text') ?? limpar(doForm?.name),
+    name: extract(responses, semMascara, 'short-text') ?? limpar(doForm?.name),
   };
 }
 
