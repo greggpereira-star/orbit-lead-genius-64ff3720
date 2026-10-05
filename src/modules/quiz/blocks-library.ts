@@ -4,11 +4,12 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
-  PhoneCall, SeparatorHorizontal, CalendarClock,
+  PhoneCall, SeparatorHorizontal, CalendarClock, Heading1, Pilcrow, MousePointerClick,
   Grid3x3, LayoutPanelTop, ListChecks as ListaResumo, BadgeCheck, ArrowDown, Smile, Building2, Share2,
 } from 'lucide-react';
 
 export type BlockCategory =
+  | 'basico'
   | 'captura'
   | 'conteudo'
   | 'interacao'
@@ -21,6 +22,7 @@ export type BlockCategory =
   | 'livre';
 
 export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
+  basico: 'Básico',
   captura: 'Captura',
   conteudo: 'Conteúdo',
   interacao: 'Interação',
@@ -43,6 +45,34 @@ interface BlockDef {
 }
 
 export const BLOCK_LIBRARY: BlockDef[] = [
+  /* Os três atômicos vêm primeiro de propósito: são as peças com que se monta
+     uma tela na ordem que se quer. Os compostos abaixo (intro, cta, argumento)
+     continuam — montar a tela inteira num bloco é mais rápido quando o arranjo
+     padrão serve —, mas deixam de ser a ÚNICA saída. */
+  {
+    type: 'heading',
+    label: 'Título',
+    description: 'Só o título, sem botão embutido',
+    category: 'basico',
+    icon: Heading1,
+    create: () => ({ type: 'heading', title: 'Escreva seu título aqui' }),
+  },
+  {
+    type: 'paragraph',
+    label: 'Texto',
+    description: 'Um parágrafo solto',
+    category: 'basico',
+    icon: Pilcrow,
+    create: () => ({ type: 'paragraph', subtitle: 'Escreva seu texto aqui.' }),
+  },
+  {
+    type: 'button',
+    label: 'Botão',
+    description: 'Só o botão, sem título embutido',
+    category: 'basico',
+    icon: MousePointerClick,
+    create: () => ({ type: 'button', ctaLabel: 'Continuar' }),
+  },
   {
     type: 'intro',
     label: 'Intro',

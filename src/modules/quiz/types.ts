@@ -44,6 +44,14 @@ export interface QuizTemplate {
 // ============ Builder schema ============
 
 export type BlockType =
+  /* Blocos ATÔMICOS — um elemento cada, nada embutido.
+     Existem porque todos os outros são compostos: o `intro` traz imagem,
+     título, subtítulo E botão numa peça só, e o `cta` traz título e botão.
+     Com isso não havia como pôr uma pergunta ENTRE o título e o botão, nem
+     montar uma tela na ordem que se quer — era a queixa que motivou isto. */
+  | "heading"
+  | "paragraph"
+  | "button"
   | "intro"
   | "single-choice"
   | "multi-choice"

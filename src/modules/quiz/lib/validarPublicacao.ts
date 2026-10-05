@@ -1,4 +1,4 @@
-import type { QuizSchema, QuizStep, ScoreTier } from '../types';
+import type { QuizBlock, QuizSchema, QuizStep, ScoreTier } from '../types';
 import { getSteps } from './steps';
 
 export interface Achado {
@@ -58,6 +58,27 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
     achados.push({
       nivel: 'avisa',
       mensagem: `${vazias.length} etapa(s) sem nenhum componente — elas são ignoradas no quiz publicado.`,
+    });
+  }
+
+  /* Botão que não é o último da etapa não aparece no quiz publicado.
+     O player dá o avanço ao ÚLTIMO bloco do fluxo e esconde os outros botões,
+     para a etapa não ter dois que avançam. No construtor o botão aparece
+     normalmente — então sem este aviso o autor monta a tela, vê o botão no
+     meio dela, e só descobre que sumiu depois de publicar. */
+  const botoesNoMeio = steps.flatMap((st) => {
+    const doPasso = st.blockIds
+      .map((id) => blocos.find((b) => b.id === id))
+      .filter((b): b is QuizBlock => !!b && (b.posicao ?? 'fluxo') === 'fluxo');
+    const ultimo = doPasso[doPasso.length - 1];
+    return doPasso.filter((b) => b.type === 'button' && b.id !== ultimo?.id);
+  });
+  if (botoesNoMeio.length) {
+    achados.push({
+      nivel: 'avisa',
+      mensagem:
+        `${botoesNoMeio.length} bloco(s) Botão não estão no fim da etapa — quem avança a etapa é ` +
+        'o último componente dela, então esses botões não aparecem no quiz publicado.',
     });
   }
 

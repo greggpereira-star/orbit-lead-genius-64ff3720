@@ -78,6 +78,7 @@ import { getSteps } from "@/modules/quiz/lib/steps";
 import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from "@/modules/quiz/types";
 
 const CATEGORY_ORDER: BlockCategory[] = [
+  "basico",
   "captura",
   "conteudo",
   "interacao",

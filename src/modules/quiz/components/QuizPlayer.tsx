@@ -2070,6 +2070,36 @@ function BlockView({
         </div>
       );
 
+    /* Atômicos: uma coisa cada. O `hidden={!terminal}` do CTA vale igual aqui —
+       num bloco que não encerra a etapa, o botão não submete nada, e o
+       validador avisa que ele some no publicado. */
+    case 'heading':
+      return (
+        <RichText
+          doc={block.titleRich}
+          fallback={title}
+          scope={scope}
+          className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
+          style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
+        />
+      );
+    case 'paragraph':
+      return (
+        <RichText
+          doc={block.subtitleRich}
+          fallback={subtitle}
+          scope={scope}
+          className="quiz-rich text-[0.9375rem] leading-relaxed max-w-[42ch] text-pretty"
+          style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
+        />
+      );
+    case 'button':
+      return (
+        <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
+          {block.ctaLabel || 'Continuar'}
+        </PrimaryBtn>
+      );
+
     case 'cta':
     case 'result':
       return (

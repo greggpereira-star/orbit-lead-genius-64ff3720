@@ -424,15 +424,20 @@ export function BlockRenderer({
   // senão formatar aqui e ver outra coisa lá vira questão de tempo.
   const heading = (
     <div className="space-y-2">
-      <RichText
-        doc={block.titleRich}
-        fallback={title}
-        className="quiz-rich text-2xl font-bold leading-tight"
-        style={resolveTextStyle(block, "title", {
-          color: design.text,
-          fontFamily: design.fontHeading,
-        })}
-      />
+      {/* O título só entra se existir. Sem esta guarda um bloco sem título
+          deixava um vão do tamanho de uma linha — e o PLAYER já fazia a
+          guarda, então canvas e publicado divergiam em altura. */}
+      {(block.titleRich || title) && (
+        <RichText
+          doc={block.titleRich}
+          fallback={title}
+          className="quiz-rich text-2xl font-bold leading-tight"
+          style={resolveTextStyle(block, "title", {
+            color: design.text,
+            fontFamily: design.fontHeading,
+          })}
+        />
+      )}
       {(block.subtitleRich || sub) && (
         <RichText
           doc={block.subtitleRich}
@@ -447,6 +452,35 @@ export function BlockRenderer({
   const opts = block.options ?? [];
 
   switch (block.type) {
+    /* Atômicos: cada um desenha UMA coisa. É o que permite montar a tela na
+       ordem que se quer, em vez de aceitar o arranjo embutido nos compostos. */
+    case "heading":
+      return (
+        <RichText
+          doc={block.titleRich}
+          fallback={title}
+          className="quiz-rich text-2xl font-bold leading-tight"
+          style={resolveTextStyle(block, "title", {
+            color: design.text,
+            fontFamily: design.fontHeading,
+          })}
+        />
+      );
+    case "paragraph":
+      return (
+        <RichText
+          doc={block.subtitleRich}
+          fallback={sub}
+          className="quiz-rich text-sm leading-relaxed"
+          style={resolveTextStyle(block, "subtitle", { color: design.muted })}
+        />
+      );
+    case "button":
+      return (
+        <Btn design={design} textStyle={resolveTextStyle(block, "button")}>
+          {block.ctaLabel || "Continuar"}
+        </Btn>
+      );
     case "intro":
       return (
         <div className="text-center space-y-6 py-8">
