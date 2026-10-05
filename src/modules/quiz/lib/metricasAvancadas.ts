@@ -79,7 +79,15 @@ export function calcularMetricasAvancadas(
   if (sessoes.length < MINIMO_DE_SESSOES) return { ...vazio, sessoes: sessoes.length };
 
   const umaEtapaSo = sessoes.filter((s) => s.etapas.size === 1).length;
-  const duracoes = sessoes.map((s) => (s.fim - s.inicio) / 1000).filter((d) => d > 0 && d < 3600);
+
+  /* O tempo só é mensurável em quem passou por mais de UMA etapa: numa sessão
+     de etapa única o início e o fim são o mesmo instante, e incluí-la puxava a
+     mediana para zero — a tela mostrava "Tempo médio: 0 s", que não quer dizer
+     nada. O teto de 1h descarta a aba esquecida aberta. */
+  const duracoes = sessoes
+    .filter((s) => s.etapas.size > 1)
+    .map((s) => (s.fim - s.inicio) / 1000)
+    .filter((d) => d >= 1 && d < 3600);
   const alcance = sessoes.map((s) => Math.max(...s.etapas) + 1);
 
   // ---- Melhor horário: hora local da conclusão ----

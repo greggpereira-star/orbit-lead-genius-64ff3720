@@ -41,6 +41,12 @@ describe('métricas avançadas', () => {
     expect(calcularMetricasAvancadas(steps, semSessao, []).sessoes).toBe(0);
   });
 
+  it('sessão de etapa única NÃO entra no tempo — início e fim são o mesmo instante', () => {
+    // Incluí-las puxava a mediana para zero e a tela mostrava "0 s".
+    const soUmaEtapa: EventoBruto[] = Array.from({ length: 10 }, (_, i) => ev(`u${i}`, 'a', 0));
+    expect(calcularMetricasAvancadas(steps, soUmaEtapa, []).tempoMedioSegundos).toBeNull();
+  });
+
   it('o tempo usa MEDIANA — uma aba esquecida não destrói o número', () => {
     const comDiscrepante = [...eventos, ev('s0', 'd', 59)];
     const r = calcularMetricasAvancadas(steps, comDiscrepante, []);

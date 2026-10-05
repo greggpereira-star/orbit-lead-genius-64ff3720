@@ -537,7 +537,10 @@ function ConversaoPorEtapa({
 function duracao(seg: number): string {
   const m = Math.floor(seg / 60);
   const s = Math.round(seg % 60);
-  return m > 0 ? `${m} min${s ? ` ${s} s` : ''}` : `${s} s`;
+  if (m > 0) return `${m} min${s ? ` ${s} s` : ''}`;
+  // Abaixo de um segundo não houve tempo a medir — dizer "0 s" seria afirmar
+  // uma duração que não existe.
+  return s >= 1 ? `${s} s` : '—';
 }
 
 /**
