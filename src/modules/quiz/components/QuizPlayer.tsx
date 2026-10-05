@@ -16,6 +16,7 @@ import { resolveBlockStyle, resolveTextStyle } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
+  recomputeScore,
   evaluateLogic,
   nextStepIndex,
   isBlockVisible,
@@ -418,11 +419,16 @@ function PlayerRunner({
       const logicJump = evaluateLogic(b, nextResponses);
       if (logicJump) jumpToBlockId = logicJump;
     }
+    /* Recalculado, não acumulado: com o botão voltar, somar o delta a cada
+       avanço contaria a mesma resposta duas vezes e deixaria o visitante
+       inflar a própria pontuação indo e voltando. `scoreDelta` e `tags` ainda
+       existem acima porque o salto condicional depende deles nesta passagem. */
+    const recalculado = recomputeScore(blocks, nextResponses);
     const nextState: QuizRunState = {
       ...state,
       responses: nextResponses,
-      score: state.score + scoreDelta,
-      tags: [...state.tags, ...tags],
+      score: recalculado.score,
+      tags: recalculado.tags,
       history: [...state.history, ...flatAnswerableBlocks.map((b) => b.id)],
     };
     // Captura antecipada: assim que existe contato, o lead é gravado — mesmo
@@ -648,6 +654,7 @@ function PlayerRunner({
                     block={b}
                     design={design}
                     scope={scope}
+                    respostaAnterior={state.responses[b.id]}
                     terminal={isTerminal}
                     stepValid={allStepValid}
                     saving={saving}
@@ -1343,7 +1350,10 @@ function BlockView({
   onValidChange,
   onDraftChange,
   saving,
+  respostaAnterior,
 }: {
+  /** O que esta pessoa já respondeu neste bloco, quando voltou para cá. */
+  respostaAnterior?: unknown;
   block: QuizBlock;
   design: QuizSchema['design'];
   scope: VariableScope;
@@ -1357,16 +1367,27 @@ function BlockView({
   // Opções marcadas como "pré-selecionada" no Inspector já chegam marcadas quando a
   // etapa abre — o inicializador do useState só roda uma vez por instância do bloco
   // (cada key={b.id} monta um BlockView novo), então isso não sobrescreve escolhas.
+  /* Voltar sem trazer a resposta de volta seria pior que não ter botão: a
+     pessoa vê a pergunta em branco e acha que perdeu o que respondeu. */
   const [value, setValue] = useState<unknown>(() => {
+    if (respostaAnterior !== undefined && !Array.isArray(respostaAnterior)) return respostaAnterior;
     if (block.type === 'single-choice') return (block.options ?? []).find((o) => o.preselected)?.id ?? '';
     if (block.type === 'weight') return block.sliderDefaultValue ?? 70;
     if (block.type === 'height') return block.sliderDefaultValue ?? 170;
     return '';
   });
-  const [multi, setMulti] = useState<string[]>(() =>
-    block.type === 'multi-choice' ? (block.options ?? []).filter((o) => o.preselected).map((o) => o.id) : []
-  );
-  const [formValue, setFormValue] = useState({ name: '', email: '', phone: '' });
+  const [multi, setMulti] = useState<string[]>(() => {
+    if (Array.isArray(respostaAnterior)) return respostaAnterior as string[];
+    return block.type === 'multi-choice' ? (block.options ?? []).filter((o) => o.preselected).map((o) => o.id) : [];
+  });
+  const [formValue, setFormValue] = useState(() => {
+    const r = respostaAnterior as { name?: string; email?: string; phone?: string } | undefined;
+    return {
+      name: r?.name ?? '',
+      email: r?.email ?? '',
+      phone: r?.phone ?? '',
+    };
+  });
   const [revealed, setRevealed] = useState(false);
   // Régua de peso/altura: guarda a unidade EXIBIDA localmente; o valor sempre fica
   // salvo internamente na unidade métrica (kg/cm), pra não quebrar o motor de

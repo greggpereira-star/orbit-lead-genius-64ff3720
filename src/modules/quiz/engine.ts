@@ -149,6 +149,31 @@ export function isBlockVisible(block: QuizBlock, responses: QuizResponses, scope
   }
 }
 
+/**
+ * Pontuação e etiquetas recalculadas a partir das respostas.
+ *
+ * Antes a pontuação era acumulada (`score + delta` a cada avanço). Isso só
+ * funcionava enquanto o visitante não pudesse voltar: com o botão voltar,
+ * responder de novo somava a pontuação uma segunda vez, e a pessoa podia
+ * inflar o próprio resultado indo e voltando. Como a pontuação decide a faixa,
+ * e a faixa decide a mensagem enviada, o valor não pode depender do caminho
+ * percorrido — só das respostas que estão valendo agora.
+ */
+export function recomputeScore(
+  blocks: QuizBlock[],
+  responses: QuizResponses,
+): { score: number; tags: string[] } {
+  let score = 0;
+  const tags = new Set<string>();
+  for (const b of blocks) {
+    if (!(b.id in responses)) continue;
+    const r = evaluateResponse(b, responses[b.id]);
+    score += r.scoreDelta;
+    r.tags.forEach((t) => tags.add(t));
+  }
+  return { score, tags: [...tags] };
+}
+
 export function classifyTemperature(score: number, max: number): 'hot' | 'warm' | 'cold' {
   if (max <= 0) return 'cold';
   const pct = score / max;
