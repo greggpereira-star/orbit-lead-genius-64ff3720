@@ -117,15 +117,26 @@ export function analisarFunil(entrada: EntradaDaAnalise): Analise {
   const temDadosSuficientes = comNota.length > 0;
 
   if (!temDadosSuficientes) {
+    /* A medição POR ETAPA depende de `session_id`, gravado só a partir de
+       05/10/2026. Um funil com visitas antigas tem `starts` alto e zero
+       visitante por etapa — dizer "nenhuma visita registrada" ali contradiz o
+       próprio cartão do quiz, que mostra os inícios. */
+    const inicios = metricas?.starts ?? 0;
+    const detalhe =
+      visitantes > 0
+        ? `${visitantes} visitante(s) por etapa — são precisos ${MINIMO_PARA_NOTA} para uma taxa confiável.`
+        : inicios > 0
+          ? `${inicios} visita(s) no período, mas nenhuma com medição por etapa ainda.`
+          : 'Nenhuma visita registrada no período (0 no período).';
     problemas.push({
       id: 'sem-dados',
       severidade: 'sugestao',
       titulo: 'Ainda sem dados para analisar a conversão',
-      detalhe:
-        visitantes > 0
-          ? `${visitantes} visitante(s) registrado(s) — são precisos ${MINIMO_PARA_NOTA} por etapa para uma taxa confiável.`
-          : 'Nenhuma visita registrada no período.',
-      acao: 'Leve tráfego ao funil e volte aqui. Abaixo do mínimo, qualquer taxa seria ruído.',
+      detalhe,
+      acao:
+        inicios > 0 && visitantes === 0
+          ? 'A medição por etapa começou em 05/10/2026; visitas anteriores a isso não entram. Volte em alguns dias.'
+          : 'Leve tráfego ao funil e volte aqui. Abaixo do mínimo, qualquer taxa seria ruído.',
     });
   } else {
     // A maior queda do funil, com nome e número.

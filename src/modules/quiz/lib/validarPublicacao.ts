@@ -23,7 +23,9 @@ const BLOCOS_DE_CAPTURA = ['email', 'phone', 'form'];
  */
 export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Achado[] {
   const achados: Achado[] = [];
-  const steps: QuizStep[] = getSteps(schema);
+  /* `keepEmpty` para enxergar as etapas vazias: sem ele `getSteps` as poda e a
+     checagem abaixo nunca via nenhuma — descoberto escrevendo o teste. */
+  const steps: QuizStep[] = getSteps(schema, { keepEmpty: true });
   const blocos = schema.blocks ?? [];
 
   if (steps.length === 0 || blocos.length === 0) {
@@ -47,12 +49,15 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
     });
   }
 
-  // Etapa vazia publicada vira tela em branco para o visitante.
+  /* Etapa vazia AVISA, não barra — e a mensagem diz a verdade. A primeira
+     versão afirmava que o visitante veria uma tela em branco; ele não vê:
+     `getSteps` poda as vazias ao renderizar. O problema real é outro, e é do
+     autor: ele criou uma tela e não preencheu. */
   const vazias = steps.filter((s) => s.blockIds.length === 0);
   if (vazias.length) {
     achados.push({
-      nivel: 'bloqueia',
-      mensagem: `${vazias.length} etapa(s) sem nenhum componente — o visitante veria uma tela em branco.`,
+      nivel: 'avisa',
+      mensagem: `${vazias.length} etapa(s) sem nenhum componente — elas são ignoradas no quiz publicado.`,
     });
   }
 

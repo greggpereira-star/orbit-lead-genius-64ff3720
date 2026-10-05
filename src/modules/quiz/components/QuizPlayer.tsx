@@ -357,7 +357,16 @@ function PlayerRunner({
   const voltarEtapa = () => {
     const anterior = historicoDeEtapas.current.pop();
     if (anterior === undefined) return;
-    setState((s) => ({ ...s, currentStepIndex: anterior }));
+    /* O que foi digitado nesta etapa e ainda não foi confirmado entra no estado
+       antes de sair: sem isso, quem preenchia um campo, voltava e avançava de
+       novo encontrava o campo em branco. A pessoa respondeu — não ter clicado
+       em "Continuar" não apaga o que ela escreveu. */
+    const rascunho = { ...draftResponses.current };
+    setState((s) => ({
+      ...s,
+      responses: { ...s.responses, ...rascunho },
+      currentStepIndex: anterior,
+    }));
   };
 
   const variantAssignments = useRef<Map<string, string>>(new Map());
