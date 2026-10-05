@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp } from '../types';
+import { MASCARAS, tamanhoDaMascara } from '../lib/fieldMask';
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from '../lib/blockStyle';
 import type { BlockStyle, TextStyle, TextSlot } from '../lib/blockStyle';
 import { getSteps } from '../lib/steps';
@@ -234,6 +235,34 @@ function BlockInspector({
           <Field label="Placeholder">
             <Input value={block.placeholder ?? ''} onChange={(e) => onChange({ placeholder: e.target.value })} />
           </Field>
+        )}
+
+        {/* Máscara não vale em texto longo nem em e-mail: nenhum dos dois tem
+            formato fixo, e uma máscara ali só atrapalharia a digitação. */}
+        {(block.type === 'short-text' || block.type === 'phone') && (
+          <>
+            <Field label="Máscara">
+              <select
+                value={block.fieldMask ?? 'livre'}
+                onChange={(e) => onChange({ fieldMask: e.target.value as NonNullable<QuizBlock['fieldMask']> })}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                {MASCARAS.map((m) => (
+                  <option key={m.valor} value={m.valor}>
+                    {m.rotulo}{m.exemplo ? ` — ${m.exemplo}` : ''}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Limite de caracteres">
+              <Input
+                type="number"
+                value={block.maxLength ?? ''}
+                placeholder={String(tamanhoDaMascara(block.fieldMask) ?? 'sem limite')}
+                onChange={(e) => onChange({ maxLength: e.target.value === '' ? undefined : Number(e.target.value) })}
+              />
+            </Field>
+          </>
         )}
 
         {(block.type === 'weight' || block.type === 'height') && (
@@ -511,9 +540,50 @@ function BlockInspector({
 
         {block.type === 'pricing' && (
           <>
-            <Field label="Preço">
-              <Input value={block.pricingPrice ?? ''} onChange={(e) => onChange({ pricingPrice: e.target.value })} placeholder="R$ 97" />
+            <Field label="Moeda">
+              <div className="grid grid-cols-4 gap-1.5">
+                {([
+                  { v: undefined, r: 'Texto' },
+                  { v: 'BRL', r: 'R$' },
+                  { v: 'USD', r: 'US$' },
+                  { v: 'EUR', r: '€' },
+                ] as const).map((o) => (
+                  <Button
+                    key={o.r}
+                    type="button"
+                    size="sm"
+                    variant={block.pricingCurrency === o.v ? 'default' : 'outline'}
+                    className="h-8 text-[11px]"
+                    onClick={() => onChange({ pricingCurrency: o.v })}
+                  >
+                    {o.r}
+                  </Button>
+                ))}
+              </div>
             </Field>
+            {block.pricingCurrency ? (
+              <>
+                <Field label="Valor">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={block.pricingAmount ?? ''}
+                    onChange={(e) => onChange({ pricingAmount: e.target.value === '' ? undefined : Number(e.target.value) })}
+                    placeholder="97"
+                  />
+                </Field>
+                <Field label="Prefixo">
+                  <Input value={block.pricingPrefix ?? ''} onChange={(e) => onChange({ pricingPrefix: e.target.value })} placeholder="a partir de" />
+                </Field>
+                <Field label="Sufixo">
+                  <Input value={block.pricingSuffix ?? ''} onChange={(e) => onChange({ pricingSuffix: e.target.value })} placeholder="à vista" />
+                </Field>
+              </>
+            ) : (
+              <Field label="Preço">
+                <Input value={block.pricingPrice ?? ''} onChange={(e) => onChange({ pricingPrice: e.target.value })} placeholder="R$ 97" />
+              </Field>
+            )}
             <Field label="Preço original (riscado)">
               <Input value={block.pricingOriginalPrice ?? ''} onChange={(e) => onChange({ pricingOriginalPrice: e.target.value })} placeholder="R$ 197" />
             </Field>
@@ -596,9 +666,114 @@ function BlockInspector({
         )}
 
         {block.type === 'chart' && (
-          <Field label="Dados do gráfico">
-            <ChartDataEditor items={block.chartData ?? []} onChange={(items) => onChange({ chartData: items })} />
-          </Field>
+          <>
+            <Field label="Tipo de gráfico">
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { v: 'bar', r: 'Barra' },
+                  { v: 'line', r: 'Linha' },
+                  { v: 'area', r: 'Área' },
+                  { v: 'pie', r: 'Pizza' },
+                  { v: 'radial', r: 'Radial' },
+                ] as const).map((o) => (
+                  <Button
+                    key={o.v}
+                    type="button"
+                    size="sm"
+                    variant={(block.chartType ?? 'bar') === o.v ? 'default' : 'outline'}
+                    className="h-8 text-[11px]"
+                    onClick={() => onChange({ chartType: o.v })}
+                  >
+                    {o.r}
+                  </Button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Dados do gráfico">
+              <ChartDataEditor items={block.chartData ?? []} onChange={(items) => onChange({ chartData: items })} />
+            </Field>
+            {/* Pizza e radial não têm eixo nem grade: oferecer os controles ali
+                deixaria o usuário mexendo em algo que não muda nada na tela. */}
+            {block.chartType !== 'pie' && block.chartType !== 'radial' && (
+              <>
+                <Toggle label="Mostrar eixo X" hint="Rótulos embaixo do gráfico" checked={block.chartShowX !== false} onChange={(v) => onChange({ chartShowX: v })} />
+                <Toggle label="Mostrar eixo Y" hint="Escala numérica à esquerda" checked={block.chartShowY !== false} onChange={(v) => onChange({ chartShowY: v })} />
+                <Toggle label="Mostrar grade" hint="Linhas de fundo para ler o valor" checked={block.chartShowGrid !== false} onChange={(v) => onChange({ chartShowGrid: v })} />
+              </>
+            )}
+            <Toggle label="Mostrar legenda" hint="Nome de cada série abaixo do gráfico" checked={block.chartShowLegend === true} onChange={(v) => onChange({ chartShowLegend: v })} />
+            <Field label="Altura (px)">
+              <Input
+                type="number"
+                value={block.chartHeight ?? 220}
+                onChange={(e) => onChange({ chartHeight: Number(e.target.value) || 220 })}
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'scheduling' && (
+          <>
+            <Toggle
+              label="Permitir intervalo"
+              hint="Data de início e fim, em vez de um dia só"
+              checked={block.schedulingAllowRange === true}
+              onChange={(v) => onChange({ schedulingAllowRange: v })}
+            />
+            <Toggle
+              label="Permitir seleção de horário"
+              hint="Além do dia, o lead escolhe a hora"
+              checked={block.schedulingAllowTime !== false}
+              onChange={(v) => onChange({ schedulingAllowTime: v })}
+            />
+            <Toggle
+              label="Bloquear datas passadas"
+              hint="Impede marcar um dia que já passou"
+              checked={block.schedulingBlockPast !== false}
+              onChange={(v) => onChange({ schedulingBlockPast: v })}
+            />
+            <Field label="Dias da semana atendidos">
+              <div className="grid grid-cols-7 gap-1">
+                {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((letra, dia) => {
+                  const atuais = block.schedulingWeekdays ?? [];
+                  const ativo = atuais.length === 0 || atuais.includes(dia);
+                  return (
+                    <Button
+                      key={dia}
+                      type="button"
+                      size="sm"
+                      variant={ativo ? 'default' : 'outline'}
+                      className="h-8 px-0 text-[11px]"
+                      onClick={() => {
+                        const base = atuais.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : atuais;
+                        const prox = base.includes(dia) ? base.filter((d) => d !== dia) : [...base, dia].sort();
+                        onChange({ schedulingWeekdays: prox });
+                      }}
+                    >
+                      {letra}
+                    </Button>
+                  );
+                })}
+              </div>
+            </Field>
+            {block.schedulingAllowTime !== false && (
+              <>
+                <Field label="Horário de início">
+                  <Input type="time" value={block.schedulingTimeStart ?? '09:00'} onChange={(e) => onChange({ schedulingTimeStart: e.target.value })} />
+                </Field>
+                <Field label="Horário de fim">
+                  <Input type="time" value={block.schedulingTimeEnd ?? '18:00'} onChange={(e) => onChange({ schedulingTimeEnd: e.target.value })} />
+                </Field>
+                <Field label="Intervalo entre horários (min)">
+                  <Input
+                    type="number"
+                    value={block.schedulingSlotMinutes ?? 30}
+                    onChange={(e) => onChange({ schedulingSlotMinutes: Number(e.target.value) || 30 })}
+                  />
+                </Field>
+              </>
+            )}
+          </>
         )}
 
         {block.type === 'custom' && (

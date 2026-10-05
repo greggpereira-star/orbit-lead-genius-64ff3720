@@ -79,7 +79,9 @@ export type BlockType =
   | 'custom'
   // Layout (Funilix parity)
   | 'container'
-  | 'spacer';
+  | 'spacer'
+  // Onda 4 (paridade inlead)
+  | 'scheduling';
 
 export interface BlockOption {
   id: string;
@@ -225,8 +227,37 @@ export interface QuizBlock {
   comparisonLeftItems?: string[];
   comparisonRightLabel?: string;
   comparisonRightItems?: string[];
-  chartType?: 'bar' | 'line';
+  chartType?: 'bar' | 'line' | 'area' | 'pie' | 'radial';
   chartData?: ChartPoint[];
+  /** Eixos e grade. Ausente = mostra, que é o comportamento de antes. */
+  chartShowX?: boolean;
+  chartShowY?: boolean;
+  chartShowGrid?: boolean;
+  chartShowLegend?: boolean;
+  chartHeight?: number;
+
+  // ---- Preço com moeda ----
+  /** Quando definido, o valor é formatado pela moeda em vez de sair como texto cru. */
+  pricingCurrency?: 'BRL' | 'USD' | 'EUR';
+  pricingAmount?: number;
+  pricingPrefix?: string;
+  pricingSuffix?: string;
+
+  // ---- Máscara de campo ----
+  /** Formata enquanto digita. `livre` é o comportamento de sempre. */
+  fieldMask?: 'livre' | 'telefone' | 'cpf' | 'cnpj' | 'cep' | 'data' | 'moeda' | 'numero';
+  maxLength?: number;
+
+  // ---- Agendamento ----
+  schedulingAllowRange?: boolean;
+  schedulingAllowTime?: boolean;
+  schedulingBlockPast?: boolean;
+  /** Dias da semana liberados (0 = domingo). Vazio = todos. */
+  schedulingWeekdays?: number[];
+  schedulingTimeStart?: string;
+  schedulingTimeEnd?: string;
+  /** Intervalo entre horários oferecidos, em minutos. */
+  schedulingSlotMinutes?: number;
   customHtml?: string;
   // Tela de resultado
   ctaUrl?: string; // link do botão final — sem isso, o botão de resultado não navega

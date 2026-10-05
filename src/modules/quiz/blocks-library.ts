@@ -4,7 +4,7 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
-  PhoneCall, SeparatorHorizontal,
+  PhoneCall, SeparatorHorizontal, CalendarClock,
 } from 'lucide-react';
 
 export type BlockCategory =
@@ -477,6 +477,28 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     create: () => ({
       type: 'custom',
       customHtml: '<div style="text-align:center;padding:24px"><h2>Conteúdo customizado</h2></div>',
+    }),
+  },
+  {
+    type: 'scheduling',
+    label: 'Agendamento',
+    description: 'Calendário com dia e horário — o lead marca dentro do quiz',
+    category: 'captura',
+    icon: CalendarClock,
+    create: () => ({
+      type: 'scheduling',
+      title: 'Escolha o melhor dia',
+      subtitle: 'A equipe confirma o horário pelo WhatsApp.',
+      ctaLabel: 'Confirmar',
+      required: true,
+      schedulingAllowTime: true,
+      schedulingBlockPast: true,
+      // Segunda a sexta: a maioria dos atendimentos não abre no fim de semana,
+      // e liberar tudo faz o lead escolher um dia que ninguém vai atender.
+      schedulingWeekdays: [1, 2, 3, 4, 5],
+      schedulingTimeStart: '09:00',
+      schedulingTimeEnd: '18:00',
+      schedulingSlotMinutes: 30,
     }),
   },
 ];

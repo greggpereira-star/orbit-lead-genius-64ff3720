@@ -8,10 +8,17 @@ import { getSteps } from '../lib/steps';
 import { getContrastText, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
+import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
+import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
+import {
+  ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
+  BarChart, Bar, LineChart, Line, AreaChart, Area,
+  PieChart, Pie, Cell, RadialBarChart, RadialBar,
+} from 'recharts';
 import { resolveBlockStyle, resolveTextStyle } from '../lib/blockStyle';
 import {
   createInitialState,
@@ -1419,6 +1426,11 @@ function BlockView({
       return !ff.email || formValue.email.trim().length > 0;
     }
     if (block.type === 'reveal') return revealed;
+    if (block.type === 'scheduling') {
+      const a = value as ValorAgendamento | undefined;
+      if (!block.required) return true;
+      return !!a?.data && (!block.schedulingAllowTime || !!a.hora);
+    }
     return true;
   }, [block, value, multi, formValue, revealed]);
 
@@ -1436,7 +1448,7 @@ function BlockView({
     if (
       block.type === 'single-choice' || block.type === 'rating' || block.type === 'short-text' ||
       block.type === 'long-text' || block.type === 'email' || block.type === 'phone' ||
-      block.type === 'weight' || block.type === 'height'
+      block.type === 'weight' || block.type === 'height' || block.type === 'scheduling'
     ) {
       return value;
     }
@@ -1655,7 +1667,13 @@ function BlockView({
             type={block.type === 'email' ? 'email' : block.type === 'phone' ? 'tel' : 'text'}
             placeholder={block.placeholder}
             value={String(value ?? '')}
-            onChange={(e) => setValue(e.target.value)}
+            maxLength={block.maxLength ?? tamanhoDaMascara(block.fieldMask)}
+            inputMode={
+              block.fieldMask && block.fieldMask !== 'livre' && block.fieldMask !== 'moeda'
+                ? 'numeric'
+                : undefined
+            }
+            onChange={(e) => setValue(aplicarMascara(e.target.value, block.fieldMask))}
             className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 mb-6 text-base"
             style={{
               borderRadius: design.radius,
@@ -2166,9 +2184,9 @@ function BlockView({
       return (
         <div className="text-center space-y-5">
           {(block.titleRich || title) && (<RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-semibold" style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })} />)}
-          {block.pricingPrice?.trim() && (
+          {formatarPreco(block).trim() && (
             <div className="flex items-end justify-center gap-2">
-              <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{block.pricingPrice}</span>
+              <span className="text-4xl font-bold" style={{ color: design.primary, fontFamily: design.fontHeading }}>{formatarPreco(block)}</span>
               {block.pricingPeriod && <span className="text-base opacity-70">{block.pricingPeriod}</span>}
             </div>
           )}
@@ -2336,26 +2354,41 @@ function BlockView({
         </div>
       );
 
-    case 'chart': {
-      const points = block.chartData ?? [];
-      const max = Math.max(1, ...points.map((p) => p.value));
+    case 'chart':
       return (
         <div>
           {heading}
-          <div className="flex items-end gap-6 h-44 mb-6">
-            {points.map((p) => (
-              <div key={p.id} className="flex-1 flex flex-col items-center justify-end gap-2 h-full">
-                <span className="text-sm font-semibold">{p.value}</span>
-                <div
-                  className="w-full rounded-t-md transition-all duration-700 motion-reduce:transition-none"
-                  style={{ height: `${(p.value / max) * 100}%`, background: design.primary }}
-                />
-                <span className="text-xs opacity-60">{p.label}</span>
-              </div>
-            ))}
-          </div>
+          <ChartBlock block={block} design={design} />
           <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'scheduling': {
+      const agenda = (value as ValorAgendamento | undefined) ?? {};
+      /* Só vale como respondido quando há dia — e, se o horário foi pedido,
+         também o horário. Sem isso o visitante avançaria com meia marcação. */
+      const completo = !!agenda.data && (!block.schedulingAllowTime || !!agenda.hora);
+      return (
+        <div>
+          {heading}
+          <div className="mb-6">
+            <SchedulingField
+              block={block}
+              design={design}
+              value={agenda}
+              onChange={(v) => setValue(v)}
+            />
+          </div>
+          <PrimaryBtn
+            design={design}
+            textStyle={btnText}
+            hidden={!terminal}
+            disabled={!completo || saving}
+            onClick={() => onSubmit(agenda)}
+          >
+            {block.ctaLabel || 'Confirmar'}
           </PrimaryBtn>
         </div>
       );
@@ -2428,6 +2461,105 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
           {resultBlock.ctaLabel}
         </PrimaryBtn>
       )}
+    </div>
+  );
+}
+
+/**
+ * Gráfico do bloco `chart`.
+ *
+ * Antes eram barras desenhadas com `div` e altura em porcentagem: só servia
+ * para barra, e nenhum eixo, grade ou legenda era possível. Agora passa pelo
+ * recharts, que já é dependência do painel.
+ */
+function ChartBlock({ block, design }: { block: QuizBlock; design: QuizDesign }) {
+  const pontos = (block.chartData ?? []).map((p) => ({ ...p, name: p.label }));
+  if (!pontos.length) {
+    return (
+      <div
+        className="mb-6 grid place-items-center rounded-xl border border-dashed py-10 text-xs opacity-60"
+        style={{ borderColor: withAlpha(design.text, 0.2) }}
+      >
+        Nenhum dado no gráfico
+      </div>
+    );
+  }
+
+  const altura = block.chartHeight ?? 220;
+  const eixoX = block.chartShowX !== false;
+  const eixoY = block.chartShowY !== false;
+  const grade = block.chartShowGrid !== false;
+  const legenda = block.chartShowLegend === true;
+  const cor = design.primary;
+  /* Fatias de pizza precisam de cores distintas. Em vez de uma paleta fixa que
+     brigaria com o tema, giram-se opacidades da cor do funil. */
+  const corDaFatia = (i: number) => withAlpha(cor, 1 - (i % 5) * 0.16);
+
+  const comum = (
+    <>
+      {grade && <CartesianGrid strokeDasharray="3 3" stroke={withAlpha(design.text, 0.12)} />}
+      {eixoX && <XAxis dataKey="name" tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} />}
+      {eixoY && <YAxis tick={{ fontSize: 11, fill: design.muted }} stroke={withAlpha(design.text, 0.2)} />}
+      <Tooltip
+        contentStyle={{
+          background: design.surface,
+          border: `1px solid ${withAlpha(design.text, 0.15)}`,
+          borderRadius: 10,
+          color: design.text,
+          fontSize: 12,
+        }}
+      />
+      {legenda && <Legend wrapperStyle={{ fontSize: 11 }} />}
+    </>
+  );
+
+  return (
+    <div className="mb-6" style={{ height: altura }}>
+      <ResponsiveContainer width="100%" height="100%">
+        {block.chartType === 'line' ? (
+          <LineChart data={pontos}>
+            {comum}
+            <Line type="monotone" dataKey="value" stroke={cor} strokeWidth={2.5} dot={{ r: 3 }} />
+          </LineChart>
+        ) : block.chartType === 'area' ? (
+          <AreaChart data={pontos}>
+            {comum}
+            <Area type="monotone" dataKey="value" stroke={cor} strokeWidth={2.5} fill={withAlpha(cor, 0.22)} />
+          </AreaChart>
+        ) : block.chartType === 'pie' ? (
+          <PieChart>
+            <Tooltip
+              contentStyle={{
+                background: design.surface,
+                border: `1px solid ${withAlpha(design.text, 0.15)}`,
+                borderRadius: 10,
+                color: design.text,
+                fontSize: 12,
+              }}
+            />
+            {legenda && <Legend wrapperStyle={{ fontSize: 11 }} />}
+            <Pie data={pontos} dataKey="value" nameKey="name" innerRadius="45%" outerRadius="80%" paddingAngle={2}>
+              {pontos.map((p, i) => (
+                <Cell key={p.id} fill={corDaFatia(i)} />
+              ))}
+            </Pie>
+          </PieChart>
+        ) : block.chartType === 'radial' ? (
+          <RadialBarChart data={pontos} innerRadius="30%" outerRadius="95%" startAngle={90} endAngle={-270}>
+            {legenda && <Legend wrapperStyle={{ fontSize: 11 }} />}
+            <RadialBar dataKey="value" cornerRadius={6}>
+              {pontos.map((p, i) => (
+                <Cell key={p.id} fill={corDaFatia(i)} />
+              ))}
+            </RadialBar>
+          </RadialBarChart>
+        ) : (
+          <BarChart data={pontos}>
+            {comum}
+            <Bar dataKey="value" fill={cor} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        )}
+      </ResponsiveContainer>
     </div>
   );
 }
