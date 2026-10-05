@@ -350,6 +350,26 @@ function PlayerRunner({
     });
   }, [visibleStepBlocks]);
 
+  /* Altura das barras fixas, medida no DOM.
+     Fora do fluxo elas não reservam espaço, e a primeira delas cobria o título
+     da pergunta — o conteúdo começava embaixo da barra. Medir é o único jeito
+     honesto: a altura depende do bloco que o usuário pôs ali, e um valor fixo
+     daria tanto sobra quanto sobreposição. */
+  const [alturaFixa, setAlturaFixa] = useState({ topo: 0, rodape: 0 });
+  const observarAltura = (onde: 'topo' | 'rodape') => (el: HTMLDivElement | null) => {
+    if (!el) {
+      setAlturaFixa((a) => (a[onde] === 0 ? a : { ...a, [onde]: 0 }));
+      return;
+    }
+    const medir = () => {
+      const h = el.getBoundingClientRect().height;
+      setAlturaFixa((a) => (Math.abs(a[onde] - h) < 1 ? a : { ...a, [onde]: h }));
+    };
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(el);
+  };
+
   /* Último bloco que de fato está no fluxo da etapa. É dele o botão que avança;
      um bloco fixo ou flutuante nunca deve assumir esse papel. */
   const ultimoNoFluxo = useMemo(() => {
@@ -654,7 +674,10 @@ function PlayerRunner({
             total={steps.length}
             design={design}
           />
-          <div className="mt-6 flex-1 flex flex-col gap-6">
+          <div
+            className="mt-6 flex-1 flex flex-col gap-6"
+            style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape }}
+          >
             {done ? (
               <ResultView schema={schema} state={state} />
             ) : (
@@ -694,7 +717,17 @@ function PlayerRunner({
                 return (
                   // Mesmo embrulho de estilo do canvas — um resolvedor só, para
                   // o que é ajustado no Builder ser o que o visitante vê.
-                  <div key={b.id} style={{ ...resolveBlockStyle(b), ...posicao }}>
+                  <div
+                    key={b.id}
+                    ref={
+                      b.posicao === 'topo-fixo'
+                        ? observarAltura('topo')
+                        : b.posicao === 'rodape-fixo'
+                          ? observarAltura('rodape')
+                          : undefined
+                    }
+                    style={{ ...resolveBlockStyle(b), ...posicao }}
+                  >
                   <BlockView
                     block={b}
                     design={design}
