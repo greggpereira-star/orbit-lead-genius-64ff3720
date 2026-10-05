@@ -41,3 +41,7 @@ dist-ssr
 # Se precisar de segredo na sua máquina, use .env.local — ignorado aqui.
 .env.local
 .env.*.local
+
+# Playwright
+/test-results/
+/playwright-report/
