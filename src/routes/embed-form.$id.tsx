@@ -38,9 +38,15 @@ function EmbedFormPage() {
     );
   }
 
+  /* No modal a altura é limitada pelo iframe: a página precisa ocupar
+     exatamente essa altura para a barra de ação ficar presa no rodapé e só os
+     campos rolarem. Embutido na página, a altura segue o conteúdo. */
+  const noModal =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('lf_modo') === 'modal';
+
   return (
-    <div className="bg-transparent p-0 overflow-hidden">
-      {/* Pass the ID directly as fallback if slug is not found in the renderer */}
+    <div className={noModal ? 'h-[100dvh] overflow-hidden bg-transparent' : 'bg-transparent p-0 overflow-hidden'}>
       <PublicFormRenderer slug={form.slug || id} />
     </div>
   );

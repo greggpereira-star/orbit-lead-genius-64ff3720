@@ -408,9 +408,11 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
     <div className="w-full h-full overflow-hidden flex flex-col">
       <form 
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full mx-auto p-0 animate-in fade-in duration-700 flex-1 overflow-y-auto" 
+        className="w-full mx-auto p-0 animate-in fade-in duration-700 flex-1 min-h-0 flex flex-col" 
         style={{ color: 'var(--foreground)' }}
       >
+        {/* Só esta parte rola; a barra de ação fica fora dela. */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         {isMultiStep && (
           /* `pr-12`: dentro do modal o botão de fechar fica no canto superior
@@ -525,15 +527,20 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 </span>
               </div>
 
-              {/* Barra de ação GRUDADA no rodapé.
-                  Numa etapa com vários campos — e principalmente com o bloco de
-                  consentimento —, os botões ficavam abaixo da dobra: a pessoa
-                  preenchia tudo e precisava descobrir que havia rolagem para
-                  achar o "Enviar". Agora eles acompanham a tela.
-                  O recuo negativo e o preenchimento devolvem a margem lateral do
-                  corpo, para a barra encostar nas bordas e o desfoque cobrir o
-                  conteúdo que passa por baixo. */}
-              <div className="sticky bottom-0 z-10 -mx-6 sm:-mx-8 -mb-8 mt-3 flex gap-3 border-t border-[var(--linha-sutil)] bg-background/95 px-6 sm:px-8 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+          </div>
+        </CardContent>
+      </Card>
+      </div>
+
+        {/* Barra de ação FORA da área que rola.
+            Tentei antes com `position: sticky` e NÃO funcionou — medido: numa
+            janela de 560px o topo da barra ficava em 624px. Sticky só segura um
+            elemento enquanto o contêiner dele ainda está em vista, e como a
+            barra era o ÚLTIMO filho não havia espaço nenhum para ela grudar.
+            O que funciona é tirá-la do que rola: a coluna é flex, os campos
+            ficam em `flex-1 overflow-y-auto` e a barra é irmã, com `shrink-0`.
+            Assim ela não depende de rolagem para estar visível. */}
+        <div className="shrink-0 flex gap-3 border-t border-[var(--linha-sutil)] bg-background px-6 sm:px-8 py-4">
               {isMultiStep && currentStep > 0 && (
                 <Button 
                   variant="outline"
@@ -566,9 +573,6 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 )}
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
       </form>
     </div>
   );

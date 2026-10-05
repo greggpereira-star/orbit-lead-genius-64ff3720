@@ -316,7 +316,13 @@
         'box-shadow:0 1px 3px rgba(0,0,0,.15)';
 
       var iframe = document.createElement('iframe');
-      iframe.src = this.buildUrl(formId);
+      /* `lf_modo=modal` avisa o formulário de que a altura é LIMITADA.
+         Sem isso ele cresce livre, o iframe é que rola, e a barra de ação
+         volta a ficar no fim do conteúdo em vez de presa no rodapé. No modo
+         embutido o parâmetro não vai, e a altura segue acompanhando o
+         conteúdo, que é o certo lá. */
+      var url = this.buildUrl(formId);
+      iframe.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'lf_modo=modal';
       iframe.setAttribute('data-leadflow-modal', 'true');
       iframe.setAttribute('scrolling', 'no');
       iframe.style.cssText = 'display:block;width:100%;height:' +
