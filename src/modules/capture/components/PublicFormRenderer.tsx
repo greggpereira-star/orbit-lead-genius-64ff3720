@@ -315,6 +315,13 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
   const pedirMarketing = Boolean(
     (form?.settings as Record<string, unknown> | undefined)?.lgpd_pedir_marketing,
   );
+  /* `description` continua valendo como alternativa: formulário criado antes
+     deste campo não pode perder o título que já mostrava. */
+  const tituloPublico =
+    ((form?.settings as Record<string, any> | undefined)?.titulo_publico as string | undefined)
+    || form?.description || '';
+  const subtituloPublico =
+    ((form?.settings as Record<string, any> | undefined)?.subtitulo_publico as string | undefined) || '';
 
   const onSubmit = async (values: any) => {
     /* A checagem também existe no servidor (`form_submit_publico` recusa com
@@ -534,11 +541,21 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                visível escreve na DESCRIÇÃO; sem descrição, o formulário entra
                direto nos campos, que é o que uma página já contextualizou
                espera. */
-            form.description ? (
+            /* Título VISÍVEL, separado do nome do formulário.
+               O nome é rótulo interno — foi ele que apareceu como banner no
+               site da Exata ("TESTE WORDPRESS - pode apagar"). Quem clicou num
+               botão dizendo que quer falar precisa de uma confirmação de que
+               chegou no lugar certo; sem isso cai direto nos campos. */
+            tituloPublico || subtituloPublico ? (
               <div className="text-center space-y-1">
-                <CardTitle className="text-[22px] font-semibold tracking-[-0.02em] text-foreground">
-                  {form.description}
-                </CardTitle>
+                {tituloPublico && (
+                  <CardTitle className="text-[22px] font-semibold tracking-[-0.02em] text-foreground">
+                    {tituloPublico}
+                  </CardTitle>
+                )}
+                {subtituloPublico && (
+                  <p className="text-sm text-muted-foreground">{subtituloPublico}</p>
+                )}
               </div>
             ) : null
           )}

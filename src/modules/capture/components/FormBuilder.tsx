@@ -963,6 +963,39 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                         placeholder="Ex: Contato do site" 
                       />
                     </div>
+                    {/* Título que o LEAD vê, separado do nome do formulário.
+                        Não havia campo nenhum para isto: o nome interno é que
+                        aparecia para o visitante, e no teste do site da Exata
+                        saiu "TESTE WORDPRESS - pode apagar" na tela de quem ia
+                        preencher. */}
+                    <div className="space-y-2">
+                      <Label className="text-xs">Título visível para quem preenche</Label>
+                      <Input
+                        value={(formConfig.settings as any)?.titulo_publico ?? ''}
+                        placeholder="Ex: Fale com um especialista"
+                        onChange={(e) => setFormConfig(prev => ({
+                          ...prev,
+                          settings: { ...(prev.settings as any), titulo_publico: e.target.value },
+                        }))}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Vazio, o formulário começa direto nos campos. O nome acima é só
+                        para você encontrar o formulário nesta lista.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Linha de apoio (opcional)</Label>
+                      <Input
+                        value={(formConfig.settings as any)?.subtitulo_publico ?? ''}
+                        placeholder="Ex: Respondemos em até 1 dia útil"
+                        onChange={(e) => setFormConfig(prev => ({
+                          ...prev,
+                          settings: { ...(prev.settings as any), subtitulo_publico: e.target.value },
+                        }))}
+                      />
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-xs">Slug</Label>
                       <Input 
