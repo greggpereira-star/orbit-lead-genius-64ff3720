@@ -172,6 +172,51 @@ reconstruí-lo seria inventar um caminho que o visitante pode não ter percorrid
 nesta etapa" aparece ao expandir a etapa, e o selo de visitantes por etapa
 atualiza (6👤, 4👤, 3👤, 2👤).
 
+## 2c. Os recursos do inlead — entregues em 05/10
+
+Dos 17 listados, um era **falso achado** (`Auto-organizar` já existia como
+"Organizar layout"). Dos 16 restantes, 15 entregues e 1 travado.
+
+| Recurso | Situação |
+|---|---|
+| `Herdar do tema` por bloco | ✅ `f0e7b7c` |
+| Design por etapa (`step.design`) | ✅ `f0e7b7c` |
+| `Cores do documento` | ✅ `f0e7b7c` |
+| `Taxa de rejeição` | ✅ `c6fba2c` |
+| `Tempo médio` | ✅ `c6fba2c` |
+| `Média de etapas concluídas` | ✅ `c6fba2c` |
+| `Profundidade média` | ✅ `c6fba2c` |
+| **`Melhor horário`** | ✅ `c6fba2c` |
+| **`Melhor origem`** | ✅ `c6fba2c` |
+| `Exportar leads` completo | ✅ `c738fb1` — sem o "link de validade", ver abaixo |
+| `Resetar dados` | ✅ `c738fb1` |
+| Rodapé "Criado via" com UTM | ✅ `c738fb1` — **desligado por padrão** |
+| Aba **Resultados** própria | ✅ `1f7c480` |
+| Aba **Respostas** separada | ✅ `1f7c480` |
+| Script `onClick` por bloco | ✅ `1f7c480` |
+| Camada de IA | ⛔ sem chave no servidor |
+
+### Dois desvios conscientes
+
+**Link de validade na exportação.** No inlead o arquivo vai por e-mail e o link
+precisa expirar. Aqui o download é imediato: um link que expira sem existir seria
+teatro. O que foi entregue é a substância — a exportação deixou de sair truncada
+em 100 linhas, em silêncio, e passou a trazer as UTMs.
+
+**Rodapé "Criado via".** Entregue, mas **desligado por padrão**. O funil é visto
+pelo cliente do nosso cliente; carimbar nossa marca na página dele sem ele pedir
+é decisão dele, não nossa. Liga em Configurações → SEO.
+
+### O que ficou de fora, e por quê
+
+| Recurso | Motivo |
+|---|---|
+| **Painel de camadas** | O posicionamento fora do fluxo foi entregue na Onda 7; o painel em si é interface de canvas livre, que decidimos não perseguir |
+| `Encaixe` (snap) | Depende do canvas livre acima |
+| Itens de paleta (Grade, Cards, Sumário, Indicador, Seta, Emoji, Marca/Logo, Redes sociais) | São 8 componentes de conteúdo. Não entraram neste lote — é trabalho de catálogo, não de arquitetura |
+| Biblioteca pública de modelos | Os `STEP_TEMPLATES` existem; falta a galeria |
+| Passo a passo guiado no primeiro uso | Não entrou |
+
 ## 3. Sim, ainda há falhas conhecidas
 
 Da auditoria de 05/10, confirmadas ainda presentes no código:
