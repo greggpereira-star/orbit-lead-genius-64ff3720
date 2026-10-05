@@ -515,6 +515,16 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                 </div>
               )}
 
+              {/* A assinatura fica ANTES da barra, dentro do que rola: depois
+                  dela sobrava um vão esquisito embaixo do rodapé fixo, e a
+                  barra parecia um divisor no meio do cartão em vez do fim
+                  dele. */}
+              <div className="pt-1 text-center">
+                <span className="text-[11px] text-muted-foreground/70">
+                  Formulário por <span className="font-medium text-foreground/60">LeadFlow</span>
+                </span>
+              </div>
+
               {/* Barra de ação GRUDADA no rodapé.
                   Numa etapa com vários campos — e principalmente com o bloco de
                   consentimento —, os botões ficavam abaixo da dobra: a pessoa
@@ -523,7 +533,7 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
                   O recuo negativo e o preenchimento devolvem a margem lateral do
                   corpo, para a barra encostar nas bordas e o desfoque cobrir o
                   conteúdo que passa por baixo. */}
-              <div className="sticky bottom-0 z-10 -mx-6 sm:-mx-8 mt-2 flex gap-3 border-t border-[var(--linha-sutil)] bg-background/95 px-6 sm:px-8 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div className="sticky bottom-0 z-10 -mx-6 sm:-mx-8 -mb-8 mt-3 flex gap-3 border-t border-[var(--linha-sutil)] bg-background/95 px-6 sm:px-8 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/85">
               {isMultiStep && currentStep > 0 && (
                 <Button 
                   variant="outline"
@@ -560,10 +570,6 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         </CardContent>
       </Card>
       </form>
-      
-      <div className="mt-4 flex justify-center items-center gap-2 opacity-40 hover:opacity-100 transition-opacity pb-4 shrink-0">
-        <span className="text-[11px] text-muted-foreground">Formulário por <span className="font-medium text-foreground/70">LeadFlow</span></span>
-      </div>
     </div>
   );
 }
