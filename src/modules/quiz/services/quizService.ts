@@ -787,6 +787,21 @@ export const quizService = {
     return (data as { block_id: string | null; session_id: string | null }[] | null) ?? [];
   },
 
+  /** Eventos e submissões crus para as métricas avançadas da Performance. */
+  async getDadosAvancados(quizId: string, days = 30) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const [{ data: eventos }, { data: submissoes }] = await Promise.all([
+      supabase.from('quiz_events').select('event_type, block_id, session_id, created_at')
+        .eq('quiz_id', quizId).gte('created_at', since).limit(50000),
+      supabase.from('quiz_submissions').select('created_at, status, tracking')
+        .eq('quiz_id', quizId).gte('created_at', since).limit(5000),
+    ]);
+    return {
+      eventos: (eventos ?? []) as unknown as import('../lib/metricasAvancadas').EventoBruto[],
+      submissoes: (submissoes ?? []) as unknown as import('../lib/metricasAvancadas').SubmissaoBruta[],
+    };
+  },
+
   // ============ ANALYTICS ============
   async getMetrics(quizId: string, days = 30): Promise<{
     starts: number;

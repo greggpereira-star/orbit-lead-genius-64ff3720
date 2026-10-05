@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { quizService } from '@/modules/quiz/services/quizService';
 import { getSteps } from '@/modules/quiz/lib/steps';
 import { calcularConversaoPorEtapa, CORES_DE_FAIXA, MINIMO_PARA_NOTA } from '@/modules/quiz/lib/stepConversion';
+import { calcularMetricasAvancadas, MINIMO_DE_SESSOES } from '@/modules/quiz/lib/metricasAvancadas';
+import type { EventoBruto, SubmissaoBruta } from '@/modules/quiz/lib/metricasAvancadas';
 import type { QuizStep } from '@/modules/quiz/types';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
@@ -44,6 +46,7 @@ function QuizPerformancePage() {
   const [promotingId, setPromotingId] = useState<string | null>(null);
   const [steps, setSteps] = useState<QuizStep[]>([]);
   const [eventosDeEtapa, setEventosDeEtapa] = useState<{ block_id: string | null; session_id: string | null }[]>([]);
+  const [avancados, setAvancados] = useState<{ eventos: EventoBruto[]; submissoes: SubmissaoBruta[] }>({ eventos: [], submissoes: [] });
 
   const refreshAbTests = () => {
     quizService.getAbTestStats(id, days).then(setAbTests).catch(() => {});
@@ -67,11 +70,16 @@ function QuizPerformancePage() {
     fetchData(true);
     /* A nota por etapa precisa do esquema (quais blocos formam cada etapa) e
        dos eventos com sessão — nenhum dos dois vem de `getMetrics`. */
-    Promise.all([quizService.getLatestSchema(id), quizService.getStepViewEvents(id, days)])
-      .then(([sch, ev]) => {
+    Promise.all([
+      quizService.getLatestSchema(id),
+      quizService.getStepViewEvents(id, days),
+      quizService.getDadosAvancados(id, days),
+    ])
+      .then(([sch, ev, av]) => {
         if (cancelled) return;
         setSteps(getSteps(sch));
         setEventosDeEtapa(ev);
+        setAvancados(av);
       })
       .catch(() => {});
     const interval = window.setInterval(() => fetchData(false), 30_000);
@@ -203,6 +211,10 @@ function QuizPerformancePage() {
               <div className="text-xs text-muted-foreground mt-2">
                 Score médio: <span className="font-semibold text-foreground">{metrics.avgScore.toFixed(1)}</span>
               </div>
+            </Card>
+
+            <Card className="p-6 md:col-span-2">
+              <MetricasAvancadas steps={steps} eventos={avancados.eventos} submissoes={avancados.submissoes} />
             </Card>
 
             <Card className="p-6">
@@ -518,5 +530,78 @@ function ConversaoPorEtapa({
         );
       })}
     </div>
+  );
+}
+
+/** Formata segundos como "2 min 30 s", que se lê melhor que "150 s". */
+function duracao(seg: number): string {
+  const m = Math.floor(seg / 60);
+  const s = Math.round(seg % 60);
+  return m > 0 ? `${m} min${s ? ` ${s} s` : ''}` : `${s} s`;
+}
+
+/**
+ * As seis métricas que o painel do inlead mostra e o nosso não tinha.
+ *
+ * `Melhor horário` e `Melhor origem` são as que mais valem: entregam a resposta
+ * de negócio pronta, em vez de deixar a pessoa deduzir de uma tabela.
+ */
+function MetricasAvancadas({
+  steps,
+  eventos,
+  submissoes,
+}: {
+  steps: QuizStep[];
+  eventos: EventoBruto[];
+  submissoes: SubmissaoBruta[];
+}) {
+  const m = calcularMetricasAvancadas(steps, eventos, submissoes);
+
+  if (m.taxaDeRejeicao === null) {
+    return (
+      <>
+        <h3 className="mb-1 font-semibold">Desempenho</h3>
+        <p className="text-sm text-muted-foreground">
+          {m.sessoes} sessão(ões) com medição — são precisas {MINIMO_DE_SESSOES} para estes números
+          dizerem alguma coisa. Abaixo disso, qualquer recorte é anedota.
+        </p>
+      </>
+    );
+  }
+
+  const celula = (rotulo: string, valor: string, dica?: string) => (
+    <div className="rounded-lg bg-muted/40 px-3 py-2.5" title={dica}>
+      <div className="text-lg font-bold tabular-nums">{valor}</div>
+      <div className="text-[11px] text-muted-foreground">{rotulo}</div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="mb-1 flex items-baseline justify-between">
+        <h3 className="font-semibold">Desempenho</h3>
+        <span className="text-[11px] text-muted-foreground">{m.sessoes} sessões</span>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Contado por visitante. Tempo e profundidade usam mediana — uma aba esquecida
+        aberta por horas destruiria a média.
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {celula('Taxa de rejeição', `${Math.round(m.taxaDeRejeicao * 100)}%`, 'Viram uma etapa só e foram embora')}
+        {celula('Tempo médio', m.tempoMedioSegundos !== null ? duracao(m.tempoMedioSegundos) : '—')}
+        {celula('Etapas concluídas', m.mediaDeEtapas !== null ? String(m.mediaDeEtapas) : '—')}
+        {celula('Profundidade', m.profundidadeMedia !== null ? `${Math.round(m.profundidadeMedia * 100)}%` : '—', 'Até que ponto do funil se chega')}
+        {celula(
+          'Melhor horário',
+          m.melhorHorario ? `${String(m.melhorHorario.hora).padStart(2, '0')}h` : '—',
+          m.melhorHorario ? `${m.melhorHorario.conclusoes} conclusão(ões) nessa hora` : undefined,
+        )}
+        {celula(
+          'Melhor origem',
+          m.melhorOrigem?.origem ?? '—',
+          m.melhorOrigem ? `${Math.round(m.melhorOrigem.taxa * 100)}% de conclusão — escolhida por TAXA, não por volume` : undefined,
+        )}
+      </div>
+    </>
   );
 }
