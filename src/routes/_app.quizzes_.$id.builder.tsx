@@ -3,35 +3,44 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertCircle,
   ArrowLeft,
-  Save,
-  Eye,
-  Loader2,
-  Smartphone,
-  Tablet,
-  Monitor,
-  Palette,
-  Plus,
-  GripVertical,
-  Trash2,
-  Copy,
-  ShieldCheck,
-  LayoutGrid,
-  SlidersHorizontal,
-  Settings,
-  Users,
-  Workflow,
-  Rocket,
-  UploadCloud,
   ChevronDown,
   ChevronRight,
-  AlertCircle,
-  Sparkles,
-  Trophy,
   ClipboardList,
+  Copy,
+  Eye,
+  GripVertical,
   HelpCircle,
+  LayoutGrid,
+  Loader2,
+  Monitor,
+  MoreHorizontal,
+  Palette,
+  Plus,
+  Rocket,
+  Save,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  Smartphone,
+  Sparkles,
+  Tablet,
+  Trash2,
+  Trophy,
+  UploadCloud,
+  Users,
+  Workflow,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/core/auth/hooks/useAuth";
@@ -937,7 +946,7 @@ function QuizBuilderPage() {
               <span className="text-base leading-none mt-0.5">{t.emoji}</span>
               <span className="min-w-0">
                 <span className="block text-xs font-semibold leading-tight">{t.name}</span>
-                <span className="block text-[10px] text-muted-foreground leading-tight mt-0.5">
+                <span className="block text-[11px] text-muted-foreground leading-tight mt-0.5">
                   {t.description}
                 </span>
               </span>
@@ -1127,7 +1136,7 @@ function QuizBuilderPage() {
                             <div className="truncate text-xs font-semibold">
                               {step.name || `Etapa ${stepIdx + 1}`}
                             </div>
-                            <div className="truncate text-[10px] text-muted-foreground">
+                            <div className="truncate text-[11px] text-muted-foreground">
                               {stepBlocks.length === 0
                                 ? "Vazia — escolha um bloco"
                                 : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ""}`}
@@ -1165,7 +1174,7 @@ function QuizBuilderPage() {
                         </div>
                         {expanded && (
                           <label
-                            className="mb-1 ml-6 flex w-fit cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                            className="mb-1 ml-6 flex w-fit cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
@@ -1207,7 +1216,7 @@ function QuizBuilderPage() {
                                 {...moduleProvided.droppableProps}
                               >
                                 {stepBlocks.length === 0 && (
-                                  <p className="rounded-lg border border-dashed px-2 py-4 text-center text-[10px] text-muted-foreground">
+                                  <p className="rounded-lg border border-dashed px-2 py-4 text-center text-[11px] text-muted-foreground">
                                     {isTarget
                                       ? "Clique num bloco da paleta — ele entra aqui."
                                       : "Etapa vazia. Selecione-a para adicionar componentes."}
@@ -1259,7 +1268,7 @@ function QuizBuilderPage() {
                                             <div className="text-xs font-medium truncate">
                                               {b.title || b.resultTitle || def?.label || b.type}
                                             </div>
-                                            <div className="text-[10px] text-muted-foreground truncate">
+                                            <div className="text-[11px] text-muted-foreground truncate">
                                               {def?.label ?? b.type}
                                             </div>
                                           </div>
@@ -1308,205 +1317,38 @@ function QuizBuilderPage() {
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="fixed inset-0 flex flex-col bg-background z-40">
         {/* Topbar */}
-        <header className="h-14 border-b flex items-center justify-between gap-2 px-2 sm:px-4 shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-            <Button asChild variant="ghost" size="sm" className="shrink-0 px-2 sm:px-3">
-              <Link to="/quizzes">
-                <ArrowLeft className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Voltar</span>
+        {/* Barra do construtor.
+         *
+         * A versão anterior enfileirava 18 controles com o MESMO peso visual —
+         * navegação, ajuste, estado e ação, todos `outline` lado a lado. Medido
+         * no navegador em 05/10: ela pedia 1907px numa janela de 1728, com
+         * `flex-wrap: nowrap` e sem rolagem. `Publicado` ficava inteiramente
+         * fora da tela e `Publicar alterações` cortado ao meio — não dava para
+         * publicar. No canto esquerdo os ícones de dispositivo colidiam com o
+         * botão Voltar e com o título.
+         *
+         * Agora o agrupamento é por natureza, não por ordem de chegada:
+         * contexto à esquerda, pré-visualização no meio, e à direita um menu
+         * `Ver` para os destinos, um `⋯` para o que se mexe uma vez, e só então
+         * as duas ações. O acento fica em UM lugar — Publicar —, como manda o
+         * DESIGN.md: "o acento marca a coisa mais importante da tela e some no
+         * resto".
+         */}
+        <header className="h-14 border-b flex items-center gap-2 px-2 sm:px-4 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+            <Button asChild variant="ghost" size="sm" className="shrink-0 px-2">
+              <Link to="/quizzes" aria-label="Voltar para a lista de quizzes">
+                <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div className="border-l pl-2 sm:pl-3 min-w-0">
-              <h1 className="font-bold text-sm leading-none truncate max-w-[100px] min-[420px]:max-w-[160px] sm:max-w-[280px]">
-                {quiz?.name ?? "Quiz"}
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">Builder</p>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center gap-1 border rounded-lg p-0.5 shrink-0">
-            <Button
-              size="sm"
-              variant={device === "mobile" ? "secondary" : "ghost"}
-              onClick={() => setDevice("mobile")}
-              aria-label="Visualizar em celular"
-              aria-pressed={device === "mobile"}
-            >
-              <Smartphone className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={device === "tablet" ? "secondary" : "ghost"}
-              onClick={() => setDevice("tablet")}
-              aria-label="Visualizar em tablet"
-              aria-pressed={device === "tablet"}
-            >
-              <Tablet className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant={device === "desktop" ? "secondary" : "ghost"}
-              onClick={() => setDevice("desktop")}
-              aria-label="Visualizar em desktop"
-              aria-pressed={device === "desktop"}
-            >
-              <Monitor className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              className="lg:hidden px-2"
-              onClick={() => setMobilePanel("blocks")}
-              aria-label="Blocos"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="lg:hidden px-2"
-              onClick={() => setMobilePanel("inspector")}
-              aria-label="Editar / Design"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-            </Button>
-            {/* Reabre o passo a passo. Sem isto, quem pula na primeira visita
-                não tem como rever — o estado fica em localStorage e é só ida. */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={tutorial.reabrir}
-              className="hidden px-2 lg:inline-flex"
-              aria-label="Rever o tutorial do construtor"
-              title="Rever o tutorial"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSettingsOpen(true)}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <Settings className="h-4 w-4" />{" "}
-              <span className="hidden sm:inline">Configurações</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/design", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-              data-tutorial="design"
-            >
-              <Palette className="h-4 w-4" /> <span className="hidden sm:inline">Design</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/results", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Resultados</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/responses", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <ClipboardList className="h-4 w-4" />{" "}
-              <span className="hidden sm:inline">Respostas</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/insights", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <Sparkles className="h-4 w-4" /> <span className="hidden sm:inline">Análise</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/flow", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <Workflow className="h-4 w-4" /> <span className="hidden sm:inline">Fluxo</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/leads", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <Users className="h-4 w-4" /> <span className="hidden sm:inline">Leads</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAccessRulesOpen(true)}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <ShieldCheck className="h-4 w-4" />{" "}
-              <span className="hidden sm:inline">Regras de acesso</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: "/quizzes/$id/preview", params: { id } })}
-              className="gap-2 px-2 sm:px-3"
-            >
-              <Eye className="h-4 w-4" /> <span className="hidden sm:inline">Preview</span>
-            </Button>
-            <div className="hidden lg:flex items-center gap-1.5 border rounded-lg px-2 py-1 shrink-0">
-              <Switch
-                id="autosave"
-                checked={autosave}
-                onCheckedChange={setAutosave}
-                className="scale-90"
-              />
-              <label
-                htmlFor="autosave"
-                className="text-xs font-medium text-muted-foreground cursor-pointer whitespace-nowrap"
-              >
-                Salvamento automático
-              </label>
-            </div>
-            {saveError ? (
-              <button
-                onClick={() => handleSave()}
-                className="flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive shrink-0 hover:bg-destructive/20 transition-colors"
-                title="Falha ao salvar — clique para tentar de novo"
-              >
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span className="hidden min-[420px]:inline">Erro — tentar de novo</span>
-              </button>
-            ) : (
-              <div
-                className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium shrink-0 ${
-                  saving
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : dirty
-                      ? "border-[var(--aviso-borda)] bg-[var(--aviso-suave)] text-[var(--aviso)]"
-                      : "border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] text-[var(--sucesso)]"
-                }`}
-                aria-live="polite"
-              >
-                {saving ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${dirty ? "bg-[var(--aviso)] animate-pulse" : "bg-[var(--sucesso)]"}`}
-                  />
-                )}
-                {/* "Salvo" sozinho virou meia verdade num quiz publicado: o
-                  rascunho está salvo, mas o visitante continua vendo a versão
-                  antiga. O indicador precisa dizer as duas coisas. */}
-                <span className="hidden min-[420px]:inline">
-                  {saving
+            <div className="min-w-0 border-l pl-2 sm:pl-3">
+              <h1 className="truncate text-sm font-bold leading-none">{quiz?.name ?? "Quiz"}</h1>
+              {/* O subtítulo era a palavra "Builder" — informação que a pessoa
+                  já tem, ocupando a linha onde cabe o que ela não tem. */}
+              <p className="mt-0.5 truncate text-[11px] leading-none text-muted-foreground">
+                {saveError
+                  ? "Erro ao salvar"
+                  : saving
                     ? "Salvando…"
                     : dirty
                       ? "Não salvo"
@@ -1515,54 +1357,198 @@ function QuizBuilderPage() {
                         : lastSavedAt
                           ? `Salvo ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
                           : "Salvo"}
-                </span>
-              </div>
+              </p>
+            </div>
+            {saveError && (
+              <button
+                onClick={() => handleSave()}
+                className="shrink-0 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] font-semibold text-destructive transition-colors hover:bg-destructive/20"
+                title="Falha ao salvar — clique para tentar de novo"
+              >
+                <AlertCircle className="h-3.5 w-3.5" />
+              </button>
             )}
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-1 rounded-lg border p-0.5 md:flex">
+            {(
+              [
+                ["mobile", Smartphone, "celular"],
+                ["tablet", Tablet, "tablet"],
+                ["desktop", Monitor, "desktop"],
+              ] as const
+            ).map(([valor, Icone, rotulo]) => (
+              <Button
+                key={valor}
+                size="sm"
+                variant={device === valor ? "secondary" : "ghost"}
+                onClick={() => setDevice(valor)}
+                aria-label={`Visualizar em ${rotulo}`}
+                aria-pressed={device === valor}
+                className="px-2"
+              >
+                <Icone className="h-4 w-4" />
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex flex-1 items-center justify-end gap-1 sm:gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2 lg:hidden"
+              onClick={() => setMobilePanel("blocks")}
+              aria-label="Blocos"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2 lg:hidden"
+              onClick={() => setMobilePanel("inspector")}
+              aria-label="Editar / Design"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+
+            {/* Os cinco destinos que antes eram cinco botões. Nenhum deles é
+                usado enquanto se monta a tela: são para DEPOIS, quando o quiz
+                já está no ar. Não competem com Publicar. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 px-2 sm:px-3">
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ver</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>Acompanhar</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/insights", params: { id } })}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" /> Análise
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/responses", params: { id } })}
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" /> Respostas
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/leads", params: { id } })}
+                >
+                  <Users className="mr-2 h-4 w-4" /> Leads
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Montar</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/flow", params: { id } })}
+                >
+                  <Workflow className="mr-2 h-4 w-4" /> Fluxo
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/results", params: { id } })}
+                >
+                  <Trophy className="mr-2 h-4 w-4" /> Resultados
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/preview", params: { id } })}
+                >
+                  <Eye className="mr-2 h-4 w-4" /> Abrir pré-visualização
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Design continua visível: é trabalho de montagem, não de depois. */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/quizzes/$id/design", params: { id } })}
+              className="gap-1.5 px-2 sm:px-3"
+              data-tutorial="design"
+            >
+              <Palette className="h-4 w-4" />
+              <span className="hidden lg:inline">Design</span>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="px-2" aria-label="Mais opções do quiz">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                  <Settings className="mr-2 h-4 w-4" /> Configurações
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAccessRulesOpen(true)}>
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Regras de acesso
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={autosave} onCheckedChange={setAutosave}>
+                  Salvamento automático
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={tutorial.reabrir}>
+                  <HelpCircle className="mr-2 h-4 w-4" /> Rever o tutorial
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               size="sm"
               onClick={() => handleSave()}
               disabled={saving || !dirty}
-              variant="outline"
-              className="gap-2 px-2 sm:px-3"
+              variant="ghost"
+              className="gap-1.5 px-2 sm:px-3"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               <span className="hidden sm:inline">Salvar</span>
             </Button>
-            {/* Publicar alterações só aparece quando há o que publicar. Enquanto
-              o rascunho é igual ao que está no ar, este botão seria ruído — e
-              pior, sugeriria que algo está pendente quando não está. */}
-            {hasUnpublishedChanges && (
+
+            {/* A ÚNICA coisa com acento na barra. Quando há rascunho fora do ar,
+                publicar as mudanças é a ação; senão, é pôr o quiz no ar. Dois
+                botões cheios lado a lado seria disputar a mesma atenção. */}
+            {hasUnpublishedChanges ? (
               <Button
                 size="sm"
                 onClick={handlePublishChanges}
                 disabled={publishing || saving}
-                className="gap-2 px-2 shadow-lg shadow-primary/20 sm:px-3"
+                className="gap-1.5 px-2.5 shadow-sm sm:px-3"
+                data-tutorial="publicar"
               >
                 {publishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <UploadCloud className="h-4 w-4" />
                 )}
-                <span className="hidden sm:inline">Publicar alterações</span>
+                <span className="hidden sm:inline">Publicar</span>
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleTogglePublish}
+                disabled={publishing}
+                variant={quiz?.status === "published" ? "outline" : "default"}
+                className={`gap-1.5 px-2.5 sm:px-3 ${
+                  quiz?.status === "published"
+                    ? "border-[var(--sucesso-borda)] text-[var(--sucesso)]"
+                    : "shadow-sm"
+                }`}
+                data-tutorial="publicar"
+              >
+                {publishing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Rocket className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {quiz?.status === "published" ? "No ar" : "Publicar"}
+                </span>
               </Button>
             )}
-            <Button
-              size="sm"
-              onClick={handleTogglePublish}
-              disabled={publishing}
-              variant={quiz?.status === "published" ? "outline" : "default"}
-              className={`gap-2 px-2 sm:px-3 ${quiz?.status === "published" ? "border-[var(--sucesso-borda)] text-[var(--sucesso)]" : "shadow-lg shadow-primary/20"}`}
-              data-tutorial="publicar"
-            >
-              {publishing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Rocket className="h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">
-                {quiz?.status === "published" ? "Publicado" : "Publicar"}
-              </span>
-            </Button>
           </div>
         </header>
 
@@ -1695,7 +1681,7 @@ function SeloDeConversao({ dados }: { dados?: ConversaoDaEtapa }) {
   if (dados.taxa === null) {
     return (
       <span
-        className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-muted-foreground"
+        className="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground"
         title={
           dados.visitantes < MINIMO_PARA_NOTA
             ? `${dados.visitantes} visitante(s) — precisa de ${MINIMO_PARA_NOTA} para uma taxa confiável`
@@ -1710,7 +1696,7 @@ function SeloDeConversao({ dados }: { dados?: ConversaoDaEtapa }) {
   const { cor, rotulo } = CORES_DE_FAIXA[dados.faixa];
   return (
     <span
-      className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums"
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums"
       style={{ background: `${cor}22`, color: cor }}
       title={`${rotulo} — ${dados.avancaram} de ${dados.visitantes} visitantes avançaram (30 dias)`}
     >
@@ -1740,7 +1726,7 @@ function DesignDaEtapa({
 
   const cor = (rotulo: string, chave: "background" | "surface" | "primary" | "text") => (
     <div className="flex items-center gap-1.5">
-      <span className="w-16 shrink-0 text-[10px] text-muted-foreground">{rotulo}</span>
+      <span className="w-16 shrink-0 text-[11px] text-muted-foreground">{rotulo}</span>
       <input
         type="color"
         value={(step.design?.[chave] as string) ?? (design[chave] as string) ?? "#000000"}
@@ -1750,7 +1736,7 @@ function DesignDaEtapa({
       {step.design?.[chave] && (
         <button
           onClick={() => onChange({ [chave]: undefined })}
-          className="text-[10px] text-muted-foreground hover:text-foreground"
+          className="text-[11px] text-muted-foreground hover:text-foreground"
         >
           herdar
         </button>
@@ -1762,12 +1748,12 @@ function DesignDaEtapa({
     <div className="ml-6 mb-1" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={() => setAberto((v) => !v)}
-        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
       >
         <Palette className="h-3 w-3" />
         Design desta etapa
         {proprio && (
-          <span className="rounded-full bg-primary/15 px-1 text-[9px] text-primary">próprio</span>
+          <span className="rounded-full bg-primary/15 px-1 text-[11px] text-primary">próprio</span>
         )}
       </button>
       {aberto && (
@@ -1786,7 +1772,7 @@ function DesignDaEtapa({
                   text: undefined,
                 })
               }
-              className="mt-1 w-full rounded border py-1 text-[10px] text-muted-foreground hover:text-foreground"
+              className="mt-1 w-full rounded border py-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
               Herdar tudo do tema
             </button>
