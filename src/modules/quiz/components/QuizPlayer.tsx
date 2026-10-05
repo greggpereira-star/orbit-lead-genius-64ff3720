@@ -25,7 +25,7 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
-import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
 
@@ -292,6 +292,23 @@ function PlayerRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentStepIndex, done, visibleStepBlocks.length]);
 
+  /**
+   * Volta para a etapa anterior que este visitante realmente viu.
+   *
+   * Não é `currentStepIndex - 1`: com salto condicional e etapa oculta, a
+   * anterior na lista pode ser uma tela que ele nunca viu — voltar para ela
+   * mostraria pergunta fora de contexto, ou cairia de novo no pulo automático
+   * e devolveria a pessoa para onde ela estava, parecendo que o botão não
+   * funciona. O histórico guarda o caminho de verdade.
+   */
+  const historicoDeEtapas = useRef<number[]>([]);
+  const podeVoltar = historicoDeEtapas.current.length > 0 && !done;
+  const voltarEtapa = () => {
+    const anterior = historicoDeEtapas.current.pop();
+    if (anterior === undefined) return;
+    setState((s) => ({ ...s, currentStepIndex: anterior }));
+  };
+
   const variantAssignments = useRef<Map<string, string>>(new Map());
   const effectiveBlocks = useMemo(() => {
     return visibleStepBlocks.map((b) => {
@@ -445,6 +462,9 @@ function PlayerRunner({
       await finish(nextState);
       return;
     }
+    // Registra de onde viemos ANTES de trocar de etapa: é isso que o botão
+    // voltar consome, e é a única memória do caminho real deste visitante.
+    historicoDeEtapas.current.push(state.currentStepIndex);
     const estadoFinal = { ...nextState, currentStepIndex: idx };
     setState(estadoFinal);
     /* Chegou na última etapa: grava agora. Se esta etapa tiver um bloco de
@@ -568,6 +588,21 @@ function PlayerRunner({
               className="mx-auto mb-5 h-auto object-contain"
               style={{ width: design.logoWidth ?? 120 }}
             />
+          )}
+          {/* Voltar fica ACIMA da barra de progresso, como nos funis de
+              referência: é navegação da tela, não conteúdo da etapa. A etapa
+              decide se aparece — na tela de resultado voltar não faz sentido. */}
+          {podeVoltar && currentStep?.showBack !== false && (
+            <button
+              type="button"
+              onClick={voltarEtapa}
+              className="mb-3 -ml-1 flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ color: design.text, outlineColor: design.primary }}
+              aria-label="Voltar para a etapa anterior"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </button>
           )}
           <ProgressBar
             value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
@@ -1155,6 +1190,21 @@ function ContainerView({
  * pessoa tentar. Círculo diz "uma"; quadrado diz "várias" — é a convenção que
  * todo formulário usa, e quem responde no celular não lê instrução.
  */
+/** Classe de grade para a disposição escolhida. */
+function classeDaGrade(layout: QuizBlock['optionsLayout']): string {
+  switch (layout) {
+    case 'grade-2':
+      return 'grid grid-cols-2 gap-2.5';
+    case 'grade-3':
+      // Três colunas em 448px dariam ~140px por cartão; no celular cai para duas.
+      return 'grid grid-cols-2 sm:grid-cols-3 gap-2.5';
+    case 'grade-4':
+      return 'grid grid-cols-2 sm:grid-cols-4 gap-2.5';
+    default:
+      return 'space-y-2.5';
+  }
+}
+
 function OptionCard({
   design,
   option,
@@ -1163,6 +1213,7 @@ function OptionCard({
   disabled,
   onClick,
   textStyle,
+  cardStyle = 'linha',
 }: {
   design: QuizDesign;
   option: BlockOption;
@@ -1172,48 +1223,106 @@ function OptionCard({
   onClick: () => void;
   /** Tipografia do slot "Opções". */
   textStyle?: React.CSSProperties;
+  /** 'cartao' = imagem grande em cima, rótulo numa barra embaixo. */
+  cardStyle?: 'linha' | 'cartao';
 }) {
+  const marcador = (
+    <span
+      aria-hidden
+      className="shrink-0 grid place-items-center transition-all duration-200 motion-reduce:transition-none"
+      style={{
+        width: 22,
+        height: 22,
+        borderRadius: multiple ? 6 : 999,
+        border: `2px solid ${active ? design.primary : withAlpha(design.text, 0.25)}`,
+        background: active ? design.primary : 'transparent',
+      }}
+    >
+      {active &&
+        (multiple ? (
+          <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: getContrastText(design.primary) }} />
+        ) : (
+          <span className="block" style={{ width: 8, height: 8, borderRadius: 999, background: getContrastText(design.primary) }} />
+        ))}
+    </span>
+  );
+
+  const comum = {
+    onClick,
+    disabled,
+    ...(multiple
+      ? { 'aria-pressed': active, 'aria-disabled': disabled }
+      : { role: 'radio' as const, 'aria-checked': active }),
+  };
+
+  const moldura = {
+    borderRadius: design.radius,
+    outlineColor: design.primary,
+    // Marcado ganha contorno cheio e um fundo levemente tingido: só a borda
+    // de 2px é fraca demais num cartão claro, principalmente no sol.
+    borderColor: active ? design.primary : withAlpha(design.text, 0.12),
+    borderWidth: active ? 2 : 1,
+    background: active ? withAlpha(design.primary, 0.06) : design.surface,
+    color: design.text,
+    // Sombra de sussurro: separa o cartão do fundo creme sem virar caixa.
+    boxShadow: active ? `0 0 0 1px ${withAlpha(design.primary, 0.25)}` : '0 1px 2px rgb(0 0 0 / 0.04)',
+  } as const;
+
+  /* Cartão com foto: a imagem ocupa o topo inteiro e o rótulo vira uma barra
+     embaixo, com o marcador dentro dela. Sem imagem o formato não se sustenta
+     (sobraria um retângulo vazio), então cai para a linha de sempre. */
+  if (cardStyle === 'cartao' && option.imageUrl) {
+    return (
+      <button
+        {...comum}
+        className={`group/opt flex w-full flex-col overflow-hidden border text-left transition-all duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${
+          disabled ? ' cursor-not-allowed opacity-40' : ' hover:-translate-y-px active:translate-y-0 active:scale-[0.99]'
+        }`}
+        style={moldura}
+      >
+        <img src={option.imageUrl} alt="" className="aspect-[4/5] w-full object-cover" />
+        <span
+          className="flex items-center gap-2 px-3 py-2.5"
+          style={{ background: active ? design.primary : withAlpha(design.text, 0.04) }}
+        >
+          <span
+            aria-hidden
+            className="grid shrink-0 place-items-center"
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: multiple ? 5 : 999,
+              border: `2px solid ${active ? getContrastText(design.primary) : withAlpha(design.text, 0.3)}`,
+              background: 'transparent',
+            }}
+          >
+            {active && (
+              <span
+                className="block"
+                style={{ width: 7, height: 7, borderRadius: multiple ? 2 : 999, background: getContrastText(design.primary) }}
+              />
+            )}
+          </span>
+          <span
+            className="min-w-0 flex-1 text-sm font-semibold leading-tight"
+            style={{ ...textStyle, color: active ? getContrastText(design.primary) : design.text }}
+          >
+            {parseRichText(option.label)}
+          </span>
+        </span>
+      </button>
+    );
+  }
+
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      {...(multiple
-        ? { 'aria-pressed': active, 'aria-disabled': disabled }
-        : { role: 'radio' as const, 'aria-checked': active })}
+      {...comum}
       className={`w-full flex items-center gap-3.5 text-left px-4 py-3.5 min-h-[3.5rem] border transition-all duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${
         disabled ? ' opacity-40 cursor-not-allowed' : ' hover:-translate-y-px active:translate-y-0 active:scale-[0.99]'
       }`}
-      style={{
-        borderRadius: design.radius,
-        outlineColor: design.primary,
-        // Marcado ganha contorno cheio e um fundo levemente tingido: só a borda
-        // de 2px é fraca demais num cartão claro, principalmente no sol.
-        borderColor: active ? design.primary : withAlpha(design.text, 0.12),
-        borderWidth: active ? 2 : 1,
-        background: active ? withAlpha(design.primary, 0.06) : design.surface,
-        color: design.text,
-        // Sombra de sussurro: separa o cartão do fundo creme sem virar caixa.
-        boxShadow: active ? `0 0 0 1px ${withAlpha(design.primary, 0.25)}` : '0 1px 2px rgb(0 0 0 / 0.04)',
-      }}
+      style={moldura}
     >
-      <span
-        aria-hidden
-        className="shrink-0 grid place-items-center transition-all duration-200 motion-reduce:transition-none"
-        style={{
-          width: 22,
-          height: 22,
-          borderRadius: multiple ? 6 : 999,
-          border: `2px solid ${active ? design.primary : withAlpha(design.text, 0.25)}`,
-          background: active ? design.primary : 'transparent',
-        }}
-      >
-        {active &&
-          (multiple ? (
-            <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: getContrastText(design.primary) }} />
-          ) : (
-            <span className="block" style={{ width: 8, height: 8, borderRadius: 999, background: getContrastText(design.primary) }} />
-          ))}
-      </span>
+      {marcador}
       {option.imageUrl ? (
         <img src={option.imageUrl} alt="" className="h-10 w-10 rounded-md object-cover shrink-0" />
       ) : option.emoji ? (
@@ -1390,13 +1499,14 @@ function BlockView({
       return (
         <div>
           {heading}
-          <div className="space-y-2.5" role="radiogroup" aria-label={block.title || 'Opções'}>
+          <div className={classeDaGrade(block.optionsLayout)} role="radiogroup" aria-label={block.title || 'Opções'}>
             {(block.options ?? []).map((o) => (
               <OptionCard
                 key={o.id}
                 design={design}
                 option={o}
                 textStyle={optText}
+                cardStyle={block.optionCardStyle}
                 active={value === o.id}
                 multiple={false}
                 onClick={() => {
@@ -1445,7 +1555,7 @@ function BlockView({
               {multi.length} de {block.maxSelections} selecionadas
             </p>
           )}
-          <div className="space-y-2.5 mb-6" role="group" aria-label={block.title || 'Opções'}>
+          <div className={`${classeDaGrade(block.optionsLayout)} mb-6`} role="group" aria-label={block.title || 'Opções'}>
             {(block.options ?? []).map((o) => {
               const active = multi.includes(o.id);
               const limite = block.maxSelections ?? 0;
@@ -1455,6 +1565,7 @@ function BlockView({
                   design={design}
                   option={o}
                   textStyle={optText}
+                  cardStyle={block.optionCardStyle}
                   active={active}
                   multiple
                   disabled={limite > 0 && !active && multi.length >= limite}

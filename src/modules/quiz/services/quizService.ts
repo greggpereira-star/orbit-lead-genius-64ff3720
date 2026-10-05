@@ -262,6 +262,21 @@ export const quizService = {
     return data as unknown as QuizFunnel;
   },
 
+  /**
+   * Arquiva ou tira do arquivo.
+   *
+   * Arquivar DESPUBLICA junto: um quiz fora da lista de trabalho mas ainda
+   * respondendo no link público seria a pior combinação — ninguém olha os leads
+   * que ele continua gerando.
+   */
+  async setArchived(quizId: string, arquivado: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('quiz_funnels')
+      .update({ status: arquivado ? 'archived' : 'draft' } as never)
+      .eq('id', quizId);
+    if (error) throw error;
+  },
+
   async duplicate(params: { quizId: string; companyId: string; userId: string }): Promise<QuizFunnel> {
     const { data: source, error: sourceError } = await supabase
       .from('quiz_funnels')

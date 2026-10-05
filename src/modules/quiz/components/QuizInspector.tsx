@@ -815,6 +815,55 @@ function BlockInspector({
               onChange={(v) => onChange({ autoAdvance: v })}
             />
           )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Disposição</Label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {([
+                { v: 'lista', r: 'Lista' },
+                { v: 'grade-2', r: '2 col' },
+                { v: 'grade-3', r: '3 col' },
+                { v: 'grade-4', r: '4 col' },
+              ] as const).map((o) => (
+                <Button
+                  key={o.v}
+                  type="button"
+                  size="sm"
+                  variant={(block.optionsLayout ?? 'lista') === o.v ? 'default' : 'outline'}
+                  className="h-8 px-1 text-[11px]"
+                  onClick={() => onChange({ optionsLayout: o.v })}
+                >
+                  {o.r}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Formato da opção</Label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {([
+                { v: 'linha', r: 'Linha' },
+                { v: 'cartao', r: 'Cartão com foto' },
+              ] as const).map((o) => (
+                <Button
+                  key={o.v}
+                  type="button"
+                  size="sm"
+                  variant={(block.optionCardStyle ?? 'linha') === o.v ? 'default' : 'outline'}
+                  className="h-8 text-[11px]"
+                  onClick={() => onChange({ optionCardStyle: o.v })}
+                >
+                  {o.r}
+                </Button>
+              ))}
+            </div>
+            {block.optionCardStyle === 'cartao' && !(block.options ?? []).every((o) => o.imageUrl) && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                Opção sem imagem continua aparecendo como linha — o cartão precisa da foto.
+              </p>
+            )}
+          </div>
         </Section>
       )}
 

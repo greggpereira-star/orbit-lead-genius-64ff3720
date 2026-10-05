@@ -180,6 +180,11 @@ export interface QuizBlock {
   countdownEndsAt?: string;
   countdownMinutes?: number;
   // Logic (Phase 4)
+  /** Disposição das opções. Lista é o padrão de sempre. */
+  optionsLayout?: 'lista' | 'grade-2' | 'grade-3' | 'grade-4';
+  /** Forma do cartão. 'cartao' põe a imagem grande em cima e o rótulo embaixo —
+   *  é o formato de escolha por foto, que só faz sentido com imagem na opção. */
+  optionCardStyle?: 'linha' | 'cartao';
   logicRules?: BlockLogicRule[];
   scoreWeight?: number; // multiplier for rating/choice blocks
   // A/B test (Fase 3)
@@ -333,6 +338,9 @@ export interface QuizStep {
   blockIds: string[]; // um ou mais QuizBlock.id, na ordem de exibição dentro da etapa
   name?: string; // nome customizado (edição via fluxograma); ausente = "Etapa N"
   isGoal?: boolean; // marcada como meta de conversão (destaque visual no fluxograma)
+  /** Botão voltar desta etapa. Ausente = mostra, que é o padrão dos funis que
+   *  convertem; desligar é para a tela de resultado, onde voltar não faz sentido. */
+  showBack?: boolean;
 }
 
 /**

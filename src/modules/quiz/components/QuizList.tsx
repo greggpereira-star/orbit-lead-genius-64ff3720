@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Plus, Trash2, ExternalLink, Loader2, Copy } from 'lucide-react';
+import { Sparkles, Plus, Trash2, ExternalLink, Loader2, Copy, Archive, ArchiveRestore } from 'lucide-react';
 import { quizService } from '../services/quizService';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import type { QuizFunnel } from '../types';
@@ -21,6 +21,9 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
   const [stats, setStats] = useState<Record<string, { total: number; completed: number; leadsCaptured: number }>>({});
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  /* Arquivado fica fora da lista por padrão — é para isso que serve arquivar.
+     O número ao lado do botão evita que alguém esqueça um quiz lá dentro. */
+  const [verArquivados, setVerArquivados] = useState(false);
 
   const refresh = async () => {
     if (!company?.id) return;
@@ -70,6 +73,19 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
     }
   };
 
+  const handleArchive = async (id: string, arquivado: boolean) => {
+    try {
+      await quizService.setArchived(id, arquivado);
+      toast.success(arquivado ? 'Quiz arquivado — o link público saiu do ar.' : 'Quiz desarquivado como rascunho.');
+      void refresh();
+    } catch (e: unknown) {
+      toast.error('Erro ao arquivar: ' + getErrorMessage(e));
+    }
+  };
+
+  const arquivados = items.filter((q) => q.status === 'archived');
+  const visiveis = verArquivados ? items : items.filter((q) => q.status !== 'archived');
+
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -101,8 +117,17 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((q) => (
+    <div className="space-y-4">
+      {arquivados.length > 0 && (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setVerArquivados((v) => !v)}>
+            <Archive className="h-3.5 w-3.5" />
+            {verArquivados ? 'Ocultar arquivados' : `Mostrar arquivados (${arquivados.length})`}
+          </Button>
+        </div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {visiveis.map((q) => (
         <Card key={q.id} className="p-4 sm:p-5 flex flex-col hover:shadow-lg hover:border-primary/30 transition-all">
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="min-w-0">
@@ -149,12 +174,22 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
                 <Copy className="h-3.5 w-3.5" />
               )}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              title={q.status === 'archived' ? 'Desarquivar' : 'Arquivar'}
+              onClick={() => handleArchive(q.id, q.status !== 'archived')}
+            >
+              {q.status === 'archived' ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+            </Button>
             <Button size="sm" variant="outline" className="shrink-0" title="Excluir" onClick={() => handleDelete(q.id)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </Card>
       ))}
+      </div>
     </div>
   );
 }

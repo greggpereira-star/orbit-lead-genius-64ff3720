@@ -16,6 +16,7 @@ import {
   Plus,
   GripVertical,
   Trash2,
+  Copy,
   ShieldCheck,
   LayoutGrid,
   SlidersHorizontal,
@@ -276,6 +277,57 @@ function QuizBuilderPage() {
       setExpandedSteps((prev) => new Set(prev).add(targetId));
     }
     setMobilePanel('inspector');
+  };
+
+  /**
+   * Duplica a etapa inteira, com os componentes e os filhos de Container.
+   *
+   * Todo id é trocado, inclusive dentro de `childBlockIds`: reaproveitar um id
+   * faria as duas cópias virarem o mesmo bloco, e editar uma mudaria a outra.
+   * Os saltos (`jumpToBlockId`) da cópia são limpos, porque apontariam para o
+   * destino da original e criariam um desvio que o usuário não pediu.
+   */
+  const duplicateStep = (stepId: string) => {
+    const step = steps.find((s) => s.id === stepId);
+    if (!step) return;
+    const novoPorAntigo = new Map<string, string>();
+    const idsDaEtapa = step.blockIds.flatMap((bid) => {
+      const b = schema.blocks.find((x) => x.id === bid);
+      return [bid, ...(b?.childBlockIds ?? [])];
+    });
+    idsDaEtapa.forEach((bid) => novoPorAntigo.set(bid, crypto.randomUUID()));
+
+    const copias: QuizBlock[] = idsDaEtapa
+      .map((bid) => schema.blocks.find((b) => b.id === bid))
+      .filter((b): b is QuizBlock => !!b)
+      .map((b) => ({
+        ...b,
+        id: novoPorAntigo.get(b.id)!,
+        childBlockIds: b.childBlockIds?.map((c) => novoPorAntigo.get(c) ?? c),
+        options: b.options?.map((o) => ({ ...o, id: crypto.randomUUID(), jumpToBlockId: undefined })),
+        logicRules: undefined,
+      }));
+
+    const novaEtapa: QuizStep = {
+      ...step,
+      id: `step-${crypto.randomUUID()}`,
+      name: step.name ? `${step.name} (cópia)` : undefined,
+      // A cópia não herda "é meta": duas metas iguais quebrariam a leitura do
+      // fluxograma e a contagem de conversão.
+      isGoal: false,
+      blockIds: step.blockIds.map((bid) => novoPorAntigo.get(bid)!),
+    };
+
+    const indice = steps.findIndex((s) => s.id === stepId);
+    updateSchema((prev) => {
+      const prevSteps = getSteps(prev, { keepEmpty: true });
+      const next = Array.from(prevSteps);
+      next.splice(indice + 1, 0, novaEtapa);
+      return { ...prev, blocks: [...prev.blocks, ...copias], steps: next };
+    });
+    setActiveStepId(novaEtapa.id);
+    setExpandedSteps((prev) => new Set(prev).add(novaEtapa.id));
+    toast.success('Etapa duplicada');
   };
 
   /** Exclui a etapa inteira: a tela e todos os componentes dela. */
@@ -854,6 +906,14 @@ function QuizBuilderPage() {
                           </div>
                           <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
                           <button
+                            onClick={(e) => { e.stopPropagation(); duplicateStep(step.id); }}
+                            className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                            aria-label={`Duplicar ${step.name || `Etapa ${stepIdx + 1}`}`}
+                            title="Duplicar etapa"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                          <button
                             onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}
                             className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                             aria-label={`Excluir ${step.name || `Etapa ${stepIdx + 1}`} e seus componentes`}
@@ -866,6 +926,26 @@ function QuizBuilderPage() {
                             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           )}
                         </div>
+                        {expanded && (
+                          <label
+                            className="mb-1 ml-6 flex w-fit cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-3 w-3 accent-current"
+                              checked={step.showBack !== false}
+                              onChange={(e) =>
+                                applySteps((prev) =>
+                                  getSteps(prev, { keepEmpty: true }).map((x) =>
+                                    x.id === step.id ? { ...x, showBack: e.target.checked } : x,
+                                  ),
+                                )
+                              }
+                            />
+                            Mostrar botão voltar nesta etapa
+                          </label>
+                        )}
                         {expanded && (
                           <Droppable droppableId={`step-${step.id}`}>
                             {(moduleProvided) => (
