@@ -366,7 +366,10 @@ function QuizBuilderPage() {
     const index = schema.blocks.findIndex((b) => b.id === target);
     const removed = schema.blocks[index];
     if (!removed) return;
-    const ownerStepIndex = steps.findIndex((s) => s.blockIds.includes(target));
+    /* Para desfazer é preciso saber não só QUAL etapa, mas em que POSIÇÃO
+       dentro dela — e o id da etapa, porque o índice pode ter mudado. */
+    const etapaDeOrigem = steps.find((s) => s.blockIds.includes(target));
+    const posicaoNaEtapa = etapaDeOrigem ? etapaDeOrigem.blockIds.indexOf(target) : -1;
     // Excluir um Container leva seus filhos junto (como excluir uma pasta) — o
     // Desfazer restaura os dois, já que `removed.childBlockIds` continua intacto.
     const cascadeIds = removed.type === 'container' ? (removed.childBlockIds ?? []) : [];
@@ -395,14 +398,33 @@ function QuizBuilderPage() {
           updateSchema((prev) => {
             const nextBlocks = Array.from(prev.blocks);
             nextBlocks.splice(index, 0, removed, ...removedCascade);
-            const nextSteps = getSteps({ blocks: prev.blocks, steps: prev.steps });
-            const restoredSteps = Array.from(nextSteps);
-            if (ownerStepIndex >= 0 && ownerStepIndex <= restoredSteps.length) {
-              restoredSteps.splice(ownerStepIndex, 0, { id: `step-${removed.id}`, blockIds: [removed.id] });
-            } else {
-              restoredSteps.push({ id: `step-${removed.id}`, blockIds: [removed.id] });
+
+            /* Devolve o bloco À ETAPA DE ONDE SAIU, na posição em que estava.
+               Antes ele voltava como uma etapa NOVA: desfazer a exclusão de um
+               componente de uma tela com três partia a tela em duas, e o
+               `getSteps` sem `keepEmpty` ainda apagava as etapas vazias que
+               existiam. Desfazer precisa devolver o estado anterior, não um
+               parecido. */
+            const base = getSteps(prev, { keepEmpty: true });
+            const alvo = etapaDeOrigem ? base.findIndex((s) => s.id === etapaDeOrigem.id) : -1;
+
+            if (alvo >= 0) {
+              const restoredSteps = base.map((s, i) => {
+                if (i !== alvo) return s;
+                const ids = Array.from(s.blockIds);
+                ids.splice(posicaoNaEtapa >= 0 ? Math.min(posicaoNaEtapa, ids.length) : ids.length, 0, removed.id);
+                return { ...s, blockIds: ids };
+              });
+              return { ...prev, blocks: nextBlocks, steps: restoredSteps };
             }
-            return { ...prev, blocks: nextBlocks, steps: restoredSteps };
+
+            // A etapa de origem sumiu junto (foi excluída inteira): recria uma
+            // para o bloco não ficar órfão.
+            return {
+              ...prev,
+              blocks: nextBlocks,
+              steps: [...base, { id: `step-${removed.id}`, blockIds: [removed.id] }],
+            };
           });
           setActiveBlockId(removed.id);
         },
@@ -427,18 +449,28 @@ function QuizBuilderPage() {
   // Tira um bloco de dentro de um Container e devolve pra ele sua própria etapa,
   // logo depois da etapa do Container (sem excluir o bloco).
   const removeChildFromContainer = (blockId: string, containerId: string) => {
-    const containerStepIndex = steps.findIndex((s) => s.blockIds.includes(containerId));
-    updateSchema((prev) => ({
-      ...prev,
-      blocks: prev.blocks.map((b) =>
-        b.id === containerId ? { ...b, childBlockIds: (b.childBlockIds ?? []).filter((id) => id !== blockId) } : b
-      ),
-      steps: [
-        ...(prev.steps ?? []).slice(0, containerStepIndex + 1),
-        { id: `step-${blockId}`, blockIds: [blockId] },
-        ...(prev.steps ?? []).slice(containerStepIndex + 1),
-      ],
-    }));
+    updateSchema((prev) => {
+      /* `getSteps(prev, { keepEmpty: true })`, e não `prev.steps ?? []`. Era o
+         único ponto do arquivo que lia a lista crua: num quiz antigo, gravado
+         antes de `steps` existir, o `?? []` virava lista vazia e tirar um bloco
+         de dentro de um Container colapsava o quiz inteiro numa etapa só.
+         O índice também é calculado AQUI dentro, sobre a lista que vai ser
+         alterada — o de fora vinha de um `useMemo` que podia estar velho. */
+      const base = getSteps(prev, { keepEmpty: true });
+      const indiceDoContainer = base.findIndex((s) => s.blockIds.includes(containerId));
+      const nova = { id: `step-${blockId}`, blockIds: [blockId] };
+      const steps =
+        indiceDoContainer >= 0
+          ? [...base.slice(0, indiceDoContainer + 1), nova, ...base.slice(indiceDoContainer + 1)]
+          : [...base, nova];
+      return {
+        ...prev,
+        blocks: prev.blocks.map((b) =>
+          b.id === containerId ? { ...b, childBlockIds: (b.childBlockIds ?? []).filter((id) => id !== blockId) } : b,
+        ),
+        steps,
+      };
+    });
   };
 
   const reorderContainerChildren = (containerId: string, fromIndex: number, toIndex: number) => {
@@ -640,14 +672,22 @@ function QuizBuilderPage() {
 
   // Salvamento automático: evita que o Preview e o link público fiquem desatualizados
   // em relação ao que está sendo editado (padrão já validado por concorrentes).
+  /* `tentativa` existe só para o efeito poder rodar DE NOVO sem que nada mais
+     mude. Antes, uma falha deixava `dirty` em true e as dependências idênticas:
+     o efeito não reexecutava, e sem uma nova edição o trabalho ficava só nesta
+     aba, com o indicador vermelho e nenhuma nova tentativa. */
+  const [tentativa, setTentativa] = useState(0);
   useEffect(() => {
     if (!autosave || !dirty || loading || !trava.souDono) return;
-    const timer = setTimeout(() => {
-      handleSave({ silent: true });
-    }, 1500);
+    // Recuo: 1,5s na primeira, depois 3s, 6s, 12s… até 1 min.
+    const espera = tentativa === 0 ? 1500 : Math.min(1500 * 2 ** tentativa, 60_000);
+    const timer = setTimeout(async () => {
+      const ok = await handleSave({ silent: true });
+      setTentativa((n) => (ok ? 0 : n + 1));
+    }, espera);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, dirty, autosave, loading, trava.souDono]);
+  }, [schema, dirty, autosave, loading, trava.souDono, tentativa]);
 
   /* Fechar a aba com alteração pendente não pode ser silencioso. Com o
      autosave desligado não existe rede de proteção nenhuma; com ele ligado,

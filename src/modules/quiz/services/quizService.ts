@@ -973,11 +973,22 @@ export const quizService = {
     });
   },
 
+  /**
+   * Números do cartão de cada quiz na lista.
+   *
+   * O denominador é quem COMEÇOU o quiz, não quantas submissões existem. Uma
+   * submissão só nasce no fim, com `status: 'completed'` — então "concluídas
+   * sobre submissões" dava quase sempre 100%, e o cartão dizia 100% de conclusão
+   * para um funil em que a Análise media 12%. Dois números contraditórios na
+   * mesma sessão, e o otimista era o que não significava nada.
+   *
+   * `starts` vem de `quiz_events`, a mesma fonte que `getMetrics` usa.
+   */
   async getListStats(companyId: string): Promise<Record<string, { total: number; completed: number; leadsCaptured: number }>> {
-    const { data, error } = await supabase
-      .from('quiz_submissions')
-      .select('quiz_id, status, answers')
-      .eq('company_id', companyId);
+    const [{ data, error }, { data: inicios }] = await Promise.all([
+      supabase.from('quiz_submissions').select('quiz_id, status, answers').eq('company_id', companyId),
+      supabase.from('quiz_events').select('quiz_id').eq('company_id', companyId).eq('event_type', 'start'),
+    ]);
     if (error) throw error;
     const rows = (data ?? []) as unknown as Array<{
       quiz_id: string;
@@ -985,13 +996,20 @@ export const quizService = {
       answers: Record<string, unknown> | null;
     }>;
     const stats: Record<string, { total: number; completed: number; leadsCaptured: number }> = {};
+    const garantir = (id: string) => (stats[id] ??= { total: 0, completed: 0, leadsCaptured: 0 });
+
+    for (const e of (inicios ?? []) as unknown as Array<{ quiz_id: string }>) {
+      garantir(e.quiz_id).total++;
+    }
     for (const r of rows) {
-      const entry = stats[r.quiz_id] ?? { total: 0, completed: 0, leadsCaptured: 0 };
-      entry.total++;
+      const entry = garantir(r.quiz_id);
       if (r.status === 'completed') entry.completed++;
       const c = (r.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
       if (c.email || c.phone) entry.leadsCaptured++;
-      stats[r.quiz_id] = entry;
+      /* Quiz antigo, de antes de `start` ser gravado: sem nenhum início, a
+         submissão vira o próprio denominador. É menos errado do que mostrar
+         "—" para um funil que claramente teve gente. */
+      if (!(inicios ?? []).length) entry.total++;
     }
     return stats;
   },

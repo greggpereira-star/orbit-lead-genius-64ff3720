@@ -88,6 +88,11 @@ function useAccessGate(rules: AccessRules | undefined, tracking: Record<string, 
     }
 
     if (rules.countries && rules.countries.length > 0) {
+      /* Esta chamada a terceiro FICA, ao contrário da que enriquecia a
+         submissão com país e cidade (removida). A diferença é a finalidade:
+         ali era coleta para relatório, aqui é a única forma de cumprir a
+         restrição por país que o dono do quiz configurou — sem ela a regra não
+         existe. Só dispara quando a restrição está ligada, e falha liberando. */
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3000);
       fetch('https://ipapi.co/json/', { signal: controller.signal })
@@ -273,7 +278,6 @@ function PlayerRunner({
     [settings]
   );
 
-  const geoRef = useRef<{ country?: string; city?: string }>({});
   const draftResponses = useRef<Record<string, unknown>>({});
 
   useEffect(() => {
@@ -281,15 +285,13 @@ function PlayerRunner({
     setStepValidity({});
   }, [state.currentStepIndex]);
 
-  useEffect(() => {
-    if (preview) return;
-    fetch('https://ipapi.co/json/')
-      .then((r) => r.json())
-      .then((data: { country_name?: string; city?: string }) => {
-        geoRef.current = { country: data.country_name, city: data.city };
-      })
-      .catch(() => {});
-  }, [preview]);
+  /* A geolocalização saía daqui, do navegador, por uma chamada a `ipapi.co` em
+     TODA carga pública: o IP do visitante ia a um terceiro antes de qualquer
+     aceite, o que não se sustenta sob a LGPD. E nem funcionava bem — medido na
+     base: 1 de 5 submissões tinha país; nas outras a chamada voltou bloqueada.
+     Removida. Se o recorte geográfico voltar a ser necessário, o lugar é o
+     servidor, resolvendo pelo IP da requisição, sob o nosso controle e depois
+     do consentimento. */
 
   // Etapa cujos blocos estão TODOS ocultos pela condição: pula pra próxima com
   // conteúdo visível (etapa condicional inteira que não se aplica a este visitante).
@@ -606,8 +608,6 @@ function PlayerRunner({
         ...tracking,
         user_agent: navigator.userAgent,
       };
-      if (geoRef.current.country) enrichedTracking.geo_country = geoRef.current.country;
-      if (geoRef.current.city) enrichedTracking.geo_city = geoRef.current.city;
       const id = await quizService.submitPublic({
         quizId,
         companyId,
@@ -937,11 +937,24 @@ function SocialProofToasts({
   );
 }
 
+/**
+ * Valor de um bloco de contato, pelo tipo.
+ *
+ * Também aceita um `Texto curto` com máscara de telefone. Quem mascara um campo
+ * como telefone está dizendo que ali vem um telefone, e antes isso não gerava
+ * lead nenhum — a busca era só por TIPO de bloco, e o quiz rodava inteiro sem
+ * capturar ninguém, em silêncio. Foi o que aconteceu no quiz de teste da onda 4
+ * sem que eu percebesse ao montá-lo.
+ */
 function extract(responses: Record<string, unknown>, blocks: QuizBlock[], type: QuizBlock['type']): string | undefined {
-  const b = blocks.find((x) => x.type === type);
-  if (!b) return undefined;
-  const v = responses[b.id];
-  return typeof v === 'string' && v.length > 0 ? v : undefined;
+  const candidatos = blocks.filter(
+    (x) => x.type === type || (type === 'phone' && x.type === 'short-text' && x.fieldMask === 'telefone'),
+  );
+  for (const b of candidatos) {
+    const v = responses[b.id];
+    if (typeof v === 'string' && v.length > 0) return v;
+  }
+  return undefined;
 }
 
 /**

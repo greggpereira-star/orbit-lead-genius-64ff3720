@@ -32,7 +32,12 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
     return achados;
   }
 
-  const temCaptura = blocos.some((b) => BLOCOS_DE_CAPTURA.includes(b.type));
+  /* `Texto curto` com máscara de telefone também captura — o player passou a
+     aceitá-lo. Os dois lados precisam concordar, senão a validação barra um
+     quiz que na prática funciona, ou libera um que não. */
+  const temCaptura = blocos.some(
+    (b) => BLOCOS_DE_CAPTURA.includes(b.type) || (b.type === 'short-text' && b.fieldMask === 'telefone'),
+  );
   if (!temCaptura) {
     achados.push({
       nivel: 'bloqueia',
