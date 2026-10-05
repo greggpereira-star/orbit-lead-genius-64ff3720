@@ -81,7 +81,16 @@ export type BlockType =
   | 'container'
   | 'spacer'
   // Onda 4 (paridade inlead)
-  | 'scheduling';
+  | 'scheduling'
+  // Componentes de conteúdo (paridade inlead)
+  | 'grid'
+  | 'cards'
+  | 'summary'
+  | 'indicator'
+  | 'arrow'
+  | 'emoji'
+  | 'brand'
+  | 'social';
 
 export interface BlockOption {
   id: string;
@@ -237,6 +246,28 @@ export interface QuizBlock {
   corDoTexto?: string;
   corDeDestaque?: string;
 
+  // ---- Componentes de conteúdo ----
+  /** Itens de Grade e de Cards. */
+  itens?: ItemDeConteudo[];
+  /** Colunas da Grade. */
+  colunas?: 2 | 3 | 4;
+  /** Para onde a Seta aponta. */
+  direcaoDaSeta?: 'baixo' | 'cima' | 'direita' | 'esquerda';
+  /** Tamanho em px do Emoji e da Seta. */
+  tamanhoDoSimbolo?: number;
+  /** Texto do Indicador (ex.: "Você está aqui"). */
+  textoDoIndicador?: string;
+  /** Emoji do bloco Emoji e do Indicador. */
+  emoji?: string;
+  /** Logo do bloco Marca. */
+  marcaUrl?: string;
+  marcaLargura?: number;
+  marcaLink?: string;
+  /** Links do bloco Redes sociais. */
+  redes?: LinkSocial[];
+  /** O Sumário mostra só os blocos escolhidos; vazio = todos os respondidos. */
+  resumirBlocos?: string[];
+
   /** Disposição das opções. Lista é o padrão de sempre. */
   optionsLayout?: 'lista' | 'grade-2' | 'grade-3' | 'grade-4';
   /** Forma do cartão. 'cartao' põe a imagem grande em cima e o rótulo embaixo —
@@ -358,6 +389,27 @@ export interface ContainerBreakpointLayout {
   gap?: number;
   align?: 'start' | 'center' | 'end' | 'stretch';
   justify?: 'start' | 'center' | 'end' | 'stretch';
+}
+
+/** Item de Grade e de Cards: um ícone, um título e uma linha de apoio. */
+export interface ItemDeConteudo {
+  id: string;
+  emoji?: string;
+  imageUrl?: string;
+  titulo: string;
+  texto?: string;
+  /** Ao clicar, abre esta URL. Vazio = o item não é clicável. */
+  url?: string;
+}
+
+export type RedeSocial =
+  | 'instagram' | 'whatsapp' | 'facebook' | 'youtube'
+  | 'tiktok' | 'linkedin' | 'site' | 'email';
+
+export interface LinkSocial {
+  id: string;
+  rede: RedeSocial;
+  url: string;
 }
 
 export interface FaqItem {

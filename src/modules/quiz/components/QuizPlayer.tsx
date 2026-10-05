@@ -37,7 +37,7 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
-import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft } from 'lucide-react';
+import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft, ArrowDown } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
 
@@ -453,6 +453,13 @@ function PlayerRunner({
 
   /* Último bloco que de fato está no fluxo da etapa. É dele o botão que avança;
      um bloco fixo ou flutuante nunca deve assumir esse papel. */
+  /* Calculado aqui, onde as respostas existem: o bloco Sumário só recebe o
+     resultado pronto. */
+  const resumoDasRespostas = useMemo(
+    () => montarResumo(blocks, state.responses),
+    [blocks, state.responses],
+  );
+
   const ultimoNoFluxo = useMemo(() => {
     const noFluxo = effectiveBlocks.filter(estaNoFluxo);
     return noFluxo[noFluxo.length - 1]?.id ?? effectiveBlocks[effectiveBlocks.length - 1]?.id;
@@ -813,6 +820,7 @@ function PlayerRunner({
                     design={design}
                     scope={scope}
                     respostaAnterior={state.responses[b.id]}
+                    resumo={resumoDasRespostas}
                     terminal={isTerminal}
                     stepValid={allStepValid}
                     saving={saving}
@@ -1529,9 +1537,12 @@ function BlockView({
   onDraftChange,
   saving,
   respostaAnterior,
+  resumo,
 }: {
   /** O que esta pessoa já respondeu neste bloco, quando voltou para cá. */
   respostaAnterior?: unknown;
+  /** Respostas já dadas, em forma legível — usado pelo bloco Sumário. */
+  resumo?: { pergunta: string; resposta: string }[];
   block: QuizBlock;
   design: QuizSchema['design'];
   scope: VariableScope;
@@ -2571,6 +2582,92 @@ function BlockView({
       );
     }
 
+    case 'grid':
+    case 'cards':
+      return (
+        <div>
+          {heading}
+          <ItensDeConteudo block={block} design={design} cartao={block.type === 'cards'} />
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'summary':
+      return (
+        <div>
+          {heading}
+          <SumarioDasRespostas block={block} design={design} resumo={resumo ?? []} />
+          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
+
+    case 'indicator':
+      return (
+        <div className="flex justify-center">
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold"
+            style={{
+              borderRadius: 999,
+              background: withAlpha(design.primary, 0.12),
+              color: design.primary,
+            }}
+          >
+            {block.emoji && <span aria-hidden>{block.emoji}</span>}
+            {interpolateText(block.textoDoIndicador ?? '', scope)}
+          </span>
+        </div>
+      );
+
+    case 'arrow': {
+      const giro = { baixo: 0, cima: 180, direita: 270, esquerda: 90 }[block.direcaoDaSeta ?? 'baixo'];
+      return (
+        <div className="flex justify-center" aria-hidden>
+          <ArrowDown
+            className="animate-bounce motion-reduce:animate-none"
+            style={{
+              width: block.tamanhoDoSimbolo ?? 32,
+              height: block.tamanhoDoSimbolo ?? 32,
+              color: design.primary,
+              transform: `rotate(${giro}deg)`,
+            }}
+          />
+        </div>
+      );
+    }
+
+    case 'emoji':
+      return (
+        <div className="text-center leading-none" style={{ fontSize: block.tamanhoDoSimbolo ?? 56 }} aria-hidden>
+          {block.emoji || '🎯'}
+        </div>
+      );
+
+    case 'brand': {
+      const img = block.marcaUrl ? (
+        <img
+          src={block.marcaUrl}
+          alt=""
+          className="mx-auto h-auto object-contain"
+          style={{ width: block.marcaLargura ?? 140 }}
+        />
+      ) : null;
+      if (!img) return null;
+      return (
+        <div className="flex justify-center">
+          {block.marcaLink ? (
+            <a href={block.marcaLink} target="_blank" rel="noopener noreferrer">{img}</a>
+          ) : img}
+        </div>
+      );
+    }
+
+    case 'social':
+      return <RedesSociais block={block} design={design} />;
+
     case 'custom':
       return (
         <div>
@@ -2787,4 +2884,179 @@ function executarScriptDoBloco(bloco: QuizBlock, resposta: unknown): void {
   } catch (e) {
     console.error('[quiz] script do bloco falhou', bloco.id, e);
   }
+}
+
+/**
+ * O que o visitante já respondeu, em pergunta e resposta legíveis.
+ *
+ * Mostra o RÓTULO da opção, não o id guardado: `o3` não diz nada a ninguém.
+ * Campos de texto entram como foram digitados; múltipla escolha vira lista
+ * separada por vírgula.
+ */
+export function montarResumo(
+  blocks: QuizBlock[],
+  responses: Record<string, unknown>,
+): { pergunta: string; resposta: string }[] {
+  const linhas: { pergunta: string; resposta: string }[] = [];
+  for (const b of blocks) {
+    const v = responses[b.id];
+    if (v === undefined || v === null || v === '') continue;
+    const rotuloDaOpcao = (id: string) =>
+      (b.options ?? []).find((o) => o.id === id)?.label ?? id;
+
+    let resposta: string;
+    if (Array.isArray(v)) resposta = v.map((x) => rotuloDaOpcao(String(x))).join(', ');
+    else if (b.options?.length) resposta = rotuloDaOpcao(String(v));
+    else if (typeof v === 'object') continue; // formulário e agendamento têm tela própria
+    else resposta = String(v);
+
+    if (!resposta.trim()) continue;
+    linhas.push({ pergunta: b.title?.trim() || b.type, resposta });
+  }
+  return linhas;
+}
+
+/**
+ * Grade e Cards.
+ *
+ * O mesmo dado nos dois: muda só a moldura. Em Grade o item é uma linha curta;
+ * em Cards ele ganha caixa, sombra e espaço para um texto de apoio.
+ */
+function ItensDeConteudo({
+  block,
+  design,
+  cartao,
+}: {
+  block: QuizBlock;
+  design: QuizDesign;
+  cartao: boolean;
+}) {
+  const itens = block.itens ?? [];
+  if (!itens.length) return null;
+  const colunas = block.colunas ?? 2;
+  // 3 e 4 colunas caem para 2 no celular: em 448px, quatro itens dariam 100px
+  // cada e o rótulo quebraria em todas as palavras.
+  const grade = colunas === 2 ? 'grid-cols-2' : colunas === 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4';
+
+  return (
+    <div className={`mb-6 grid gap-2.5 ${grade}`}>
+      {itens.map((i) => {
+        const conteudo = (
+          <>
+            {i.imageUrl ? (
+              <img src={i.imageUrl} alt="" className={cartao ? 'mb-2 aspect-video w-full rounded-md object-cover' : 'h-6 w-6 shrink-0 rounded object-cover'} />
+            ) : i.emoji ? (
+              <span className={cartao ? 'mb-1 block text-2xl leading-none' : 'shrink-0'} aria-hidden>{i.emoji}</span>
+            ) : null}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold leading-tight">{i.titulo}</span>
+              {cartao && i.texto && (
+                <span className="mt-0.5 block text-xs opacity-70">{i.texto}</span>
+              )}
+            </span>
+          </>
+        );
+
+        const estilo = {
+          borderRadius: design.radius,
+          background: cartao ? design.surface : 'transparent',
+          border: cartao ? `1px solid ${withAlpha(design.text, 0.1)}` : 'none',
+          color: design.text,
+        } as const;
+
+        const classe = cartao
+          ? 'block p-3 text-left'
+          : 'flex items-center gap-2 py-1.5 text-left';
+
+        return i.url ? (
+          <a key={i.id} href={i.url} target="_blank" rel="noopener noreferrer" className={`${classe} transition-opacity hover:opacity-80`} style={estilo}>
+            {conteudo}
+          </a>
+        ) : (
+          <div key={i.id} className={classe} style={estilo}>{conteudo}</div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Repete ao visitante o que ele respondeu.
+ *
+ * Mostra o RÓTULO da opção, não o id guardado: `o3` não diz nada a ninguém.
+ * Sem resposta nenhuma ainda, o bloco não aparece — uma caixa vazia dizendo
+ * "o que você nos contou" seria pior que nada.
+ */
+function SumarioDasRespostas({
+  block,
+  design,
+  resumo,
+}: {
+  block: QuizBlock;
+  design: QuizDesign;
+  resumo: { pergunta: string; resposta: string }[];
+}) {
+  const filtradas = block.resumirBlocos?.length
+    ? resumo.filter((_, i) => block.resumirBlocos!.includes(String(i)))
+    : resumo;
+
+  if (!filtradas.length) return null;
+
+  return (
+    <div
+      className="mb-6 divide-y overflow-hidden"
+      style={{ borderRadius: design.radius, background: design.surface, border: `1px solid ${withAlpha(design.text, 0.1)}` }}
+    >
+      {filtradas.map((l, i) => (
+        <div key={i} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2">
+          <span className="text-xs opacity-60">{l.pergunta}</span>
+          <span className="text-sm font-semibold">{l.resposta}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const REDES: Record<NonNullable<QuizBlock['redes']>[number]['rede'], { rotulo: string; prefixo: string }> = {
+  instagram: { rotulo: 'Instagram', prefixo: 'https://instagram.com/' },
+  whatsapp: { rotulo: 'WhatsApp', prefixo: 'https://wa.me/' },
+  facebook: { rotulo: 'Facebook', prefixo: 'https://facebook.com/' },
+  youtube: { rotulo: 'YouTube', prefixo: 'https://youtube.com/' },
+  tiktok: { rotulo: 'TikTok', prefixo: 'https://tiktok.com/@' },
+  linkedin: { rotulo: 'LinkedIn', prefixo: 'https://linkedin.com/in/' },
+  site: { rotulo: 'Site', prefixo: 'https://' },
+  email: { rotulo: 'E-mail', prefixo: 'mailto:' },
+};
+
+/** Monta o endereço quando o autor digitou só o usuário. */
+function enderecoDaRede(rede: keyof typeof REDES, valor: string): string {
+  const v = valor.trim();
+  if (!v) return '';
+  if (/^(https?:|mailto:)/i.test(v)) return v;
+  return REDES[rede].prefixo + v.replace(/^@/, '');
+}
+
+function RedesSociais({ block, design }: { block: QuizBlock; design: QuizDesign }) {
+  const links = (block.redes ?? []).filter((r) => r.url.trim());
+  if (!links.length) return null;
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      {links.map((r) => (
+        <a
+          key={r.id}
+          href={enderecoDaRede(r.rede, r.url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
+          style={{
+            borderRadius: 999,
+            border: `1px solid ${withAlpha(design.text, 0.15)}`,
+            color: design.text,
+          }}
+        >
+          {REDES[r.rede].rotulo}
+        </a>
+      ))}
+    </div>
+  );
 }

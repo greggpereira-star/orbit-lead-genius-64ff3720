@@ -5,6 +5,7 @@ import {
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
   PhoneCall, SeparatorHorizontal, CalendarClock,
+  Grid3x3, LayoutPanelTop, ListChecks as ListaResumo, BadgeCheck, ArrowDown, Smile, Building2, Share2,
 } from 'lucide-react';
 
 export type BlockCategory =
@@ -499,6 +500,93 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       schedulingTimeStart: '09:00',
       schedulingTimeEnd: '18:00',
       schedulingSlotMinutes: 30,
+    }),
+  },
+  {
+    type: 'grid',
+    label: 'Grade',
+    description: 'Itens curtos em colunas — benefícios, etapas, o que está incluso',
+    category: 'conteudo',
+    icon: Grid3x3,
+    create: () => ({
+      type: 'grid',
+      title: 'O que está incluso',
+      colunas: 2,
+      itens: [
+        { id: crypto.randomUUID(), emoji: '✅', titulo: 'Primeiro item' },
+        { id: crypto.randomUUID(), emoji: '✅', titulo: 'Segundo item' },
+      ],
+    }),
+  },
+  {
+    type: 'cards',
+    label: 'Cards',
+    description: 'Cartões com imagem, título e texto',
+    category: 'conteudo',
+    icon: LayoutPanelTop,
+    create: () => ({
+      type: 'cards',
+      title: 'Como funciona',
+      colunas: 2,
+      itens: [
+        { id: crypto.randomUUID(), emoji: '1️⃣', titulo: 'Primeiro passo', texto: 'Explique aqui.' },
+        { id: crypto.randomUUID(), emoji: '2️⃣', titulo: 'Segundo passo', texto: 'Explique aqui.' },
+      ],
+    }),
+  },
+  {
+    type: 'summary',
+    label: 'Sumário',
+    description: 'Repete ao visitante o que ele mesmo respondeu',
+    category: 'resultado',
+    icon: ListaResumo,
+    create: () => ({
+      type: 'summary',
+      title: 'O que você nos contou',
+      subtitle: 'Confira antes de seguir.',
+    }),
+  },
+  {
+    type: 'indicator',
+    label: 'Indicador',
+    description: 'Selo curto de destaque — "Você está aqui", "Mais escolhido"',
+    category: 'conteudo',
+    icon: BadgeCheck,
+    create: () => ({ type: 'indicator', textoDoIndicador: 'Você está aqui' }),
+  },
+  {
+    type: 'arrow',
+    label: 'Seta',
+    description: 'Aponta para o que vem a seguir',
+    category: 'conteudo',
+    icon: ArrowDown,
+    create: () => ({ type: 'arrow', direcaoDaSeta: 'baixo', tamanhoDoSimbolo: 32 }),
+  },
+  {
+    type: 'emoji',
+    label: 'Emoji',
+    description: 'Um emoji grande, para dar tom à etapa',
+    category: 'conteudo',
+    icon: Smile,
+    create: () => ({ type: 'emoji', emoji: '🎯', tamanhoDoSimbolo: 56 }),
+  },
+  {
+    type: 'brand',
+    label: 'Marca / Logo',
+    description: 'A logo de quem assina o funil',
+    category: 'conteudo',
+    icon: Building2,
+    create: () => ({ type: 'brand', marcaLargura: 140 }),
+  },
+  {
+    type: 'social',
+    label: 'Redes sociais',
+    description: 'Links para Instagram, WhatsApp e companhia',
+    category: 'conteudo',
+    icon: Share2,
+    create: () => ({
+      type: 'social',
+      redes: [{ id: crypto.randomUUID(), rede: 'instagram', url: '' }],
     }),
   },
 ];

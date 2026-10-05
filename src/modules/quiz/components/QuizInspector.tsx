@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp, BlockLogicOp, BlockLogicRule } from '../types';
+import type { QuizBlock, QuizDesign, QuizStep, BlockVariant, BlockOption, FaqItem, ChartPoint, BlockShowIf, ShowIfOp, BlockLogicOp, BlockLogicRule, ItemDeConteudo, LinkSocial } from '../types';
 import { MASCARAS, tamanhoDaMascara } from '../lib/fieldMask';
 import { POSICOES, ANCORAS } from '../lib/blockPosition';
 import { temCorPropria, coresDoDocumento, VOLTAR_AO_TEMA } from '../lib/temaDoBloco';
@@ -669,6 +669,142 @@ function BlockInspector({
               />
             </Field>
           </>
+        )}
+
+        {(block.type === 'grid' || block.type === 'cards') && (
+          <>
+            <Field label="Colunas">
+              <div className="grid grid-cols-3 gap-1.5">
+                {([2, 3, 4] as const).map((n) => (
+                  <Button
+                    key={n}
+                    type="button"
+                    size="sm"
+                    variant={(block.colunas ?? 2) === n ? 'default' : 'outline'}
+                    className="h-8 text-[11px]"
+                    onClick={() => onChange({ colunas: n })}
+                  >
+                    {n}
+                  </Button>
+                ))}
+              </div>
+              {(block.colunas ?? 2) > 2 && (
+                <p className="text-[10px] text-muted-foreground">
+                  No celular cai para 2 — em 448px, quatro itens dariam 100px cada.
+                </p>
+              )}
+            </Field>
+            <Field label="Itens">
+              <ItensEditor
+                itens={block.itens ?? []}
+                comTexto={block.type === 'cards'}
+                onChange={(itens) => onChange({ itens })}
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'indicator' && (
+          <>
+            <Field label="Texto">
+              <Input
+                value={block.textoDoIndicador ?? ''}
+                onChange={(e) => onChange({ textoDoIndicador: e.target.value })}
+                placeholder="Você está aqui"
+              />
+            </Field>
+            <Field label="Emoji (opcional)">
+              <Input value={block.emoji ?? ''} onChange={(e) => onChange({ emoji: e.target.value })} placeholder="📍" />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'arrow' && (
+          <>
+            <Field label="Direção">
+              <div className="grid grid-cols-4 gap-1.5">
+                {([
+                  { v: 'baixo', r: '↓' }, { v: 'cima', r: '↑' },
+                  { v: 'esquerda', r: '←' }, { v: 'direita', r: '→' },
+                ] as const).map((o) => (
+                  <Button
+                    key={o.v}
+                    type="button"
+                    size="sm"
+                    variant={(block.direcaoDaSeta ?? 'baixo') === o.v ? 'default' : 'outline'}
+                    className="h-8 text-sm"
+                    onClick={() => onChange({ direcaoDaSeta: o.v })}
+                  >
+                    {o.r}
+                  </Button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Tamanho (px)">
+              <Input
+                type="number"
+                value={block.tamanhoDoSimbolo ?? 32}
+                onChange={(e) => onChange({ tamanhoDoSimbolo: Number(e.target.value) || 32 })}
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'emoji' && (
+          <>
+            <Field label="Emoji">
+              <Input value={block.emoji ?? ''} onChange={(e) => onChange({ emoji: e.target.value })} placeholder="🎯" />
+            </Field>
+            <Field label="Tamanho (px)">
+              <Input
+                type="number"
+                value={block.tamanhoDoSimbolo ?? 56}
+                onChange={(e) => onChange({ tamanhoDoSimbolo: Number(e.target.value) || 56 })}
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'brand' && (
+          <>
+            <Field label="Logo">
+              <MediaUploader
+                quizId={quizId}
+                accept="image"
+                value={block.marcaUrl}
+                onChange={(url) => onChange({ marcaUrl: url || undefined })}
+                compact
+              />
+            </Field>
+            <Field label="Largura (px)">
+              <Input
+                type="number"
+                value={block.marcaLargura ?? 140}
+                onChange={(e) => onChange({ marcaLargura: Number(e.target.value) || 140 })}
+              />
+            </Field>
+            <Field label="Link ao clicar (opcional)">
+              <Input
+                value={block.marcaLink ?? ''}
+                onChange={(e) => onChange({ marcaLink: e.target.value || undefined })}
+                placeholder="https://"
+              />
+            </Field>
+          </>
+        )}
+
+        {block.type === 'social' && (
+          <Field label="Redes">
+            <RedesEditor redes={block.redes ?? []} onChange={(redes) => onChange({ redes })} />
+          </Field>
+        )}
+
+        {block.type === 'summary' && (
+          <p className="text-[11px] text-muted-foreground">
+            Repete as perguntas já respondidas, com o rótulo da opção escolhida. Formulário e
+            agendamento ficam de fora — eles têm tela própria. Sem nenhuma resposta ainda, o
+            bloco não aparece.
+          </p>
         )}
 
         {block.type === 'chart' && (
@@ -2847,5 +2983,120 @@ function CoresDoBlocoSection({
         </Button>
       )}
     </Section>
+  );
+}
+
+/** Itens de Grade e de Cards. */
+function ItensEditor({
+  itens,
+  comTexto,
+  onChange,
+}: {
+  itens: ItemDeConteudo[];
+  comTexto: boolean;
+  onChange: (i: ItemDeConteudo[]) => void;
+}) {
+  const atualizar = (i: number, patch: Partial<ItemDeConteudo>) =>
+    onChange(itens.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+
+  return (
+    <div className="space-y-2">
+      {itens.map((item, i) => (
+        <div key={item.id} className="space-y-1.5 rounded-lg border p-2">
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={item.emoji ?? ''}
+              onChange={(e) => atualizar(i, { emoji: e.target.value })}
+              className="h-8 w-12 text-center"
+              placeholder="✅"
+            />
+            <Input
+              value={item.titulo}
+              onChange={(e) => atualizar(i, { titulo: e.target.value })}
+              className="h-8 flex-1 text-xs"
+              placeholder="Título"
+            />
+            <button
+              onClick={() => onChange(itens.filter((_, k) => k !== i))}
+              className="text-muted-foreground transition-colors hover:text-destructive"
+              aria-label={`Remover item ${i + 1}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {comTexto && (
+            <Input
+              value={item.texto ?? ''}
+              onChange={(e) => atualizar(i, { texto: e.target.value })}
+              className="h-8 text-xs"
+              placeholder="Texto de apoio"
+            />
+          )}
+          <Input
+            value={item.url ?? ''}
+            onChange={(e) => atualizar(i, { url: e.target.value || undefined })}
+            className="h-8 text-xs"
+            placeholder="Link ao clicar (opcional)"
+          />
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full gap-1.5 text-xs"
+        onClick={() => onChange([...itens, { id: crypto.randomUUID(), titulo: '', emoji: '✅' }])}
+      >
+        <Plus className="h-3.5 w-3.5" />Adicionar item
+      </Button>
+    </div>
+  );
+}
+
+const ROTULO_DA_REDE: Record<LinkSocial['rede'], string> = {
+  instagram: 'Instagram', whatsapp: 'WhatsApp', facebook: 'Facebook', youtube: 'YouTube',
+  tiktok: 'TikTok', linkedin: 'LinkedIn', site: 'Site', email: 'E-mail',
+};
+
+/** Links de redes. Aceita só o usuário — o endereço completo é montado no player. */
+function RedesEditor({ redes, onChange }: { redes: LinkSocial[]; onChange: (r: LinkSocial[]) => void }) {
+  return (
+    <div className="space-y-2">
+      {redes.map((r, i) => (
+        <div key={r.id} className="flex items-center gap-1.5">
+          <select
+            value={r.rede}
+            onChange={(e) => onChange(redes.map((x, k) => (k === i ? { ...x, rede: e.target.value as LinkSocial['rede'] } : x)))}
+            className="h-8 w-28 shrink-0 rounded-md border bg-background px-1.5 text-xs"
+          >
+            {(Object.keys(ROTULO_DA_REDE) as LinkSocial['rede'][]).map((k) => (
+              <option key={k} value={k}>{ROTULO_DA_REDE[k]}</option>
+            ))}
+          </select>
+          <Input
+            value={r.url}
+            onChange={(e) => onChange(redes.map((x, k) => (k === i ? { ...x, url: e.target.value } : x)))}
+            className="h-8 flex-1 text-xs"
+            placeholder="@usuario ou endereço completo"
+          />
+          <button
+            onClick={() => onChange(redes.filter((_, k) => k !== i))}
+            className="text-muted-foreground transition-colors hover:text-destructive"
+            aria-label={`Remover ${ROTULO_DA_REDE[r.rede]}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full gap-1.5 text-xs"
+        onClick={() => onChange([...redes, { id: crypto.randomUUID(), rede: 'instagram', url: '' }])}
+      >
+        <Plus className="h-3.5 w-3.5" />Adicionar rede
+      </Button>
+    </div>
   );
 }
