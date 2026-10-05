@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { posicaoDoCartao, faixasDoVeu } from "./tutorialPosicao";
+import { posicaoDoCartao, faixasDoVeu, recorteVisivel } from "./tutorialPosicao";
 
 const JANELA = { width: 1440, height: 900 };
 const CARTAO = { width: 320, height: 180 };
@@ -87,5 +87,31 @@ describe("faixasDoVeu", () => {
       expect(f.left + f.width).toBeLessThanOrEqual(JANELA.width);
       expect(f.top + f.height).toBeLessThanOrEqual(JANELA.height);
     }
+  });
+});
+
+describe("recorteVisivel", () => {
+  it("devolve o alvo inteiro quando ele cabe na tela", () => {
+    const alvo = { top: 100, left: 50, width: 200, height: 300 };
+    expect(recorteVisivel(alvo, JANELA)).toEqual(alvo);
+  });
+
+  it("recorta o que passa da borda de baixo", () => {
+    const r = recorteVisivel({ top: 800, left: 0, width: 200, height: 600 }, JANELA);
+    expect(r).toEqual({ top: 800, left: 0, width: 200, height: 100 });
+  });
+
+  it("devolve null quando o alvo está inteiramente abaixo da dobra", () => {
+    // O caso de produção: âncora em top 2546 numa janela de 841.
+    expect(
+      recorteVisivel(
+        { top: 2546, left: 0, width: 272, height: 1625 },
+        { width: 1728, height: 841 },
+      ),
+    ).toBeNull();
+  });
+
+  it("devolve null quando sobra só uma lasca", () => {
+    expect(recorteVisivel({ top: 896, left: 0, width: 200, height: 300 }, JANELA)).toBeNull();
   });
 });

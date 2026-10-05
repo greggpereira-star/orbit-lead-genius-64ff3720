@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import {
   posicaoDoCartao,
   faixasDoVeu,
+  recorteVisivel,
   type PosicaoDoCartao,
   type Retangulo,
 } from "../lib/tutorialPosicao";
@@ -67,12 +68,19 @@ export function TutorialGuiado({
       setPos(null);
       return;
     }
+    /* O alvo pode estar fora da dobra: o painel lateral rola, e num quiz de 24
+       etapas a lista começa muito abaixo. Sem isto o véu cobria a tela toda e o
+       recorte caía fora dela — medido em produção em 05/10. */
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
     const r = el.getBoundingClientRect();
-    const ret: Retangulo = { top: r.top, left: r.left, width: r.width, height: r.height };
+    const ret = recorteVisivel(
+      { top: r.top, left: r.left, width: r.width, height: r.height },
+      janela,
+    );
     setAlvo(ret);
     setPos(
       posicaoDoCartao(
-        ret,
+        ret ?? { top: 0, left: 0, width: 0, height: 0 },
         { width: CARTAO.width, height: refCartao.current?.offsetHeight ?? CARTAO.height },
         janela,
       ),

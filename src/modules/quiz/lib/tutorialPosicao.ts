@@ -105,3 +105,27 @@ export function faixasDoVeu(
     },
   ].filter((r) => r.width > 0 && r.height > 0);
 }
+
+/**
+ * A parte do alvo que realmente está na tela.
+ *
+ * Medido em produção, 05/10: a âncora das etapas ficava em `top: 2546` numa
+ * janela de 841px — o painel lateral rola, e num quiz de 24 etapas a lista
+ * começa muito abaixo da dobra. O véu então cobria tudo e o buraco caía fora
+ * da tela: o tutorial escurecia a tela inteira e destacava o nada.
+ *
+ * Devolve `null` quando sobra pouco ou nada visível, e aí o cartão vai ao
+ * centro sem recorte — que é honesto, em vez de apontar para fora.
+ */
+export function recorteVisivel(
+  alvo: Retangulo,
+  janela: { width: number; height: number },
+  minimo = 8,
+): Retangulo | null {
+  const top = Math.max(0, alvo.top);
+  const left = Math.max(0, alvo.left);
+  const width = Math.min(janela.width, alvo.left + alvo.width) - left;
+  const height = Math.min(janela.height, alvo.top + alvo.height) - top;
+  if (width < minimo || height < minimo) return null;
+  return { top, left, width, height };
+}
