@@ -299,10 +299,7 @@
         'display:flex;align-items:center;justify-content:center;z-index:2147483000;' +
         'padding:22px 20px;opacity:0;transition:opacity .18s ease';
 
-      /* A `caixa` existe só para o botão de fechar poder sair PARA FORA do
-         cartão. Ele ficava dentro, no canto superior direito, colado na barra
-         de rolagem do formulário — dois elementos disputando os mesmos 14
-         pixels. Fora do cartão não há o que disputar. */
+      /* A `caixa` segura o cartão e a animação de entrada. */
       var caixa = document.createElement('div');
       caixa.style.cssText = 'position:relative;width:100%;max-width:' +
         (options.maxWidth || 520) + 'px;transform:translateY(8px);transition:transform .18s ease';
@@ -318,40 +315,15 @@
        * uma faixa suja embaixo do cartão, que é o que apareceu na tela da
        * Exata. Elevação sobre fundo escurecido é redundante. */
 
-      var fechar = document.createElement('button');
-      fechar.type = 'button';
-      fechar.setAttribute('aria-label', 'Fechar');
-      /* SVG em vez do caractere `&times;`: o glifo herda a métrica da fonte do
-         site do cliente e nunca fica centrado no círculo — na Exata ele saiu
-         encostado na borda de cima. Um traço desenhado é sempre o mesmo. */
-      fechar.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" '
-        + 'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
-        + '<path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6" '
-        + 'stroke-linecap="round"/></svg>';
-      /* ACIMA do cartão, inteiro sobre o escurecido.
-       *
-       * Estava no canto superior direito DENTRO do cartão, bem onde a borda
-       * curva: círculo branco sobre cartão branco, metade dele na curva. Lia
-       * como elemento quebrado — foi o que apareceu na tela da Exata. Inteiro
-       * fora, sobre o fundo escuro, vira um controle claro; e como não encosta
-       * no cartão, também não disputa espaço com a barra de rolagem do
-       * formulário, que era o problema de antes.
-       *
-       * Vidro em vez de branco chapado: sobre o escurecido, um círculo branco
-       * sólido puxa mais atenção que o próprio formulário. */
-      fechar.style.cssText = 'position:absolute;bottom:calc(100% + 12px);right:0;z-index:3;' +
-        'width:36px;height:36px;border:1px solid rgba(255,255,255,.22);border-radius:999px;' +
-        'background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(6px);' +
-        'backdrop-filter:blur(6px);color:#fff;cursor:pointer;display:grid;place-items:center;' +
-        'padding:0;transition:background .15s ease,border-color .15s ease';
-      fechar.onmouseenter = function () {
-        fechar.style.background = 'rgba(255,255,255,.24)';
-        fechar.style.borderColor = 'rgba(255,255,255,.38)';
-      };
-      fechar.onmouseleave = function () {
-        fechar.style.background = 'rgba(255,255,255,.12)';
-        fechar.style.borderColor = 'rgba(255,255,255,.22)';
-      };
+      /* O botão de fechar agora vive DENTRO do formulário, no cabeçalho dele,
+         e avisa aqui por `LEADFLOW_CLOSE`.
+         
+         Tentei as duas posições externas e as duas estavam erradas: na quina
+         do cartão ele era um círculo branco sobre fundo branco e lia como
+         quebrado; inteiramente fora, acima do cartão, descolava do modal e
+         ficava difícil de achar. Dentro do cabeçalho ele fica alinhado com a
+         margem do formulário, é parte do desenho, e como o cabeçalho não rola
+         também não disputa espaço com a barra de rolagem. */
 
       var iframe = document.createElement('iframe');
       /* `lf_modo=modal` avisa o formulário de que a altura é LIMITADA.
@@ -389,9 +361,8 @@
          * piso de 420px passava por cima do teto e o modal ficava MAIOR que o
          * espaço disponível. O piso agora é ele próprio limitado pela janela.
          */
-        /* Reserva: 22px de folga em cima e embaixo, mais 36px do botão de
-           fechar e 12px entre ele e o cartão — ele agora fica ACIMA. */
-        var teto = Math.max(window.innerHeight - 92, 240);
+        // 22px de folga em cima e embaixo do escurecido, mais uma margem.
+        var teto = Math.max(window.innerHeight - 56, 240);
         /* Acompanha o conteúdo até o teto da janela.
          *
          * Fixar sempre no teto deixava uma área branca enorme num formulário
@@ -423,6 +394,10 @@
           esconderEspera();
           ajustarAltura(e.data.height);
         }
+        if (e.data.type === 'LEADFLOW_CLOSE') {
+          encerrar();
+          return;
+        }
         if (e.data.type === 'LEADFLOW_FORM_SUBMITTED' && options.closeOnSubmit !== false) {
           // Tempo de ler a confirmação antes de fechar.
           setTimeout(encerrar, options.closeDelay || 2500);
@@ -433,7 +408,6 @@
       var aoRedimensionar = function() { ajustarAltura(); };
 
       overlay.onclick = encerrar;
-      fechar.onclick = encerrar;
       document.addEventListener('keydown', aoTeclar);
       window.addEventListener('message', aoReceber);
       // Girar o celular muda o teto; sem isto o modal ficaria com a altura da
@@ -479,7 +453,6 @@
 
       content.appendChild(carregando);
       content.appendChild(iframe);
-      caixa.appendChild(fechar);
       caixa.appendChild(content);
       overlay.appendChild(caixa);
       document.body.appendChild(overlay);

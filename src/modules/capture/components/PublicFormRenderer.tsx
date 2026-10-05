@@ -183,7 +183,8 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
       if (!(window.parent && window.parent !== window)) return;
       const rolagem = document.querySelector('[data-lf-rolagem]') as HTMLElement | null;
       const barra = document.querySelector('[data-lf-barra]') as HTMLElement | null;
-      const altura = (rolagem?.scrollHeight ?? 0) + (barra?.offsetHeight ?? 0);
+      const topo = document.querySelector('[data-lf-topo]') as HTMLElement | null;
+      const altura = (topo?.offsetHeight ?? 0) + (rolagem?.scrollHeight ?? 0) + (barra?.offsetHeight ?? 0);
       window.parent.postMessage(
         { type: 'LEADFLOW_READY', height: altura || undefined },
         origemDoEmbutidor(),
@@ -534,25 +535,49 @@ export function PublicFormRenderer({ slug }: PublicFormRendererProps) {
         style={{ color: 'var(--foreground)' }}
       >
         {/* Só esta parte rola; a barra de ação fica fora dela. */}
-        <div data-lf-rolagem className="flex-1 min-h-0 overflow-y-auto">
-        <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
-        {isMultiStep && (
-          /* `pr-12`: dentro do modal o botão de fechar fica no canto superior
-             direito e cobria o "50% completo". A folga reserva o espaço dele. */
-          <div className="pt-5 px-6 sm:px-8 pr-12 sm:pr-14">
-            <div className="flex justify-between items-center mb-2.5">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Passo {currentStep + 1} de {sortedSteps.length}
-              </span>
-              <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
-                {Math.round(progress)}%
-              </span>
+        {/* Faixa fixa no topo, FORA da área que rola.
+            O botão de fechar mora aqui, alinhado com a margem do cartão. Fora
+            do cartão ele descolava e ficava difícil de achar; na quina de
+            dentro, círculo branco sobre branco, lia como quebrado. Numa faixa
+            própria ele é parte do desenho — e como a faixa não rola, nunca
+            disputa espaço com a barra de rolagem. */}
+        {(noModal || isMultiStep) && (
+          <div data-lf-topo className="shrink-0 px-6 sm:px-8 pt-4">
+            <div className="flex items-center gap-3">
+              {isMultiStep ? (
+                <>
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    Passo {currentStep + 1} de {sortedSteps.length}
+                  </span>
+                  <span className="text-[11px] font-medium text-muted-foreground tabular-nums ml-auto">
+                    {Math.round(progress)}%
+                  </span>
+                </>
+              ) : <span className="flex-1" />}
+
+              {noModal && (
+                <button
+                  type="button"
+                  aria-label="Fechar"
+                  onClick={() => window.parent?.postMessage(
+                    { type: 'LEADFLOW_CLOSE' }, origemDoEmbutidor(),
+                  )}
+                  className="-mr-2 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <path d="M1 1L12 12M12 1L1 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
             </div>
-            <Progress value={progress} className="h-1" />
+            {isMultiStep && <Progress value={progress} className="mt-2.5 h-1" />}
           </div>
         )}
+
+        <div data-lf-rolagem className="flex-1 min-h-0 overflow-y-auto">
+        <Card className="border-none shadow-none bg-transparent w-full overflow-visible" style={{ borderColor: 'var(--border)' }}>
         
-        <CardHeader className="space-y-1.5 px-6 sm:px-8 pb-7 pt-5 border-none" style={{ borderColor: 'var(--border)' }}>
+        <CardHeader className="space-y-1.5 px-6 sm:px-8 pb-7 pt-3 border-none" style={{ borderColor: 'var(--border)' }}>
           {isMultiStep ? (
             <div className="text-center space-y-1">
                <CardTitle className="text-[22px] font-semibold tracking-[-0.02em] text-foreground">
