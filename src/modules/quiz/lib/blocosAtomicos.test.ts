@@ -52,7 +52,7 @@ function quizCom(blocosDaEtapa: QuizBlock[]): QuizSchema {
   };
 }
 
-describe("aviso de botão fora do fim da etapa", () => {
+describe("o Botão é o dono do avanço", () => {
   const titulo = { id: "t", type: "heading", title: "Oi" } as QuizBlock;
   const botao = { id: "b", type: "button", ctaLabel: "Continuar" } as QuizBlock;
   const pergunta = {
@@ -62,19 +62,36 @@ describe("aviso de botão fora do fim da etapa", () => {
     options: [{ id: "o1", label: "A" }],
   } as QuizBlock;
 
-  it("não avisa quando o botão é o último do fluxo", () => {
+  it("não reclama de um botão no meio da etapa — ele passou a funcionar ali", () => {
+    const achados = validarPublicacao(quizCom([titulo, botao, pergunta]));
+    expect(achados.filter((a) => /Botão/.test(a.mensagem))).toEqual([]);
+  });
+
+  it("não reclama de um botão único no fim", () => {
     const achados = validarPublicacao(quizCom([titulo, pergunta, botao]));
     expect(achados.filter((a) => /Botão/.test(a.mensagem))).toEqual([]);
   });
 
-  it("avisa quando o botão está no meio — ele some no publicado", () => {
-    const achados = validarPublicacao(quizCom([titulo, botao, pergunta]));
+  it("avisa quando há dois botões e o primeiro não leva a lugar nenhum", () => {
+    const mudo = { id: "b2", type: "button", ctaLabel: "Outro" } as QuizBlock;
+    const achados = validarPublicacao(quizCom([mudo, pergunta, botao]));
     const aviso = achados.find((a) => /Botão/.test(a.mensagem));
     expect(aviso).toBeTruthy();
     expect(aviso!.nivel).toBe("avisa");
   });
 
-  it("nunca bloqueia a publicação por causa disso", () => {
+  it("não avisa quando o botão extra tem link próprio", () => {
+    const comLink = {
+      id: "b2",
+      type: "button",
+      ctaLabel: "Comprar",
+      ctaUrl: "https://exemplo.com",
+    } as QuizBlock;
+    const achados = validarPublicacao(quizCom([comLink, pergunta, botao]));
+    expect(achados.filter((a) => /Botão/.test(a.mensagem))).toEqual([]);
+  });
+
+  it("nunca bloqueia a publicação por causa de botão", () => {
     const achados = validarPublicacao(quizCom([botao, pergunta]));
     expect(achados.filter((a) => a.nivel === "bloqueia" && /Botão/.test(a.mensagem))).toEqual([]);
   });

@@ -465,6 +465,16 @@ function BlockInspector({
               </Field>
             )}
 
+            {block.type === "button" && (
+              <Field label="Link do botão (URL)">
+                <Input
+                  value={block.ctaUrl ?? ""}
+                  onChange={(e) => onChange({ ctaUrl: e.target.value })}
+                  placeholder="deixe vazio para avançar a etapa"
+                />
+              </Field>
+            )}
+
             {block.type === "result" && (
               <>
                 <Field label="Link do botão (URL)">

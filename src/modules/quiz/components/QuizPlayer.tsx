@@ -462,6 +462,14 @@ function PlayerRunner({
 
   const ultimoNoFluxo = useMemo(() => {
     const noFluxo = effectiveBlocks.filter(estaNoFluxo);
+    /* Um bloco Botão EXPLÍCITO declara onde fica o avanço, e ganha do último
+       da etapa. Sem isto, quem punha um botão no meio via ele sumir, porque o
+       avanço pertencia a quem estivesse por último — e era preciso um aviso no
+       validador para explicar um comportamento que ninguém pediu.
+       É o modelo do inlead, cuja documentação descreve o Botão como componente
+       de navegação com ação própria, e não como um apêndice do último bloco. */
+    const botaoExplicito = [...noFluxo].reverse().find((b) => b.type === 'button');
+    if (botaoExplicito) return botaoExplicito.id;
     return noFluxo[noFluxo.length - 1]?.id ?? effectiveBlocks[effectiveBlocks.length - 1]?.id;
   }, [effectiveBlocks]);
 
@@ -2094,8 +2102,19 @@ function BlockView({
         />
       );
     case 'button':
+      /* `ctaUrl` preenchido = o botão leva para fora (checkout, WhatsApp);
+         vazio = avança a etapa. Até aqui `ctaUrl` só era honrado na tela de
+         resultado, e num bloco de ação era lido e ignorado. */
       return (
-        <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
+        <PrimaryBtn
+          design={design}
+          textStyle={btnText}
+          hidden={!terminal && !block.ctaUrl}
+          onClick={() => {
+            if (block.ctaUrl) window.location.href = block.ctaUrl;
+            else onSubmit(true);
+          }}
+        >
           {block.ctaLabel || 'Continuar'}
         </PrimaryBtn>
       );

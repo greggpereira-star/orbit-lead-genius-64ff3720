@@ -1,13 +1,13 @@
-import type { QuizBlock, QuizSchema, QuizStep, ScoreTier } from '../types';
-import { getSteps } from './steps';
+import type { QuizBlock, QuizSchema, QuizStep, ScoreTier } from "../types";
+import { getSteps } from "./steps";
 
 export interface Achado {
-  nivel: 'bloqueia' | 'avisa';
+  nivel: "bloqueia" | "avisa";
   mensagem: string;
 }
 
 /** Blocos que podem capturar contato. Sem um deles, o quiz não gera lead. */
-const BLOCOS_DE_CAPTURA = ['email', 'phone', 'form'];
+const BLOCOS_DE_CAPTURA = ["email", "phone", "form"];
 
 /**
  * Checagens antes de deixar um quiz ir ao ar.
@@ -29,7 +29,7 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
   const blocos = schema.blocks ?? [];
 
   if (steps.length === 0 || blocos.length === 0) {
-    achados.push({ nivel: 'bloqueia', mensagem: 'O quiz não tem nenhuma etapa com conteúdo.' });
+    achados.push({ nivel: "bloqueia", mensagem: "O quiz não tem nenhuma etapa com conteúdo." });
     // Sem etapa, as checagens seguintes não têm o que dizer.
     return achados;
   }
@@ -38,14 +38,15 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
      aceitá-lo. Os dois lados precisam concordar, senão a validação barra um
      quiz que na prática funciona, ou libera um que não. */
   const temCaptura = blocos.some(
-    (b) => BLOCOS_DE_CAPTURA.includes(b.type) || (b.type === 'short-text' && b.fieldMask === 'telefone'),
+    (b) =>
+      BLOCOS_DE_CAPTURA.includes(b.type) || (b.type === "short-text" && b.fieldMask === "telefone"),
   );
   if (!temCaptura) {
     achados.push({
-      nivel: 'bloqueia',
+      nivel: "bloqueia",
       mensagem:
-        'Nenhuma etapa de captura identificada. Sem um bloco de E-mail, Telefone ou Formulário, ' +
-        'o quiz roda e pontua, mas nunca gera lead.',
+        "Nenhuma etapa de captura identificada. Sem um bloco de E-mail, Telefone ou Formulário, " +
+        "o quiz roda e pontua, mas nunca gera lead.",
     });
   }
 
@@ -56,41 +57,47 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
   const vazias = steps.filter((s) => s.blockIds.length === 0);
   if (vazias.length) {
     achados.push({
-      nivel: 'avisa',
+      nivel: "avisa",
       mensagem: `${vazias.length} etapa(s) sem nenhum componente — elas são ignoradas no quiz publicado.`,
     });
   }
 
-  /* Botão que não é o último da etapa não aparece no quiz publicado.
-     O player dá o avanço ao ÚLTIMO bloco do fluxo e esconde os outros botões,
-     para a etapa não ter dois que avançam. No construtor o botão aparece
-     normalmente — então sem este aviso o autor monta a tela, vê o botão no
-     meio dela, e só descobre que sumiu depois de publicar. */
-  const botoesNoMeio = steps.flatMap((st) => {
-    const doPasso = st.blockIds
+  /* Dois blocos Botão na mesma etapa: só o ÚLTIMO avança, os outros precisam
+     de link próprio para fazer alguma coisa. Antes o aviso aqui era outro — que
+     um botão fora do fim sumia —, e ele existia para explicar um comportamento
+     que não era intencional. Com o Botão explícito passando a ser o dono do
+     avanço, aquilo deixou de acontecer, e o que resta é este caso bem mais
+     estreito. */
+  const etapasComBotaoMudo = steps.filter((st) => {
+    const botoes = st.blockIds
       .map((id) => blocos.find((b) => b.id === id))
-      .filter((b): b is QuizBlock => !!b && (b.posicao ?? 'fluxo') === 'fluxo');
-    const ultimo = doPasso[doPasso.length - 1];
-    return doPasso.filter((b) => b.type === 'button' && b.id !== ultimo?.id);
+      .filter(
+        (b): b is QuizBlock => !!b && b.type === "button" && (b.posicao ?? "fluxo") === "fluxo",
+      );
+    if (botoes.length < 2) return false;
+    // O último avança; os anteriores só valem se levarem a algum lugar.
+    return botoes.slice(0, -1).some((b) => !b.ctaUrl?.trim());
   });
-  if (botoesNoMeio.length) {
+  if (etapasComBotaoMudo.length) {
     achados.push({
-      nivel: 'avisa',
+      nivel: "avisa",
       mensagem:
-        `${botoesNoMeio.length} bloco(s) Botão não estão no fim da etapa — quem avança a etapa é ` +
-        'o último componente dela, então esses botões não aparecem no quiz publicado.',
+        `${etapasComBotaoMudo.length} etapa(s) têm mais de um Botão sem link próprio — ` +
+        "só o último avança a etapa, os outros não fazem nada.",
     });
   }
 
   // Salto apontando para bloco que não existe mais deixa o visitante preso.
   const ids = new Set(blocos.map((b) => b.id));
-  const saltosQuebrados = blocos.flatMap((b) => [
-    ...(b.options ?? []).map((o) => o.jumpToBlockId),
-    ...(b.logicRules ?? []).map((r) => r.jumpToBlockId),
-  ]).filter((id): id is string => !!id && !ids.has(id));
+  const saltosQuebrados = blocos
+    .flatMap((b) => [
+      ...(b.options ?? []).map((o) => o.jumpToBlockId),
+      ...(b.logicRules ?? []).map((r) => r.jumpToBlockId),
+    ])
+    .filter((id): id is string => !!id && !ids.has(id));
   if (saltosQuebrados.length) {
     achados.push({
-      nivel: 'bloqueia',
+      nivel: "bloqueia",
       mensagem: `${saltosQuebrados.length} salto(s) apontam para um componente que não existe mais.`,
     });
   }
@@ -100,22 +107,22 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
     const semMensagem = faixas.filter((t) => !t.whatsappTemplate?.trim());
     if (semMensagem.length) {
       achados.push({
-        nivel: 'avisa',
+        nivel: "avisa",
         mensagem: `${semMensagem.length} faixa(s) sem mensagem de WhatsApp — quem cair nelas não recebe nada.`,
       });
     }
   } else {
     achados.push({
-      nivel: 'avisa',
-      mensagem: 'Nenhuma faixa de pontuação configurada — todos os leads chegam sem classificação.',
+      nivel: "avisa",
+      mensagem: "Nenhuma faixa de pontuação configurada — todos os leads chegam sem classificação.",
     });
   }
 
-  const temResultado = blocos.some((b) => b.type === 'result');
+  const temResultado = blocos.some((b) => b.type === "result");
   if (!temResultado) {
     achados.push({
-      nivel: 'avisa',
-      mensagem: 'Nenhum bloco de Resultado — o visitante termina sem ver um desfecho.',
+      nivel: "avisa",
+      mensagem: "Nenhum bloco de Resultado — o visitante termina sem ver um desfecho.",
     });
   }
 
