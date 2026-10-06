@@ -615,8 +615,13 @@ function QuizBuilderPage() {
     if (destination.droppableId === "palette") return;
 
     if (source.droppableId === "palette") {
-      const type = draggableId.replace("palette-", "");
-      const defIndex = BLOCK_LIBRARY.findIndex((d) => d.type === type);
+      /* O identificador arrastado é o do ITEM DE PALETA, não o tipo: "Sim / Não"
+         e "Número" são atalhos que produzem `single-choice` e `short-text` já
+         configurados, e dois itens dividem o mesmo tipo. Procurar por tipo aqui
+         traria sempre o genérico, e arrastar o atalho entregaria o bloco
+         errado — sem erro nenhum na tela. */
+      const idDaPaleta = draggableId.replace("palette-", "");
+      const defIndex = BLOCK_LIBRARY.findIndex((d) => (d.id ?? d.type) === idDaPaleta);
       if (defIndex === -1) return;
       const def = BLOCK_LIBRARY[defIndex];
       const newBlock: QuizBlock = { id: crypto.randomUUID(), ...def.create() };
@@ -998,8 +1003,8 @@ function QuizBuilderPage() {
                         <div className="grid grid-cols-2 gap-1.5">
                           {items.map(({ def, defIndex, paletteIndex }) => (
                             <Draggable
-                              key={def.type}
-                              draggableId={`palette-${def.type}`}
+                              key={def.id ?? def.type}
+                              draggableId={`palette-${def.id ?? def.type}`}
                               index={paletteIndex}
                             >
                               {(dragProvided, dragSnapshot) => (

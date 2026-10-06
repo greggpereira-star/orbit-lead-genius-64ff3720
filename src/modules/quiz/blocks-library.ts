@@ -5,6 +5,7 @@ import {
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
   PhoneCall, SeparatorHorizontal, CalendarClock, Heading1, Pilcrow, MousePointerClick, AlertCircle,
+  ToggleLeft, Hash,
   Grid3x3, LayoutPanelTop, ListChecks as ListaResumo, BadgeCheck, ArrowDown, Smile, Building2, Share2,
 } from 'lucide-react';
 
@@ -37,6 +38,18 @@ export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
 
 interface BlockDef {
   type: BlockType;
+  /**
+   * Identidade do ITEM DE PALETA, quando ela não coincide com o tipo.
+   *
+   * Existe porque "Sim / Não" e "Número" são atalhos: produzem uma
+   * `single-choice` e um `short-text` já configurados, e não tipos novos. Com
+   * dois registros do mesmo `type`, usar o tipo como chave de React duplicaria
+   * chave, e o `draggableId` colidiria no arrastar. A BUSCA pela definição
+   * continua por `type` e devolve a primeira — por isso os atalhos vêm DEPOIS
+   * do registro genérico, senão uma escolha única qualquer passaria a se
+   * chamar "Sim / Não" no inspetor e na lista de etapas.
+   */
+  id?: string;
   label: string;
   description: string;
   category: BlockCategory;
@@ -114,6 +127,27 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       ],
     }),
   },
+  /* Atalhos de paleta: produzem um bloco já configurado, não um tipo novo. O
+     inlead os oferece como componentes próprios, e a razão é de uso — montar
+     "Sim/Não" na mão é escolher o bloco, apagar três opções e renomear duas.
+     Vêm DEPOIS do genérico porque a busca por `type` devolve a primeira. */
+  {
+    type: 'single-choice',
+    id: 'sim-nao',
+    label: 'Sim / Não',
+    description: 'Pergunta binária, de um clique',
+    category: 'interacao',
+    icon: ToggleLeft,
+    create: () => ({
+      type: 'single-choice',
+      title: 'Você já tentou resolver isso antes?',
+      optionsLayout: 'grade-2',
+      options: [
+        { id: crypto.randomUUID(), label: 'Sim' },
+        { id: crypto.randomUUID(), label: 'Não' },
+      ],
+    }),
+  },
   {
     type: 'multi-choice',
     label: 'Múltipla escolha',
@@ -137,6 +171,20 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     category: 'captura',
     icon: Type,
     create: () => ({ type: 'short-text', title: 'Qual seu nome?', placeholder: 'Digite seu nome' }),
+  },
+  {
+    type: 'short-text',
+    id: 'numero',
+    label: 'Número',
+    description: 'Campo que só aceita números',
+    category: 'captura',
+    icon: Hash,
+    create: () => ({
+      type: 'short-text',
+      title: 'Quantos anos você tem?',
+      fieldMask: 'numero',
+      placeholder: 'Digite um número',
+    }),
   },
   {
     type: 'long-text',
