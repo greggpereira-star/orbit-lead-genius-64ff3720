@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Check,
   Video,
+  ArrowDown,
 } from "lucide-react";
 import type { QuizBlock, QuizDesign, QuizSchema } from "../types";
 import { getSteps } from "../lib/steps";
@@ -30,6 +31,8 @@ import { estiloDoAlerta } from "../lib/alerta";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import { CountdownTimer } from "./CountdownTimer";
 import { AudioPlayer } from "./AudioPlayer";
+import { ItensDeConteudo, SumarioDasRespostas, RedesSociais } from "./blocosDeConteudo";
+import { SchedulingField } from "./SchedulingField";
 
 const CONTAINER_ALIGN_CSS: Record<string, React.CSSProperties["alignItems"]> = {
   start: "flex-start",
@@ -769,6 +772,112 @@ export function BlockRenderer({
         </div>
       );
     }
+    /* Os nove abaixo existiam só no player: no construtor caíam no `default`
+       e apareciam como um título solto. Os ajudantes são os MESMOS de lá —
+       `blocosDeConteudo` —, para os dois lados não divergirem de novo. */
+    case "grid":
+    case "cards":
+      return (
+        <div className="space-y-4">
+          {heading}
+          <ItensDeConteudo block={block} design={design} cartao={block.type === "cards"} />
+        </div>
+      );
+
+    case "summary":
+      /* No canvas o resumo vem vazio: não há respostas em tempo de edição.
+         Em vez do nada que o player mostra, uma linha de exemplo — senão o
+         autor acha que o bloco está quebrado. */
+      return (
+        <div className="space-y-4">
+          {heading}
+          <SumarioDasRespostas
+            block={block}
+            design={design}
+            resumo={[{ pergunta: "Exemplo de pergunta", resposta: "Resposta do visitante" }]}
+          />
+        </div>
+      );
+
+    case "social":
+      return <RedesSociais block={block} design={design} />;
+
+    case "indicator":
+      return (
+        <div className="flex justify-center">
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold"
+            style={{
+              borderRadius: 999,
+              background: withAlpha(design.primary, 0.12),
+              color: design.primary,
+            }}
+          >
+            {block.emoji && <span aria-hidden>{block.emoji}</span>}
+            {block.textoDoIndicador ?? ""}
+          </span>
+        </div>
+      );
+
+    case "arrow": {
+      const giro = { baixo: 0, cima: 180, direita: 270, esquerda: 90 }[
+        block.direcaoDaSeta ?? "baixo"
+      ];
+      return (
+        <div className="flex justify-center" aria-hidden>
+          <span className="quiz-seta-deriva inline-flex">
+            <ArrowDown
+              style={{
+                width: block.tamanhoDoSimbolo ?? 32,
+                height: block.tamanhoDoSimbolo ?? 32,
+                color: design.primary,
+                transform: `rotate(${giro}deg)`,
+              }}
+            />
+          </span>
+        </div>
+      );
+    }
+
+    case "emoji":
+      return (
+        <div
+          className="text-center leading-none"
+          style={{ fontSize: block.tamanhoDoSimbolo ?? 56 }}
+          aria-hidden
+        >
+          {block.emoji || "🎯"}
+        </div>
+      );
+
+    case "brand": {
+      if (!block.marcaUrl) {
+        return (
+          <div className="text-center text-xs" style={{ color: design.muted }}>
+            Cole a URL do logo no inspetor
+          </div>
+        );
+      }
+      return (
+        <div className="flex justify-center">
+          <img
+            src={block.marcaUrl}
+            alt=""
+            className="h-auto object-contain"
+            style={{ width: block.marcaLargura ?? 140 }}
+          />
+        </div>
+      );
+    }
+
+    case "scheduling":
+      return (
+        <div className="space-y-4">
+          {heading}
+          <SchedulingField block={block} design={design} value={{}} onChange={() => {}} />
+        </div>
+      );
+
     case "video-answer":
       /* O canvas mostra a MOLDURA, não a gravação: pedir a câmera do autor
          toda vez que ele seleciona o bloco seria invasivo e inútil — quem
