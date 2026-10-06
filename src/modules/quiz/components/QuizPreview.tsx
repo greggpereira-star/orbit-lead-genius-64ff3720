@@ -425,7 +425,13 @@ export function BlockRenderer({
   allBlocks?: QuizBlock[];
   device?: Breakpoint;
 }) {
-  const title = block.title || "(sem título)";
+  /* "(sem título)" é um RECADO DE EDIÇÃO, não conteúdo: avisa que o bloco tem
+     um slot de título vazio. Só vale onde o título é esperado. Nos blocos em
+     que ele é opcional — Alerta, e os atômicos — o canvas estaria mostrando um
+     texto que o publicado não mostra, que é a divergência que esta tela já
+     cometeu antes. Daí o `tituloCru`. */
+  const tituloCru = block.title;
+  const title = tituloCru || "(sem título)";
   const sub = block.subtitle;
 
   // Mesmo <RichText> do player — o canvas não pode ter renderizador próprio,
@@ -488,10 +494,10 @@ export function BlockRenderer({
             style={{ background: a.destaque }}
           />
           <div className="min-w-0 flex-1 space-y-1">
-            {(block.titleRich || title) && (
+            {(block.titleRich || tituloCru) && (
               <RichText
                 doc={block.titleRich}
-                fallback={title}
+                fallback={tituloCru}
                 className="quiz-rich text-sm font-semibold"
                 style={resolveTextStyle(block, "title", { color: a.texto })}
               />
