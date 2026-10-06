@@ -321,10 +321,23 @@ function PlayerRunner({
 
   const draftResponses = useRef<Record<string, unknown>>({});
 
-  useEffect(() => {
+  /* Zera rascunho e validade ao TROCAR de etapa — durante a renderização, e
+     não num efeito.
+     Como efeito, isto rodava também na montagem; e como os efeitos dos filhos
+     rodam ANTES dos do pai, a sequência era: o bloco obrigatório reporta
+     "inválido" → o pai apaga o registro. A etapa nascia sempre válida, e um
+     bloco obrigatório que o visitante não tocasse deixava o botão liberado.
+     Valia para e-mail, telefone, texto, agendamento e vídeo, e também em toda
+     troca de etapa, não só na primeira.
+     Ajustar estado durante a renderização é o padrão do React para "derivar de
+     uma mudança": acontece antes dos efeitos dos filhos, então o que eles
+     reportam em seguida sobrevive. */
+  const [etapaDaValidade, setEtapaDaValidade] = useState(state.currentStepIndex);
+  if (etapaDaValidade !== state.currentStepIndex) {
+    setEtapaDaValidade(state.currentStepIndex);
     draftResponses.current = {};
     setStepValidity({});
-  }, [state.currentStepIndex]);
+  }
 
   /* A geolocalização saía daqui, do navegador, por uma chamada a `ipapi.co` em
      TODA carga pública: o IP do visitante ia a um terceiro antes de qualquer
