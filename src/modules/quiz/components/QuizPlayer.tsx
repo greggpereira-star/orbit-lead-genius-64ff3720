@@ -1671,6 +1671,13 @@ function BlockView({
       const ff = block.formFields ?? { name: true, email: true, phone: true };
       return !ff.email || formValue.email.trim().length > 0;
     }
+    if (block.type === 'video-answer') {
+      /* O vídeo enviado vira o `value` do bloco, como em qualquer outro. Sem
+         isto o bloco nascia "válido" e o botão da etapa liberava sem gravação
+         nenhuma — dava para pular o bloco inteiro sem perceber. */
+      if (!block.required) return true;
+      return typeof value === 'string' && value.length > 0;
+    }
     if (block.type === 'reveal') return revealed;
     if (block.type === 'scheduling') {
       const a = value as ValorAgendamento | undefined;
@@ -1694,7 +1701,8 @@ function BlockView({
     if (
       block.type === 'single-choice' || block.type === 'rating' || block.type === 'short-text' ||
       block.type === 'long-text' || block.type === 'email' || block.type === 'phone' ||
-      block.type === 'weight' || block.type === 'height' || block.type === 'scheduling'
+      block.type === 'weight' || block.type === 'height' || block.type === 'scheduling' ||
+      block.type === 'video-answer'
     ) {
       return value;
     }
@@ -2016,14 +2024,17 @@ function BlockView({
         <div>
           {heading}
           <div className="mb-6">
+            {/* `setValue` e não `onDraftChange` direto: o valor do bloco é o
+                que alimenta validade, rascunho e persistência, pelos mesmos
+                efeitos que todos os outros blocos usam. Ligar por fora
+                parecia funcionar na tela e NÃO gravava a resposta. */}
             <VideoAnswerRecorder
               quizId={quizId ?? ''}
               blockId={block.id}
               sessionId={sessionId ?? ''}
               design={design}
               onEnviado={(url) => {
-                onDraftChange?.(url);
-                onValidChange?.(true);
+                setValue(url);
                 if (terminal) onSubmit(url);
               }}
             />
@@ -2032,8 +2043,8 @@ function BlockView({
             design={design}
             textStyle={btnText}
             hidden={!terminal}
-            disabled={!respostaAnterior}
-            onClick={() => onSubmit(respostaAnterior)}
+            disabled={!value}
+            onClick={() => onSubmit(value)}
           >
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
