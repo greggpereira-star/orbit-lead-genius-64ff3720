@@ -315,6 +315,9 @@ export interface QuizBlock {
   /** Variante do bloco Alerta: info | sucesso | atencao | erro | neutro | tema. */
   alertVariant?: string;
 
+  /** Estilo do bloco Áudio: padrao | instagram | escuro. */
+  audioStyle?: string;
+
   loadingSeconds?: number;
   loadingSteps?: string[];
   faqItems?: FaqItem[];

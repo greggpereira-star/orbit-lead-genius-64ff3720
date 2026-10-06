@@ -40,6 +40,7 @@ import {
 } from '../engine';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
+import { AudioPlayer } from './AudioPlayer';
 import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft, ArrowDown } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
@@ -2002,7 +2003,17 @@ function BlockView({
       return (
         <div>
           {heading}
-          {block.mediaUrl && <audio src={block.mediaUrl} controls className="w-full mb-6" />}
+          {block.mediaUrl && (
+            <div className="mb-6">
+              <AudioPlayer
+                src={block.mediaUrl}
+                estilo={block.audioStyle as never}
+                nome={block.subtitle}
+                fotoUrl={block.imageUrl}
+                design={design}
+              />
+            </div>
+          )}
           <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>

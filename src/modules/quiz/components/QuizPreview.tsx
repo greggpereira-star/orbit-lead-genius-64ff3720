@@ -28,6 +28,7 @@ import { larguraDoBloco } from "../lib/larguraDoBloco";
 import { estiloDoAlerta } from "../lib/alerta";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import { CountdownTimer } from "./CountdownTimer";
+import { AudioPlayer } from "./AudioPlayer";
 
 const CONTAINER_ALIGN_CSS: Record<string, React.CSSProperties["alignItems"]> = {
   start: "flex-start",
@@ -772,7 +773,13 @@ export function BlockRenderer({
         <div className="space-y-4">
           {heading}
           {block.mediaUrl ? (
-            <audio src={block.mediaUrl} controls className="w-full" />
+            <AudioPlayer
+              src={block.mediaUrl}
+              estilo={block.audioStyle as never}
+              nome={block.subtitle}
+              fotoUrl={block.imageUrl}
+              design={design}
+            />
           ) : (
             <div className="text-xs opacity-60" style={{ color: design.muted }}>
               Cole a URL do áudio no inspetor

@@ -20,6 +20,7 @@ import { temCorPropria, coresDoDocumento, VOLTAR_AO_TEMA } from "../lib/temaDoBl
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from "../lib/blockStyle";
 import { LARGURAS } from "../lib/larguraDoBloco";
 import { VARIANTES_DE_ALERTA, estiloDoAlerta } from "../lib/alerta";
+import { ESTILOS_DE_AUDIO } from "../lib/audio";
 import { DEFAULT_DESIGN } from "../design-presets";
 import type { BlockStyle, TextStyle, TextSlot } from "../lib/blockStyle";
 import { getSteps } from "../lib/steps";
@@ -471,6 +472,36 @@ function BlockInspector({
                   value={block.ctaLabel ?? ""}
                   onChange={(e) => onChange({ ctaLabel: e.target.value })}
                 />
+              </Field>
+            )}
+
+            {block.type === "audio" && (
+              <Field label="Estilo do player">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ESTILOS_DE_AUDIO.map((e) => {
+                    const ativo = (block.audioStyle ?? "padrao") === e.valor;
+                    return (
+                      <button
+                        key={e.valor}
+                        type="button"
+                        onClick={() => onChange({ audioStyle: e.valor })}
+                        aria-pressed={ativo}
+                        title={e.ajuda}
+                        className={`rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
+                          ativo
+                            ? "border-[var(--selecao)] text-[var(--selecao)]"
+                            : "border-input text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {e.rotulo}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                  No estilo <strong>Mensagem de voz</strong>, o Subtítulo vira o nome de quem fala e
+                  a Imagem vira a foto do balão.
+                </p>
               </Field>
             )}
 
