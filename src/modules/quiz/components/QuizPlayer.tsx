@@ -16,6 +16,7 @@ import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { larguraDoBloco } from '../lib/larguraDoBloco';
+import { estiloDoAlerta } from '../lib/alerta';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
 import {
@@ -2112,6 +2113,44 @@ function BlockView({
           style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
         />
       );
+    case 'alert': {
+      /* Mesma função de cor do canvas. O significado mora no traço e na borda,
+         não no texto: alerta vermelho escrito em vermelho vira mancha nos temas
+         escuros, e o tema é escolhido depois que o texto foi escrito. */
+      const a = estiloDoAlerta(block.alertVariant as never, design);
+      return (
+        <div
+          role="note"
+          className="flex items-start gap-3 rounded-xl border p-3.5"
+          style={{ background: a.fundo, borderColor: a.borda, color: a.texto }}
+        >
+          <span
+            aria-hidden
+            className="mt-1 h-5 w-1 shrink-0 rounded-full"
+            style={{ background: a.destaque }}
+          />
+          <div className="min-w-0 flex-1 space-y-1">
+            {(block.titleRich || title) && (
+              <RichText
+                doc={block.titleRich}
+                fallback={title}
+                scope={scope}
+                className="quiz-rich text-[0.9375rem] font-semibold"
+                style={resolveTextStyle(block, 'title', { color: a.texto })}
+              />
+            )}
+            <RichText
+              doc={block.subtitleRich}
+              fallback={subtitle}
+              scope={scope}
+              className="quiz-rich text-[0.9375rem] leading-relaxed"
+              style={resolveTextStyle(block, 'subtitle', { color: a.texto })}
+            />
+          </div>
+        </div>
+      );
+    }
+
     case 'paragraph':
       return (
         <RichText

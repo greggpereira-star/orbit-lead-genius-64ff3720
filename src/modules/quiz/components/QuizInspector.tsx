@@ -19,6 +19,8 @@ import { POSICOES, ANCORAS } from "../lib/blockPosition";
 import { temCorPropria, coresDoDocumento, VOLTAR_AO_TEMA } from "../lib/temaDoBloco";
 import { BLOCK_FONTS, TEXT_SLOTS, hasTextStyle } from "../lib/blockStyle";
 import { LARGURAS } from "../lib/larguraDoBloco";
+import { VARIANTES_DE_ALERTA, estiloDoAlerta } from "../lib/alerta";
+import { DEFAULT_DESIGN } from "../design-presets";
 import type { BlockStyle, TextStyle, TextSlot } from "../lib/blockStyle";
 import { getSteps } from "../lib/steps";
 import { Input } from "@/components/ui/input";
@@ -322,11 +324,17 @@ function BlockInspector({
                 {block.type !== "heading" && (
                   <RichTextEditor
                     key={`${block.id}-subtitle`}
-                    label={block.type === "paragraph" ? "Texto" : "Subtítulo"}
+                    label={
+                      block.type === "paragraph"
+                        ? "Texto"
+                        : block.type === "alert"
+                          ? "Mensagem"
+                          : "Subtítulo"
+                    }
                     value={block.subtitleRich}
                     fallbackText={block.subtitle}
                     variables={availableVariables}
-                    minHeight={block.type === "paragraph" ? 120 : 68}
+                    minHeight={block.type === "paragraph" || block.type === "alert" ? 100 : 68}
                     onChange={(doc, text) => onChange({ subtitleRich: doc, subtitle: text })}
                   />
                 )}
@@ -463,6 +471,41 @@ function BlockInspector({
                   value={block.ctaLabel ?? ""}
                   onChange={(e) => onChange({ ctaLabel: e.target.value })}
                 />
+              </Field>
+            )}
+
+            {block.type === "alert" && (
+              <Field label="Tipo do aviso">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {VARIANTES_DE_ALERTA.map((v) => {
+                    const a = estiloDoAlerta(v.valor, design ?? DEFAULT_DESIGN);
+                    const ativo = (block.alertVariant ?? "info") === v.valor;
+                    return (
+                      <button
+                        key={v.valor}
+                        type="button"
+                        onClick={() => onChange({ alertVariant: v.valor })}
+                        aria-pressed={ativo}
+                        className={`flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors ${
+                          ativo
+                            ? "border-[var(--selecao)] text-foreground"
+                            : "border-input text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span
+                          aria-hidden
+                          className="h-3 w-1 shrink-0 rounded-full"
+                          style={{ background: a.destaque }}
+                        />
+                        {v.rotulo}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                  A cor fica no traço e na borda. O texto segue a cor do tema, para o aviso
+                  continuar legível se você trocar de tema depois.
+                </p>
               </Field>
             )}
 

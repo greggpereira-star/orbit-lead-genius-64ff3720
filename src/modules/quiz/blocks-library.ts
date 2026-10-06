@@ -4,7 +4,7 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
-  PhoneCall, SeparatorHorizontal, CalendarClock, Heading1, Pilcrow, MousePointerClick,
+  PhoneCall, SeparatorHorizontal, CalendarClock, Heading1, Pilcrow, MousePointerClick, AlertCircle,
   Grid3x3, LayoutPanelTop, ListChecks as ListaResumo, BadgeCheck, ArrowDown, Smile, Building2, Share2,
 } from 'lucide-react';
 
@@ -64,6 +64,18 @@ export const BLOCK_LIBRARY: BlockDef[] = [
     category: 'basico',
     icon: Pilcrow,
     create: () => ({ type: 'paragraph', subtitle: 'Escreva seu texto aqui.' }),
+  },
+  {
+    type: 'alert',
+    label: 'Alerta',
+    description: 'Aviso em destaque, com cor de significado',
+    category: 'basico',
+    icon: AlertCircle,
+    create: () => ({
+      type: 'alert',
+      alertVariant: 'info',
+      subtitle: 'Escreva aqui o aviso que precisa de destaque.',
+    }),
   },
   {
     type: 'button',

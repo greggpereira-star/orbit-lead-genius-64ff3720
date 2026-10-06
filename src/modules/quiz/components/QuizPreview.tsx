@@ -25,6 +25,7 @@ import { evaluatePercent } from "../lib/variables";
 import { resolveBlockStyle, resolveTextStyle } from "../lib/blockStyle";
 import { resolveContainerLayout, type Breakpoint } from "../lib/containerLayout";
 import { larguraDoBloco } from "../lib/larguraDoBloco";
+import { estiloDoAlerta } from "../lib/alerta";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import { CountdownTimer } from "./CountdownTimer";
 
@@ -473,6 +474,38 @@ export function BlockRenderer({
           })}
         />
       );
+    case "alert": {
+      const a = estiloDoAlerta(block.alertVariant as never, design);
+      return (
+        <div
+          className="flex items-start gap-2.5 rounded-xl border p-3"
+          style={{ background: a.fundo, borderColor: a.borda, color: a.texto }}
+          role="note"
+        >
+          <span
+            aria-hidden
+            className="mt-0.5 h-4 w-1 shrink-0 rounded-full"
+            style={{ background: a.destaque }}
+          />
+          <div className="min-w-0 flex-1 space-y-1">
+            {(block.titleRich || title) && (
+              <RichText
+                doc={block.titleRich}
+                fallback={title}
+                className="quiz-rich text-sm font-semibold"
+                style={resolveTextStyle(block, "title", { color: a.texto })}
+              />
+            )}
+            <RichText
+              doc={block.subtitleRich}
+              fallback={sub}
+              className="quiz-rich text-sm leading-relaxed"
+              style={resolveTextStyle(block, "subtitle", { color: a.texto })}
+            />
+          </div>
+        </div>
+      );
+    }
     case "paragraph":
       return (
         <RichText

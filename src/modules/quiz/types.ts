@@ -52,6 +52,7 @@ export type BlockType =
   | "heading"
   | "paragraph"
   | "button"
+  | "alert"
   | "intro"
   | "single-choice"
   | "multi-choice"
@@ -309,6 +310,9 @@ export interface QuizBlock {
   meterFormula?: string;
   /** Legendas distribuídas embaixo da barra (ex.: Incomoda, Afeta, Evito praia). */
   meterCaptions?: string[];
+  /** Variante do bloco Alerta: info | sucesso | atencao | erro | neutro | tema. */
+  alertVariant?: string;
+
   loadingSeconds?: number;
   loadingSteps?: string[];
   faqItems?: FaqItem[];

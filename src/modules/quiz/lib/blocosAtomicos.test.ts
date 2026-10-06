@@ -9,11 +9,14 @@ import type { QuizBlock, QuizSchema } from "../types";
  * pôr uma pergunta ENTRE o título e o botão.
  */
 describe("blocos atômicos", () => {
-  it.each(["heading", "paragraph", "button"])("%s está na paleta, na categoria Básico", (tipo) => {
-    const def = BLOCK_LIBRARY.find((b) => b.type === tipo);
-    expect(def, `bloco ${tipo} ausente da paleta`).toBeTruthy();
-    expect(def!.category).toBe("basico");
-  });
+  it.each(["heading", "paragraph", "button", "alert"])(
+    "%s está na paleta, na categoria Básico",
+    (tipo) => {
+      const def = BLOCK_LIBRARY.find((b) => b.type === tipo);
+      expect(def, `bloco ${tipo} ausente da paleta`).toBeTruthy();
+      expect(def!.category).toBe("basico");
+    },
+  );
 
   it("cada um nasce com UMA coisa só — nada embutido", () => {
     const t = BLOCK_LIBRARY.find((b) => b.type === "heading")!.create() as QuizBlock;
@@ -29,6 +32,13 @@ describe("blocos atômicos", () => {
     const b = BLOCK_LIBRARY.find((b) => b.type === "button")!.create() as QuizBlock;
     expect(b.ctaLabel).toBeTruthy();
     expect(b.title).toBeUndefined();
+  });
+
+  it("o Alerta nasce com uma variante, para não cair num padrão invisível", () => {
+    const a = BLOCK_LIBRARY.find((b) => b.type === "alert")!.create() as QuizBlock;
+    expect(a.alertVariant).toBeTruthy();
+    expect(a.subtitle).toBeTruthy();
+    expect(a.ctaLabel).toBeUndefined();
   });
 
   it("a categoria Básico vem antes das outras na paleta", () => {
