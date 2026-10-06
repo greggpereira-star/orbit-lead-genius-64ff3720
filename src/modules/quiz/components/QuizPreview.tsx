@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  Video,
 } from "lucide-react";
 import type { QuizBlock, QuizDesign, QuizSchema } from "../types";
 import { getSteps } from "../lib/steps";
@@ -768,6 +769,28 @@ export function BlockRenderer({
         </div>
       );
     }
+    case "video-answer":
+      /* O canvas mostra a MOLDURA, não a gravação: pedir a câmera do autor
+         toda vez que ele seleciona o bloco seria invasivo e inútil — quem
+         grava é o visitante. */
+      return (
+        <div className="space-y-4">
+          {heading}
+          <div
+            className="flex flex-col items-center justify-center gap-2 px-6 text-center"
+            style={{
+              aspectRatio: "3 / 4",
+              borderRadius: design.radius,
+              background: withAlpha(design.text, 0.06),
+              color: design.muted,
+            }}
+          >
+            <Video className="h-8 w-8" />
+            <p className="text-xs">O visitante grava aqui — até 60 segundos</p>
+          </div>
+        </div>
+      );
+
     case "audio":
       return (
         <div className="space-y-4">

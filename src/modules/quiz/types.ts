@@ -53,6 +53,7 @@ export type BlockType =
   | "paragraph"
   | "button"
   | "alert"
+  | "video-answer"
   | "intro"
   | "single-choice"
   | "multi-choice"

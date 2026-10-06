@@ -194,6 +194,7 @@ function BlockInspector({
 
   const ctaEligible = [
     "button",
+    "video-answer",
     "intro",
     "cta",
     "result",

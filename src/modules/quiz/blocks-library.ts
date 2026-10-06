@@ -4,7 +4,7 @@ import {
   Video, Music, Image as ImageIcon, GitCompare, Quote, Timer, Minus,
   MessageSquareText, TrendingUp, Gauge, Hourglass, Bell, HelpCircle, ClipboardList,
   Scale, Ruler, Tag, Gift, BellRing, GalleryHorizontal, Columns3, BarChart3, Code2,
-  PhoneCall, SeparatorHorizontal, CalendarClock, Heading1, Pilcrow, MousePointerClick, AlertCircle,
+  PhoneCall, SeparatorHorizontal, CalendarClock, Heading1, Pilcrow, MousePointerClick, AlertCircle, VideoIcon,
   ToggleLeft, Hash,
   Grid3x3, LayoutPanelTop, ListChecks as ListaResumo, BadgeCheck, ArrowDown, Smile, Building2, Share2,
 } from 'lucide-react';
@@ -250,6 +250,18 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       title: 'Assista antes de continuar',
       mediaProvider: 'youtube',
       mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    }),
+  },
+  {
+    type: 'video-answer',
+    label: 'Vídeo Resposta',
+    description: 'O visitante grava um vídeo de resposta',
+    category: 'captura',
+    icon: VideoIcon,
+    create: () => ({
+      type: 'video-answer',
+      title: 'Grave um vídeo contando seu caso',
+      subtitle: 'Até 60 segundos. Você revê antes de enviar.',
     }),
   },
   {

@@ -41,6 +41,7 @@ import {
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 import { AudioPlayer } from './AudioPlayer';
+import { VideoAnswerRecorder } from './VideoAnswerRecorder';
 import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft, ArrowDown } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
 import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
@@ -847,6 +848,8 @@ function PlayerRunner({
                     block={b}
                     design={design}
                     scope={scope}
+                    quizId={quizId}
+                    sessionId={sessionId.current}
                     respostaAnterior={state.responses[b.id]}
                     resumo={resumoDasRespostas}
                     terminal={isTerminal}
@@ -1584,6 +1587,8 @@ function BlockView({
   block,
   design,
   scope,
+  quizId,
+  sessionId,
   terminal,
   stepValid = true,
   onSubmit,
@@ -1593,6 +1598,10 @@ function BlockView({
   respostaAnterior,
   resumo,
 }: {
+  /** Só o bloco de Vídeo Resposta usa: o envio vai para uma rota pública que
+   *  confere se o bloco existe mesmo neste quiz antes de gravar o arquivo. */
+  quizId?: string;
+  sessionId?: string;
   /** O que esta pessoa já respondeu neste bloco, quando voltou para cá. */
   respostaAnterior?: unknown;
   /** Respostas já dadas, em forma legível — usado pelo bloco Sumário. */
@@ -1998,6 +2007,37 @@ function BlockView({
         </div>
       );
     }
+
+    case 'video-answer':
+      /* O botão de avançar só libera depois do envio: um vídeo gravado e não
+         enviado some quando a etapa troca, e a pessoa não tem como saber. */
+      return (
+        <div>
+          {heading}
+          <div className="mb-6">
+            <VideoAnswerRecorder
+              quizId={quizId ?? ''}
+              blockId={block.id}
+              sessionId={sessionId ?? ''}
+              design={design}
+              onEnviado={(url) => {
+                onDraftChange?.(url);
+                onValidChange?.(true);
+                if (terminal) onSubmit(url);
+              }}
+            />
+          </div>
+          <PrimaryBtn
+            design={design}
+            textStyle={btnText}
+            hidden={!terminal}
+            disabled={!respostaAnterior}
+            onClick={() => onSubmit(respostaAnterior)}
+          >
+            {block.ctaLabel || 'Continuar'}
+          </PrimaryBtn>
+        </div>
+      );
 
     case 'audio':
       return (
