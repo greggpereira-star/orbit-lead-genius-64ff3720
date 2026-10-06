@@ -68,6 +68,7 @@ import {
   buildProfileSummary, getLeadCompleteness,
   type AnswerKind, type LeadCompleteness,
 } from "../lib/leadFields";
+import { midiaDaResposta } from '../lib/midiaDaResposta';
 
 interface Props {
   lead: LeadRow | null;
@@ -888,6 +889,50 @@ const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
  */
 
 
+/**
+ * Mostra a resposta — e, quando ela é um arquivo, o arquivo.
+ *
+ * O bloco Vídeo Resposta guarda a URL do vídeo como resposta. Sem isto a ficha
+ * imprimia a URL assinada truncada, e o vídeo que o visitante gravou não
+ * chegava a ninguém.
+ */
+function RespostaOuMidia({ valor, compacto = false }: { valor: string; compacto?: boolean }) {
+  const midia = midiaDaResposta(valor);
+
+  if (!midia) {
+    return (
+      <dd className={compacto ? 'truncate text-[13px] font-semibold' : 'truncate text-sm font-semibold'} title={valor}>
+        {valor}
+      </dd>
+    );
+  }
+
+  // No cartão resumido não cabe player: um link honesto, que diz o que é.
+  if (compacto) {
+    return (
+      <dd className="truncate text-[13px] font-semibold">
+        <a href={midia.url} target="_blank" rel="noopener noreferrer" className="text-[var(--selecao)] underline underline-offset-2">
+          {midia.tipo === 'video' ? 'Ver vídeo' : midia.tipo === 'audio' ? 'Ouvir áudio' : 'Ver imagem'}
+        </a>
+      </dd>
+    );
+  }
+
+  return (
+    <dd className="mt-1">
+      {/* `preload="metadata"`: a ficha pode ter vários arquivos, e baixar todos
+          de uma vez trava a abertura por mídia que talvez nem seja vista. */}
+      {midia.tipo === 'video' && (
+        <video src={midia.url} controls preload="metadata" className="max-h-64 w-full rounded-lg bg-black" />
+      )}
+      {midia.tipo === 'audio' && <audio src={midia.url} controls preload="metadata" className="w-full" />}
+      {midia.tipo === 'imagem' && (
+        <img src={midia.url} alt="Resposta enviada pelo visitante" className="max-h-64 rounded-lg object-contain" />
+      )}
+    </dd>
+  );
+}
+
 export function LeadDetailDialog({
   lead, open, onOpenChange, originLabel = "Origem", onStatusChange, onLeadUpdated,
 }: Props) {
@@ -1250,7 +1295,7 @@ export function LeadDetailDialog({
                     <dt className="truncate text-[10px] uppercase tracking-[0.04em] text-muted-foreground" title={a.label}>
                       {a.short}
                     </dt>
-                    <dd className="truncate text-[13px] font-semibold" title={a.value}>{a.value}</dd>
+                    <RespostaOuMidia valor={a.value} compacto />
                   </div>
                 </div>
               );
@@ -1550,7 +1595,10 @@ export function LeadDetailDialog({
                                   <dt className="truncate text-[11px] text-muted-foreground" title={a.label}>
                                     {a.short}
                                   </dt>
-                                  <dd className="truncate text-sm font-semibold" title={a.value}>{a.value}</dd>
+                                  {/* Resposta que é arquivo vira player. Antes saía como
+                                      `{a.value}` truncado: meia URL assinada, e o vídeo
+                                      gravado pelo visitante não chegava a ninguém. */}
+                                  <RespostaOuMidia valor={a.value} />
                                 </div>
                               </div>
                             );
