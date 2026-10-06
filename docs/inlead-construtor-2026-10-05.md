@@ -55,7 +55,7 @@ Em ordem do que mais afeta "fácil de construir":
 
 | O que | Como é lá | Como está aqui |
 |---|---|---|
-| **Largura em %** | "ajustar a largura do componente (ex: 50%) para alinhar dois lado a lado" | `maxWidth` em px, sem lado a lado no fluxo |
+| ~~**Largura em %**~~ | "ajustar a largura do componente (ex: 50%) para alinhar dois lado a lado" | ✅ feito em 05/10 — Inteira/Metade/Um terço/Um quarto, com volta à linha inteira no celular |
 | **Alerta** | componente próprio, 6 estilos: erro, info, sucesso, atenção, neutro e **cor do tema** | não existe |
 | **Timer com atraso** | regra "Mostrar após" — o timer aparece e começa depois de N segundos | contador sem atraso |
 | **Sim/Não** | pergunta binária de um clique | monta-se com Escolha Única |
@@ -74,8 +74,36 @@ com bloqueios e avisos.
 
 ## 5. Ordem sugerida
 
-1. **Largura em %** — é o que destrava "adaptável" e composição lado a lado.
+1. ~~**Largura em %**~~ — **feito em 05/10.** Ver §6.
 2. **Alerta** — componente barato e muito usado em funil.
 3. **Timer com "Mostrar após"** — um campo.
 4. **Sim/Não** e **Número** — atalhos sobre o que já existe.
 5. Vídeo Resposta e estilos de áudio — maiores, e menos frequentes.
+
+---
+
+## 6. Largura em fração — como ficou
+
+Quatro opções: Inteira, Metade, Um terço, Um quarto. A linha da etapa virou
+`flex-wrap`; com todo bloco em 100% o empilhamento é idêntico ao de antes.
+
+**A conta do espaçamento é o que erraria calado.** Numa linha com `gap` de
+24px, dois itens de 50% não cabem juntos — somam 100% mais 24px e o segundo
+quebra para baixo, parecendo que a funcionalidade não funciona. Cada item cede
+a parte que lhe cabe:
+
+    n itens de w% + (n−1) espaçamentos = 100%
+    → cada um mede  calc(w% − g·(1 − w/100))
+
+Aferido nos dois renderizadores, em produção:
+
+| Onde | Espaçamento | Largura da linha | Bloco de Metade |
+|---|---|---|---|
+| canvas | 0 | 384px | `50%` → **192px** |
+| player | 24px | 416px | `calc(50% - 12px)` → **196px** |
+
+No player, 196 + 24 + 196 = 416 — a linha fecha cravada.
+
+No celular a fração é ignorada por padrão: 50% de 390px são 195px, e texto
+nessa medida vira coluna de duas palavras. Há uma caixa "manter lado a lado no
+celular" para quem quer mesmo.
