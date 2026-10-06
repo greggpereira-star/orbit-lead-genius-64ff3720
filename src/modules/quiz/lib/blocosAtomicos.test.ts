@@ -62,6 +62,15 @@ function quizCom(blocosDaEtapa: QuizBlock[]): QuizSchema {
   };
 }
 
+describe("Vídeo Resposta", () => {
+  it("nasce obrigatório — quem põe o bloco quer o vídeo", () => {
+    // Sem isto o visitante avança sem gravar, e o autor só descobre a lacuna
+    // ao abrir as respostas.
+    const b = BLOCK_LIBRARY.find((x) => x.type === "video-answer")!.create() as QuizBlock;
+    expect(b.required).toBe(true);
+  });
+});
+
 describe("o Botão é o dono do avanço", () => {
   const titulo = { id: "t", type: "heading", title: "Oi" } as QuizBlock;
   const botao = { id: "b", type: "button", ctaLabel: "Continuar" } as QuizBlock;

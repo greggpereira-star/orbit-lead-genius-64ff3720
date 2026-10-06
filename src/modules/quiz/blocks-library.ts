@@ -262,6 +262,10 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       type: 'video-answer',
       title: 'Grave um vídeo contando seu caso',
       subtitle: 'Até 60 segundos. Você revê antes de enviar.',
+      /* Nasce OBRIGATÓRIO, diferente da maioria dos blocos. Quem põe este
+         bloco quer o vídeo; sem isto o visitante avança sem gravar e o autor
+         só descobre a lacuna ao abrir as respostas. Desligável no inspetor. */
+      required: true,
     }),
   },
   {

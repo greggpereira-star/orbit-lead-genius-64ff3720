@@ -192,6 +192,19 @@ function BlockInspector({
       .filter((v): v is string => !!v);
   })();
 
+  /* Tipos cuja validade consulta `block.required` no player. Fora desta lista
+     o campo existe no schema e não muda nada — e, dentro dela, sem o
+     interruptor o autor não consegue exigir a resposta. Era o caso de e-mail,
+     telefone, texto, agendamento e vídeo: todos puláveis, sem como mudar. */
+  const honraObrigatorio = [
+    "short-text",
+    "long-text",
+    "email",
+    "phone",
+    "scheduling",
+    "video-answer",
+  ].includes(block?.type ?? "");
+
   const ctaEligible = [
     "button",
     "video-answer",
@@ -1523,6 +1536,17 @@ function BlockInspector({
               >
                 <Plus className="h-3.5 w-3.5" /> Adicionar opção
               </Button>
+            </Section>
+          )}
+
+          {!hasOptions && honraObrigatorio && (
+            <Section title="Comportamento" icon={SlidersHorizontal}>
+              <Toggle
+                label="Obrigatório"
+                hint="Só avança depois de responder"
+                checked={block.required === true}
+                onChange={(v) => onChange({ required: v })}
+              />
             </Section>
           )}
 
