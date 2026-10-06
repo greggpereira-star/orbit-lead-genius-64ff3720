@@ -640,6 +640,26 @@ function BlockInspector({
                     placeholder="2026-12-31T23:59:00Z"
                   />
                 </Field>
+                <Field label="Mostrar após (segundos)">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={300}
+                    value={block.countdownDelaySeconds ?? ""}
+                    onChange={(e) =>
+                      onChange({
+                        countdownDelaySeconds: e.target.value
+                          ? Math.max(0, Number(e.target.value))
+                          : undefined,
+                      })
+                    }
+                    placeholder="0 — aparece junto com a etapa"
+                  />
+                  <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    O contador espera esse tempo para aparecer e só então começa a contar. No
+                    construtor ele aparece de imediato, senão sumiria da tela em que você edita.
+                  </p>
+                </Field>
               </>
             )}
 

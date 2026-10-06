@@ -2071,6 +2071,7 @@ function BlockView({
             <CountdownTimer
               endsAt={block.countdownEndsAt}
               minutes={block.countdownMinutes ?? 15}
+              delaySeconds={block.countdownDelaySeconds}
               color={design.primary}
             />
           </div>

@@ -222,6 +222,8 @@ export interface QuizBlock {
   testimonialAvatar?: string;
   countdownEndsAt?: string;
   countdownMinutes?: number;
+  /** "Mostrar após": segundos antes do contador aparecer e começar a contar. */
+  countdownDelaySeconds?: number;
   // Logic (Phase 4)
   /**
    * Onde o bloco vive na tela.
