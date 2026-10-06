@@ -17,6 +17,7 @@ import { parseRichText } from '../lib/richtext';
 import { resolveContainerLayout, type Breakpoint } from '../lib/containerLayout';
 import { larguraDoBloco } from '../lib/larguraDoBloco';
 import { estiloDoAlerta } from '../lib/alerta';
+import { jaPodeAparecer } from '../lib/contador';
 import { resolveScope, interpolateText, evaluatePercent, type VariableScope } from '../lib/variables';
 import { RichText } from './RichText';
 import {
@@ -1556,6 +1557,28 @@ function OptionCard({
   );
 }
 
+/**
+ * "Mostrar após": segura o bloco inteiro, não só os dígitos.
+ *
+ * A primeira versão punha a espera dentro do `CountdownTimer`, e o resultado
+ * media bem no teste e ficava errado na tela: os dígitos sumiam e o TÍTULO do
+ * bloco continuava, porque ele é desenhado fora do componente. O autor via um
+ * rótulo órfão — "Oferta expira em:" sem contador embaixo.
+ *
+ * O argumento é 0 para todo bloco que não seja contador, e o hook é chamado em
+ * toda renderização, para a contagem de hooks não depender do tipo do bloco.
+ */
+function useAtrasoDeExibicao(atrasoSegundos: number): boolean {
+  const montadoEm = useRef(Date.now());
+  const [agora, setAgora] = useState(() => montadoEm.current);
+  useEffect(() => {
+    if (atrasoSegundos <= 0) return;
+    const id = setInterval(() => setAgora(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [atrasoSegundos]);
+  return jaPodeAparecer(montadoEm.current, agora, atrasoSegundos);
+}
+
 function BlockView({
   block,
   design,
@@ -1683,6 +1706,12 @@ function BlockView({
   // configurou no elemento vence.
   const btnText = resolveTextStyle(block, 'button');
   const optText = resolveTextStyle(block, 'options');
+
+  /* Chamado sempre: só o contador usa atraso, mas um hook condicional mudaria
+     a contagem entre renderizações. */
+  const podeAparecer = useAtrasoDeExibicao(
+    block.type === 'countdown' ? (block.countdownDelaySeconds ?? 0) : 0,
+  );
 
   const heading = (
     <div className="space-y-2.5 mb-7 pt-1">
@@ -2064,6 +2093,7 @@ function BlockView({
       );
 
     case 'countdown':
+      if (!podeAparecer) return null;
       return (
         <div>
           {heading}
@@ -2071,7 +2101,6 @@ function BlockView({
             <CountdownTimer
               endsAt={block.countdownEndsAt}
               minutes={block.countdownMinutes ?? 15}
-              delaySeconds={block.countdownDelaySeconds}
               color={design.primary}
             />
           </div>

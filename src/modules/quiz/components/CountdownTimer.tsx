@@ -5,19 +5,14 @@ interface Props {
   endsAt?: string;
   minutes?: number;
   color: string;
-  /** "Mostrar após": segundos de espera antes de aparecer e começar a contar. */
-  delaySeconds?: number;
-  /** No canvas o atraso é ignorado — senão o bloco somem da tela de edição. */
-  ignorarAtraso?: boolean;
 }
 
-export function CountdownTimer({
-  endsAt,
-  minutes = 15,
-  color,
-  delaySeconds = 0,
-  ignorarAtraso = false,
-}: Props) {
+/* O "Mostrar após" NÃO mora aqui. Morou, e o efeito na tela era errado: os
+   dígitos sumiam e o título do bloco ficava, porque o título é desenhado fora
+   deste componente. Quem segura o bloco inteiro é o `useAtrasoDeExibicao` do
+   player. */
+
+export function CountdownTimer({ endsAt, minutes = 15, color }: Props) {
   /* O alvo é fixado UMA vez, na montagem. Antes era recalculado a cada render
      com `Date.now()`, e como o `now` do estado vinha do mesmo instante a
      diferença dava sempre igual: o contador mostrava 15:00 e nunca descia.
@@ -31,8 +26,6 @@ export function CountdownTimer({
     const id = setInterval(() => setAgora(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  if (!ignorarAtraso && !jaPodeAparecer(montadoEm.current, agora, delaySeconds)) return null;
 
   const { horas, minutos, segundos } = restanteDoContador(alvo, agora);
   const pad = (n: number) => String(n).padStart(2, "0");

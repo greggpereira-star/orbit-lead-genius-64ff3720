@@ -846,14 +846,11 @@ export function BlockRenderer({
               style={{ color: design.text }}
             />
           )}
-          {/* `ignorarAtraso`: no canvas o "Mostrar após" não vale, senão o
-              autor configura 10 segundos e o bloco desaparece da tela em que
-              ele está editando. */}
+          {/* O canvas não aplica o "Mostrar após": senão o autor configura 10
+              segundos e o bloco some da tela em que ele está editando. */}
           <CountdownTimer
             endsAt={block.countdownEndsAt}
             minutes={block.countdownMinutes ?? 15}
-            delaySeconds={block.countdownDelaySeconds}
-            ignorarAtraso
             color={design.primary}
           />
         </div>
