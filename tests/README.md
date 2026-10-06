@@ -55,3 +55,33 @@ ter testado nada — teste verde que não rodou é pior do que teste nenhum.
    instruções acima rodam o e2e contra o ambiente publicado. **Ainda em
    aberto** — resolver exige decidir para onde o desenvolvimento local deve
    apontar.
+
+## Estado da suíte de ponta a ponta, 06/10/2026
+
+    4 passam · 7 pulam · 0 falham
+
+**Os 4 que passam** são os de entrada: a tela de login tem os campos certos,
+o campo de e-mail é do tipo e-mail, rota protegida manda para o login sem
+sessão, e credencial errada não entra. Nenhum deles escreve no banco.
+
+A versão anterior desses quatro vinha do scaffold e **nunca havia rodado** —
+a configuração apontava para a porta 5173 e o servidor sobe na 8080. Quando a
+porta foi corrigida, eles falharam de vez: procuravam textos em inglês que o
+app não tem e criavam uma conta de verdade a cada execução, com e-mail
+aleatório. Quatro testes sempre vermelhos ensinam a ignorar a saída da suíte,
+então foram substituídos por estes.
+
+**Os 7 que pulam** são os do player público, e eles pulam com o motivo
+escrito, não em silêncio. O player carrega o quiz durante o SSR: nenhuma
+requisição sai do navegador, então não há o que interceptar no Playwright — é
+preciso um quiz publicado de verdade. O script `npm run e2e:fixture criar`
+cria um, mas exige `SUPABASE_SERVICE_ROLE_KEY` e `E2E_COMPANY_ID` no
+ambiente, que não estão na máquina de desenvolvimento.
+
+**Para rodá-los:**
+
+    SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... E2E_COMPANY_ID=... \
+      npm run e2e:fixture criar
+    E2E_QUIZ_SLUG=e2e-fixture npm run test:e2e
+    # ao terminar
+    npm run e2e:fixture remover
