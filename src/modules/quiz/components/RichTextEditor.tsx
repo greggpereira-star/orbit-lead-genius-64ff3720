@@ -28,6 +28,7 @@ import {
   Baseline,
   Highlighter,
   Variable,
+  MoreHorizontal,
   Superscript,
   Subscript,
   ImagePlus,
@@ -181,21 +182,25 @@ export function RichTextEditor({
       {label && <p className="text-xs font-medium text-muted-foreground">{label}</p>}
 
       <div className="rounded-lg border bg-card">
-        {/* ---- barra de ferramentas ---- */}
-        <div className="flex flex-wrap items-center gap-0.5 border-b p-1.5">
-          <ToolButton onClick={() => run("undo")} label="Desfazer">
-            <Undo2 className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("redo")} label="Refazer">
-            <Redo2 className="h-3.5 w-3.5" />
-          </ToolButton>
-          <Divider />
+        {/* ---- barra de ferramentas ----
+            Uma linha, e não três.
+            Medido no inspetor em 07/10, no bloco Peso: a barra quebrava em 3
+            linhas dentro dos 304px do painel e cada campo de texto ocupava
+            249px de altura para um título de UMA linha. Com dois campos, os
+            ajustes que definem o bloco (mínimo, máximo, passo) só começavam a
+            665px — fora da dobra de 740px. Dezenove ferramentas com o mesmo
+            peso não é poder de edição, é adiar o trabalho.
 
+            Ficam à mão as cinco que se usam escrevendo copy de quiz: nível do
+            texto, negrito, itálico, link e variável. O resto, que se mexe uma
+            vez por página, vai para o `⋯` — inclusive o fundo de apoio, que
+            nem chega ao quiz publicado. */}
+        <div className="flex items-center gap-0.5 border-b p-1.5">
           <Select
             onValueChange={(v) => run("formatBlock", v === "p" ? "<p>" : `<${v}>`)}
             defaultValue="p"
           >
-            <SelectTrigger className="h-7 w-[104px] text-xs" aria-label="Nível do texto">
+            <SelectTrigger className="h-7 w-[92px] shrink-0 text-xs" aria-label="Nível do texto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -221,57 +226,6 @@ export function RichTextEditor({
           <ToolButton onClick={() => run("italic")} label="Itálico">
             <Italic className="h-3.5 w-3.5" />
           </ToolButton>
-          <ToolButton onClick={() => run("underline")} label="Sublinhado">
-            <Underline className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("strikeThrough")} label="Tachado">
-            <Strikethrough className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("superscript")} label="Sobrescrito">
-            <Superscript className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("subscript")} label="Subscrito">
-            <Subscript className="h-3.5 w-3.5" />
-          </ToolButton>
-          <Divider />
-
-          <SwatchPicker
-            label="Cor do texto"
-            icon={<Baseline className="h-3.5 w-3.5" />}
-            colors={TEXT_COLORS}
-            onOpen={rememberSelection}
-            onPick={(c) => run("foreColor", c)}
-          />
-          <SwatchPicker
-            label="Marca-texto"
-            icon={<Highlighter className="h-3.5 w-3.5" />}
-            colors={HIGHLIGHTS}
-            onOpen={rememberSelection}
-            onPick={(c) => run("hiliteColor", c)}
-          />
-          <Divider />
-
-          <ToolButton onClick={() => run("insertUnorderedList")} label="Lista com marcadores">
-            <List className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("insertOrderedList")} label="Lista numerada">
-            <ListOrdered className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("formatBlock", "<pre>")} label="Bloco de código">
-            <Code2 className="h-3.5 w-3.5" />
-          </ToolButton>
-          <Divider />
-
-          <ToolButton onClick={() => run("justifyLeft")} label="Alinhar à esquerda">
-            <AlignLeft className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("justifyCenter")} label="Centralizar">
-            <AlignCenter className="h-3.5 w-3.5" />
-          </ToolButton>
-          <ToolButton onClick={() => run("justifyRight")} label="Alinhar à direita">
-            <AlignRight className="h-3.5 w-3.5" />
-          </ToolButton>
-          <Divider />
 
           <Popover onOpenChange={(o) => o && rememberSelection()}>
             <PopoverTrigger asChild>
@@ -303,41 +257,6 @@ export function RichTextEditor({
                 />
                 <Button size="sm" className="h-8" onClick={applyLink}>
                   Aplicar
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Popover onOpenChange={(o) => o && rememberSelection()}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                title="Imagem no meio do texto"
-                aria-label="Inserir imagem"
-                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <ImagePlus className="h-3.5 w-3.5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 space-y-2 p-2" align="start">
-              <p className="text-[11px] text-muted-foreground">
-                Cole o endereço da imagem. Ela entra na posição do cursor.
-              </p>
-              <div className="flex gap-1.5">
-                <Input
-                  value={imgUrl}
-                  onChange={(e) => setImgUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      insertImage();
-                    }
-                  }}
-                  placeholder="https://..."
-                  className="h-8 text-xs"
-                />
-                <Button size="sm" className="h-8" onClick={insertImage}>
-                  Inserir
                 </Button>
               </div>
             </PopoverContent>
@@ -380,42 +299,142 @@ export function RichTextEditor({
               )}
             </PopoverContent>
           </Popover>
-        </div>
 
-        {/* ---- fundo de apoio ---- */}
-        <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5">
-          <span className="text-[11px] text-muted-foreground">
-            Fundo de apoio <span className="opacity-70">— só na edição</span>
-          </span>
-          {/* O rótulo saía da própria chave com `capitalize`, e imprimia
-              "Padrao" sem til na tela. */}
-          {/* O chip ativo vinha preenchido de acento — o tratamento mais forte
-              da interface, num ajuste que é "só na edição" e nem chega ao quiz
-              publicado. Agora é o segmentado neutro: trilho acinzentado, o
-              escolhido em branco. O acento fica para a seleção de verdade. */}
-          <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
-            {(
-              [
-                ["padrao", "Padrão"],
-                ["escuro", "Escuro"],
-                ["pastel", "Pastel"],
-              ] as [Backdrop, string][]
-            ).map(([b, rotulo]) => (
+          <Popover onOpenChange={(o) => o && rememberSelection()}>
+            <PopoverTrigger asChild>
               <button
-                key={b}
                 type="button"
-                onClick={() => setBackdrop(b)}
-                aria-pressed={backdrop === b}
-                className={`rounded px-2 py-0.5 text-[11px] transition-colors ${
-                  backdrop === b
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                title="Mais ferramentas de formatação"
+                aria-label="Mais ferramentas de formatação"
+                className="ml-auto rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                {rotulo}
+                <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
-            ))}
-          </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 space-y-3 p-2.5" align="end">
+              <GrupoDeFerramentas titulo="Histórico">
+                <ToolButton onClick={() => run("undo")} label="Desfazer">
+                  <Undo2 className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("redo")} label="Refazer">
+                  <Redo2 className="h-3.5 w-3.5" />
+                </ToolButton>
+              </GrupoDeFerramentas>
+
+              <GrupoDeFerramentas titulo="Estilo">
+                <ToolButton onClick={() => run("underline")} label="Sublinhado">
+                  <Underline className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("strikeThrough")} label="Tachado">
+                  <Strikethrough className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("superscript")} label="Sobrescrito">
+                  <Superscript className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("subscript")} label="Subscrito">
+                  <Subscript className="h-3.5 w-3.5" />
+                </ToolButton>
+                <SwatchPicker
+                  label="Cor do texto"
+                  icon={<Baseline className="h-3.5 w-3.5" />}
+                  colors={TEXT_COLORS}
+                  onOpen={rememberSelection}
+                  onPick={(c) => run("foreColor", c)}
+                />
+                <SwatchPicker
+                  label="Marca-texto"
+                  icon={<Highlighter className="h-3.5 w-3.5" />}
+                  colors={HIGHLIGHTS}
+                  onOpen={rememberSelection}
+                  onPick={(c) => run("hiliteColor", c)}
+                />
+              </GrupoDeFerramentas>
+
+              <GrupoDeFerramentas titulo="Blocos e alinhamento">
+                <ToolButton onClick={() => run("insertUnorderedList")} label="Lista com marcadores">
+                  <List className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("insertOrderedList")} label="Lista numerada">
+                  <ListOrdered className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("formatBlock", "<pre>")} label="Bloco de código">
+                  <Code2 className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("justifyLeft")} label="Alinhar à esquerda">
+                  <AlignLeft className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("justifyCenter")} label="Centralizar">
+                  <AlignCenter className="h-3.5 w-3.5" />
+                </ToolButton>
+                <ToolButton onClick={() => run("justifyRight")} label="Alinhar à direita">
+                  <AlignRight className="h-3.5 w-3.5" />
+                </ToolButton>
+              </GrupoDeFerramentas>
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Imagem no meio do texto
+                </p>
+                <div className="flex gap-1.5">
+                  <Input
+                    value={imgUrl}
+                    onChange={(e) => setImgUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        insertImage();
+                      }
+                    }}
+                    placeholder="https://..."
+                    className="h-8 text-xs"
+                  />
+                  <Button size="sm" className="h-8 shrink-0" onClick={insertImage}>
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    <span className="sr-only">Inserir imagem</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* O fundo de apoio é ajuda de edição: não chega ao quiz
+                  publicado. Ficava numa faixa própria em cada campo de texto,
+                  gastando altura permanente para um controle que se mexe uma
+                  vez. */}
+              <div className="space-y-1.5 border-t pt-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Fundo de apoio <span className="font-normal normal-case">— só na edição</span>
+                </p>
+                {/* O rótulo saía da própria chave com `capitalize`, e imprimia
+                    "Padrao" sem til na tela. */}
+                {/* O chip ativo vinha preenchido de acento — o tratamento mais
+                    forte da interface, num ajuste que nem chega ao publicado.
+                    Agora é o segmentado neutro; o acento fica para a seleção
+                    de verdade. */}
+                <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+                  {(
+                    [
+                      ["padrao", "Padrão"],
+                      ["escuro", "Escuro"],
+                      ["pastel", "Pastel"],
+                    ] as [Backdrop, string][]
+                  ).map(([b, rotulo]) => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setBackdrop(b)}
+                      aria-pressed={backdrop === b}
+                      className={`flex-1 rounded px-2 py-0.5 text-[11px] transition-colors ${
+                        backdrop === b
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {rotulo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* ---- área de edição ---- */}
@@ -460,6 +479,18 @@ function ToolButton({
     >
       {children}
     </button>
+  );
+}
+
+/** Fila de botões do menu `⋯`, com um rótulo que diz do que é o grupo. */
+function GrupoDeFerramentas({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+      </p>
+      <div className="flex flex-wrap items-center gap-0.5">{children}</div>
+    </div>
   );
 }
 

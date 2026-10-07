@@ -138,7 +138,7 @@ function QuizBuilderPage() {
   /* Posse da edição. Duas abas no mesmo quiz se sobrescreviam em silêncio: cada
      uma tem o seu `schema` em memória e o autosave grava o estado INTEIRO, então
      quem salvasse por último apagava o trabalho do outro sem aviso nenhum. */
-  const trava = useEditLock(id, user?.name || user?.email || undefined);
+  const trava = useEditLock(id, user?.name || user?.email || undefined, true, user?.id);
 
   /* Conversão medida por etapa, dos últimos 30 dias. Carrega uma vez: é leitura
      de análise, não precisa acompanhar cada tecla digitada no construtor. */

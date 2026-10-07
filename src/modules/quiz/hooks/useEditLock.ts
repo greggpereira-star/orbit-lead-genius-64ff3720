@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface EditLock {
   quiz_id: string;
@@ -26,17 +26,30 @@ export const ESPERA_PARA_FORCAR_MS = 20_000;
  * sobrescreviam igualzinho a duas pessoas diferentes, porque cada aba tem o
  * seu `schema` em memória e o autosave grava o estado inteiro.
  */
-export function useEditLock(quizId: string, nome: string | undefined, ativo = true) {
+export function useEditLock(
+  quizId: string,
+  nome: string | undefined,
+  ativo = true,
+  meuUserId?: string,
+) {
   /* O id da aba vive em sessionStorage: sobrevive ao recarregar (a mesma aba
      reassume a sua própria trava em vez de disputar consigo mesma) e não
      vaza para outra aba, que é justamente quem precisa ser distinguida. */
-  const tabId = useRef<string>('');
+  const tabId = useRef<string>("");
   if (!tabId.current) {
     let guardado: string | null = null;
-    try { guardado = sessionStorage.getItem('lf.tab'); } catch { /* aba anônima */ }
+    try {
+      guardado = sessionStorage.getItem("lf.tab");
+    } catch {
+      /* aba anônima */
+    }
     if (!guardado) {
       guardado = crypto.randomUUID();
-      try { sessionStorage.setItem('lf.tab', guardado); } catch { /* sem storage: id só em memória */ }
+      try {
+        sessionStorage.setItem("lf.tab", guardado);
+      } catch {
+        /* sem storage: id só em memória */
+      }
     }
     tabId.current = guardado;
   }
@@ -48,12 +61,21 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
 
   const souDonoReal = !!lock && lock.holder_tab_id === tabId.current;
   const pedidoParaMim = souDonoReal && !!lock?.requester_tab_id;
+  /* Outra ABA da MESMA pessoa não é um colega.
+     A trava é por aba de propósito — duas abas suas se sobrescrevem igual a
+     duas pessoas —, mas pedir licença a si mesmo e esperar 20s não protege
+     ninguém: do outro lado não há quem responda, e quase sempre é uma aba
+     esquecida aberta. Quem decide é o mesmo dono dos dois lados. */
+  const souEuEmOutraAba =
+    !!lock && !souDonoReal && !!meuUserId && lock.holder_user_id === meuUserId;
 
   const adquirir = useCallback(
     async (forcar = false) => {
-      const { data, error } = await (supabase as unknown as {
-        rpc: (f: string, a: unknown) => Promise<{ data: unknown; error: unknown }>;
-      }).rpc('quiz_lock_adquirir', {
+      const { data, error } = await (
+        supabase as unknown as {
+          rpc: (f: string, a: unknown) => Promise<{ data: unknown; error: unknown }>;
+        }
+      ).rpc("quiz_lock_adquirir", {
         p_quiz_id: quizId,
         p_tab_id: tabId.current,
         p_nome: nome ?? null,
@@ -63,7 +85,7 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
         /* Falhar aqui não pode travar o editor: sem resposta do servidor a aba
            segue editável, que é o comportamento de antes desta funcionalidade
            existir. A trava protege do caso comum, não é cofre. */
-        console.warn('[trava] não foi possível adquirir', error);
+        console.warn("[trava] não foi possível adquirir", error);
         return null;
       }
       const l = (data as EditLock | null) ?? null;
@@ -76,9 +98,17 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
   useEffect(() => {
     if (!ativo || !quizId) return;
     let vivo = true;
-    void adquirir().finally(() => { if (vivo) setCarregando(false); });
-    const timer = setInterval(() => { void adquirir(); setAgora(Date.now()); }, BATIDA_MS);
-    return () => { vivo = false; clearInterval(timer); };
+    void adquirir().finally(() => {
+      if (vivo) setCarregando(false);
+    });
+    const timer = setInterval(() => {
+      void adquirir();
+      setAgora(Date.now());
+    }, BATIDA_MS);
+    return () => {
+      vivo = false;
+      clearInterval(timer);
+    };
   }, [ativo, quizId, adquirir]);
 
   /* Solta ao sair, para a próxima aba não esperar os 75 segundos à toa. É
@@ -87,25 +117,32 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
     if (!ativo) return;
     const soltar = () => {
       if (!souDonoReal) return;
-      void (supabase as unknown as { rpc: (f: string, a: unknown) => Promise<unknown> })
-        .rpc('quiz_lock_soltar', { p_quiz_id: quizId, p_tab_id: tabId.current });
+      void (supabase as unknown as { rpc: (f: string, a: unknown) => Promise<unknown> }).rpc(
+        "quiz_lock_soltar",
+        { p_quiz_id: quizId, p_tab_id: tabId.current },
+      );
     };
-    window.addEventListener('pagehide', soltar);
+    window.addEventListener("pagehide", soltar);
     return () => {
-      window.removeEventListener('pagehide', soltar);
+      window.removeEventListener("pagehide", soltar);
       soltar();
     };
   }, [ativo, quizId, souDonoReal]);
 
   const pedirControle = useCallback(async () => {
-    const { data, error } = await (supabase as unknown as {
-      rpc: (f: string, a: unknown) => Promise<{ data: unknown; error: unknown }>;
-    }).rpc('quiz_lock_pedir', {
+    const { data, error } = await (
+      supabase as unknown as {
+        rpc: (f: string, a: unknown) => Promise<{ data: unknown; error: unknown }>;
+      }
+    ).rpc("quiz_lock_pedir", {
       p_quiz_id: quizId,
       p_tab_id: tabId.current,
       p_nome: nome ?? null,
     });
-    if (error) { console.warn('[trava] pedido falhou', error); return; }
+    if (error) {
+      console.warn("[trava] pedido falhou", error);
+      return;
+    }
     setLock((data as EditLock | null) ?? null);
     setPedidoEnviadoEm(Date.now());
   }, [quizId, nome]);
@@ -113,8 +150,10 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
   const assumir = useCallback(() => adquirir(true), [adquirir]);
 
   const entregar = useCallback(async () => {
-    await (supabase as unknown as { rpc: (f: string, a: unknown) => Promise<unknown> })
-      .rpc('quiz_lock_soltar', { p_quiz_id: quizId, p_tab_id: tabId.current });
+    await (supabase as unknown as { rpc: (f: string, a: unknown) => Promise<unknown> }).rpc(
+      "quiz_lock_soltar",
+      { p_quiz_id: quizId, p_tab_id: tabId.current },
+    );
     setLock(null);
   }, [quizId]);
 
@@ -125,8 +164,7 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
     return () => clearInterval(t);
   }, [pedidoEnviadoEm]);
 
-  const podeForcar =
-    pedidoEnviadoEm !== null && agora - pedidoEnviadoEm >= ESPERA_PARA_FORCAR_MS;
+  const podeForcar = pedidoEnviadoEm !== null && agora - pedidoEnviadoEm >= ESPERA_PARA_FORCAR_MS;
 
   const segundosParaForcar =
     pedidoEnviadoEm === null
@@ -139,6 +177,7 @@ export function useEditLock(quizId: string, nome: string | undefined, ativo = tr
     /** Enquanto carrega assume que sim, para não piscar aviso no caminho normal. */
     souDono: carregando ? true : souDonoReal,
     pedidoParaMim,
+    souEuEmOutraAba,
     pedidoEnviado: pedidoEnviadoEm !== null,
     podeForcar,
     segundosParaForcar,
