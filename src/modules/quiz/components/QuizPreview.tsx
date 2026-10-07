@@ -366,17 +366,21 @@ export function QuizPreview({
               style={{ top: medida.altura }}
               aria-hidden
             >
-              <span className="h-px flex-1" style={{ background: withAlpha(design.text, 0.28) }} />
+              <span className="h-px flex-1" style={{ background: withAlpha(design.text, 0.35) }} />
               <span
                 className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                /* Medido na tela: com o texto a 65% de alfa o rótulo dava
+                   3,82:1 sobre o próprio chip — abaixo do piso de 4,5:1 para
+                   10px. A tinta do tema em cheio resolve; quem segura o peso
+                   visual é o chip, não o apagamento da letra. */
                 style={{
-                  background: withAlpha(design.text, 0.1),
-                  color: withAlpha(design.text, 0.65),
+                  background: withAlpha(design.text, 0.12),
+                  color: design.text,
                 }}
               >
                 dobra do {medida.rotulo}
               </span>
-              <span className="h-px w-4" style={{ background: withAlpha(design.text, 0.28) }} />
+              <span className="h-px w-4" style={{ background: withAlpha(design.text, 0.35) }} />
             </div>
           )}
         </div>
