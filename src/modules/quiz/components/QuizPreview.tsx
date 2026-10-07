@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   GripVertical,
@@ -19,6 +19,7 @@ import type { QuizBlock, QuizDesign, QuizSchema } from "../types";
 import { getSteps } from "../lib/steps";
 import { TrilhaDeEtapas } from "./TrilhaDeEtapas";
 import { resumirEtapa } from "../lib/trilhaDeEtapas";
+import { DISPOSITIVOS, larguraQueCabe, mostrarDobra } from "../lib/dispositivoDoCanvas";
 import { BLOCK_LIBRARY } from "../blocks-library";
 import type { ConversaoDaEtapa } from "../lib/stepConversion";
 import { RichText } from "./RichText";
@@ -144,7 +145,39 @@ export function QuizPreview({
   const hoverTintClass =
     getContrastText(design.background) === "#1a1a1a" ? "hover:bg-black/5" : "hover:bg-white/5";
 
-  const viewportWidth = device === "mobile" ? 390 : device === "tablet" ? 820 : 1280;
+  const medida = DISPOSITIVOS[device];
+  /* A moldura precisa caber na área, e a área muda com o painel lateral, com o
+     inspetor e com a janela — então é medida, não suposta. */
+  const areaRef = useRef<HTMLDivElement | null>(null);
+  const molduraRef = useRef<HTMLDivElement | null>(null);
+  const [larguraDaArea, setLarguraDaArea] = useState(0);
+  const [alturaDoConteudo, setAlturaDoConteudo] = useState(0);
+
+  useLayoutEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+    const medir = () => setLarguraDaArea(area.clientWidth - 48);
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(area);
+    return () => obs.disconnect();
+  }, []);
+
+  /* Lista VAZIA de propósito: a moldura cresce e encolhe com o conteúdo, e é o
+     próprio `ResizeObserver` que avisa. Sem a lista, o observador era criado e
+     destruído a cada render — custo por render para medir a mesma coisa. */
+  useEffect(() => {
+    const moldura = molduraRef.current;
+    if (!moldura) return;
+    const medir = () => setAlturaDoConteudo(moldura.scrollHeight);
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(moldura);
+    return () => obs.disconnect();
+  }, []);
+
+  const viewportWidth = larguraQueCabe(medida.largura, larguraDaArea);
+  const temDobra = mostrarDobra(alturaDoConteudo, medida.altura);
 
   const cssVars = useMemo(
     () =>
@@ -171,14 +204,15 @@ export function QuizPreview({
         onAdicionar={onAdicionarEtapa}
       />
 
-      <div className="flex min-h-0 flex-1 overflow-auto p-6">
+      <div ref={areaRef} className="flex min-h-0 flex-1 overflow-auto p-6">
         <div
+          ref={molduraRef}
           // m-auto (não items-center/justify-center no pai) centraliza o device-frame
           // quando ele cabe no painel, mas nunca corta o topo/lado quando ele é maior
           // que a área visível — um contêiner com overflow-auto + align/justify-center
           // no pai empurra o início do conteúdo pra fora da rolagem quando o filho
           // excede o tamanho do pai (bug clássico de centralização + overflow).
-          className="m-auto rounded-2xl overflow-hidden shadow-2xl transition-all flex justify-center shrink-0"
+          className="relative m-auto flex shrink-0 justify-center overflow-hidden rounded-2xl shadow-2xl transition-all"
           style={{
             ...cssVars,
             width: viewportWidth,
@@ -319,6 +353,32 @@ export function QuizPreview({
               )}
             </Droppable>
           </div>
+
+          {/* Marca da dobra.
+              O que o visitante vê ANTES de rolar é a pergunta que decide a
+              conversão de um quiz, e era justamente o que a prévia não
+              contava: medido em 07/10, a etapa 1 tem 1454px de conteúdo numa
+              tela de celular de 844px — dois terços do que foi escrito só
+              existem para quem rolar. A linha diz onde isso começa. */}
+          {temDobra && (
+            <div
+              className="pointer-events-none absolute inset-x-0 z-10 flex items-center gap-2"
+              style={{ top: medida.altura }}
+              aria-hidden
+            >
+              <span className="h-px flex-1" style={{ background: withAlpha(design.text, 0.28) }} />
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={{
+                  background: withAlpha(design.text, 0.1),
+                  color: withAlpha(design.text, 0.65),
+                }}
+              >
+                dobra do {medida.rotulo}
+              </span>
+              <span className="h-px w-4" style={{ background: withAlpha(design.text, 0.28) }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
