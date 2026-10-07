@@ -227,27 +227,50 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
                 s && s.total > 0 ? `${((s.completed / s.total) * 100).toFixed(0)}%` : "—";
               const conversionPct =
                 s && s.total > 0 ? `${((s.leadsCaptured / s.total) * 100).toFixed(0)}%` : "—";
+              /* Porcentagem sem denominador não é número, é impressão.
+                 "Conclusão 8%" e "Conversão 8%" apareciam lado a lado com o
+                 mesmo valor e nada dizia que uma mede quem TERMINOU e a outra
+                 quem DEIXOU CONTATO — nem sobre quantas pessoas. Num painel
+                 que serve para decidir onde mexer, isso é a diferença entre
+                 agir e adivinhar. */
+              const comecaram = s?.total ?? 0;
+              const dicaDeLeads = s
+                ? `${s.leadsCaptured} pessoa(s) deixaram e-mail ou telefone nos últimos 30 dias`
+                : "Sem dados nos últimos 30 dias";
+              const dicaDeConclusao = s
+                ? `${s.completed} de ${comecaram} que começaram chegaram ao fim do quiz`
+                : "Sem dados nos últimos 30 dias";
+              const dicaDeConversao = s
+                ? `${s.leadsCaptured} de ${comecaram} que começaram deixaram contato`
+                : "Sem dados nos últimos 30 dias";
               return (
                 <div className="mb-4 rounded-lg bg-muted/40 py-3 text-center text-xs">
                   <div className="mb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
                     Últimos 30 dias
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div>
+                    <div title={dicaDeLeads}>
                       <div className="font-bold text-base sm:text-lg">
                         {s?.leadsCaptured ?? "—"}
                       </div>
                       <div className="text-muted-foreground">Leads</div>
                     </div>
-                    <div>
+                    <div title={dicaDeConclusao}>
                       <div className="font-bold text-base sm:text-lg">{completionPct}</div>
-                      <div className="text-muted-foreground">Conclusão</div>
+                      <div className="text-muted-foreground">Concluíram</div>
                     </div>
-                    <div>
+                    <div title={dicaDeConversao}>
                       <div className="font-bold text-base sm:text-lg">{conversionPct}</div>
-                      <div className="text-muted-foreground">Conversão</div>
+                      <div className="text-muted-foreground">Viraram lead</div>
                     </div>
                   </div>
+                  {/* O denominador, escrito. É ele que diz se 8% é pouco ou se
+                      a amostra ainda não significa nada. */}
+                  {comecaram > 0 && (
+                    <div className="mt-1.5 text-[10px] text-muted-foreground">
+                      de {comecaram} que começaram
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -291,11 +314,16 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
                   <Archive className="h-3.5 w-3.5" />
                 )}
               </Button>
+              {/* O irreversível não pode ter o mesmo peso do reversível.
+                  "Arquivar" e "Excluir" eram dois botões `outline` idênticos,
+                  lado a lado, distinguíveis só pelo desenho do ícone — e
+                  arquivar se desfaz, excluir não. A confirmação continua; ela
+                  é a trava, isto é o aviso antes dela. */}
               <Button
                 size="sm"
                 variant="outline"
-                className="shrink-0"
-                title="Excluir"
+                className="shrink-0 text-destructive hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                title="Excluir — não dá para desfazer"
                 onClick={() => handleDelete(q.id)}
               >
                 <Trash2 className="h-3.5 w-3.5" />
