@@ -115,6 +115,18 @@ export function QuizPreview({
   /* A natureza da etapa sai da CATEGORIA dos blocos dela, não do tipo: é a
      categoria que já separa captura de resultado na paleta, e manter as duas
      telas na mesma régua evita que a trilha diga uma coisa e a paleta outra. */
+  /* Ícone de cada etapa: o do PRIMEIRO bloco dela, igual à lista lateral.
+     Vem daqui e não da lib porque é um componente React, e a lib é pura. */
+  const iconesDaTrilha = useMemo(() => {
+    const mapa: Record<string, React.ComponentType<{ className?: string }>> = {};
+    for (const s of steps) {
+      const primeiro = s.blockIds.map((bid) => blocks.find((b) => b.id === bid)).find(Boolean);
+      const def = primeiro && BLOCK_LIBRARY.find((d) => d.type === primeiro.type);
+      if (def) mapa[s.id] = def.icon;
+    }
+    return mapa;
+  }, [steps, blocks]);
+
   const etapasDaTrilha = useMemo(
     () =>
       steps.map((s, i) =>
@@ -199,6 +211,7 @@ export function QuizPreview({
           visitante vê esses controles. */}
       <TrilhaDeEtapas
         etapas={etapasDaTrilha}
+        icones={iconesDaTrilha}
         etapaAtualId={step?.id ?? null}
         onEscolher={(id) => onChangeStep?.(id)}
         onAdicionar={onAdicionarEtapa}

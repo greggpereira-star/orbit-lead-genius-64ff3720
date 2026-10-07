@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { naturezaDaEtapa, resumirEtapa, rolagemParaCentralizar } from "./trilhaDeEtapas";
+import {
+  naturezaDaEtapa,
+  resumirEtapa,
+  rolagemParaCentralizar,
+  ROTULO_DA_NATUREZA,
+  TINTA_DA_NATUREZA,
+} from "./trilhaDeEtapas";
 import type { ConversaoDaEtapa } from "./stepConversion";
 
 describe("naturezaDaEtapa", () => {
@@ -16,8 +22,30 @@ describe("naturezaDaEtapa", () => {
     expect(naturezaDaEtapa(["basico", "captura", "midia"])).toBe("captura");
   });
 
-  it("o resto é percurso", () => {
-    expect(naturezaDaEtapa(["interacao", "midia"])).toBe("percurso");
+  it("pergunta ganha de mídia — o vídeo é apoio, a pergunta é que decide", () => {
+    expect(naturezaDaEtapa(["interacao", "midia"])).toBe("pergunta");
+  });
+
+  it("reconhece mídia, prova e conteúdo quando não há pergunta", () => {
+    expect(naturezaDaEtapa(["midia"])).toBe("midia");
+    expect(naturezaDaEtapa(["prova"])).toBe("prova");
+    expect(naturezaDaEtapa(["basico", "conteudo"])).toBe("conteudo");
+  });
+
+  it("toda natureza tem rótulo e tinta — cartão sem marca é cartão mudo", () => {
+    for (const cats of [
+      [],
+      ["captura"],
+      ["resultado"],
+      ["interacao"],
+      ["midia"],
+      ["prova"],
+      ["basico"],
+    ]) {
+      const n = naturezaDaEtapa(cats);
+      expect(ROTULO_DA_NATUREZA[n], n).toBeTruthy();
+      expect(TINTA_DA_NATUREZA[n], n).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
   });
 });
 

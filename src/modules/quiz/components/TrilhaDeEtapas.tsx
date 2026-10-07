@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import type { ResumoDaEtapa, NaturezaDaEtapa } from "../lib/trilhaDeEtapas";
-import { ROTULO_DA_NATUREZA, rolagemParaCentralizar } from "../lib/trilhaDeEtapas";
+import type { ResumoDaEtapa } from "../lib/trilhaDeEtapas";
+import { rolagemParaCentralizar } from "../lib/trilhaDeEtapas";
 
 /**
  * Navegação entre as telas do quiz, no topo do canvas.
@@ -19,29 +19,27 @@ import { ROTULO_DA_NATUREZA, rolagemParaCentralizar } from "../lib/trilhaDeEtapa
  * leitura do funil inteiro.
  */
 
-/* 168px de cartão não é número redondo: é o que os nomes PEDEM.
+/* 180px de cartão não é número redondo: é o que os nomes PEDEM.
    Medido nos 24 nomes do funil do cliente, com a fonte e o peso reais do
    cartão: mediana 105px, p90 123px, máximo 128px ("Histórico com estética").
    O cartão de 136px deixava 96px para o nome e cortava até a mediana — com
    isso "Detalhe da reg…" e "Desejo emocio…" ficavam indistinguíveis, que é
    justamente o que a trilha existe para resolver. Caber menos cartão na tela
-   é melhor do que caber mais cartão ilegível. */
-const TINTA_DA_NATUREZA: Record<NaturezaDaEtapa, string> = {
-  vazia: "#F59E0B",
-  captura: "#38BDF8",
-  resultado: "#34D399",
-  percurso: "transparent",
-};
+   é melhor do que caber mais cartão ilegível. Os 12px a mais sobre os 168
+   anteriores são o chip do ícone, que entrou à esquerda do número. */
+const LARGURA_DO_CARTAO = 180;
 
 interface Props {
   etapas: ResumoDaEtapa[];
+  /** Ícone por etapa, do primeiro bloco dela — mesmo da lista lateral. */
+  icones?: Record<string, React.ComponentType<{ className?: string }>>;
   etapaAtualId: string | null;
   onEscolher: (stepId: string) => void;
   /** Ausente na tela de Design, onde a trilha só mostra — não constrói. */
   onAdicionar?: () => void;
 }
 
-export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }: Props) {
+export function TrilhaDeEtapas({ etapas, icones, etapaAtualId, onEscolher, onAdicionar }: Props) {
   const pistaRef = useRef<HTMLDivElement | null>(null);
   const cartaoAtualRef = useRef<HTMLButtonElement | null>(null);
   /* Esmaecimento só do lado que REALMENTE continua. Fixo nos dois lados, ele
@@ -176,7 +174,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
         >
           {etapas.map((e, i) => {
             const selecionada = i === atual;
-            const tinta = TINTA_DA_NATUREZA[e.natureza];
+            const Icone = icones?.[e.id];
             return (
               <button
                 key={e.id}
@@ -187,23 +185,42 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
                 ref={selecionada ? cartaoAtualRef : undefined}
                 onClick={() => onEscolher(e.id)}
                 title={e.titulo}
-                className={`group relative flex min-h-[50px] w-[168px] shrink-0 scroll-mx-2 flex-col justify-center gap-1 rounded-lg px-3 py-2 text-left transition-colors ${
+                style={{ width: LARGURA_DO_CARTAO }}
+                className={`group relative flex min-h-[66px] shrink-0 scroll-mx-2 flex-col justify-center gap-1.5 overflow-hidden rounded-xl py-2.5 pl-3.5 pr-3 text-left transition-colors ${
                   selecionada
                     ? "bg-white text-neutral-900"
-                    : "bg-white/[0.07] text-white/70 hover:bg-white/[0.14] hover:text-white"
+                    : "bg-white/[0.06] text-white/75 hover:bg-white/[0.12] hover:text-white"
                 } ${e.natureza === "vazia" && !selecionada ? "ring-1 ring-inset ring-amber-400/35" : ""}`}
               >
-                <span className="flex items-center gap-1.5">
-                  {/* Barrinha de natureza: onde está a captura e onde está o
-                      resultado, legível sem ler. Percurso não ganha cor — se
-                      tudo é marcado, nada é. */}
-                  {tinta !== "transparent" && (
-                    <span
-                      aria-hidden
-                      className="h-2.5 w-[3px] shrink-0 rounded-full"
-                      style={{ background: tinta }}
-                    />
-                  )}
+                {/* Marca de natureza na BORDA, de alto a baixo — e em todas as
+                    etapas, não só em captura e resultado. Varrendo a trilha com
+                    o olho, a sequência de cores desenha a forma do funil: onde
+                    pergunta, onde prova, onde pede contato, onde entrega. A
+                    versão anterior marcava duas naturezas com 3px no meio do
+                    cartão e o resto de nada. */}
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-[3px]"
+                  style={{ background: e.tinta }}
+                />
+
+                <span className="flex items-center gap-2">
+                  {/* Ícone do primeiro bloco, o mesmo da lista lateral: é o
+                      identificador mais rápido que existe — reconhecido antes
+                      de qualquer palavra ser lida. */}
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                    style={{
+                      background: selecionada ? `${e.tinta}2E` : `${e.tinta}24`,
+                      color: selecionada ? undefined : e.tinta,
+                    }}
+                  >
+                    {Icone ? (
+                      <Icone className="h-3 w-3" />
+                    ) : (
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    )}
+                  </span>
                   <span
                     className={`shrink-0 text-[10px] font-bold tabular-nums ${
                       selecionada ? "text-neutral-400" : "text-white/35"
@@ -211,21 +228,9 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
                   >
                     {String(e.numero).padStart(2, "0")}
                   </span>
-                  <span className="truncate text-[11.5px] font-semibold leading-[1.35]">
-                    {e.nome}
-                  </span>
-                </span>
-                <span
-                  className={`flex items-center gap-1 pl-[1px] text-[10px] leading-[1.4] ${
-                    selecionada ? "text-neutral-500" : "text-white/35"
-                  }`}
-                >
-                  <span className="truncate">
-                    {e.componentes === 0 ? ROTULO_DA_NATUREZA.vazia : `${e.componentes} comp.`}
-                  </span>
                   {e.percentual !== null && (
                     <span
-                      className="ml-auto shrink-0 rounded px-1 font-bold tabular-nums"
+                      className="ml-auto shrink-0 rounded px-1 text-[10px] font-bold tabular-nums"
                       style={{
                         color: e.cor ?? undefined,
                         background: selecionada ? "transparent" : `${e.cor}1F`,
@@ -234,6 +239,23 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
                       {e.percentual}%
                     </span>
                   )}
+                </span>
+
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] font-semibold leading-[1.3]">
+                    {e.nome}
+                  </span>
+                  {/* O QUE a etapa é, não QUANTAS peças tem.
+                      "1 comp." aparecia em 14 das 24 etapas deste funil: a
+                      linha existia e não distinguia 58% dos cartões. */}
+                  <span
+                    className={`block truncate text-[10px] leading-[1.4] ${
+                      selecionada ? "text-neutral-500" : "text-white/40"
+                    }`}
+                  >
+                    {e.rotuloDaNatureza}
+                    {e.componentes > 1 && ` · ${e.componentes} itens`}
+                  </span>
                 </span>
               </button>
             );
@@ -244,7 +266,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
               type="button"
               onClick={onAdicionar}
               title="Adicionar uma etapa no fim do funil"
-              className="flex min-h-[50px] w-[44px] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/20 text-white/45 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="flex min-h-[66px] w-[46px] shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 text-white/45 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             >
               <Plus className="h-4 w-4" />
               <span className="sr-only">Nova etapa</span>
