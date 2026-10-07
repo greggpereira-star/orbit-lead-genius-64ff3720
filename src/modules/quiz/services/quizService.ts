@@ -1,5 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { prefixoDoQuiz, outroQuizUsaAMidia } from "../lib/midiaDoQuiz";
+import {
+  classificarArquivos,
+  quizDoCaminho,
+  type ArquivoClassificado,
+  type ArquivoDaBiblioteca,
+} from "../lib/biblioteca";
 
 /** Mesmo bucket do `mediaService`. */
 const BUCKET_DE_MIDIA = "quiz-media";
@@ -239,6 +245,88 @@ export const quizService = {
       else caminhos.push(...(await this._listarMidia(`${filho}/`, profundidade + 1)));
     }
     return caminhos;
+  },
+
+  /**
+   * Tudo que a empresa tem no bucket, já cruzado com os quizzes existentes.
+   *
+   * Uma passada só: lista os arquivos, lê os schemas vivos e classifica. O
+   * cruzamento é o que distingue "órfão" de "em uso" — e são perguntas
+   * diferentes, porque uma cópia pode referenciar a mídia de um quiz já
+   * apagado.
+   */
+  async listarBiblioteca(companyId: string): Promise<ArquivoClassificado[]> {
+    const caminhos = await this._listarMidia(`${companyId}/`);
+    if (!caminhos.length) return [];
+
+    const { data: quizzes } = await supabase
+      .from("quiz_funnels")
+      .select("id")
+      .eq("company_id", companyId);
+    const ids = ((quizzes ?? []) as { id: string }[]).map((q) => q.id);
+
+    const schemas = await Promise.all(
+      ids.map((id) => this.getLatestSchema(id).catch(() => null)),
+    );
+
+    /* O metadado vem da listagem por pasta, não de um `select` — o storage do
+       Supabase não expõe tabela para o cliente. Uma chamada por pasta é o
+       preço; são poucas. */
+    const porPasta = new Map<string, string[]>();
+    for (const c of caminhos) {
+      const pasta = c.slice(0, c.lastIndexOf("/"));
+      porPasta.set(pasta, [...(porPasta.get(pasta) ?? []), c]);
+    }
+
+    const arquivos: ArquivoDaBiblioteca[] = [];
+    for (const pasta of porPasta.keys()) {
+      const { data } = await supabase.storage.from(BUCKET_DE_MIDIA).list(pasta, { limit: 1000 });
+      for (const item of data ?? []) {
+        if (!item.id) continue;
+        const caminho = `${pasta}/${item.name}`;
+        const meta = (item.metadata ?? {}) as { size?: number; mimetype?: string };
+        arquivos.push({
+          caminho,
+          bytes: meta.size ?? 0,
+          mimeType: meta.mimetype ?? "",
+          criadoEm: item.created_at ?? "",
+          quizId: quizDoCaminho(caminho, companyId),
+          deVisitante: caminho.includes("/respostas/"),
+        });
+      }
+    }
+
+    return classificarArquivos({
+      arquivos,
+      companyId,
+      quizzesExistentes: ids,
+      schemasSerializados: schemas.map((x) => {
+        try {
+          return JSON.stringify(x ?? {});
+        } catch {
+          return "";
+        }
+      }),
+    });
+  },
+
+  /** URLs assinadas para a prévia. Uma hora basta para olhar a tela. */
+  async assinarMidia(caminhos: string[]): Promise<Record<string, string>> {
+    if (!caminhos.length) return {};
+    const { data } = await supabase.storage
+      .from(BUCKET_DE_MIDIA)
+      .createSignedUrls(caminhos, 60 * 60);
+    const mapa: Record<string, string> = {};
+    for (const d of data ?? []) {
+      if (d.path && d.signedUrl) mapa[d.path] = d.signedUrl;
+    }
+    return mapa;
+  },
+
+  async apagarMidia(caminhos: string[]): Promise<void> {
+    if (!caminhos.length) return;
+    const { error } = await supabase.storage.from(BUCKET_DE_MIDIA).remove(caminhos);
+    if (error) throw error;
   },
 
   /**

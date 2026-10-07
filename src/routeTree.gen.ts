@@ -23,6 +23,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppFormsRouteImport } from './routes/_app.forms'
 import { Route as AppInboxRouteImport } from './routes/_app.inbox'
 import { Route as AppLeadsRouteImport } from './routes/_app.leads'
+import { Route as AppMidiaRouteImport } from './routes/_app.midia'
 import { Route as AppObservabilityRouteImport } from './routes/_app.observability'
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppQuizzesRouteImport } from './routes/_app.quizzes'
@@ -142,6 +143,11 @@ const AppInboxRoute = AppInboxRouteImport.update({
 const AppLeadsRoute = AppLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMidiaRoute = AppMidiaRouteImport.update({
+  id: '/midia',
+  path: '/midia',
   getParentRoute: () => AppRoute,
 } as any)
 const AppObservabilityRoute = AppObservabilityRouteImport.update({
@@ -427,6 +433,7 @@ export interface FileRoutesByFullPath {
   '/forms': typeof AppFormsRoute
   '/inbox': typeof AppInboxRoute
   '/leads': typeof AppLeadsRouteWithChildren
+  '/midia': typeof AppMidiaRoute
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
   '/quizzes': typeof AppQuizzesRoute
@@ -493,6 +500,7 @@ export interface FileRoutesByTo {
   '/forms': typeof AppFormsRoute
   '/inbox': typeof AppInboxRoute
   '/leads': typeof AppLeadsRouteWithChildren
+  '/midia': typeof AppMidiaRoute
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
   '/quizzes': typeof AppQuizzesRoute
@@ -561,6 +569,7 @@ export interface FileRoutesById {
   '/_app/forms': typeof AppFormsRoute
   '/_app/inbox': typeof AppInboxRoute
   '/_app/leads': typeof AppLeadsRouteWithChildren
+  '/_app/midia': typeof AppMidiaRoute
   '/_app/observability': typeof AppObservabilityRoute
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/quizzes': typeof AppQuizzesRoute
@@ -629,6 +638,7 @@ export interface FileRouteTypes {
     | '/forms'
     | '/inbox'
     | '/leads'
+    | '/midia'
     | '/observability'
     | '/pipeline'
     | '/quizzes'
@@ -695,6 +705,7 @@ export interface FileRouteTypes {
     | '/forms'
     | '/inbox'
     | '/leads'
+    | '/midia'
     | '/observability'
     | '/pipeline'
     | '/quizzes'
@@ -762,6 +773,7 @@ export interface FileRouteTypes {
     | '/_app/forms'
     | '/_app/inbox'
     | '/_app/leads'
+    | '/_app/midia'
     | '/_app/observability'
     | '/_app/pipeline'
     | '/_app/quizzes'
@@ -942,6 +954,13 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/leads'
       preLoaderRoute: typeof AppLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/midia': {
+      id: '/_app/midia'
+      path: '/midia'
+      fullPath: '/midia'
+      preLoaderRoute: typeof AppMidiaRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/observability': {
@@ -1375,6 +1394,7 @@ interface AppRouteChildren {
   AppFormsRoute: typeof AppFormsRoute
   AppInboxRoute: typeof AppInboxRoute
   AppLeadsRoute: typeof AppLeadsRouteWithChildren
+  AppMidiaRoute: typeof AppMidiaRoute
   AppObservabilityRoute: typeof AppObservabilityRoute
   AppPipelineRoute: typeof AppPipelineRoute
   AppQuizzesRoute: typeof AppQuizzesRoute
@@ -1401,6 +1421,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFormsRoute: AppFormsRoute,
   AppInboxRoute: AppInboxRoute,
   AppLeadsRoute: AppLeadsRouteWithChildren,
+  AppMidiaRoute: AppMidiaRoute,
   AppObservabilityRoute: AppObservabilityRoute,
   AppPipelineRoute: AppPipelineRoute,
   AppQuizzesRoute: AppQuizzesRoute,

@@ -13,6 +13,7 @@ import {
   Copy,
   Archive,
   ArchiveRestore,
+  Image as ImageIcon,
 } from "lucide-react";
 import { quizService } from "../services/quizService";
 import { useAuth } from "@/core/auth/hooks/useAuth";
@@ -149,6 +150,11 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
     <div className="space-y-4">
       {arquivados.length > 0 && (
         <div className="flex justify-end">
+          <Button asChild variant="ghost" size="sm" className="gap-1.5 text-xs">
+            <Link to="/midia">
+              <ImageIcon className="h-3 w-3" /> Biblioteca de mídia
+            </Link>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
