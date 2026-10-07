@@ -1299,6 +1299,10 @@ export const quizService = {
       temperature: string | null;
       completed: boolean;
       created_at: string;
+      /* As respostas vinham do banco e eram DESCARTADAS aqui. A tela chamada
+         "Respostas" mostrava contato, pontos e temperatura — e nenhuma
+         resposta. O dado sempre esteve na mesma consulta. */
+      answers: Record<string, unknown> | null;
     }>
   > {
     const { data, error } = await supabase
@@ -1331,6 +1335,7 @@ export const quizService = {
         temperature: r.temperature,
         completed: r.status === "completed",
         created_at: r.created_at,
+        answers: r.answers,
       };
     });
   },
