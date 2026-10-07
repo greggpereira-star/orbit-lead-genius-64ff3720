@@ -303,6 +303,32 @@
   background: transparent;
 }
 
+/* ---------------------------------------------------------------------------
+   Trilha de etapas do construtor.
+   A barra nativa media 15px e empurrava a faixa para 78px de altura, numa
+   régua cujos cartões têm 42px — mais barra do que conteúdo. Fica fina e
+   sobre o fundo escuro do canvas, que é onde a trilha vive; some até o
+   ponteiro chegar perto. Escondê-la de todo tiraria o único sinal permanente
+   de que o funil continua para os lados.
+   --------------------------------------------------------------------------- */
+.trilha-etapas {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+}
+.trilha-etapas::-webkit-scrollbar {
+  height: 6px;
+}
+.trilha-etapas::-webkit-scrollbar-track {
+  background: transparent;
+}
+.trilha-etapas::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 0.18);
+  border-radius: 9999px;
+}
+.trilha-etapas:hover::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 0.32);
+}
+
 /* Editor de texto rico do Builder.
    O contentEditable não herda tamanho de título do Tailwind (o preflight zera
    h1..h3), então sem isto "Título 1" e "Parágrafo" ficam do mesmo tamanho na

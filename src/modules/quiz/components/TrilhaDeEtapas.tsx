@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { ResumoDaEtapa, NaturezaDaEtapa } from "../lib/trilhaDeEtapas";
 import { ROTULO_DA_NATUREZA, rolagemParaCentralizar } from "../lib/trilhaDeEtapas";
@@ -37,6 +37,19 @@ interface Props {
 export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }: Props) {
   const pistaRef = useRef<HTMLDivElement | null>(null);
   const cartaoAtualRef = useRef<HTMLButtonElement | null>(null);
+  /* Esmaecimento só do lado que REALMENTE continua. Fixo nos dois lados, ele
+     escurecia o primeiro cartão com a trilha já no começo — sugerindo conteúdo
+     que não existe e sujando o cartão selecionado. */
+  const [sobra, setSobra] = useState({ antes: false, depois: false });
+
+  const medirSobra = useCallback(() => {
+    const p = pistaRef.current;
+    if (!p) return;
+    setSobra({
+      antes: p.scrollLeft > 2,
+      depois: p.scrollLeft + p.clientWidth < p.scrollWidth - 2,
+    });
+  }, []);
 
   const indiceAtual = etapas.findIndex((e) => e.id === etapaAtualId);
   const atual = indiceAtual >= 0 ? indiceAtual : 0;
@@ -56,7 +69,21 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
       }),
       behavior: "smooth",
     });
-  }, [etapaAtualId, etapas.length]);
+    medirSobra();
+  }, [etapaAtualId, etapas.length, medirSobra]);
+
+  useEffect(() => {
+    const p = pistaRef.current;
+    if (!p) return;
+    medirSobra();
+    p.addEventListener("scroll", medirSobra, { passive: true });
+    const observador = new ResizeObserver(medirSobra);
+    observador.observe(p);
+    return () => {
+      p.removeEventListener("scroll", medirSobra);
+      observador.disconnect();
+    };
+  }, [medirSobra, etapas.length]);
 
   const irPara = useCallback(
     (i: number) => {
@@ -220,14 +247,18 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
 
         {/* Esmaecimento nas bordas: diz que a trilha continua, sem ocupar a
             linha com uma barra de rolagem. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-[#0a0a0a] to-transparent"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-[#0a0a0a] to-transparent"
-        />
+        {sobra.antes && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0a0a0a] to-transparent"
+          />
+        )}
+        {sobra.depois && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0a0a0a] to-transparent"
+          />
+        )}
       </div>
 
       {seta(1, ChevronRight, "Próxima etapa")}
