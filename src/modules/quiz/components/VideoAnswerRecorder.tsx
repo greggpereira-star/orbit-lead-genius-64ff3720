@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Video, Square, RotateCcw, Loader2, Check } from "lucide-react";
+import { Video, Square, RotateCcw, Loader2, Check, AlertCircle } from "lucide-react";
 import type { QuizDesign } from "../types";
 import { getContrastText, withAlpha } from "../lib/color";
 import { VIDEO_RESPOSTA, validarEnvioDeVideo } from "../lib/videoResposta";
 import { formatarTempo } from "../lib/audio";
 
-type Fase = "parado" | "pedindo" | "gravando" | "revendo" | "enviando" | "pronto" | "negado";
+/* Sem "revendo": o envio começa sozinho ao parar de gravar, e a revisão
+   acontece durante o envio. */
+type Fase = "parado" | "pedindo" | "gravando" | "enviando" | "pronto" | "erro" | "negado";
 
 interface Props {
   quizId: string;
@@ -39,6 +41,8 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
   const pedacosRef = useRef<Blob[]>([]);
   const blobRef = useRef<Blob | null>(null);
   const duracaoRef = useRef(0);
+  /* `onstop` é registrado uma vez e precisa chamar o `enviar` ATUAL. */
+  const enviarRef = useRef<() => Promise<void>>(async () => {});
 
   const encerrarCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -77,7 +81,12 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
           videoRef.current.src = URL.createObjectURL(blobRef.current);
           videoRef.current.muted = false;
         }
-        setFase("revendo");
+        /* O envio começa SOZINHO ao parar de gravar. Antes era preciso clicar
+           em "Enviar": quem gravasse e seguisse em frente perdia o vídeo, e um
+           clique a mais é um passo que pode falhar sem ninguém conferir. Dá
+           para rever enquanto sobe; refazer troca pelo novo. */
+        setFase("enviando");
+        void enviarRef.current();
       };
       rec.start();
       setSegundos(0);
@@ -119,6 +128,7 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
     });
     if (problema) {
       setErro(problema.motivo);
+      setFase("erro");
       return;
     }
     setFase("enviando");
@@ -133,16 +143,18 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
       const j = (await r.json()) as { url?: string; erro?: string };
       if (!r.ok || !j.url) {
         setErro(j.erro || "Não foi possível enviar.");
-        setFase("revendo");
+        setFase("erro");
         return;
       }
       setFase("pronto");
       onEnviado(j.url);
     } catch {
       setErro("Falha de conexão ao enviar.");
-      setFase("revendo");
+      setFase("erro");
     }
   }, [quizId, blockId, sessionId, onEnviado]);
+
+  enviarRef.current = enviar;
 
   const refazer = useCallback(() => {
     blobRef.current = null;
@@ -181,7 +193,7 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
         <video
           ref={videoRef}
           playsInline
-          controls={fase === "revendo" || fase === "pronto"}
+          controls={fase === "enviando" || fase === "pronto" || fase === "erro"}
           className="h-full w-full object-cover"
         />
         {(fase === "parado" || fase === "negado" || fase === "pedindo") && (
@@ -207,25 +219,40 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
         )}
       </div>
 
+      {/* Falha de envio como PAINEL, não como linha de texto. O visitante
+          gravou, a gravação está na mão dele e pode se perder: tem de ficar
+          claro que nada foi enviado e o que fazer. Enquanto está assim, o
+          bloco segue sem resposta — e, sendo obrigatório, o botão da etapa
+          continua travado, então ninguém avança achando que enviou. */}
       {erro && (
-        <p className="text-[13px] font-medium" style={{ color: "#DC2626" }}>
-          {erro}
-        </p>
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-xl border p-3"
+          style={{ borderColor: "#DC262659", background: "#DC26261F", color: design.text }}
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#DC2626" }} />
+          <div className="min-w-0 flex-1 text-[13px]">
+            <p className="font-semibold">O vídeo não foi enviado.</p>
+            <p className="opacity-80">{erro}</p>
+          </div>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         {(fase === "parado" || fase === "negado") && botao("Gravar", () => void gravar(), Video)}
         {fase === "gravando" && botao("Parar", parar, Square)}
-        {fase === "revendo" && (
-          <>
-            {botao("Enviar", () => void enviar(), Check)}
-            {botao("Refazer", refazer, RotateCcw, false)}
-          </>
-        )}
         {fase === "enviando" && (
           <span className="inline-flex items-center gap-2 text-sm" style={{ color: design.muted }}>
             <Loader2 className="h-4 w-4 animate-spin" /> Enviando…
           </span>
+        )}
+        {fase === "erro" && (
+          <>
+            {/* Tenta o MESMO arquivo de novo: a gravação não se perde por causa
+                de uma falha de rede. */}
+            {botao("Tentar de novo", () => void enviar(), RotateCcw)}
+            {botao("Gravar outro", refazer, Video, false)}
+          </>
         )}
         {fase === "pronto" && (
           <>
