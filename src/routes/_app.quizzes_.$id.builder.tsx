@@ -1221,13 +1221,20 @@ function QuizBuilderPage() {
                             que o canvas já mostra, e o nome da etapa ("Dor
                             principal") já distingue melhor do que ele. */}
                         <div className="min-w-0 flex-1 space-y-0.5">
+                          {/* O número desce para a segunda linha.
+                              Na primeira ele custava 22px do NOME, que é o
+                              identificador principal: medido na tela, 13 dos 24
+                              nomes passaram a chegar cortados ("Vídeo de a…",
+                              "Dor princi…"). Embaixo ele convive com a natureza
+                              sem disputar espaço com nada. */}
                           <div className="truncate text-xs font-semibold leading-[1.35]">
-                            <span className="mr-1 tabular-nums text-muted-foreground">
-                              {String(stepIdx + 1).padStart(2, "0")}
-                            </span>
                             {step.name || `Etapa ${stepIdx + 1}`}
                           </div>
                           <div className="truncate text-[11px] leading-[1.35] text-muted-foreground">
+                            <span className="tabular-nums">
+                              {String(stepIdx + 1).padStart(2, "0")}
+                            </span>
+                            {" · "}
                             {stepBlocks.length === 0
                               ? "Vazia — escolha um bloco"
                               : `${resumoDaEtapa.rotuloDaNatureza}${stepBlocks.length > 1 ? ` · ${stepBlocks.length} itens` : ""}`}
