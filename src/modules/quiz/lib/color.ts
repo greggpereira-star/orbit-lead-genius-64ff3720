@@ -5,9 +5,9 @@
  */
 export function getContrastText(hex: string): string {
   const rgb = hexToRgb(hex);
-  if (!rgb) return '#ffffff';
+  if (!rgb) return "#ffffff";
   const luminance = relativeLuminance(rgb);
-  return luminance > 0.45 ? '#1a1a1a' : '#ffffff';
+  return luminance > 0.45 ? "#1a1a1a" : "#ffffff";
 }
 
 /** Clareia `hex` em direção ao branco por `amount` (0-1). Usado pelos estilos de
@@ -30,12 +30,18 @@ export function darken(hex: string, amount: number): string {
 
 function rgbToHex(r: number, g: number, b: number): string {
   const clamp = (c: number) => Math.max(0, Math.min(255, c));
-  return `#${[r, g, b].map((c) => clamp(c).toString(16).padStart(2, '0')).join('')}`;
+  return `#${[r, g, b].map((c) => clamp(c).toString(16).padStart(2, "0")).join("")}`;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const clean = hex.replace('#', '');
-  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const clean = hex.replace("#", "");
+  const full =
+    clean.length === 3
+      ? clean
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : clean;
   if (full.length !== 6) return null;
   const num = parseInt(full, 16);
   if (Number.isNaN(num)) return null;
@@ -62,3 +68,35 @@ export function withAlpha(hex: string, alpha: number): string {
   if (!rgb) return hex;
   return `rgb(${rgb.r} ${rgb.g} ${rgb.b} / ${alpha})`;
 }
+
+/**
+ * Contraste WCAG entre duas cores em hex.
+ *
+ * Existe porque dois dos oito presets publicavam texto de apoio abaixo do piso
+ * legível — Rose Luxe a 3,76:1 e Candy a 2,54:1, medidos no quiz do cliente no
+ * ar em 07/10. Uma cor escolhida a olho numa paleta bonita vira texto que o
+ * visitante não lê, e isso só aparece medindo.
+ */
+export function contrasteWCAG(a: string, b: string): number {
+  const lum = (hex: string) => {
+    const h = hex.replace("#", "");
+    const n =
+      h.length === 3
+        ? h
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : h;
+    const canal = (i: number) => {
+      const v = parseInt(n.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4);
+  };
+  const l1 = lum(a);
+  const l2 = lum(b);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+
+/** Piso da WCAG AA para texto normal. Texto grande (>=24px) pede 3:1. */
+export const CONTRASTE_MINIMO = 4.5;
