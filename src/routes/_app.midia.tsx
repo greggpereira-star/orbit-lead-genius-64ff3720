@@ -70,7 +70,14 @@ function BibliotecaDeMidia() {
     return arquivos.filter((a) => {
       if (filtro === "orfaos" && !a.orfao) return false;
       if (filtro === "visitantes" && !a.deVisitante) return false;
-      return !t || a.nome.toLowerCase().includes(t) || (a.quizId ?? "").includes(t);
+      /* O nome do quiz entra na busca porque é o único termo que alguém
+         realmente digita: o nome do arquivo e o id do quiz são UUIDs. */
+      return (
+        !t ||
+        a.nome.toLowerCase().includes(t) ||
+        (a.quizNome ?? "").toLowerCase().includes(t) ||
+        (a.quizId ?? "").includes(t)
+      );
     });
   }, [arquivos, busca, filtro]);
 
@@ -191,6 +198,13 @@ function BibliotecaDeMidia() {
                     {formatarTamanho(a.bytes)}
                     {a.criadoEm && ` · ${new Date(a.criadoEm).toLocaleDateString("pt-BR")}`}
                   </p>
+                  {/* De onde o arquivo veio. Sem esta linha o cartão só tem um
+                      UUID, e não há como saber qual quiz some se apagar. */}
+                  {a.quizNome && (
+                    <p className="truncate text-[11px] text-muted-foreground" title={a.quizNome}>
+                      em <span className="font-medium text-foreground">{a.quizNome}</span>
+                    </p>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-1">
                     {a.deVisitante && (
@@ -221,7 +235,7 @@ function BibliotecaDeMidia() {
                       void apagar(
                         [a],
                         a.emUso
-                          ? `"${a.nome}"? Ele está EM USO num quiz e vai sumir da tela do visitante`
+                          ? `"${a.nome}"? Ele está EM USO ${a.quizNome ? `em "${a.quizNome}"` : "num quiz"} e vai sumir da tela do visitante`
                           : `"${a.nome}"`,
                       )
                     }

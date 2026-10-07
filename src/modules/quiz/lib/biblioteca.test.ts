@@ -114,3 +114,37 @@ describe("seguroApagar", () => {
     expect(seguroApagar(arquivos).map((a) => a.nome)).toEqual(["livre.png"]);
   });
 });
+
+describe("quizNome no cartão", () => {
+  const base = {
+    caminho: "emp/q1/a.png",
+    bytes: 10,
+    mimeType: "image/png",
+    criadoEm: "",
+    quizId: "q1",
+    deVisitante: false,
+  };
+
+  it("usa o nome do quiz de origem", () => {
+    const [a] = classificarArquivos({
+      arquivos: [base],
+      companyId: "emp",
+      quizzesExistentes: ["q1"],
+      schemasSerializados: [],
+      nomesDeQuiz: { q1: "Diagnóstico" },
+    });
+    expect(a.quizNome).toBe("Diagnóstico");
+  });
+
+  it("fica sem nome quando o quiz já foi apagado", () => {
+    const [a] = classificarArquivos({
+      arquivos: [base],
+      companyId: "emp",
+      quizzesExistentes: [],
+      schemasSerializados: [],
+      nomesDeQuiz: {},
+    });
+    expect(a.orfao).toBe(true);
+    expect(a.quizNome).toBeNull();
+  });
+});

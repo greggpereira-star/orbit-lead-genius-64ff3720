@@ -261,13 +261,14 @@ export const quizService = {
 
     const { data: quizzes } = await supabase
       .from("quiz_funnels")
-      .select("id")
+      .select("id, name")
       .eq("company_id", companyId);
-    const ids = ((quizzes ?? []) as { id: string }[]).map((q) => q.id);
+    const linhas = (quizzes ?? []) as { id: string; name: string | null }[];
+    const ids = linhas.map((q) => q.id);
+    const nomesDeQuiz: Record<string, string> = {};
+    for (const q of linhas) if (q.name) nomesDeQuiz[q.id] = q.name;
 
-    const schemas = await Promise.all(
-      ids.map((id) => this.getLatestSchema(id).catch(() => null)),
-    );
+    const schemas = await Promise.all(ids.map((id) => this.getLatestSchema(id).catch(() => null)));
 
     /* O metadado vem da listagem por pasta, não de um `select` — o storage do
        Supabase não expõe tabela para o cliente. Uma chamada por pasta é o
@@ -300,6 +301,7 @@ export const quizService = {
       arquivos,
       companyId,
       quizzesExistentes: ids,
+      nomesDeQuiz,
       schemasSerializados: schemas.map((x) => {
         try {
           return JSON.stringify(x ?? {});

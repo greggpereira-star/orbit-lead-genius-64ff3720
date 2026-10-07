@@ -19,6 +19,8 @@ export interface ArquivoClassificado extends ArquivoDaBiblioteca {
   /** Algum quiz referencia este arquivo no schema? */
   emUso: boolean;
   nome: string;
+  /** Nome do quiz de origem, quando ele ainda existe. */
+  quizNome: string | null;
 }
 
 /**
@@ -74,8 +76,10 @@ export function classificarArquivos(params: {
   quizzesExistentes: string[];
   /** Schemas dos quizzes existentes, já serializados. */
   schemasSerializados: string[];
+  /** `id -> nome` dos quizzes existentes, para o cartão dizer de onde veio. */
+  nomesDeQuiz?: Record<string, string>;
 }): ArquivoClassificado[] {
-  const { arquivos, quizzesExistentes, schemasSerializados } = params;
+  const { arquivos, quizzesExistentes, schemasSerializados, nomesDeQuiz } = params;
   const existentes = new Set(quizzesExistentes);
   const todoOTexto = schemasSerializados.join("\n");
 
@@ -85,6 +89,9 @@ export function classificarArquivos(params: {
     tipo: tipoDoArquivo(a.mimeType, a.caminho),
     orfao: !a.quizId || !existentes.has(a.quizId),
     emUso: todoOTexto.includes(a.caminho),
+    /* Sem nome quando o quiz já foi apagado: o cartão diz "órfão" e isso é a
+       informação honesta. Inventar um nome aqui seria pior que não ter. */
+    quizNome: (a.quizId && nomesDeQuiz?.[a.quizId]) || null,
   }));
 }
 
