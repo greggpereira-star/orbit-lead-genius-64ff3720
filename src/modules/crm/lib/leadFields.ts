@@ -37,6 +37,11 @@ const INTERNAL_KEYS = new Set([
   "quiz_slug",
   "quiz_title",
   "submission_id",
+  /* `responses` é o PAYLOAD CRU da submissão, guardado inteiro no meta do
+     lead — não é resposta que a pessoa digitou. Sem estar aqui, ele virava um
+     cartão com o mapa de respostas em JSON, sob um rótulo "Responses" que
+     ninguém traduziu, ao lado dos cartões das respostas de verdade. */
+  "responses",
   "visitor_id",
   "company_name",
   "source",

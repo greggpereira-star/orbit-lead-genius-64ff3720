@@ -9,11 +9,38 @@ import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Clock,
-  Mail, Phone, MapPin, Copy, Check, ExternalLink,
-  MessageCircle, ClipboardList, User, Radio, TrendingUp, XCircle, Zap, CheckSquare, Tag as TagIcon,
-  StickyNote, Plus, Trash2, CalendarClock, Loader2, X, Paperclip, FileText,
-  ChevronDown, AlertTriangle, Sparkles, DollarSign, BarChart3, Home, CircleDot,
-  PencilLine, MessagesSquare,
+  Mail,
+  Phone,
+  MapPin,
+  Copy,
+  Check,
+  ExternalLink,
+  MessageCircle,
+  ClipboardList,
+  User,
+  Radio,
+  TrendingUp,
+  XCircle,
+  Zap,
+  CheckSquare,
+  Tag as TagIcon,
+  StickyNote,
+  Plus,
+  Trash2,
+  CalendarClock,
+  Loader2,
+  X,
+  Paperclip,
+  FileText,
+  ChevronDown,
+  AlertTriangle,
+  Sparkles,
+  DollarSign,
+  BarChart3,
+  Home,
+  CircleDot,
+  PencilLine,
+  MessagesSquare,
   type LucideIcon,
   CircleDollarSign,
   ShieldCheck,
@@ -26,20 +53,40 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  listLeadNotes, createLeadNote, deleteLeadNote, toggleNoteDone,
-  listLeadTags, addLeadTag, removeLeadTag, listCompanyTagNames,
+  listLeadNotes,
+  createLeadNote,
+  deleteLeadNote,
+  toggleNoteDone,
+  listLeadTags,
+  addLeadTag,
+  removeLeadTag,
+  listCompanyTagNames,
 } from "../services/leadNotesService";
 import {
-  listLeadAttachments, uploadLeadAttachment, deleteLeadAttachment,
-  getAttachmentUrl, formatFileSize, type LeadAttachment,
+  listLeadAttachments,
+  uploadLeadAttachment,
+  deleteLeadAttachment,
+  getAttachmentUrl,
+  formatFileSize,
+  type LeadAttachment,
 } from "../services/leadAttachmentsService";
 
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,10 +94,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { salvarValorDaVenda } from "@/lib/google-ads.functions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LeadRow } from "../services/leadService";
-import { getLeadDisplayName, updateLead, deleteLead, type EditableLeadFields } from "../services/leadService";
+import {
+  getLeadDisplayName,
+  updateLead,
+  deleteLead,
+  type EditableLeadFields,
+} from "../services/leadService";
 import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
 import { LossReasonDialog } from "@/modules/crm/components/LossReasonDialog";
 import { LossReasonPanel } from "@/modules/crm/components/LossReasonPanel";
@@ -60,15 +115,27 @@ import { LeadInsights } from "@/modules/crm/components/LeadInsights";
 import { NextActions } from "@/modules/crm/components/NextActions";
 import { LeadQuickActions } from "@/modules/crm/components/LeadQuickActions";
 import {
-  CartaoFicha, LinkDoCartao, PropFicha, ValorOuVazio, FatoRapido,
+  CartaoFicha,
+  LinkDoCartao,
+  PropFicha,
+  ValorOuVazio,
+  FatoRapido,
 } from "@/modules/crm/components/LeadCards";
 import {
-  getLeadAnswers, getLeadOrigin, getLeadCity, formatDateTime,
-  relativeTime, whatsappLink, toTitleCase, channelLabel,
-  buildProfileSummary, getLeadCompleteness,
-  type AnswerKind, type LeadCompleteness,
+  getLeadAnswers,
+  getLeadOrigin,
+  getLeadCity,
+  formatDateTime,
+  relativeTime,
+  whatsappLink,
+  toTitleCase,
+  channelLabel,
+  buildProfileSummary,
+  getLeadCompleteness,
+  type AnswerKind,
+  type LeadCompleteness,
 } from "../lib/leadFields";
-import { midiaDaResposta } from '../lib/midiaDaResposta';
+import { midiaDaResposta } from "../lib/midiaDaResposta";
 
 interface Props {
   lead: LeadRow | null;
@@ -119,12 +186,7 @@ function avatarTone(_seed: string): string {
  * `leads.stage_id` — mudar a etapa aqui não mexia o card no board, e vice-versa.
  * Agora as duas telas escrevem pelo mesmo `moveLeadToStage`.
  */
-function StagePicker({
-  lead, onChanged,
-}: {
-  lead: LeadRow;
-  onChanged: (status: string) => void;
-}) {
+function StagePicker({ lead, onChanged }: { lead: LeadRow; onChanged: (status: string) => void }) {
   const qc = useQueryClient();
   const [currentId, setCurrentId] = useState<string | null>(
     (lead as { stage_id?: string | null }).stage_id ?? null,
@@ -178,7 +240,11 @@ function StagePicker({
           className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
           style={
             current
-              ? { borderColor: `${current.color}55`, backgroundColor: `${current.color}14`, color: current.color }
+              ? {
+                  borderColor: `${current.color}55`,
+                  backgroundColor: `${current.color}14`,
+                  color: current.color,
+                }
               : undefined
           }
           aria-label={`Etapa atual: ${label}. Clique para alterar.`}
@@ -193,7 +259,10 @@ function StagePicker({
             key={s.id}
             onClick={() => {
               if (s.id === currentId) return;
-              if (s.kind === 'lost') { setPerguntandoMotivo(s); return; }
+              if (s.kind === "lost") {
+                setPerguntandoMotivo(s);
+                return;
+              }
               mutation.mutate({ stage: s });
             }}
             className="gap-2"
@@ -208,10 +277,14 @@ function StagePicker({
       {perguntandoMotivo && (
         <LossReasonDialog
           companyId={lead.company_id}
-          leadName={lead.name || 'este lead'}
+          leadName={lead.name || "este lead"}
           open
           onConfirm={(motivoId, observacao) => {
-            mutation.mutate({ stage: perguntandoMotivo, lossReasonId: motivoId, lostNotes: observacao });
+            mutation.mutate({
+              stage: perguntandoMotivo,
+              lossReasonId: motivoId,
+              lostNotes: observacao,
+            });
             setPerguntandoMotivo(null);
           }}
           // Aqui nada se moveu ainda — a ficha só grava depois de confirmar —
@@ -233,10 +306,7 @@ function StagePicker({
 /** Um tom só para todos os assuntos. Ver o comentário dentro do mapa. */
 const NEUTRO = "bg-[var(--superficie-tonal)] text-muted-foreground";
 
-const ANSWER_KIND_STYLE: Record<
-  AnswerKind,
-  { icon: LucideIcon; tone: string }
-> = {
+const ANSWER_KIND_STYLE: Record<AnswerKind, { icon: LucideIcon; tone: string }> = {
   // Seis matizes viraram um tom neutro só. O que distingue o assunto é a
   // FORMA do ícone — cifrão, casa, calendário —, que já basta de relance e
   // sobrevive ao daltonismo. Seis cores pastel competindo não distinguiam
@@ -269,7 +339,12 @@ function CompletenessMeter({ data }: { data: LeadCompleteness }) {
         <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
           <circle cx="32" cy="32" r={R} fill="none" strokeWidth="6" className="stroke-muted" />
           <circle
-            cx="32" cy="32" r={R} fill="none" strokeWidth="6" strokeLinecap="round"
+            cx="32"
+            cy="32"
+            r={R}
+            fill="none"
+            strokeWidth="6"
+            strokeLinecap="round"
             className="stroke-primary transition-[stroke-dashoffset] duration-700 ease-out"
             strokeDasharray={C}
             strokeDashoffset={C * (1 - pct)}
@@ -288,8 +363,6 @@ function CompletenessMeter({ data }: { data: LeadCompleteness }) {
     </div>
   );
 }
-
-
 
 /** Copiar é a ação mais repetida numa ficha de lead — merece feedback próprio. */
 function CopyButton({ value, label }: { value: string; label: string }) {
@@ -311,13 +384,25 @@ function CopyButton({ value, label }: { value: string; label: string }) {
         );
       }}
     >
-      {copied ? <Check className="h-3.5 w-3.5 text-[var(--sucesso)]" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? (
+        <Check className="h-3.5 w-3.5 text-[var(--sucesso)]" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
     </Button>
   );
 }
 
 function Field({
-  icon, label, value, copyable, emphasis, action, onSave, placeholder, semRotulo,
+  icon,
+  label,
+  value,
+  copyable,
+  emphasis,
+  action,
+  onSave,
+  placeholder,
+  semRotulo,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -364,8 +449,14 @@ function Field({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commit}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); commit(); }
-              if (e.key === "Escape") { setDraft(value ?? ""); setEditing(false); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              }
+              if (e.key === "Escape") {
+                setDraft(value ?? "");
+                setEditing(false);
+              }
             }}
             placeholder={placeholder}
             aria-label={label}
@@ -374,7 +465,10 @@ function Field({
         ) : onSave ? (
           <button
             type="button"
-            onClick={() => { setDraft(value ?? ""); setEditing(true); }}
+            onClick={() => {
+              setDraft(value ?? "");
+              setEditing(true);
+            }}
             title={value ? `${value} — clique para editar` : "Clique para preencher"}
             className={`-mx-1 block w-full truncate rounded px-1 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${textClass} ${
               value ? "" : "text-muted-foreground"
@@ -418,7 +512,9 @@ function Field({
  * porque é neles que o corretor precisa agir.
  */
 function NotesTab({
-  leadId, companyId, compacto,
+  leadId,
+  companyId,
+  compacto,
 }: {
   leadId: string;
   companyId: string;
@@ -484,7 +580,11 @@ function NotesTab({
 
   const fmt = (iso: string) =>
     new Date(iso).toLocaleString("pt-BR", {
-      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
   const renderNote = (n: (typeof notes)[number]) => {
@@ -502,7 +602,9 @@ function NotesTab({
             {n.done ? " · concluído" : overdue ? " · atrasado" : ""}
           </div>
         )}
-        <p className={`whitespace-pre-wrap text-sm ${n.done ? "text-muted-foreground line-through" : ""}`}>
+        <p
+          className={`whitespace-pre-wrap text-sm ${n.done ? "text-muted-foreground line-through" : ""}`}
+        >
           {n.body}
         </p>
         <div className="mt-2 flex items-center justify-between gap-2">
@@ -722,7 +824,9 @@ function AttachmentsTab({ leadId, companyId }: { leadId: string; companyId: stri
         <span className="text-sm font-medium">
           {uploadMutation.isPending ? "Enviando…" : "Anexar proposta ou documento"}
         </span>
-        <span className="text-xs text-muted-foreground">PDF, imagem, Word ou Excel · até 10 MB</span>
+        <span className="text-xs text-muted-foreground">
+          PDF, imagem, Word ou Excel · até 10 MB
+        </span>
       </label>
 
       {listQuery.isLoading ? (
@@ -778,7 +882,10 @@ function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
   const qc = useQueryClient();
   const [input, setInput] = useState("");
 
-  const tagsQuery = useQuery({ queryKey: ["lead-tags", leadId], queryFn: () => listLeadTags(leadId) });
+  const tagsQuery = useQuery({
+    queryKey: ["lead-tags", leadId],
+    queryFn: () => listLeadTags(leadId),
+  });
   const suggestionsQuery = useQuery({
     queryKey: ["company-tags", companyId],
     queryFn: () => listCompanyTagNames(companyId),
@@ -802,7 +909,9 @@ function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
 
   const current = tagsQuery.data ?? [];
   const currentNames = new Set(current.map((t) => t.tag_name));
-  const suggestions = (suggestionsQuery.data ?? []).filter((s) => !currentNames.has(s)).slice(0, 12);
+  const suggestions = (suggestionsQuery.data ?? [])
+    .filter((s) => !currentNames.has(s))
+    .slice(0, 12);
 
   return (
     <div className="space-y-5">
@@ -888,7 +997,6 @@ const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
  * aba continuava selecionada mas seu conteúdo sumia.
  */
 
-
 /**
  * Mostra a resposta — e, quando ela é um arquivo, o arquivo.
  *
@@ -901,7 +1009,12 @@ function RespostaOuMidia({ valor, compacto = false }: { valor: string; compacto?
 
   if (!midia) {
     return (
-      <dd className={compacto ? 'truncate text-[13px] font-semibold' : 'truncate text-sm font-semibold'} title={valor}>
+      <dd
+        className={
+          compacto ? "truncate text-[13px] font-semibold" : "truncate text-sm font-semibold"
+        }
+        title={valor}
+      >
         {valor}
       </dd>
     );
@@ -911,8 +1024,17 @@ function RespostaOuMidia({ valor, compacto = false }: { valor: string; compacto?
   if (compacto) {
     return (
       <dd className="truncate text-[13px] font-semibold">
-        <a href={midia.url} target="_blank" rel="noopener noreferrer" className="text-[var(--selecao)] underline underline-offset-2">
-          {midia.tipo === 'video' ? 'Ver vídeo' : midia.tipo === 'audio' ? 'Ouvir áudio' : 'Ver imagem'}
+        <a
+          href={midia.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--selecao)] underline underline-offset-2"
+        >
+          {midia.tipo === "video"
+            ? "Ver vídeo"
+            : midia.tipo === "audio"
+              ? "Ouvir áudio"
+              : "Ver imagem"}
         </a>
       </dd>
     );
@@ -922,19 +1044,35 @@ function RespostaOuMidia({ valor, compacto = false }: { valor: string; compacto?
     <dd className="mt-1">
       {/* `preload="metadata"`: a ficha pode ter vários arquivos, e baixar todos
           de uma vez trava a abertura por mídia que talvez nem seja vista. */}
-      {midia.tipo === 'video' && (
-        <video src={midia.url} controls preload="metadata" className="max-h-64 w-full rounded-lg bg-black" />
+      {midia.tipo === "video" && (
+        <video
+          src={midia.url}
+          controls
+          preload="metadata"
+          className="max-h-64 w-full rounded-lg bg-black"
+        />
       )}
-      {midia.tipo === 'audio' && <audio src={midia.url} controls preload="metadata" className="w-full" />}
-      {midia.tipo === 'imagem' && (
-        <img src={midia.url} alt="Resposta enviada pelo visitante" className="max-h-64 rounded-lg object-contain" />
+      {midia.tipo === "audio" && (
+        <audio src={midia.url} controls preload="metadata" className="w-full" />
+      )}
+      {midia.tipo === "imagem" && (
+        <img
+          src={midia.url}
+          alt="Resposta enviada pelo visitante"
+          className="max-h-64 rounded-lg object-contain"
+        />
       )}
     </dd>
   );
 }
 
 export function LeadDetailDialog({
-  lead, open, onOpenChange, originLabel = "Origem", onStatusChange, onLeadUpdated,
+  lead,
+  open,
+  onOpenChange,
+  originLabel = "Origem",
+  onStatusChange,
+  onLeadUpdated,
 }: Props) {
   const qc = useQueryClient();
   const [tab, setTab] = useState("visao-geral");
@@ -982,21 +1120,22 @@ export function LeadDetailDialog({
    * `editMutation` genérico gravaria o número e perderia a conversão.
    */
   const salvarValor = async (texto: string) => {
-    const limpo = texto.trim().replace(/[R$\s]/g, '');
-    const valor = limpo ? Number(limpo.replace(/\./g, '').replace(',', '.')) : null;
+    const limpo = texto.trim().replace(/[R$\s]/g, "");
+    const valor = limpo ? Number(limpo.replace(/\./g, "").replace(",", ".")) : null;
     if (valor !== null && (!Number.isFinite(valor) || valor < 0)) {
-      toast.error('Valor inválido', { description: 'Use apenas números, por exemplo 12.500,00' });
+      toast.error("Valor inválido", { description: "Use apenas números, por exemplo 12.500,00" });
       return;
     }
     try {
       const r = await salvarValorDaVenda({ data: { leadId, valor } });
-      qc.invalidateQueries({ queryKey: ['lead-detail', leadId] });
-      qc.invalidateQueries({ queryKey: ['leads'] });
-      if (r.conversao === 'enviada') toast.success('Valor salvo e conversão enviada ao Google Ads');
-      else if (r.conversao) toast.warning('Valor salvo, conversão não enviada', { description: r.conversao });
-      else toast.success('Valor da venda salvo');
+      qc.invalidateQueries({ queryKey: ["lead-detail", leadId] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      if (r.conversao === "enviada") toast.success("Valor salvo e conversão enviada ao Google Ads");
+      else if (r.conversao)
+        toast.warning("Valor salvo, conversão não enviada", { description: r.conversao });
+      else toast.success("Valor da venda salvo");
     } catch (e) {
-      toast.error('Não deu para salvar o valor', {
+      toast.error("Não deu para salvar o valor", {
         description: e instanceof Error ? e.message : String(e),
       });
     }
@@ -1004,23 +1143,23 @@ export function LeadDetailDialog({
 
   const editMutation = useMutation({
     mutationFn: (patch: Partial<EditableLeadFields>) =>
-      updateLead({ leadId: leadId, companyId: lead?.company_id ?? '', patch }),
+      updateLead({ leadId: leadId, companyId: lead?.company_id ?? "", patch }),
     onSuccess: (updated) => {
       // A tabela e o board mostram os mesmos campos; precisam acompanhar.
-      qc.invalidateQueries({ queryKey: ['leads'] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
       onLeadUpdated?.(updated);
-      toast.success('Dado atualizado');
+      toast.success("Dado atualizado");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteLead({ leadId, companyId: lead?.company_id ?? '' }),
+    mutationFn: () => deleteLead({ leadId, companyId: lead?.company_id ?? "" }),
     onSuccess: () => {
       setConfirmDelete(false);
       onOpenChange(false);
-      qc.invalidateQueries({ queryKey: ['leads'] });
-      toast.success('Lead excluído');
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Lead excluído");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -1076,9 +1215,8 @@ export function LeadDetailDialog({
     { label: "Formulário", value: meta.meta_form_name },
   ].filter((f) => typeof f.value === "string" && f.value);
 
-  const duplicateSince = typeof meta.duplicate_first_seen_at === "string"
-    ? meta.duplicate_first_seen_at
-    : null;
+  const duplicateSince =
+    typeof meta.duplicate_first_seen_at === "string" ? meta.duplicate_first_seen_at : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1111,8 +1249,14 @@ export function LeadDetailDialog({
                       onChange={(e) => setNameDraft(e.target.value)}
                       onBlur={commitName}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.preventDefault(); commitName(); }
-                        if (e.key === "Escape") { setNameDraft(name); setEditingName(false); }
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          commitName();
+                        }
+                        if (e.key === "Escape") {
+                          setNameDraft(name);
+                          setEditingName(false);
+                        }
                       }}
                       aria-label="Nome do lead"
                       className="h-8 max-w-[22rem] px-1.5 text-lg font-semibold leading-tight"
@@ -1120,7 +1264,10 @@ export function LeadDetailDialog({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => { setNameDraft(name); setEditingName(true); }}
+                      onClick={() => {
+                        setNameDraft(name);
+                        setEditingName(true);
+                      }}
                       title="Clique para editar o nome"
                       className="-mx-1 truncate rounded px-1 text-left text-lg font-semibold leading-tight hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
@@ -1145,13 +1292,25 @@ export function LeadDetailDialog({
                 completa são secundárias, então viram ícones. */}
             <div className="flex shrink-0 items-center gap-1.5 pr-8">
               {lead.email && (
-                <Button asChild variant="ghost" size="icon" className="h-9 w-9" title="Enviar e-mail">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  title="Enviar e-mail"
+                >
                   <a href={`mailto:${lead.email}`}>
                     <Mail className="h-4 w-4" />
                   </a>
                 </Button>
               )}
-              <Button asChild variant="ghost" size="icon" className="h-9 w-9" title="Abrir página completa">
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                title="Abrir página completa"
+              >
                 <a href={`/leads/${lead.id}`}>
                   <ExternalLink className="h-4 w-4" />
                 </a>
@@ -1219,234 +1378,316 @@ export function LeadDetailDialog({
                 anterior empilhava tudo em três colunas fixas e obrigava a
                 rolar duas delas ao mesmo tempo. */}
             <TabsList className="h-auto w-full shrink-0 justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent px-6 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <TabsTrigger value="visao-geral" className="gap-2"><Home className="h-4 w-4" />Visão geral</TabsTrigger>
-              <TabsTrigger value="contato" className="gap-2"><User className="h-4 w-4" />Contato</TabsTrigger>
+              <TabsTrigger value="visao-geral" className="gap-2">
+                <Home className="h-4 w-4" />
+                Visão geral
+              </TabsTrigger>
+              <TabsTrigger value="contato" className="gap-2">
+                <User className="h-4 w-4" />
+                Contato
+              </TabsTrigger>
               <TabsTrigger value="qualificacao" className="gap-2">
-                <ClipboardList className="h-4 w-4" />Qualificação
+                <ClipboardList className="h-4 w-4" />
+                Qualificação
                 {answers.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{answers.length}</Badge>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                    {answers.length}
+                  </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="historico" className="gap-2"><Clock className="h-4 w-4" />Histórico</TabsTrigger>
+              <TabsTrigger value="historico" className="gap-2">
+                <Clock className="h-4 w-4" />
+                Histórico
+              </TabsTrigger>
               <TabsTrigger value="anotacoes" className="gap-2">
-                <StickyNote className="h-4 w-4" />Anotações
+                <StickyNote className="h-4 w-4" />
+                Anotações
                 {noteCount ? (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{noteCount}</Badge>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                    {noteCount}
+                  </Badge>
                 ) : null}
               </TabsTrigger>
               <TabsTrigger value="arquivos" className="gap-2">
-                <Paperclip className="h-4 w-4" />Arquivos
+                <Paperclip className="h-4 w-4" />
+                Arquivos
                 {/* A contagem existia na faixa de fatos do layout antigo e se
                     perdeu na reorganização: ficou sendo calculada e nunca
                     exibida. Na aba ela diz se vale abrir antes de abrir. */}
                 {attachmentCount ? (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{attachmentCount}</Badge>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                    {attachmentCount}
+                  </Badge>
                 ) : null}
               </TabsTrigger>
             </TabsList>
 
             <ScrollArea className="min-h-0 flex-1">
               <TabsContent value="visao-geral" className="m-0 sup-tonal @container">
-  {/* Duas colunas independentes, não grade de linhas.
+                {/* Duas colunas independentes, não grade de linhas.
       Numa grade os cartões precisam alinhar em linha, e quando um termina antes
       abre um vão branco embaixo — era isso que fazia a versão de nove cartões
       parecer desalinhada. Colunas independentes fluem cada uma no seu ritmo.
       Esquerda: o que se LÊ. Direita: o que se CONSULTA e o que se FAZ. */}
-  <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
-    <div className="flex min-w-0 flex-col gap-3.5">
-      <CartaoFicha
-        icone={<Sparkles className="h-4 w-4" />}
-        titulo="Resumo do perfil"
-        assunto="acento"
-        descricao="Montado a partir das respostas do formulário"
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
-            {summary || 'Este lead não trouxe respostas de formulário.'}
-          </p>
-          <CompletenessMeter data={completeness} />
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
-          <FatoRapido rotulo="No funil há" valor={ago ? ago.replace('há ', '') : '—'} />
-          <FatoRapido rotulo="Respostas" valor={String(answers.length)} />
-          <FatoRapido rotulo="Anotações" valor={noteCount === null ? '—' : String(noteCount)} />
-          <FatoRapido rotulo="Arquivos" valor={attachmentCount === null ? '—' : String(attachmentCount)} />
-        </div>
-      </CartaoFicha>
+                <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<Sparkles className="h-4 w-4" />}
+                      titulo="Resumo do perfil"
+                      assunto="acento"
+                      descricao="Montado a partir das respostas do formulário"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="min-w-0 text-sm leading-relaxed text-muted-foreground">
+                          {/* O texto fala do RESUMO, não das respostas: `buildProfileSummary`
+                devolve null quando nada cai nas famílias que ele sabe resumir
+                (imóvel, orçamento, renda, prazo, local), e isso não quer dizer
+                que o lead não respondeu. Visto na ficha de um lead com 5
+                respostas, que lia "não trouxe respostas de formulário" ao lado
+                do contador dizendo "Respostas 5". */}
+                          {summary ||
+                            "As respostas deste lead não formam um resumo automático — veja-as abaixo."}
+                        </p>
+                        <CompletenessMeter data={completeness} />
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
+                        <FatoRapido
+                          rotulo="No funil há"
+                          valor={ago ? ago.replace("há ", "") : "—"}
+                        />
+                        <FatoRapido rotulo="Respostas" valor={String(answers.length)} />
+                        <FatoRapido
+                          rotulo="Anotações"
+                          valor={noteCount === null ? "—" : String(noteCount)}
+                        />
+                        <FatoRapido
+                          rotulo="Arquivos"
+                          valor={attachmentCount === null ? "—" : String(attachmentCount)}
+                        />
+                      </div>
+                    </CartaoFicha>
 
-      {answers.length > 0 && (
-        <CartaoFicha
-          icone={<TrendingUp className="h-4 w-4" />}
-          titulo="O que ele quer"
-          descricao="Respostas do formulário de captação"
-          
-          acao={<LinkDoCartao aoClicar={() => setTab('qualificacao')}>Ver tudo</LinkDoCartao>}
-        >
-          <dl className="grid gap-2.5 sm:grid-cols-2">
-            {answers.slice(0, 4).map((a) => {
-              const k = ANSWER_KIND_STYLE[a.kind];
-              const Icon = k.icon;
-              return (
-                <div key={a.key} className="caixa-interna flex items-center gap-2.5 p-2.5">
-                  <span className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] ${k.tone}`} aria-hidden="true">
-                    <Icon className="h-[15px] w-[15px]" />
-                  </span>
-                  <div className="min-w-0">
-                    <dt className="truncate text-[10px] uppercase tracking-[0.04em] text-muted-foreground" title={a.label}>
-                      {a.short}
-                    </dt>
-                    <RespostaOuMidia valor={a.value} compacto />
+                    {answers.length > 0 && (
+                      <CartaoFicha
+                        icone={<TrendingUp className="h-4 w-4" />}
+                        titulo="O que ele quer"
+                        descricao="Respostas do formulário de captação"
+
+                        acao={
+                          <LinkDoCartao aoClicar={() => setTab("qualificacao")}>
+                            Ver tudo
+                          </LinkDoCartao>
+                        }
+                      >
+                        <dl className="grid gap-2.5 sm:grid-cols-2">
+                          {answers.slice(0, 4).map((a) => {
+                            const k = ANSWER_KIND_STYLE[a.kind];
+                            const Icon = k.icon;
+                            return (
+                              <div
+                                key={a.key}
+                                className="caixa-interna flex items-center gap-2.5 p-2.5"
+                              >
+                                <span
+                                  className={`flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] ${k.tone}`}
+                                  aria-hidden="true"
+                                >
+                                  <Icon className="h-[15px] w-[15px]" />
+                                </span>
+                                <div className="min-w-0">
+                                  <dt
+                                    className="truncate text-[10px] uppercase tracking-[0.04em] text-muted-foreground"
+                                    title={a.label}
+                                  >
+                                    {a.short}
+                                  </dt>
+                                  <RespostaOuMidia valor={a.value} compacto />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </dl>
+                      </CartaoFicha>
+                    )}
+
+                    <CartaoFicha
+                      icone={<Clock className="h-4 w-4" />}
+                      titulo="Caminho no funil"
+
+                      acao={
+                        <LinkDoCartao aoClicar={() => setTab("historico")}>Ver tudo</LinkDoCartao>
+                      }
+                    >
+                      <LeadJourney
+                        leadId={lead.id}
+                        criadoEm={lead.created_at ?? null}
+                        compacto
+                        semMoldura
+                      />
+                    </CartaoFicha>
+
+                    <CartaoFicha
+                      icone={<StickyNote className="h-4 w-4" />}
+                      titulo="Anotações"
+                      acao={
+                        <LinkDoCartao aoClicar={() => setTab("anotacoes")}>Ver todas</LinkDoCartao>
+                      }
+                    >
+                      <NotesTab leadId={lead.id} companyId={lead.company_id} compacto />
+                    </CartaoFicha>
+
+                    <LeadInsights lead={lead} />
                   </div>
-                </div>
-              );
-            })}
-          </dl>
-        </CartaoFicha>
-      )}
 
-      <CartaoFicha
-        icone={<Clock className="h-4 w-4" />}
-        titulo="Caminho no funil"
-        
-        acao={<LinkDoCartao aoClicar={() => setTab('historico')}>Ver tudo</LinkDoCartao>}
-      >
-        <LeadJourney leadId={lead.id} criadoEm={lead.created_at ?? null} compacto semMoldura />
-      </CartaoFicha>
-
-      <CartaoFicha
-        icone={<StickyNote className="h-4 w-4" />}
-        titulo="Anotações"
-        acao={<LinkDoCartao aoClicar={() => setTab('anotacoes')}>Ver todas</LinkDoCartao>}
-      >
-        <NotesTab leadId={lead.id} companyId={lead.company_id} compacto />
-      </CartaoFicha>
-
-      <LeadInsights lead={lead} />
-    </div>
-
-    <div className="flex min-w-0 flex-col gap-3.5">
-      {/* Primeiro de tudo na coluna de consulta: é o fato que muda o que fazer
+                  <div className="flex min-w-0 flex-col gap-3.5">
+                    {/* Primeiro de tudo na coluna de consulta: é o fato que muda o que fazer
           com este lead. */}
-      {estaPerdido && (
-        <CartaoFicha
-          icone={<XCircle className="h-4 w-4" />}
-          titulo="Desfecho"
-          descricao="Por que parou aqui"
-          assunto="alerta"
-        >
-          {/* `semMoldura`: o cartão já traz borda, título e disco. A moldura
+                    {estaPerdido && (
+                      <CartaoFicha
+                        icone={<XCircle className="h-4 w-4" />}
+                        titulo="Desfecho"
+                        descricao="Por que parou aqui"
+                        assunto="alerta"
+                      >
+                        {/* `semMoldura`: o cartão já traz borda, título e disco. A moldura
               vermelha por dentro era caixa dentro de caixa, e o botão Alterar
               espremido ali dentro quebrava o motivo em duas linhas. */}
-          <LossReasonPanel
-            leadId={lead.id}
-            companyId={lead.company_id}
-            motivoAtualId={lead.loss_reason_id ?? null}
-            observacaoAtual={lead.lost_notes ?? null}
-            semMoldura
-          />
-        </CartaoFicha>
-      )}
+                        <LossReasonPanel
+                          leadId={lead.id}
+                          companyId={lead.company_id}
+                          motivoAtualId={lead.loss_reason_id ?? null}
+                          observacaoAtual={lead.lost_notes ?? null}
+                          semMoldura
+                        />
+                      </CartaoFicha>
+                    )}
 
-      <CartaoFicha
-        icone={<User className="h-4 w-4" />}
-        titulo="Registro"
-        descricao="Contato e responsável"
-        acao={<LinkDoCartao aoClicar={() => setTab('contato')}>Editar</LinkDoCartao>}
-      >
-        <div className="space-y-2.5">
-          <PropFicha icone={<User className="h-3.5 w-3.5" />} rotulo="Responsável">
-            <OwnerPicker
-              leadId={lead.id}
-              companyId={lead.company_id}
-              responsavelAtual={lead.assigned_to ?? null}
-              compacto
-            />
-          </PropFicha>
-          <PropFicha
-            icone={<Phone className="h-3.5 w-3.5" />}
-            rotulo="Telefone"
-            acao={lead.phone ? <CopyButton value={lead.phone} label="Telefone" /> : undefined}
-          >
-            <span className="block truncate tabular-nums">
-              <ValorOuVazio valor={lead.phone} vazio="Sem telefone" />
-            </span>
-          </PropFicha>
-          <PropFicha
-            icone={<Mail className="h-3.5 w-3.5" />}
-            rotulo="E-mail"
-            acao={lead.email ? <CopyButton value={lead.email} label="E-mail" /> : undefined}
-          >
-            <ValorOuVazio valor={lead.email} vazio="Sem e-mail" />
-          </PropFicha>
-          <PropFicha icone={<MapPin className="h-3.5 w-3.5" />} rotulo="Cidade (pelo DDD)">
-            <ValorOuVazio valor={city ? String(city) : null} vazio="Sem cidade" />
-          </PropFicha>
-        </div>
-      </CartaoFicha>
+                    <CartaoFicha
+                      icone={<User className="h-4 w-4" />}
+                      titulo="Registro"
+                      descricao="Contato e responsável"
+                      acao={<LinkDoCartao aoClicar={() => setTab("contato")}>Editar</LinkDoCartao>}
+                    >
+                      <div className="space-y-2.5">
+                        <PropFicha icone={<User className="h-3.5 w-3.5" />} rotulo="Responsável">
+                          <OwnerPicker
+                            leadId={lead.id}
+                            companyId={lead.company_id}
+                            responsavelAtual={lead.assigned_to ?? null}
+                            compacto
+                          />
+                        </PropFicha>
+                        <PropFicha
+                          icone={<Phone className="h-3.5 w-3.5" />}
+                          rotulo="Telefone"
+                          acao={
+                            lead.phone ? (
+                              <CopyButton value={lead.phone} label="Telefone" />
+                            ) : undefined
+                          }
+                        >
+                          <span className="block truncate tabular-nums">
+                            <ValorOuVazio valor={lead.phone} vazio="Sem telefone" />
+                          </span>
+                        </PropFicha>
+                        <PropFicha
+                          icone={<Mail className="h-3.5 w-3.5" />}
+                          rotulo="E-mail"
+                          acao={
+                            lead.email ? (
+                              <CopyButton value={lead.email} label="E-mail" />
+                            ) : undefined
+                          }
+                        >
+                          <ValorOuVazio valor={lead.email} vazio="Sem e-mail" />
+                        </PropFicha>
+                        <PropFicha
+                          icone={<MapPin className="h-3.5 w-3.5" />}
+                          rotulo="Cidade (pelo DDD)"
+                        >
+                          <ValorOuVazio valor={city ? String(city) : null} vazio="Sem cidade" />
+                        </PropFicha>
+                      </div>
+                    </CartaoFicha>
 
-      <CartaoFicha
-        icone={<Radio className="h-4 w-4" />}
-        titulo="Origem"
-        descricao="Como chegou até você"
-        
-      >
-        <div className="space-y-2.5">
-          <PropFicha
-            icone={<ClipboardList className="h-3.5 w-3.5" />}
-            rotulo={originLabel}
-            acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
-          >
-            <ValorOuVazio valor={origin} vazio="Sem origem" />
-          </PropFicha>
-          <PropFicha icone={<Radio className="h-3.5 w-3.5" />} rotulo="Canal">
-            <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
-          </PropFicha>
-          <PropFicha icone={<CalendarClock className="h-3.5 w-3.5" />} rotulo="Entrou em">
-            <span className="block truncate tabular-nums">{created}</span>
-          </PropFicha>
-          <PropFicha icone={<CircleDollarSign className="h-3.5 w-3.5" />} rotulo="Valor da venda">
-            <span className="block truncate tabular-nums">
-              <ValorOuVazio
-                valor={(() => {
-                  const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
-                  return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
-                    style: 'currency', currency: l.deal_currency ?? 'BRL',
-                  });
-                })()}
-                vazio="Sem valor"
-              />
-            </span>
-          </PropFicha>
-        </div>
-      </CartaoFicha>
+                    <CartaoFicha
+                      icone={<Radio className="h-4 w-4" />}
+                      titulo="Origem"
+                      descricao="Como chegou até você"
+                    >
+                      <div className="space-y-2.5">
+                        <PropFicha
+                          icone={<ClipboardList className="h-3.5 w-3.5" />}
+                          rotulo={originLabel}
+                          acao={
+                            origin ? <CopyButton value={origin} label={originLabel} /> : undefined
+                          }
+                        >
+                          <ValorOuVazio valor={origin} vazio="Sem origem" />
+                        </PropFicha>
+                        <PropFicha icone={<Radio className="h-3.5 w-3.5" />} rotulo="Canal">
+                          <ValorOuVazio
+                            valor={channelLabel(lead.source ?? lead.utm_source) || null}
+                            vazio="Sem canal"
+                          />
+                        </PropFicha>
+                        <PropFicha
+                          icone={<CalendarClock className="h-3.5 w-3.5" />}
+                          rotulo="Entrou em"
+                        >
+                          <span className="block truncate tabular-nums">{created}</span>
+                        </PropFicha>
+                        <PropFicha
+                          icone={<CircleDollarSign className="h-3.5 w-3.5" />}
+                          rotulo="Valor da venda"
+                        >
+                          <span className="block truncate tabular-nums">
+                            <ValorOuVazio
+                              valor={(() => {
+                                const l = lead as unknown as {
+                                  deal_value?: number | string | null;
+                                  deal_currency?: string;
+                                };
+                                return l.deal_value == null
+                                  ? null
+                                  : Number(l.deal_value).toLocaleString("pt-BR", {
+                                      style: "currency",
+                                      currency: l.deal_currency ?? "BRL",
+                                    });
+                              })()}
+                              vazio="Sem valor"
+                            />
+                          </span>
+                        </PropFicha>
+                      </div>
+                    </CartaoFicha>
 
-      <CartaoFicha icone={<Zap className="h-4 w-4" />} titulo="Próximo passo">
-        <div className="space-y-3">
-          <LeadQuickActions
-            leadId={lead.id}
-            companyId={lead.company_id}
-            email={lead.email}
-            whatsapp={wa}
-          />
-          <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
-        </div>
-      </CartaoFicha>
+                    <CartaoFicha icone={<Zap className="h-4 w-4" />} titulo="Próximo passo">
+                      <div className="space-y-3">
+                        <LeadQuickActions
+                          leadId={lead.id}
+                          companyId={lead.company_id}
+                          email={lead.email}
+                          whatsapp={wa}
+                        />
+                        <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
+                      </div>
+                    </CartaoFicha>
 
-      <CartaoFicha
-        icone={<ShieldCheck className="h-4 w-4" />}
-        titulo="Dados do titular"
-        descricao="Acesso e eliminação (LGPD)"
-      >
-        <DadosDoTitular
-          leadId={lead.id}
-          nome={lead.name}
-          onEliminado={() => onOpenChange(false)}
-        />
-      </CartaoFicha>
-    </div>
-  </div>
-</TabsContent>
-
+                    <CartaoFicha
+                      icone={<ShieldCheck className="h-4 w-4" />}
+                      titulo="Dados do titular"
+                      descricao="Acesso e eliminação (LGPD)"
+                    >
+                      <DadosDoTitular
+                        leadId={lead.id}
+                        nome={lead.name}
+                        onEliminado={() => onOpenChange(false)}
+                      />
+                    </CartaoFicha>
+                  </div>
+                </div>
+              </TabsContent>
 
               <TabsContent value="contato" className="m-0 sup-tonal @container">
                 <div className="grid gap-3.5 p-5 @4xl:grid-cols-[minmax(0,1fr)_21rem]">
@@ -1467,11 +1708,15 @@ export function LeadDetailDialog({
                           emphasis
                           placeholder="Sem telefone"
                           onSave={(phone) => editMutation.mutate({ phone })}
-                          action={lead.phone ? {
-                            href: `tel:${lead.phone.replace(/[^\d+]/g, "")}`,
-                            icon: <Phone className="h-3.5 w-3.5" />,
-                            title: "Ligar",
-                          } : undefined}
+                          action={
+                            lead.phone
+                              ? {
+                                  href: `tel:${lead.phone.replace(/[^\d+]/g, "")}`,
+                                  icon: <Phone className="h-3.5 w-3.5" />,
+                                  title: "Ligar",
+                                }
+                              : undefined
+                          }
                         />
                         <Field
                           icon={<Mail className="h-4 w-4" />}
@@ -1479,11 +1724,15 @@ export function LeadDetailDialog({
                           value={lead.email}
                           placeholder="Sem e-mail"
                           onSave={(email) => editMutation.mutate({ email })}
-                          action={lead.email ? {
-                            href: `mailto:${lead.email}`,
-                            icon: <Mail className="h-3.5 w-3.5" />,
-                            title: "Enviar e-mail",
-                          } : undefined}
+                          action={
+                            lead.email
+                              ? {
+                                  href: `mailto:${lead.email}`,
+                                  icon: <Mail className="h-3.5 w-3.5" />,
+                                  title: "Enviar e-mail",
+                                }
+                              : undefined
+                          }
                         />
                         <Field
                           icon={<MapPin className="h-4 w-4" />}
@@ -1496,10 +1745,16 @@ export function LeadDetailDialog({
                           icon={<CircleDollarSign className="h-4 w-4" />}
                           label="Valor da venda"
                           value={(() => {
-                            const l = lead as unknown as { deal_value?: number | string | null; deal_currency?: string };
-                            return l.deal_value == null ? null : Number(l.deal_value).toLocaleString('pt-BR', {
-                              style: 'currency', currency: l.deal_currency ?? 'BRL',
-                            });
+                            const l = lead as unknown as {
+                              deal_value?: number | string | null;
+                              deal_currency?: string;
+                            };
+                            return l.deal_value == null
+                              ? null
+                              : Number(l.deal_value).toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: l.deal_currency ?? "BRL",
+                                });
                           })()}
                           placeholder="Sem valor"
                           emphasis
@@ -1508,10 +1763,7 @@ export function LeadDetailDialog({
                       </div>
                     </CartaoFicha>
 
-                    <CartaoFicha
-                      icone={<Zap className="h-4 w-4" />}
-                      titulo="Falar agora"
-                    >
+                    <CartaoFicha icone={<Zap className="h-4 w-4" />} titulo="Falar agora">
                       <LeadQuickActions
                         leadId={lead.id}
                         companyId={lead.company_id}
@@ -1546,14 +1798,22 @@ export function LeadDetailDialog({
                         <PropFicha
                           icone={<ClipboardList className="h-3.5 w-3.5" />}
                           rotulo={originLabel}
-                          acao={origin ? <CopyButton value={origin} label={originLabel} /> : undefined}
+                          acao={
+                            origin ? <CopyButton value={origin} label={originLabel} /> : undefined
+                          }
                         >
                           <ValorOuVazio valor={origin} vazio="Sem origem" />
                         </PropFicha>
                         <PropFicha icone={<Radio className="h-3.5 w-3.5" />} rotulo="Canal">
-                          <ValorOuVazio valor={channelLabel(lead.source ?? lead.utm_source) || null} vazio="Sem canal" />
+                          <ValorOuVazio
+                            valor={channelLabel(lead.source ?? lead.utm_source) || null}
+                            vazio="Sem canal"
+                          />
                         </PropFicha>
-                        <PropFicha icone={<CalendarClock className="h-3.5 w-3.5" />} rotulo="Entrou em">
+                        <PropFicha
+                          icone={<CalendarClock className="h-3.5 w-3.5" />}
+                          rotulo="Entrou em"
+                        >
                           <span className="block truncate tabular-nums">{created}</span>
                         </PropFicha>
                       </div>
@@ -1572,7 +1832,8 @@ export function LeadDetailDialog({
                     >
                       {answers.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          Este lead não trouxe respostas de formulário. Quando trouxer, elas aparecem aqui.
+                          Este lead não trouxe respostas de formulário. Quando trouxer, elas
+                          aparecem aqui.
                         </p>
                       ) : (
                         /* Uma linha por resposta, não um cartão por resposta:
@@ -1584,7 +1845,10 @@ export function LeadDetailDialog({
                             const k = ANSWER_KIND_STYLE[a.kind];
                             const Icon = k.icon;
                             return (
-                              <div key={a.key} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                              <div
+                                key={a.key}
+                                className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                              >
                                 <span
                                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] ${k.tone}`}
                                   aria-hidden="true"
@@ -1592,7 +1856,10 @@ export function LeadDetailDialog({
                                   <Icon className="h-4 w-4" />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                  <dt className="truncate text-[11px] text-muted-foreground" title={a.label}>
+                                  <dt
+                                    className="truncate text-[11px] text-muted-foreground"
+                                    title={a.label}
+                                  >
                                     {a.short}
                                   </dt>
                                   {/* Resposta que é arquivo vira player. Antes saía como
@@ -1617,7 +1884,7 @@ export function LeadDetailDialog({
                     >
                       <div className="space-y-4">
                         <p className="text-sm leading-relaxed text-muted-foreground">
-                          {summary || 'Este lead não trouxe respostas de formulário.'}
+                          {summary || "Este lead não trouxe respostas de formulário."}
                         </p>
                         <CompletenessMeter data={completeness} />
                       </div>
@@ -1672,7 +1939,9 @@ export function LeadDetailDialog({
                               {metaInfo.map((t) => (
                                 <PropFicha key={t.label} rotulo={t.label}>
                                   {/* Mono: são identificadores literais, não rótulos. */}
-                                  <span className="block break-words font-mono text-xs">{String(t.value)}</span>
+                                  <span className="block break-words font-mono text-xs">
+                                    {String(t.value)}
+                                  </span>
                                 </PropFicha>
                               ))}
                             </div>
@@ -1741,8 +2010,8 @@ export function LeadDetailDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Some junto tudo que está preso a este lead: anotações, anexos,
-              etiquetas, histórico e mensagens de WhatsApp. Não dá para desfazer.
+              Some junto tudo que está preso a este lead: anotações, anexos, etiquetas, histórico e
+              mensagens de WhatsApp. Não dá para desfazer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1750,7 +2019,10 @@ export function LeadDetailDialog({
             <AlertDialogAction
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                deleteMutation.mutate();
+              }}
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Excluir definitivamente
@@ -1761,6 +2033,3 @@ export function LeadDetailDialog({
     </Dialog>
   );
 }
-
-
-
