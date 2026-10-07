@@ -131,17 +131,17 @@ function StepNode({ data }: { data: StepNodeData }) {
         className="!bg-[var(--aviso)] !w-2.5 !h-2.5 !border-2 !border-background"
       />
 
-      {/* Faixa da natureza, mesma tinta da trilha e da lista lateral.
-          A tela do FUNIL era a única das três que não respondia "onde está a
-          captura, onde está o resultado" — e é a pergunta que ela existe para
-          responder. Com a faixa, a resposta aparece no zoom reduzido, antes de
-          qualquer texto ficar legível. */}
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-1 rounded-t-[10px]"
-        style={{ background: resumo.tinta }}
-      />
-      <div className="flex items-center gap-1.5 px-3 py-2 border-b bg-muted/40 rounded-t-[10px]">
+      {/* A tinta da natureza vai no FUNDO do cabeçalho, não num fio no topo.
+          Medido depois de publicar a primeira versão: um funil de 24 etapas
+          renderiza a ~7,5% de zoom, e ali um fio de 4px vira 0,3px — as 24
+          faixas existiam no DOM e nenhuma aparecia na tela. O que sobrevive a
+          esse zoom é área preenchida: a faixa do cabeçalho tem 28px, que ainda
+          dão ~2px de cor na visão geral. É nela que se lê onde está a captura
+          e onde está o resultado antes de qualquer texto ficar legível. */}
+      <div
+        className="flex items-center gap-1.5 px-3 py-2 border-b rounded-t-[10px]"
+        style={{ background: `${resumo.tinta}2E` }}
+      >
         <span
           className="flex items-center justify-center h-5 w-5 rounded-md text-[10px] font-bold shrink-0 tabular-nums"
           style={{ background: `${resumo.tinta}24`, color: resumo.tinta }}
