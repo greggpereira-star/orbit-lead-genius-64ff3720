@@ -34,3 +34,30 @@ describe("respostas na tela", () => {
     expect(tela).toContain("midiaDaResposta");
   });
 });
+
+/**
+ * Trilha e lista lateral precisam falar a MESMA língua.
+ *
+ * Medido em 07/10: para a mesma etapa, na mesma tela, a trilha dizia
+ * "Pergunta" e a lista dizia "1 comp. · Quando você se olha no espelho ou
+ * aparece em uma fo…". Duas descrições do mesmo objeto, a um palmo uma da
+ * outra. Lendo as duas do mesmo `resumirEtapa`, elas não têm como divergir.
+ */
+describe("vocabulário das etapas", () => {
+  const builder = readFileSync("src/routes/_app.quizzes_.$id.builder.tsx", "utf8");
+  const trilha = readFileSync("src/modules/quiz/components/TrilhaDeEtapas.tsx", "utf8");
+
+  it("a lista lateral monta pelo mesmo resumirEtapa da trilha", () => {
+    expect(builder).toContain("resumirEtapa");
+    expect(builder).toContain("rotuloDaNatureza");
+  });
+
+  it("as duas usam a mesma tinta de natureza", () => {
+    expect(builder).toContain("resumoDaEtapa.tinta");
+    expect(trilha).toContain("e.tinta");
+  });
+
+  it("a lista não ecoa mais o título do primeiro bloco", () => {
+    expect(builder).not.toContain("firstBlock.title || firstBlock.resultTitle");
+  });
+});

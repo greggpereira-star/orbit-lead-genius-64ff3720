@@ -62,6 +62,7 @@ import { QuizPreview } from "@/modules/quiz/components/QuizPreview";
 import { QuizInspector } from "@/modules/quiz/components/QuizInspector";
 import { TutorialGuiado } from "@/modules/quiz/components/TutorialGuiado";
 import { filtrarBlocos, normalizar } from "@/modules/quiz/lib/buscaDeBlocos";
+import { resumirEtapa } from "@/modules/quiz/lib/trilhaDeEtapas";
 import { useTutorial, PASSOS_DO_CONSTRUTOR } from "@/modules/quiz/hooks/useTutorial";
 import { AccessRulesDialog } from "@/modules/quiz/components/AccessRulesDialog";
 import { QuizSettingsDialog } from "@/modules/quiz/components/QuizSettingsDialog";
@@ -1142,6 +1143,15 @@ function QuizBuilderPage() {
               // que "cada bloco vira uma etapa".
               const expanded = expandedSteps.has(step.id);
               const isTarget = step.id === targetStep?.id;
+              const resumoDaEtapa = resumirEtapa({
+                id: step.id,
+                indice: stepIdx,
+                nome: step.name,
+                categorias: stepBlocks.map(
+                  (b) => BLOCK_LIBRARY.find((d) => d.type === b.type)?.category ?? "conteudo",
+                ),
+                conversao: conversaoPorEtapa.get(step.id),
+              });
               return (
                 <Draggable key={step.id} draggableId={`step-drag-${step.id}`} index={stepIdx}>
                   {(stepDragProvided, stepDragSnapshot) => (
@@ -1181,11 +1191,19 @@ function QuizBuilderPage() {
                         >
                           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        {/* Mesma tinta da trilha: é por ela que se mapeia uma
+                            lista na outra sem contar posição. */}
+                        <div
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                          style={{
+                            background: `${resumoDaEtapa.tinta}24`,
+                            color: resumoDaEtapa.tinta,
+                          }}
+                        >
                           {firstDef ? (
-                            <firstDef.icon className="h-3.5 w-3.5 text-foreground" />
+                            <firstDef.icon className="h-3.5 w-3.5" />
                           ) : (
-                            <LayoutGrid className="h-3.5 w-3.5 text-foreground" />
+                            <LayoutGrid className="h-3.5 w-3.5" />
                           )}
                         </div>
                         {/* Verificado na tela: o nome vinha cortado em ~10
@@ -1194,14 +1212,25 @@ function QuizBuilderPage() {
                               linha com quatro ícones num painel de 240px. Agora
                               o nome da etapa fica sozinho na primeira linha e o
                               bloco desce para a segunda, junto da contagem. */}
+                        {/* A segunda linha fala a MESMA língua da trilha, pelo
+                            mesmo `resumirEtapa`. Medido em 07/10: a trilha dizia
+                            "Pergunta" e a lista dizia "1 comp. · Quando você se
+                            olha no espelho ou aparece em uma fo…" para a MESMA
+                            etapa, na mesma tela. O eco do título do primeiro
+                            bloco chegava truncado no meio da frase, repetia o
+                            que o canvas já mostra, e o nome da etapa ("Dor
+                            principal") já distingue melhor do que ele. */}
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <div className="truncate text-xs font-semibold leading-[1.35]">
+                            <span className="mr-1 tabular-nums text-muted-foreground">
+                              {String(stepIdx + 1).padStart(2, "0")}
+                            </span>
                             {step.name || `Etapa ${stepIdx + 1}`}
                           </div>
                           <div className="truncate text-[11px] leading-[1.35] text-muted-foreground">
                             {stepBlocks.length === 0
                               ? "Vazia — escolha um bloco"
-                              : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ""}`}
+                              : `${resumoDaEtapa.rotuloDaNatureza}${stepBlocks.length > 1 ? ` · ${stepBlocks.length} itens` : ""}`}
                           </div>
                         </div>
                         <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
