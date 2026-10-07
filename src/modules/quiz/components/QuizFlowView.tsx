@@ -132,12 +132,14 @@ function StepNode({ data }: { data: StepNodeData }) {
       />
 
       {/* A tinta da natureza vai no FUNDO do cabeçalho, não num fio no topo.
-          Medido depois de publicar a primeira versão: um funil de 24 etapas
-          renderiza a ~7,5% de zoom, e ali um fio de 4px vira 0,3px — as 24
-          faixas existiam no DOM e nenhuma aparecia na tela. O que sobrevive a
-          esse zoom é área preenchida: a faixa do cabeçalho tem 28px, que ainda
-          dão ~2px de cor na visão geral. É nela que se lê onde está a captura
-          e onde está o resultado antes de qualquer texto ficar legível. */}
+          Medido no `fitView` de um funil de 24 etapas: o canvas assenta em
+          12,4% de zoom, e o nó de 432px rende a 53,6px. Ali o fio de 4px que
+          esta versão tinha antes vira 0,5px — as 24 faixas existiam no DOM, em
+          6 cores, e nenhuma aparecia. O cabeçalho tem 28px e rende a 1,5px:
+          pouco, mas é linha de cor sólida, e é por ela que se lê onde está a
+          captura e onde está o resultado antes de qualquer texto ficar
+          legível. (Os números desta nota foram refeitos: a primeira versão
+          dela dizia 7,5% de zoom, que era estimativa minha, não medição.) */}
       <div
         className="flex items-center gap-1.5 px-3 py-2 border-b rounded-t-[10px]"
         style={{ background: `${resumo.tinta}2E` }}
