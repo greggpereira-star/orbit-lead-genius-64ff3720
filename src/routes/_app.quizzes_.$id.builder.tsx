@@ -39,6 +39,7 @@ import {
   Sparkles,
   Tablet,
   Trash2,
+  TrendingUp,
   Trophy,
   UploadCloud,
   Users,
@@ -1543,6 +1544,14 @@ function QuizBuilderPage() {
                   onClick={() => navigate({ to: "/quizzes/$id/leads", params: { id } })}
                 >
                   <Users className="mr-2 h-4 w-4" /> Leads
+                </DropdownMenuItem>
+                {/* A tela de Performance existia pronta — inícios, conclusões,
+                    taxa, série diária, exportação — e NENHUM lugar do app
+                    levava até ela. Construída e órfã é o mesmo que não ter. */}
+                <DropdownMenuItem
+                  onClick={() => navigate({ to: "/quizzes/$id/performance", params: { id } })}
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" /> Performance
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Montar</DropdownMenuLabel>
