@@ -1,28 +1,32 @@
-import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Loader2, Plus, Trash2, Trophy, AlertCircle } from 'lucide-react';
-import { useAuth } from '@/core/auth/hooks/useAuth';
-import { quizService } from '@/modules/quiz/services/quizService';
-import { maxPossibleScore, minPossibleScore, scorePercent } from '@/modules/quiz/engine';
-import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
-import type { QuizFunnel, QuizSchema, ScoreTier } from '@/modules/quiz/types';
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Loader2, Plus, Trash2, Trophy, AlertCircle } from "lucide-react";
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import { quizService } from "@/modules/quiz/services/quizService";
+import { maxPossibleScore, minPossibleScore, scorePercent } from "@/modules/quiz/engine";
+import { DEFAULT_DESIGN } from "@/modules/quiz/design-presets";
+import type { QuizFunnel, QuizSchema, ScoreTier } from "@/modules/quiz/types";
 
-export const Route = createFileRoute('/_app/quizzes_/$id/results')({
+export const Route = createFileRoute("/_app/quizzes_/$id/results")({
   component: QuizResultsPage,
 });
 
 function QuizResultsPage() {
-  const { id } = useParams({ from: '/_app/quizzes_/$id/results' });
+  const { id } = useParams({ from: "/_app/quizzes_/$id/results" });
   const { company } = useAuth();
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
-  const [schema, setSchema] = useState<QuizSchema>({ blocks: [], design: DEFAULT_DESIGN, results: [] });
+  const [schema, setSchema] = useState<QuizSchema>({
+    blocks: [],
+    design: DEFAULT_DESIGN,
+    results: [],
+  });
   const [tiers, setTiers] = useState<ScoreTier[]>([]);
   const [respostas, setRespostas] = useState<Array<{ score: number | null }>>([]);
   const [loading, setLoading] = useState(true);
@@ -42,9 +46,13 @@ function QuizResultsPage() {
         setTiers(((q?.settings?.score_tiers as ScoreTier[] | undefined) ?? []).slice());
         setRespostas(subs);
       })
-      .catch(() => toast.error('Não foi possível carregar os resultados.'))
-      .finally(() => { if (vivo) setLoading(false); });
-    return () => { vivo = false; };
+      .catch(() => toast.error("Não foi possível carregar os resultados."))
+      .finally(() => {
+        if (vivo) setLoading(false);
+      });
+    return () => {
+      vivo = false;
+    };
   }, [id]);
 
   /* O teto e o piso vêm do esquema, não de um número digitado: é a mesma conta
@@ -53,10 +61,7 @@ function QuizResultsPage() {
   const max = useMemo(() => maxPossibleScore(schema), [schema]);
   const min = useMemo(() => minPossibleScore(schema), [schema]);
 
-  const ordenadas = useMemo(
-    () => [...tiers].sort((a, b) => b.minPercent - a.minPercent),
-    [tiers],
-  );
+  const ordenadas = useMemo(() => [...tiers].sort((a, b) => b.minPercent - a.minPercent), [tiers]);
 
   /** Quantos leads reais caíram em cada faixa — medido, não estimado. */
   const contagem = useMemo(() => {
@@ -81,10 +86,10 @@ function QuizResultsPage() {
         slug: quiz.slug,
         scoreTiers: tiers,
       });
-      toast.success('Faixas salvas');
+      toast.success("Faixas salvas");
     } catch (e) {
-      console.error('Erro ao salvar faixas', e);
-      toast.error('Não foi possível salvar agora.');
+      console.error("Erro ao salvar faixas", e);
+      toast.error("Não foi possível salvar agora.");
     } finally {
       setSalvando(false);
     }
@@ -94,7 +99,10 @@ function QuizResultsPage() {
     setTiers((t) => t.map((x, k) => (k === i ? { ...x, ...patch } : x)));
 
   const adicionar = () =>
-    setTiers((t) => [...t, { id: crypto.randomUUID(), label: `Faixa ${t.length + 1}`, minPercent: 0 }]);
+    setTiers((t) => [
+      ...t,
+      { id: crypto.randomUUID(), label: `Faixa ${t.length + 1}`, minPercent: 0 },
+    ]);
 
   if (loading) {
     return (
@@ -107,7 +115,9 @@ function QuizResultsPage() {
   /* Duas faixas com o mesmo mínimo: a de baixo nunca recebe ninguém, porque a
      busca para na primeira que bate. É silencioso e caro — a mensagem daquela
      faixa simplesmente nunca sai. */
-  const empatadas = ordenadas.filter((t, i) => i > 0 && t.minPercent === ordenadas[i - 1].minPercent);
+  const empatadas = ordenadas.filter(
+    (t, i) => i > 0 && t.minPercent === ordenadas[i - 1].minPercent,
+  );
   const semZero = ordenadas.length > 0 && !ordenadas.some((t) => t.minPercent <= 0);
 
   return createPortal(
@@ -115,15 +125,16 @@ function QuizResultsPage() {
       <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
         <Button asChild variant="ghost" size="sm">
           <Link to="/quizzes/$id/builder" params={{ id }}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Voltar ao Builder
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao Builder
           </Link>
         </Button>
         <div className="border-l pl-3">
-          <h1 className="text-sm font-bold leading-none">{quiz?.name ?? 'Quiz'}</h1>
+          <h1 className="text-sm font-bold leading-none">{quiz?.name ?? "Quiz"}</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Resultados</p>
         </div>
         <Button size="sm" className="ml-auto" onClick={() => void salvar()} disabled={salvando}>
-          {salvando ? 'Salvando…' : 'Salvar faixas'}
+          {salvando ? "Salvando…" : "Salvar faixas"}
         </Button>
       </header>
 
@@ -140,7 +151,9 @@ function QuizResultsPage() {
               </p>
             </div>
             <div className="text-right">
-              <div className="font-mono text-sm tabular-nums">{min} a {max}</div>
+              <div className="font-mono text-sm tabular-nums">
+                {min} a {max}
+              </div>
               <div className="text-[11px] text-muted-foreground">pontos alcançáveis</div>
             </div>
           </Card>
@@ -149,8 +162,8 @@ function QuizResultsPage() {
             <Card className="flex items-start gap-2 border-l-[3px] border-l-amber-500 p-4 text-xs">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
               <span>
-                Nenhuma pergunta deste quiz vale pontos, então toda faixa é inalcançável.
-                Dê pontuação às opções no construtor.
+                Nenhuma pergunta deste quiz vale pontos, então toda faixa é inalcançável. Dê
+                pontuação às opções no construtor.
               </span>
             </Card>
           )}
@@ -214,28 +227,54 @@ function QuizResultsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                  <span>a partir de <span className="font-mono tabular-nums text-foreground">{pontosMin}</span> pontos</span>
                   <span>
-                    <span className="font-semibold tabular-nums text-foreground">{quantos}</span> lead(s) nesta faixa
+                    a partir de{" "}
+                    <span className="font-mono tabular-nums text-foreground">{pontosMin}</span>{" "}
+                    pontos
+                  </span>
+                  <span>
+                    <span className="font-semibold tabular-nums text-foreground">{quantos}</span>{" "}
+                    lead(s) nesta faixa
                   </span>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Mensagem de WhatsApp ao concluir</Label>
+                  {/* A caixa cresce com o texto, até um teto.
+                      Medido na tela em 07/10: a faixa com mensagem tinha 246
+                      caracteres e 76px de conteúdo numa caixa de 58px — editava-se
+                      por uma janela de 3 linhas com rolagem interna, enquanto as
+                      duas faixas VAZIAS ocupavam as mesmas 3 linhas sem nada
+                      dentro. O espaço estava distribuído ao contrário. */}
                   <Textarea
-                    value={t.whatsappTemplate ?? ''}
+                    value={t.whatsappTemplate ?? ""}
                     onChange={(e) => atualizar(i, { whatsappTemplate: e.target.value })}
                     rows={2}
                     placeholder="Vazio = não envia nada. Use {{nome}} e {{faixa}}."
-                    className="text-xs"
+                    className="field-sizing-content max-h-56 min-h-[58px] text-xs"
                   />
+                  {/* Faixa sem mensagem é VAZAMENTO, não estado neutro: quem cair
+                      nela conclui o quiz e não recebe nada, em silêncio. A
+                      Análise já denunciava isso ("2 faixa(s) sem mensagem"), e a
+                      tela que resolve o problema tratava a lacuna com o mesmo tom
+                      de um texto de ajuda. */}
+                  {!(t.whatsappTemplate ?? "").trim() && (
+                    <p className="flex items-start gap-1.5 text-[11px] text-[var(--aviso)]">
+                      <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Quem terminar nesta faixa não recebe mensagem nenhuma
+                        {quantos > 0 && ` — já são ${quantos} lead(s)`}.
+                      </span>
+                    </p>
+                  )}
                 </div>
               </Card>
             );
           })}
 
           <Button variant="outline" className="w-full gap-1.5" onClick={adicionar}>
-            <Plus className="h-4 w-4" />Adicionar faixa
+            <Plus className="h-4 w-4" />
+            Adicionar faixa
           </Button>
         </div>
       </div>
