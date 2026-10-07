@@ -35,6 +35,7 @@ import { BLOCK_LIBRARY } from "../blocks-library";
 import { getSteps, findStepIndexForBlock } from "../lib/steps";
 import type { QuizBlock, QuizDesign, QuizSchema, QuizStep } from "../types";
 import { BlockRenderer, ProgressBar } from "./QuizPreview";
+import { resumirEtapa } from "../lib/trilhaDeEtapas";
 
 // Cada nó do fluxograma é uma miniatura AO VIVO da tela real (mesmo BlockRenderer do
 // canvas do Builder) — em tamanho NATURAL, sem transform: scale e sem corte de altura,
@@ -79,6 +80,16 @@ function StepNode({ data }: { data: StepNodeData }) {
   const { step, blocks, index, design, onSelectStep, onRenameStep, onDeleteStep, onToggleGoal } =
     data;
   const dominant = blocks[blocks.length - 1] ?? blocks[0];
+  /* Mesmo `resumirEtapa` da trilha e da lista: três telas descrevendo a mesma
+     etapa precisam ler da mesma função, senão divergem. */
+  const resumo = resumirEtapa({
+    id: step.id,
+    indice: index,
+    nome: step.name,
+    categorias: blocks.map(
+      (b) => BLOCK_LIBRARY.find((d) => d.type === b.type)?.category ?? "conteudo",
+    ),
+  });
   const def = dominant ? typeMeta.get(dominant.type) : undefined;
   const hasConditional = blocks.some((b) => b.showIf?.enabled);
   const hasBranch = blocks.some(
@@ -103,7 +114,7 @@ function StepNode({ data }: { data: StepNodeData }) {
 
   return (
     <div
-      className="rounded-xl border-2 bg-card shadow-md overflow-visible transition-all hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+      className="relative rounded-xl border-2 bg-card shadow-md overflow-visible transition-all hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
       style={{ width: STEP_WIDTH, borderColor, boxShadow }}
       onClick={() => onSelectStep?.(step.id)}
     >
@@ -120,8 +131,21 @@ function StepNode({ data }: { data: StepNodeData }) {
         className="!bg-[var(--aviso)] !w-2.5 !h-2.5 !border-2 !border-background"
       />
 
+      {/* Faixa da natureza, mesma tinta da trilha e da lista lateral.
+          A tela do FUNIL era a única das três que não respondia "onde está a
+          captura, onde está o resultado" — e é a pergunta que ela existe para
+          responder. Com a faixa, a resposta aparece no zoom reduzido, antes de
+          qualquer texto ficar legível. */}
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-1 rounded-t-[10px]"
+        style={{ background: resumo.tinta }}
+      />
       <div className="flex items-center gap-1.5 px-3 py-2 border-b bg-muted/40 rounded-t-[10px]">
-        <span className="flex items-center justify-center h-5 w-5 rounded-md bg-foreground/10 text-foreground text-[10px] font-bold shrink-0 tabular-nums">
+        <span
+          className="flex items-center justify-center h-5 w-5 rounded-md text-[10px] font-bold shrink-0 tabular-nums"
+          style={{ background: `${resumo.tinta}24`, color: resumo.tinta }}
+        >
           {index + 1}
         </span>
         {editing ? (
@@ -142,8 +166,13 @@ function StepNode({ data }: { data: StepNodeData }) {
             className="min-w-0 flex-1 rounded border bg-background px-1.5 py-0.5 text-[11px] font-semibold outline-none focus-visible:ring-1 focus-visible:ring-primary"
           />
         ) : (
-          <span className="text-[11px] font-bold text-foreground truncate">
-            {step.name || `Etapa ${index + 1}`}
+          <span className="min-w-0 truncate">
+            <span className="text-[11px] font-bold text-foreground">
+              {step.name || `Etapa ${index + 1}`}
+            </span>
+            <span className="ml-1.5 text-[10px] text-muted-foreground">
+              {resumo.rotuloDaNatureza}
+            </span>
           </span>
         )}
         <div className="ml-auto flex items-center gap-1 shrink-0">
