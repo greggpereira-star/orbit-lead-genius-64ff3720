@@ -60,10 +60,19 @@ export function valorLegivel(bloco: QuizBlock, bruto: unknown): string {
   if (Array.isArray(bruto)) return bruto.map(rotuloDaOpcao).join("; ");
   if (typeof bruto === "boolean") return bruto ? "sim" : "não";
   if (typeof bruto === "object") {
+    const o = bruto as Record<string, unknown>;
     // Agendamento vem como `{ data, hora }`; sem isto o CSV levaria
     // "[object Object]" em toda linha, que é pior que a célula vazia.
-    const o = bruto as Record<string, unknown>;
-    return [o.data, o.hora].filter(Boolean).join(" ").trim() || JSON.stringify(bruto);
+    const agendamento = [o.data, o.hora].filter(Boolean).join(" ").trim();
+    if (agendamento) return agendamento;
+    /* Formulário vem como `{ name, email, phone }`. Sem este caso a resposta
+       saía como JSON cru — visto na tela de respostas do cliente em 07/10:
+       `{"name":"…","email":"…","phone":"…"}` numa célula que a pessoa lê. O
+       `JSON.stringify` abaixo é rede de segurança para forma desconhecida,
+       não formato de leitura. */
+    const contato = [o.name, o.email, o.phone].filter(Boolean).map(String);
+    if (contato.length) return contato.join(" · ");
+    return JSON.stringify(bruto);
   }
   return rotuloDaOpcao(bruto);
 }

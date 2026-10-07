@@ -130,3 +130,29 @@ describe("montarCsvDeRespostas", () => {
     expect(csv.split("\n")[0].split(",")).toHaveLength(9);
   });
 });
+
+describe("valorLegivel com objetos", () => {
+  const bloco = { id: "b", type: "form", options: [] } as unknown as QuizBlock;
+
+  it("formulário vira contato legível, não JSON", () => {
+    const r = valorLegivel(bloco, {
+      name: "Teste Roteamento",
+      email: "quiz.rot@altagency.com.br",
+      phone: "27988886666",
+    });
+    expect(r).toBe("Teste Roteamento · quiz.rot@altagency.com.br · 27988886666");
+    expect(r).not.toContain("{");
+  });
+
+  it("formulário parcial não inventa separador sobrando", () => {
+    expect(valorLegivel(bloco, { email: "a@b.c" })).toBe("a@b.c");
+  });
+
+  it("agendamento continua ganhando do contato", () => {
+    expect(valorLegivel(bloco, { data: "10/10", hora: "14h", name: "x" })).toBe("10/10 14h");
+  });
+
+  it("forma desconhecida ainda cai no JSON, como rede de segurança", () => {
+    expect(valorLegivel(bloco, { foo: 1 })).toBe('{"foo":1}');
+  });
+});
