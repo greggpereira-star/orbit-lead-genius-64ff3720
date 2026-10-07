@@ -19,18 +19,43 @@ function meta(lead: LeadRow): Meta {
  * assim funciona pra qualquer nicho sem precisar cadastrar campo por campo.
  */
 const INTERNAL_KEYS = new Set([
-  "channel", "stage_id", "mapping_id", "pipeline_id", "default_tags",
-  "qualification_rules", "meta_ad_id", "meta_form_id", "meta_page_id",
-  "meta_adset_id", "meta_form_name", "meta_leadgen_id", "meta_campaign_id",
-  "meta_created_time", "quiz_id", "quiz_slug", "quiz_title", "submission_id",
-  "visitor_id", "company_name", "source", "utm_source", "utm_medium",
-  "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid",
+  "channel",
+  "stage_id",
+  "mapping_id",
+  "pipeline_id",
+  "default_tags",
+  "qualification_rules",
+  "meta_ad_id",
+  "meta_form_id",
+  "meta_page_id",
+  "meta_adset_id",
+  "meta_form_name",
+  "meta_leadgen_id",
+  "meta_campaign_id",
+  "meta_created_time",
+  "quiz_id",
+  "quiz_slug",
+  "quiz_title",
+  "submission_id",
+  "visitor_id",
+  "company_name",
+  "source",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+  "gclid",
+  "fbclid",
   // Nomes resolvidos da atribuição e marcação de contato repetido: são
   // metadados nossos, não resposta que o lead digitou. Sem estar nesta lista,
   // apareciam como "Meta ad name" no meio das perguntas do formulário e
   // inflavam o contador de respostas.
-  "meta_ad_name", "meta_adset_name", "meta_campaign_name",
-  "duplicate_of", "duplicate_first_seen_at",
+  "meta_ad_name",
+  "meta_adset_name",
+  "meta_campaign_name",
+  "duplicate_of",
+  "duplicate_first_seen_at",
 ]);
 
 /**
@@ -51,7 +76,21 @@ export function humanizeValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (Array.isArray(value)) return value.map((v) => humanizeValue(v)).join(", ");
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object") {
+    /* Objeto vira texto LEGÍVEL, não JSON.
+       Visto na ficha de um lead do cliente em 07/10: o resumo do perfil saía
+       como `Contato investimento de {"b-dor":"o2","b-card":true,…}` — o mapa
+       inteiro de respostas, com id de bloco e id de opção, na tela que o
+       corretor usa antes de ligar. As duas formas que aparecem de verdade são
+       contato (`{name,email,phone}`) e agendamento (`{data,hora}`); o resto cai
+       no `JSON.stringify` como rede de segurança, não como formato de leitura. */
+    const o = value as Record<string, unknown>;
+    const agendamento = [o.data, o.hora].filter(Boolean).map(String).join(" ").trim();
+    if (agendamento) return agendamento;
+    const contato = [o.name, o.email, o.phone].filter(Boolean).map(String);
+    if (contato.length) return contato.join(" · ");
+    return JSON.stringify(value);
+  }
 
   const raw = String(value).trim();
   if (!raw) return "—";
@@ -73,7 +112,10 @@ export type AnswerKind = "money" | "budget" | "property" | "place" | "time" | "p
 const KIND_PATTERNS: Array<[AnswerKind, RegExp]> = [
   ["money", /\b(renda|salari|sal[áa]rio|ganho|faturament|receita)/i],
   ["budget", /\b(investiment|or[çc]ament|quanto|valor|pre[çc]o|entrada|financiament)/i],
-  ["property", /\b(im[óo]vel|imovel|apartament|casa|quarto|terreno|lote|sala|produto|plano|servi[çc]o|curso|procediment)/i],
+  [
+    "property",
+    /\b(im[óo]vel|imovel|apartament|casa|quarto|terreno|lote|sala|produto|plano|servi[çc]o|curso|procediment)/i,
+  ],
   ["place", /\b(local|regi[ãa]o|bairro|cidade|onde|endere[çc]o|zona)/i],
   ["time", /\b(prazo|quando|data|per[íi]odo|urg[êe]ncia|tempo|hor[áa]rio)/i],
   ["person", /\b(idade|profiss[ãa]o|estado civil|fam[íi]lia|filhos|quem)/i],
@@ -87,6 +129,12 @@ export function answerKind(key: string, value?: string): AnswerKind {
   for (const [kind, re] of KIND_PATTERNS) {
     if (re.test(question)) return kind;
   }
+  /* Valor que é estrutura serializada NÃO classifica.
+     Foi assim que um mapa de respostas inteiro virou "orçamento": o JSON
+     continha a chave `b-investimento`, o padrão de orçamento casou com ela, e
+     o resumo passou a abrir com "Contato investimento de {…}". Um id de bloco
+     dentro de um blob não é o assunto da resposta. */
+  if (value && /^[[{].*[\]}]$/s.test(value.trim())) return "other";
   if (value) {
     for (const [kind, re] of KIND_PATTERNS) {
       if (re.test(value)) return kind;
@@ -239,7 +287,20 @@ export function getLeadOrigin(lead: LeadRow): string | null {
  * atrapalha a leitura numa lista. Mantém partículas em minúsculo, senão vira
  * "Maria Da Silva Dos Santos".
  */
-const NAME_PARTICLES = new Set(["de", "da", "do", "das", "dos", "e", "di", "du", "van", "von", "la", "le"]);
+const NAME_PARTICLES = new Set([
+  "de",
+  "da",
+  "do",
+  "das",
+  "dos",
+  "e",
+  "di",
+  "du",
+  "van",
+  "von",
+  "la",
+  "le",
+]);
 
 export function toTitleCase(raw: string | null | undefined): string {
   if (!raw) return "";
@@ -291,31 +352,73 @@ export function getLeadChannel(lead: LeadRow): string {
  * ela tem prioridade sobre esta dedução.
  */
 const DDD_MAP: Record<string, string> = {
-  "11": "São Paulo, SP", "12": "São José dos Campos, SP", "13": "Santos, SP",
-  "14": "Bauru, SP", "15": "Sorocaba, SP", "16": "Ribeirão Preto, SP",
-  "17": "São José do Rio Preto, SP", "18": "Presidente Prudente, SP",
+  "11": "São Paulo, SP",
+  "12": "São José dos Campos, SP",
+  "13": "Santos, SP",
+  "14": "Bauru, SP",
+  "15": "Sorocaba, SP",
+  "16": "Ribeirão Preto, SP",
+  "17": "São José do Rio Preto, SP",
+  "18": "Presidente Prudente, SP",
   "19": "Campinas, SP",
-  "21": "Rio de Janeiro, RJ", "22": "Campos dos Goytacazes, RJ", "24": "Volta Redonda, RJ",
-  "27": "Vitória, ES", "28": "Cachoeiro de Itapemirim, ES",
-  "31": "Belo Horizonte, MG", "32": "Juiz de Fora, MG", "33": "Governador Valadares, MG",
-  "34": "Uberlândia, MG", "35": "Poços de Caldas, MG", "37": "Divinópolis, MG",
+  "21": "Rio de Janeiro, RJ",
+  "22": "Campos dos Goytacazes, RJ",
+  "24": "Volta Redonda, RJ",
+  "27": "Vitória, ES",
+  "28": "Cachoeiro de Itapemirim, ES",
+  "31": "Belo Horizonte, MG",
+  "32": "Juiz de Fora, MG",
+  "33": "Governador Valadares, MG",
+  "34": "Uberlândia, MG",
+  "35": "Poços de Caldas, MG",
+  "37": "Divinópolis, MG",
   "38": "Montes Claros, MG",
-  "41": "Curitiba, PR", "42": "Ponta Grossa, PR", "43": "Londrina, PR",
-  "44": "Maringá, PR", "45": "Foz do Iguaçu, PR", "46": "Francisco Beltrão, PR",
-  "47": "Joinville, SC", "48": "Florianópolis, SC", "49": "Chapecó, SC",
-  "51": "Porto Alegre, RS", "53": "Pelotas, RS", "54": "Caxias do Sul, RS",
+  "41": "Curitiba, PR",
+  "42": "Ponta Grossa, PR",
+  "43": "Londrina, PR",
+  "44": "Maringá, PR",
+  "45": "Foz do Iguaçu, PR",
+  "46": "Francisco Beltrão, PR",
+  "47": "Joinville, SC",
+  "48": "Florianópolis, SC",
+  "49": "Chapecó, SC",
+  "51": "Porto Alegre, RS",
+  "53": "Pelotas, RS",
+  "54": "Caxias do Sul, RS",
   "55": "Santa Maria, RS",
-  "61": "Brasília, DF", "62": "Goiânia, GO", "63": "Palmas, TO",
-  "64": "Rio Verde, GO", "65": "Cuiabá, MT", "66": "Rondonópolis, MT",
-  "67": "Campo Grande, MS", "68": "Rio Branco, AC", "69": "Porto Velho, RO",
-  "71": "Salvador, BA", "73": "Itabuna, BA", "74": "Juazeiro, BA",
-  "75": "Feira de Santana, BA", "77": "Barreiras, BA", "79": "Aracaju, SE",
-  "81": "Recife, PE", "82": "Maceió, AL", "83": "João Pessoa, PB",
-  "84": "Natal, RN", "85": "Fortaleza, CE", "86": "Teresina, PI",
-  "87": "Petrolina, PE", "88": "Juazeiro do Norte, CE", "89": "Picos, PI",
-  "91": "Belém, PA", "92": "Manaus, AM", "93": "Santarém, PA",
-  "94": "Marabá, PA", "95": "Boa Vista, RR", "96": "Macapá, AP",
-  "97": "Coari, AM", "98": "São Luís, MA", "99": "Imperatriz, MA",
+  "61": "Brasília, DF",
+  "62": "Goiânia, GO",
+  "63": "Palmas, TO",
+  "64": "Rio Verde, GO",
+  "65": "Cuiabá, MT",
+  "66": "Rondonópolis, MT",
+  "67": "Campo Grande, MS",
+  "68": "Rio Branco, AC",
+  "69": "Porto Velho, RO",
+  "71": "Salvador, BA",
+  "73": "Itabuna, BA",
+  "74": "Juazeiro, BA",
+  "75": "Feira de Santana, BA",
+  "77": "Barreiras, BA",
+  "79": "Aracaju, SE",
+  "81": "Recife, PE",
+  "82": "Maceió, AL",
+  "83": "João Pessoa, PB",
+  "84": "Natal, RN",
+  "85": "Fortaleza, CE",
+  "86": "Teresina, PI",
+  "87": "Petrolina, PE",
+  "88": "Juazeiro do Norte, CE",
+  "89": "Picos, PI",
+  "91": "Belém, PA",
+  "92": "Manaus, AM",
+  "93": "Santarém, PA",
+  "94": "Marabá, PA",
+  "95": "Boa Vista, RR",
+  "96": "Macapá, AP",
+  "97": "Coari, AM",
+  "98": "São Luís, MA",
+  "99": "Imperatriz, MA",
 };
 
 export function cityFromPhone(phone: string | null | undefined): string | null {
@@ -348,8 +451,11 @@ export function formatDateTime(value: string | null | undefined): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("pt-BR", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
