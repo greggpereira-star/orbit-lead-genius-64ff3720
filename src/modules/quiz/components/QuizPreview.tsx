@@ -27,7 +27,7 @@ import { getContrastText, withAlpha } from "../lib/color";
 import { getButtonStyle } from "../lib/buttonStyles";
 import { parseRichText } from "../lib/richtext";
 import { evaluatePercent } from "../lib/variables";
-import { resolveBlockStyle, resolveTextStyle } from "../lib/blockStyle";
+import { resolveBlockStyle, resolveTextStyle, classeDeAlinhamento } from "../lib/blockStyle";
 import { resolveContainerLayout, type Breakpoint } from "../lib/containerLayout";
 import { larguraDoBloco } from "../lib/larguraDoBloco";
 import { estiloDoAlerta } from "../lib/alerta";
@@ -333,7 +333,7 @@ export function QuizPreview({
                                       embrulho: sem ele cada bloco teria que
                                       aplicar margem e cor por conta própria, e
                                       37 tipos divergiriam em uma semana. */}
-                                <div style={resolveBlockStyle(b)}>
+                                <div className={classeDeAlinhamento(b)} style={resolveBlockStyle(b)}>
                                   <BlockRenderer
                                     block={b}
                                     design={design}

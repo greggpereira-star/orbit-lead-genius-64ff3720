@@ -186,3 +186,21 @@ export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
 
   return Object.keys(style).length ? style : undefined;
 }
+
+/**
+ * Classe que faz o alinhamento escolhido no inspetor VALER.
+ *
+ * Medido no construtor em 07/10, num quiz de teste: clicar em "Esquerda" num
+ * bloco Intro gravava `text-align: left` no embrulho e o texto continuava
+ * centralizado — o renderizador tem `text-center` fixo num ancestral, e uma
+ * classe em descendente vence o `text-align` herdado. O controle dizia que
+ * tinha funcionado e não fazia nada. Nos blocos atômicos (Título, Texto) ele
+ * sempre funcionou, o que tornava a falha mais difícil de enxergar.
+ *
+ * A classe só sai quando o autor ESCOLHEU um alinhamento: sem escolha, cada
+ * renderizador segue com o que sempre fez, e nenhum quiz publicado muda de
+ * aparência por causa disto.
+ */
+export function classeDeAlinhamento(block: QuizBlock): string | undefined {
+  return block.blockStyle?.align ? "alinhamento-proprio" : undefined;
+}

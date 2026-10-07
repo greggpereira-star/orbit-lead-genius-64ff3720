@@ -25,7 +25,7 @@ import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   PieChart, Pie, Cell, RadialBarChart, RadialBar,
 } from 'recharts';
-import { resolveBlockStyle, resolveTextStyle } from '../lib/blockStyle';
+import { resolveBlockStyle, resolveTextStyle, classeDeAlinhamento } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
@@ -856,6 +856,7 @@ function PlayerRunner({
                   <div
                     key={b.id}
                     ref={b.posicao === 'topo-fixo' ? refTopo : b.posicao === 'rodape-fixo' ? refRodape : undefined}
+                    className={classeDeAlinhamento(b)}
                     style={{
                       ...larguraDoBloco(b, breakpointDaTela, GAP_DA_ETAPA),
                       ...resolveBlockStyle(b),

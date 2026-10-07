@@ -423,3 +423,20 @@
   border: 1px solid var(--linha-sutil);
   border-radius: 10px;
 }
+
+/* ---------------------------------------------------------------------------
+   Alinhamento escolhido no inspetor.
+
+   Os renderizadores compostos (Intro, Resultado, CTA, Carregando…) trazem
+   `text-center` fixo. Como classe em descendente vence `text-align` herdado,
+   escolher "Esquerda" no bloco gravava o estilo no embrulho e não mudava nada
+   na tela — medido no construtor em 07/10. Quando o autor ESCOLHE um
+   alinhamento, o embrulho ganha esta classe e o centramento padrão passa a
+   herdar em vez de mandar. Sem escolha, nada muda: nenhum quiz publicado
+   troca de aparência por causa disto.
+   --------------------------------------------------------------------------- */
+.alinhamento-proprio .text-center,
+.alinhamento-proprio .text-left,
+.alinhamento-proprio .text-right {
+  text-align: inherit;
+}
