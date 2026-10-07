@@ -23,7 +23,6 @@ import { VARIANTES_DE_ALERTA, estiloDoAlerta } from "../lib/alerta";
 import { ESTILOS_DE_AUDIO } from "../lib/audio";
 import { DEFAULT_DESIGN } from "../design-presets";
 import type { BlockStyle, TextStyle, TextSlot } from "../lib/blockStyle";
-import { getSteps } from "../lib/steps";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1491,6 +1490,7 @@ function BlockInspector({
                               option={opt}
                               blockType={block.type}
                               allBlocks={allBlocks}
+                              steps={allSteps}
                               currentBlockId={block.id}
                               dragHandleProps={dragProvided.dragHandleProps}
                               onUpdate={(patch) => {
@@ -2105,16 +2105,28 @@ function stepLabelFor(allBlocks: QuizBlock[], blockIds: string[], index: number)
 // Ramificação por opção: "quem responde X pula pra etapa Y".
 function OptionJumpSelect({
   allBlocks,
+  steps,
   currentBlockId,
   value,
   onSelect,
 }: {
   allBlocks: QuizBlock[];
+  /** As etapas REAIS do schema, na ordem real. */
+  steps: QuizStep[];
   currentBlockId: string;
   value?: string;
   onSelect: (jumpToBlockId: string | undefined) => void;
 }) {
-  const steps = getSteps({ blocks: allBlocks });
+  /* As etapas vêm de fora, e não de `getSteps({ blocks })`.
+     Aquela chamada passava SÓ os blocos: sem `schema.steps`, `getSteps` cai no
+     comportamento retroativo e trata cada bloco como uma etapa, na ordem de
+     `blocks`. Quando a ordem das etapas difere da ordem dos blocos — o que
+     acontece assim que alguém cria etapas e só depois põe os componentes, ou
+     reordena na lista — o seletor numerava errado.
+
+     Medido num quiz de teste em 07/10: o autor escolheu "Pular para Etapa 3" e
+     o visitante caiu na Etapa 2. O motor estava certo o tempo todo; quem mentia
+     era o rótulo que o autor leu antes de decidir. */
   const currentStepIdx = steps.findIndex((s) => s.blockIds.includes(currentBlockId));
   const targets = steps.filter((_, i) => i !== currentStepIdx);
   if (targets.length === 0) return null;
@@ -2465,6 +2477,7 @@ function OptionEditor({
   option,
   blockType,
   allBlocks,
+  steps,
   currentBlockId,
   dragHandleProps,
   onUpdate,
@@ -2475,6 +2488,7 @@ function OptionEditor({
   option: BlockOption;
   blockType: QuizBlock["type"];
   allBlocks: QuizBlock[];
+  steps: QuizStep[];
   currentBlockId: string;
   dragHandleProps?: DraggableProvidedDragHandleProps | null;
   onUpdate: (patch: Partial<BlockOption>) => void;
@@ -2720,6 +2734,7 @@ function OptionEditor({
                 <div className="mt-1.5">
                   <OptionJumpSelect
                     allBlocks={allBlocks}
+                    steps={steps}
                     currentBlockId={currentBlockId}
                     value={option.jumpToBlockId}
                     onSelect={(target) => onUpdate({ jumpToBlockId: target })}
