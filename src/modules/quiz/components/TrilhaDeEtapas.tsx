@@ -155,7 +155,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
+    <div className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2.5">
       {/* A contagem vem ANTES da trilha, encostada nela: é o rótulo do que vem
           a seguir, e não um comentário solto no fim da faixa. */}
       <span className="shrink-0 pl-1 pr-1 text-[11px] font-medium tabular-nums text-white/45">
@@ -172,7 +172,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
           aria-label="Etapas do quiz"
           tabIndex={0}
           onKeyDown={aoTeclar}
-          className="trilha-etapas flex items-stretch gap-1.5 overflow-x-auto scroll-smooth rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+          className="trilha-etapas flex items-stretch gap-2 overflow-x-auto scroll-smooth rounded-lg py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
         >
           {etapas.map((e, i) => {
             const selecionada = i === atual;
@@ -187,7 +187,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
                 ref={selecionada ? cartaoAtualRef : undefined}
                 onClick={() => onEscolher(e.id)}
                 title={e.titulo}
-                className={`group relative flex min-h-[38px] w-[168px] shrink-0 scroll-mx-2 flex-col justify-center gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
+                className={`group relative flex min-h-[50px] w-[168px] shrink-0 scroll-mx-2 flex-col justify-center gap-1 rounded-lg px-3 py-2 text-left transition-colors ${
                   selecionada
                     ? "bg-white text-neutral-900"
                     : "bg-white/[0.07] text-white/70 hover:bg-white/[0.14] hover:text-white"
@@ -211,12 +211,12 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
                   >
                     {String(e.numero).padStart(2, "0")}
                   </span>
-                  <span className="truncate text-[11.5px] font-semibold leading-tight">
+                  <span className="truncate text-[11.5px] font-semibold leading-[1.35]">
                     {e.nome}
                   </span>
                 </span>
                 <span
-                  className={`flex items-center gap-1 pl-[1px] text-[10px] leading-tight ${
+                  className={`flex items-center gap-1 pl-[1px] text-[10px] leading-[1.4] ${
                     selecionada ? "text-neutral-500" : "text-white/35"
                   }`}
                 >
@@ -244,7 +244,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
               type="button"
               onClick={onAdicionar}
               title="Adicionar uma etapa no fim do funil"
-              className="flex min-h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/20 text-white/45 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="flex min-h-[50px] w-[44px] shrink-0 items-center justify-center rounded-lg border border-dashed border-white/20 text-white/45 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             >
               <Plus className="h-4 w-4" />
               <span className="sr-only">Nova etapa</span>

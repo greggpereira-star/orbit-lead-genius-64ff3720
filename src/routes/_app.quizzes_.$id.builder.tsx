@@ -1123,11 +1123,7 @@ function QuizBuilderPage() {
       </Button>
       <Droppable droppableId="steps">
         {(stepsProvided) => (
-          <div
-            className="space-y-1.5"
-            ref={stepsProvided.innerRef}
-            {...stepsProvided.droppableProps}
-          >
+          <div className="space-y-2" ref={stepsProvided.innerRef} {...stepsProvided.droppableProps}>
             {steps.map((step, stepIdx) => {
               const stepBlocks = step.blockIds
                 .map((bid) => schema.blocks.find((b) => b.id === bid))
@@ -1197,11 +1193,11 @@ function QuizBuilderPage() {
                               linha com quatro ícones num painel de 240px. Agora
                               o nome da etapa fica sozinho na primeira linha e o
                               bloco desce para a segunda, junto da contagem. */}
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-xs font-semibold">
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="truncate text-xs font-semibold leading-[1.35]">
                             {step.name || `Etapa ${stepIdx + 1}`}
                           </div>
-                          <div className="truncate text-[11px] text-muted-foreground">
+                          <div className="truncate text-[11px] leading-[1.35] text-muted-foreground">
                             {stepBlocks.length === 0
                               ? "Vazia — escolha um bloco"
                               : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ""}`}
@@ -1796,15 +1792,21 @@ function SeloDeConversao({ dados }: { dados?: ConversaoDaEtapa }) {
 
   if (dados.taxa === null) {
     return (
+      /* Ícone desenhado, e não o emoji 👤: o emoji é desenhado pelo sistema,
+         muda de forma e de cor entre Mac, Windows e Android, e não acompanha a
+         tinta do texto ao lado. Também era mais largo que o número que ele
+         acompanha, e numa linha de 259px cada pixel estava tirando letra do
+         nome da etapa. */
       <span
-        className="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground"
+        className="flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground"
         title={
           dados.visitantes < MINIMO_PARA_NOTA
             ? `${dados.visitantes} visitante(s) — precisa de ${MINIMO_PARA_NOTA} para uma taxa confiável`
             : "Última etapa: não existe etapa posterior para medir avanço"
         }
       >
-        {dados.visitantes}👤
+        {dados.visitantes}
+        <Users className="h-3 w-3" aria-hidden />
       </span>
     );
   }
