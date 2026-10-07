@@ -14,6 +14,13 @@ export interface PassoDoTutorial {
   alvo?: string;
   titulo: string;
   texto: string;
+  /**
+   * Aba da coluna esquerda que precisa estar aberta para o alvo existir.
+   *
+   * Sem isto, a coluna em abas faria o tutorial pular os passos cujo alvo mora
+   * numa aba fechada — e pular em silêncio é pior do que não ter o passo.
+   */
+  painel?: string;
 }
 
 const CARTAO = { width: 320, height: 176 };
@@ -34,9 +41,12 @@ const CARTAO = { width: 320, height: 176 };
 export function TutorialGuiado({
   passos,
   onFechar,
+  onPainel,
 }: {
   passos: PassoDoTutorial[];
   onFechar: () => void;
+  /** Pedido para abrir a aba onde o alvo do passo atual vive. */
+  onPainel?: (painel: string) => void;
 }) {
   const [i, setI] = useState(0);
   const [alvo, setAlvo] = useState<Retangulo | null>(null);
@@ -52,9 +62,20 @@ export function TutorialGuiado({
   const passo = passos[i];
   const ultimo = i === passos.length - 1;
 
+  /* Tentativas de medição deste passo, e não um booleano.
+     A aba só abre no render seguinte ao pedido: com um booleano, a primeira
+     medição falhava, o passo era pulado, e o cartão nunca chegava a aparecer.
+     Só desistimos a partir da segunda tentativa, que é depois da remedida. */
+  const tentativas = useRef(0);
+
+  useEffect(() => {
+    if (passo?.painel) onPainel?.(passo.painel);
+  }, [passo, onPainel]);
+
   const medir = useCallback(() => {
     if (!passo) return;
     medido.current = true;
+    tentativas.current += 1;
     const janela = { width: window.innerWidth, height: window.innerHeight };
     setJanela(janela);
     if (!passo.alvo) {
@@ -89,6 +110,7 @@ export function TutorialGuiado({
 
   useLayoutEffect(() => {
     medido.current = false;
+    tentativas.current = 0;
     setPos(undefined);
     medir();
   }, [medir]);
@@ -123,7 +145,7 @@ export function TutorialGuiado({
 
   // Passo com alvo ausente: pula adiante em vez de mostrar cartão solto.
   useEffect(() => {
-    if (passo?.alvo && pos === null && medido.current) {
+    if (passo?.alvo && pos === null && medido.current && tentativas.current >= 2) {
       if (ultimo) onFechar();
       else setI((v) => v + 1);
     }

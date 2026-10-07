@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PassoDoTutorial } from "../components/TutorialGuiado";
 
 /** Versionada: subir o número reapresenta um tutorial reescrito a quem já viu. */
-export const CHAVE_DO_TUTORIAL = "altleadflow:tutorial-construtor:v1";
+export const CHAVE_DO_TUTORIAL = "altleadflow:tutorial-construtor:v2";
 const CHAVE = CHAVE_DO_TUTORIAL;
 /** O tutorial aponta para o painel lateral, que é `hidden lg:block`. */
 const LARGURA_MINIMA = 1024;
@@ -10,12 +10,14 @@ const LARGURA_MINIMA = 1024;
 export const PASSOS_DO_CONSTRUTOR: PassoDoTutorial[] = [
   {
     alvo: "etapas",
+    painel: "etapas",
     titulo: "As telas do seu quiz",
     texto:
       "Cada etapa é uma tela que a pessoa vê. Arraste para reordenar, clique para abrir. É aqui que o funil toma forma.",
   },
   {
     alvo: "componentes",
+    painel: "blocos",
     titulo: "Componentes",
     texto:
       "Arraste daqui para a tela do meio: pergunta, imagem, depoimento, contador. A etapa selecionada é quem recebe.",

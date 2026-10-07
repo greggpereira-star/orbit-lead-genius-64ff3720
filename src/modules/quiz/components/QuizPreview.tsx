@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import {
   GripVertical,
@@ -11,14 +11,16 @@ import {
   X,
   Eye,
   PhoneCall,
-  ChevronLeft,
-  ChevronRight,
   Check,
   Video,
   ArrowDown,
 } from "lucide-react";
 import type { QuizBlock, QuizDesign, QuizSchema } from "../types";
 import { getSteps } from "../lib/steps";
+import { TrilhaDeEtapas } from "./TrilhaDeEtapas";
+import { resumirEtapa } from "../lib/trilhaDeEtapas";
+import { BLOCK_LIBRARY } from "../blocks-library";
+import type { ConversaoDaEtapa } from "../lib/stepConversion";
 import { RichText } from "./RichText";
 import { getContrastText, withAlpha } from "../lib/color";
 import { getButtonStyle } from "../lib/buttonStyles";
@@ -76,6 +78,10 @@ interface Props {
    */
   currentStepId?: string | null;
   onChangeStep?: (stepId: string) => void;
+  /** Conversão medida por etapa, para a trilha mostrar onde o funil vaza. */
+  conversaoPorEtapa?: Map<string, ConversaoDaEtapa>;
+  /** Ausente na tela de Design: lá a trilha navega, não constrói. */
+  onAdicionarEtapa?: () => void;
 }
 
 // Largura fixa do quiz em qualquer dispositivo (mesmo padrão de QuizPlayer.tsx) — o
@@ -91,25 +97,39 @@ export function QuizPreview({
   onRequestAddBlock,
   currentStepId,
   onChangeStep,
+  conversaoPorEtapa,
+  onAdicionarEtapa,
 }: Props) {
   const { design, blocks } = schema;
   // keepEmpty: uma etapa recém-criada precisa aparecer no canvas mesmo antes de
   // ganhar o primeiro bloco — senão o usuário cria a tela e não vê nada.
   const steps = useMemo(() => getSteps(schema, { keepEmpty: true }), [schema]);
 
-  /* Traz a etapa atual para dentro da faixa visível quando o quiz tem mais
-     etapas do que cabem. `useCallback` com lista VAZIA: um ref de callback
-     recriado a cada render é reexecutado a cada render, e foi exatamente o que
-     já derrubou esta tela com o erro #185 do React. */
-  const refEtapaAtual = useCallback((el: HTMLButtonElement | null) => {
-    el?.scrollIntoView({ block: "nearest", inline: "center" });
-  }, []);
-
   const stepIndex = useMemo(() => {
     const i = currentStepId ? steps.findIndex((s) => s.id === currentStepId) : -1;
     return i >= 0 ? i : 0;
   }, [steps, currentStepId]);
   const step = steps[stepIndex] ?? null;
+
+  /* A natureza da etapa sai da CATEGORIA dos blocos dela, não do tipo: é a
+     categoria que já separa captura de resultado na paleta, e manter as duas
+     telas na mesma régua evita que a trilha diga uma coisa e a paleta outra. */
+  const etapasDaTrilha = useMemo(
+    () =>
+      steps.map((s, i) =>
+        resumirEtapa({
+          id: s.id,
+          indice: i,
+          nome: s.name,
+          categorias: s.blockIds
+            .map((bid) => blocks.find((b) => b.id === bid))
+            .filter((b): b is QuizBlock => !!b)
+            .map((b) => BLOCK_LIBRARY.find((d) => d.type === b.type)?.category ?? "conteudo"),
+          conversao: conversaoPorEtapa?.get(s.id),
+        }),
+      ),
+    [steps, blocks, conversaoPorEtapa],
+  );
   const stepBlocks = useMemo(
     () =>
       step
@@ -144,68 +164,12 @@ export function QuizPreview({
       {/* Navegador de etapas: fica FORA do device-frame de propósito. Dentro
           dele, viraria parte da tela simulada e o usuário acharia que o
           visitante vê esses controles. */}
-      {steps.length > 0 && (
-        <div className="flex shrink-0 items-center justify-center gap-3 px-6 pt-4 pb-1">
-          <button
-            type="button"
-            onClick={() => onChangeStep?.(steps[stepIndex - 1].id)}
-            disabled={stepIndex === 0}
-            aria-label="Etapa anterior"
-            className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          {/* O ponto continua com 6px porque é enfeite; o ALVO tem 24px de
-              altura, que é o mínimo da WCAG 2.5.8. Antes o botão inteiro era o
-              ponto: num quiz de 24 etapas, acertar a de número 17 era sorte. */}
-          <div
-            className="flex max-w-[55%] items-center overflow-x-auto"
-            role="tablist"
-            aria-label="Etapas do quiz"
-          >
-            {steps.map((s, i) => (
-              <button
-                key={s.id}
-                type="button"
-                role="tab"
-                onClick={() => onChangeStep?.(s.id)}
-                aria-label={`Etapa ${i + 1} de ${steps.length}${s.name ? `: ${s.name}` : ""}`}
-                aria-selected={i === stepIndex}
-                title={`Etapa ${i + 1}${s.name ? ` · ${s.name}` : ""}`}
-                ref={i === stepIndex ? refEtapaAtual : undefined}
-                className="group flex h-6 shrink-0 items-center px-[3px]"
-              >
-                <span
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === stepIndex ? "w-6 bg-white" : "w-1.5 bg-white/25 group-hover:bg-white/50"
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onChangeStep?.(steps[stepIndex + 1].id)}
-            disabled={stepIndex >= steps.length - 1}
-            aria-label="Próxima etapa"
-            className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-
-          {/* Era `{step.name} de {steps.length}`, que numa etapa nomeada
-              imprimia a frase quebrada "Entrada emocional de 24". A contagem e
-              o nome são duas informações, não uma. */}
-          <span className="ml-1 flex min-w-0 items-baseline gap-1.5 text-xs text-white/50">
-            <span className="shrink-0 tabular-nums">
-              Etapa {stepIndex + 1} de {steps.length}
-            </span>
-            {step?.name && <span className="truncate text-white/40">· {step.name}</span>}
-          </span>
-        </div>
-      )}
+      <TrilhaDeEtapas
+        etapas={etapasDaTrilha}
+        etapaAtualId={step?.id ?? null}
+        onEscolher={(id) => onChangeStep?.(id)}
+        onAdicionar={onAdicionarEtapa}
+      />
 
       <div className="flex min-h-0 flex-1 overflow-auto p-6">
         <div

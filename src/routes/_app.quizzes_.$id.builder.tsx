@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -30,6 +31,7 @@ import {
   Plus,
   Rocket,
   Save,
+  Search,
   Settings,
   ShieldCheck,
   SlidersHorizontal,
@@ -41,6 +43,7 @@ import {
   UploadCloud,
   Users,
   Workflow,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/core/auth/hooks/useAuth";
@@ -57,6 +60,7 @@ import { EditLockBanner } from "@/modules/quiz/components/EditLockBanner";
 import { QuizPreview } from "@/modules/quiz/components/QuizPreview";
 import { QuizInspector } from "@/modules/quiz/components/QuizInspector";
 import { TutorialGuiado } from "@/modules/quiz/components/TutorialGuiado";
+import { filtrarBlocos, normalizar } from "@/modules/quiz/lib/buscaDeBlocos";
 import { useTutorial, PASSOS_DO_CONSTRUTOR } from "@/modules/quiz/hooks/useTutorial";
 import { AccessRulesDialog } from "@/modules/quiz/components/AccessRulesDialog";
 import { QuizSettingsDialog } from "@/modules/quiz/components/QuizSettingsDialog";
@@ -107,6 +111,8 @@ function QuizBuilderPage() {
     results: [],
   });
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [abaEsquerda, setAbaEsquerda] = useState<"blocos" | "modelos" | "etapas">("blocos");
+  const [buscaDeBloco, setBuscaDeBloco] = useState("");
   /** Etapa escolhida na barra lateral como destino dos próximos componentes. */
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [device, setDevice] = useState<"mobile" | "tablet" | "desktop">("desktop");
@@ -919,6 +925,10 @@ function QuizBuilderPage() {
     );
   }
 
+  /* O índice da paleta é atribuído ANTES do filtro e preservado depois.
+     Ele é a posição do item no `Droppable` da paleta, e o arrastar resolve o
+     bloco por essa posição: renumerar depois de filtrar faria "Vídeo" soltar
+     um "Alerta" na tela. */
   const groupedBlocks = (() => {
     let paletteIndex = 0;
     return CATEGORY_ORDER.map((category) => ({
@@ -934,389 +944,481 @@ function QuizBuilderPage() {
       }));
   })();
 
-  const BlocksPalette = (
-    <>
-      <div className="p-3 border-b">
-        <h3 className="font-bold text-sm mb-2">Modelos prontos</h3>
-        <p className="text-[11px] text-muted-foreground mb-3">
-          Insere uma etapa completa, já montada — é só personalizar os textos.
-        </p>
-        <div className="space-y-1.5">
-          {STEP_TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => addStepTemplate(t.id)}
-              className="w-full flex items-start gap-2.5 rounded-lg border p-2 text-left transition-all hover:border-foreground/20 hover:bg-muted/60"
-            >
-              <span className="text-base leading-none mt-0.5">{t.emoji}</span>
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold leading-tight">{t.name}</span>
-                <span className="block text-[11px] text-muted-foreground leading-tight mt-0.5">
-                  {t.description}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="p-3 border-b">
-        <h3 className="font-bold text-sm mb-2">Blocos</h3>
-        {/* Dizer ONDE o bloco vai cair é metade do conserto: antes cada clique
-            criava uma etapa nova e não havia como saber (nem escolher) o
-            destino. Clicar aqui leva à etapa alvo na lista abaixo. */}
-        {targetStep ? (
+  const gruposVisiveis = groupedBlocks
+    .map((g) => ({
+      ...g,
+      items: filtrarBlocos(
+        g.items,
+        buscaDeBloco,
+        (c) => BLOCK_CATEGORY_LABELS[c as keyof typeof BLOCK_CATEGORY_LABELS] ?? c,
+      ) as typeof g.items,
+    }))
+    .filter((g) => g.items.length > 0);
+  const buscando = normalizar(buscaDeBloco).length > 0;
+  const achados = gruposVisiveis.reduce((n, g) => n + g.items.length, 0);
+
+  const PainelModelos = (
+    <div className="p-3 border-b">
+      <h3 className="font-bold text-sm mb-2">Modelos prontos</h3>
+      <p className="text-[11px] text-muted-foreground mb-3">
+        Insere uma etapa completa, já montada — é só personalizar os textos.
+      </p>
+      <div className="space-y-1.5">
+        {STEP_TEMPLATES.map((t) => (
           <button
+            key={t.id}
             type="button"
-            onClick={() => {
-              setActiveStepId(targetStep.id);
-              setExpandedSteps((prev) => new Set(prev).add(targetStep.id));
-            }}
-            className="mb-3 flex w-full items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-left text-[11px] transition-colors hover:bg-muted"
+            onClick={() => addStepTemplate(t.id)}
+            className="w-full flex items-start gap-2.5 rounded-lg border p-2 text-left transition-all hover:border-foreground/20 hover:bg-muted/60"
           >
-            <LayoutGrid className="h-3 w-3 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate">
-              Adicionando na <strong className="font-semibold">Etapa {targetStepIndex + 1}</strong>
-              {targetStep.blockIds.length > 0 &&
-                ` · ${targetStep.blockIds.length} componente${targetStep.blockIds.length > 1 ? "s" : ""}`}
+            <span className="text-base leading-none mt-0.5">{t.emoji}</span>
+            <span className="min-w-0">
+              <span className="block text-xs font-semibold leading-tight">{t.name}</span>
+              <span className="block text-[11px] text-muted-foreground leading-tight mt-0.5">
+                {t.description}
+              </span>
             </span>
           </button>
-        ) : (
-          <p className="text-[11px] text-muted-foreground mb-3">
-            O primeiro bloco cria a Etapa 1. Depois, cada bloco entra na etapa selecionada.
-          </p>
-        )}
-        <p className="text-[11px] text-muted-foreground mb-3">
-          Arraste até o canvas ou clique para adicionar
-        </p>
-        <div data-tutorial="componentes">
-          <Droppable droppableId="palette" isDropDisabled>
-            {(provided) => (
-              <div ref={provided.innerRef} {...provided.droppableProps}>
-                <Accordion type="multiple" defaultValue={CATEGORY_ORDER} className="space-y-1">
-                  {groupedBlocks.map(({ category, items }) => (
-                    <AccordionItem key={category} value={category} className="border-b-0">
-                      <AccordionTrigger className="py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:no-underline">
-                        {BLOCK_CATEGORY_LABELS[category]}
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-2 pt-0">
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {items.map(({ def, defIndex, paletteIndex }) => (
-                            <Draggable
-                              key={def.id ?? def.type}
-                              draggableId={`palette-${def.id ?? def.type}`}
-                              index={paletteIndex}
-                            >
-                              {(dragProvided, dragSnapshot) => (
-                                <div
-                                  ref={dragProvided.innerRef}
-                                  {...dragProvided.draggableProps}
-                                  {...dragProvided.dragHandleProps}
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() => addBlock(defIndex)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") addBlock(defIndex);
-                                  }}
-                                  title={def.description}
-                                  className={`relative text-left p-2 rounded-lg border hover:border-foreground/20 hover:bg-muted/60 transition-all cursor-grab active:cursor-grabbing select-none ${
-                                    dragSnapshot.isDragging
-                                      ? "shadow-xl ring-2 ring-[var(--selecao-anel)] bg-card"
-                                      : ""
-                                  }`}
-                                >
-                                  <GripVertical className="absolute right-1 top-1 h-3 w-3 text-muted-foreground opacity-40" />
-                                  <def.icon className="h-4 w-4 mb-1 text-foreground" />
-                                  <div className="text-xs font-semibold leading-tight pr-3">
-                                    {def.label}
-                                  </div>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </div>
+        ))}
       </div>
-      <div className="p-3" data-tutorial="etapas">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-bold text-sm">Etapas ({steps.length})</h3>
-          <button
-            onClick={() => navigate({ to: "/quizzes/$id/design", params: { id } })}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-          >
-            <Palette className="h-3 w-3" /> Design
-          </button>
-        </div>
-        <p className="mb-2 text-[11px] text-muted-foreground">
-          Cada etapa é uma tela do quiz e cabe quantos componentes você quiser.
+    </div>
+  );
+
+  const PainelBlocos = (
+    <div className="p-3 border-b">
+      <h3 className="font-bold text-sm mb-2">Blocos</h3>
+      {/* Dizer ONDE o bloco vai cair é metade do conserto: antes cada clique
+            criava uma etapa nova e não havia como saber (nem escolher) o
+            destino. Clicar aqui leva à etapa alvo na lista abaixo. */}
+      {targetStep ? (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveStepId(targetStep.id);
+            setExpandedSteps((prev) => new Set(prev).add(targetStep.id));
+          }}
+          className="mb-3 flex w-full items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2 py-1.5 text-left text-[11px] transition-colors hover:bg-muted"
+        >
+          <LayoutGrid className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate">
+            Adicionando na <strong className="font-semibold">Etapa {targetStepIndex + 1}</strong>
+            {targetStep.blockIds.length > 0 &&
+              ` · ${targetStep.blockIds.length} componente${targetStep.blockIds.length > 1 ? "s" : ""}`}
+          </span>
+        </button>
+      ) : (
+        <p className="text-[11px] text-muted-foreground mb-3">
+          O primeiro bloco cria a Etapa 1. Depois, cada bloco entra na etapa selecionada.
         </p>
-        <Button variant="outline" size="sm" className="mb-2.5 w-full" onClick={addStep}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Nova etapa
-        </Button>
-        <Droppable droppableId="steps">
-          {(stepsProvided) => (
-            <div
-              className="space-y-1.5"
-              ref={stepsProvided.innerRef}
-              {...stepsProvided.droppableProps}
-            >
-              {steps.map((step, stepIdx) => {
-                const stepBlocks = step.blockIds
-                  .map((bid) => schema.blocks.find((b) => b.id === bid))
-                  .filter(Boolean) as QuizBlock[];
-                const firstBlock = stepBlocks[0];
-                const firstDef = firstBlock
-                  ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type)
-                  : undefined;
-                // TODA etapa expande — inclusive a de um componente só.
-                //
-                // Antes, etapa com 1 bloco virava "solo": sem seta, sem área de
-                // solta. Como todo bloco novo nascia na própria etapa, nenhuma
-                // etapa jamais chegava a dois componentes: ela nascia solo e
-                // solo não recebia nada. Era o beco sem saída que fazia parecer
-                // que "cada bloco vira uma etapa".
-                const expanded = expandedSteps.has(step.id);
-                const isTarget = step.id === targetStep?.id;
-                return (
-                  <Draggable key={step.id} draggableId={`step-drag-${step.id}`} index={stepIdx}>
-                    {(stepDragProvided, stepDragSnapshot) => (
+      )}
+      {/* Busca na paleta: são 50 blocos em 11 categorias, e achar "resposta
+            em vídeo" dependia de saber que ele mora em Captura. */}
+      <div className="relative mb-2">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={buscaDeBloco}
+          onChange={(e) => setBuscaDeBloco(e.target.value)}
+          placeholder="Buscar bloco"
+          aria-label="Buscar bloco na paleta"
+          className="h-8 pl-8 pr-7 text-xs"
+        />
+        {buscando && (
+          <button
+            type="button"
+            onClick={() => setBuscaDeBloco("")}
+            aria-label="Limpar busca"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-3">
+        {buscando
+          ? `${achados} bloco${achados === 1 ? "" : "s"} para "${buscaDeBloco.trim()}"`
+          : "Arraste até o canvas ou clique para adicionar"}
+      </p>
+      <div data-tutorial="componentes">
+        <Droppable droppableId="palette" isDropDisabled>
+          {(provided) => (
+            <div ref={provided.innerRef} {...provided.droppableProps}>
+              {/* Buscando, as categorias abrem TODAS: um resultado escondido
+                    atrás de uma seção fechada é o mesmo que nenhum resultado. */}
+              <Accordion
+                type="multiple"
+                value={buscando ? gruposVisiveis.map((g) => g.category) : undefined}
+                defaultValue={CATEGORY_ORDER}
+                className="space-y-1"
+              >
+                {gruposVisiveis.map(({ category, items }) => (
+                  <AccordionItem key={category} value={category} className="border-b-0">
+                    <AccordionTrigger className="py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide hover:no-underline">
+                      {BLOCK_CATEGORY_LABELS[category]}
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2 pt-0">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {items.map(({ def, defIndex, paletteIndex }) => (
+                          <Draggable
+                            key={def.id ?? def.type}
+                            draggableId={`palette-${def.id ?? def.type}`}
+                            index={paletteIndex}
+                          >
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => addBlock(defIndex)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") addBlock(defIndex);
+                                }}
+                                title={def.description}
+                                className={`relative text-left p-2 rounded-lg border hover:border-foreground/20 hover:bg-muted/60 transition-all cursor-grab active:cursor-grabbing select-none ${
+                                  dragSnapshot.isDragging
+                                    ? "shadow-xl ring-2 ring-[var(--selecao-anel)] bg-card"
+                                    : ""
+                                }`}
+                              >
+                                <GripVertical className="absolute right-1 top-1 h-3 w-3 text-muted-foreground opacity-40" />
+                                <def.icon className="h-4 w-4 mb-1 text-foreground" />
+                                <div className="text-xs font-semibold leading-tight pr-3">
+                                  {def.label}
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </div>
+    </div>
+  );
+
+  const PainelEtapas = (
+    <div className="p-3" data-tutorial="etapas">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-bold text-sm">Etapas ({steps.length})</h3>
+        <button
+          onClick={() => navigate({ to: "/quizzes/$id/design", params: { id } })}
+          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+        >
+          <Palette className="h-3 w-3" /> Design
+        </button>
+      </div>
+      <p className="mb-2 text-[11px] text-muted-foreground">
+        Cada etapa é uma tela do quiz e cabe quantos componentes você quiser.
+      </p>
+      <Button variant="outline" size="sm" className="mb-2.5 w-full" onClick={addStep}>
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
+        Nova etapa
+      </Button>
+      <Droppable droppableId="steps">
+        {(stepsProvided) => (
+          <div
+            className="space-y-1.5"
+            ref={stepsProvided.innerRef}
+            {...stepsProvided.droppableProps}
+          >
+            {steps.map((step, stepIdx) => {
+              const stepBlocks = step.blockIds
+                .map((bid) => schema.blocks.find((b) => b.id === bid))
+                .filter(Boolean) as QuizBlock[];
+              const firstBlock = stepBlocks[0];
+              const firstDef = firstBlock
+                ? BLOCK_LIBRARY.find((d) => d.type === firstBlock.type)
+                : undefined;
+              // TODA etapa expande — inclusive a de um componente só.
+              //
+              // Antes, etapa com 1 bloco virava "solo": sem seta, sem área de
+              // solta. Como todo bloco novo nascia na própria etapa, nenhuma
+              // etapa jamais chegava a dois componentes: ela nascia solo e
+              // solo não recebia nada. Era o beco sem saída que fazia parecer
+              // que "cada bloco vira uma etapa".
+              const expanded = expandedSteps.has(step.id);
+              const isTarget = step.id === targetStep?.id;
+              return (
+                <Draggable key={step.id} draggableId={`step-drag-${step.id}`} index={stepIdx}>
+                  {(stepDragProvided, stepDragSnapshot) => (
+                    <div
+                      ref={stepDragProvided.innerRef}
+                      {...stepDragProvided.draggableProps}
+                      className={`rounded-xl border transition-all ${
+                        stepDragSnapshot.isDragging
+                          ? "shadow-lg bg-card ring-2 ring-[var(--selecao-anel)]"
+                          : isTarget
+                            ? "border-[var(--selecao-borda)] bg-[var(--selecao-suave)]"
+                            : "border-transparent"
+                      }`}
+                    >
                       <div
-                        ref={stepDragProvided.innerRef}
-                        {...stepDragProvided.draggableProps}
-                        className={`rounded-xl border transition-all ${
-                          stepDragSnapshot.isDragging
-                            ? "shadow-lg bg-card ring-2 ring-[var(--selecao-anel)]"
-                            : isTarget
-                              ? "border-[var(--selecao-borda)] bg-[var(--selecao-suave)]"
-                              : "border-transparent"
+                        role="button"
+                        tabIndex={0}
+                        /* Clicar na etapa a torna o destino dos próximos
+                             componentes — é assim que se escolhe onde montar. */
+                        onClick={() => {
+                          setActiveStepId(step.id);
+                          toggleStepExpanded(step.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return;
+                          setActiveStepId(step.id);
+                          toggleStepExpanded(step.id);
+                        }}
+                        className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
+                          expanded ? "bg-muted" : "hover:bg-muted border border-transparent"
                         }`}
                       >
                         <div
-                          role="button"
-                          tabIndex={0}
-                          /* Clicar na etapa a torna o destino dos próximos
-                             componentes — é assim que se escolhe onde montar. */
-                          onClick={() => {
-                            setActiveStepId(step.id);
-                            toggleStepExpanded(step.id);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key !== "Enter") return;
-                            setActiveStepId(step.id);
-                            toggleStepExpanded(step.id);
-                          }}
-                          className={`group flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
-                            expanded ? "bg-muted" : "hover:bg-muted border border-transparent"
-                          }`}
+                          {...stepDragProvided.dragHandleProps}
+                          className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <div
-                            {...stepDragProvided.dragHandleProps}
-                            className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
-                            {firstDef ? (
-                              <firstDef.icon className="h-3.5 w-3.5 text-foreground" />
-                            ) : (
-                              <LayoutGrid className="h-3.5 w-3.5 text-foreground" />
-                            )}
-                          </div>
-                          {/* Verificado na tela: o nome vinha cortado em ~10
+                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted">
+                          {firstDef ? (
+                            <firstDef.icon className="h-3.5 w-3.5 text-foreground" />
+                          ) : (
+                            <LayoutGrid className="h-3.5 w-3.5 text-foreground" />
+                          )}
+                        </div>
+                        {/* Verificado na tela: o nome vinha cortado em ~10
                               caracteres ("Telefone ...", "Grade 2 ..."), porque
                               nome e descrição do primeiro bloco disputavam UMA
                               linha com quatro ícones num painel de 240px. Agora
                               o nome da etapa fica sozinho na primeira linha e o
                               bloco desce para a segunda, junto da contagem. */}
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-xs font-semibold">
-                              {step.name || `Etapa ${stepIdx + 1}`}
-                            </div>
-                            <div className="truncate text-[11px] text-muted-foreground">
-                              {stepBlocks.length === 0
-                                ? "Vazia — escolha um bloco"
-                                : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ""}`}
-                            </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-xs font-semibold">
+                            {step.name || `Etapa ${stepIdx + 1}`}
                           </div>
-                          <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
-                          {/* Duplicar e excluir só aparecem com o ponteiro em
-                              cima: quatro ícones permanentes espremiam o nome. */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              duplicateStep(step.id);
-                            }}
-                            className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-foreground group-hover:block"
-                            aria-label={`Duplicar ${step.name || `Etapa ${stepIdx + 1}`}`}
-                            title="Duplicar etapa"
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteStep(step.id);
-                            }}
-                            className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-destructive group-hover:block"
-                            aria-label={`Excluir ${step.name || `Etapa ${stepIdx + 1}`} e seus componentes`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                          {expanded ? (
-                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          )}
+                          <div className="truncate text-[11px] text-muted-foreground">
+                            {stepBlocks.length === 0
+                              ? "Vazia — escolha um bloco"
+                              : `${stepBlocks.length} comp.${firstBlock ? ` · ${firstBlock.title || firstBlock.resultTitle || firstDef?.label || firstBlock.type}` : ""}`}
+                          </div>
                         </div>
-                        {expanded && (
-                          <label
-                            className="mb-1 ml-6 flex w-fit cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-3 w-3 accent-current"
-                              checked={step.showBack !== false}
-                              onChange={(e) =>
-                                applySteps((prev) =>
-                                  getSteps(prev, { keepEmpty: true }).map((x) =>
-                                    x.id === step.id ? { ...x, showBack: e.target.checked } : x,
-                                  ),
-                                )
-                              }
-                            />
-                            Mostrar botão voltar nesta etapa
-                          </label>
+                        <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
+                        {/* Duplicar e excluir só aparecem com o ponteiro em
+                              cima: quatro ícones permanentes espremiam o nome. */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            duplicateStep(step.id);
+                          }}
+                          className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-foreground group-hover:block"
+                          aria-label={`Duplicar ${step.name || `Etapa ${stepIdx + 1}`}`}
+                          title="Duplicar etapa"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteStep(step.id);
+                          }}
+                          className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-destructive group-hover:block"
+                          aria-label={`Excluir ${step.name || `Etapa ${stepIdx + 1}`} e seus componentes`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                        {expanded ? (
+                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         )}
-                        {expanded && (
-                          <DesignDaEtapa
-                            step={step}
-                            design={schema.design}
-                            onChange={(patch) =>
+                      </div>
+                      {expanded && (
+                        <label
+                          className="mb-1 ml-6 flex w-fit cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-current"
+                            checked={step.showBack !== false}
+                            onChange={(e) =>
                               applySteps((prev) =>
                                 getSteps(prev, { keepEmpty: true }).map((x) =>
-                                  x.id === step.id
-                                    ? { ...x, design: { ...x.design, ...patch } }
-                                    : x,
+                                  x.id === step.id ? { ...x, showBack: e.target.checked } : x,
                                 ),
                               )
                             }
                           />
-                        )}
-                        {expanded && (
-                          <Droppable droppableId={`step-${step.id}`}>
-                            {(moduleProvided) => (
-                              <div
-                                className="space-y-1 pl-6 pr-1 pb-1.5 pt-0.5"
-                                ref={moduleProvided.innerRef}
-                                {...moduleProvided.droppableProps}
-                              >
-                                {stepBlocks.length === 0 && (
-                                  <p className="rounded-lg border border-dashed px-2 py-4 text-center text-[11px] text-muted-foreground">
-                                    {isTarget
-                                      ? "Clique num bloco da paleta — ele entra aqui."
-                                      : "Etapa vazia. Selecione-a para adicionar componentes."}
-                                  </p>
-                                )}
-                                {stepBlocks.map((b, bi) => {
-                                  const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
-                                  return (
-                                    <Draggable key={b.id} draggableId={b.id} index={bi}>
-                                      {(dragProvided, dragSnapshot) => (
-                                        <div
-                                          ref={dragProvided.innerRef}
-                                          {...dragProvided.draggableProps}
-                                          role="button"
-                                          tabIndex={0}
-                                          onClick={() => {
+                          Mostrar botão voltar nesta etapa
+                        </label>
+                      )}
+                      {expanded && (
+                        <DesignDaEtapa
+                          step={step}
+                          design={schema.design}
+                          onChange={(patch) =>
+                            applySteps((prev) =>
+                              getSteps(prev, { keepEmpty: true }).map((x) =>
+                                x.id === step.id ? { ...x, design: { ...x.design, ...patch } } : x,
+                              ),
+                            )
+                          }
+                        />
+                      )}
+                      {expanded && (
+                        <Droppable droppableId={`step-${step.id}`}>
+                          {(moduleProvided) => (
+                            <div
+                              className="space-y-1 pl-6 pr-1 pb-1.5 pt-0.5"
+                              ref={moduleProvided.innerRef}
+                              {...moduleProvided.droppableProps}
+                            >
+                              {stepBlocks.length === 0 && (
+                                <p className="rounded-lg border border-dashed px-2 py-4 text-center text-[11px] text-muted-foreground">
+                                  {isTarget
+                                    ? "Clique num bloco da paleta — ele entra aqui."
+                                    : "Etapa vazia. Selecione-a para adicionar componentes."}
+                                </p>
+                              )}
+                              {stepBlocks.map((b, bi) => {
+                                const def = BLOCK_LIBRARY.find((d) => d.type === b.type);
+                                return (
+                                  <Draggable key={b.id} draggableId={b.id} index={bi}>
+                                    {(dragProvided, dragSnapshot) => (
+                                      <div
+                                        ref={dragProvided.innerRef}
+                                        {...dragProvided.draggableProps}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => {
+                                          setActiveBlockId(b.id);
+                                          setMobilePanel("inspector");
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
                                             setActiveBlockId(b.id);
                                             setMobilePanel("inspector");
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                              setActiveBlockId(b.id);
-                                              setMobilePanel("inspector");
-                                            }
-                                          }}
-                                          className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
-                                            dragSnapshot.isDragging
-                                              ? "shadow-lg bg-card ring-2 ring-[var(--selecao-anel)]"
-                                              : activeBlockId === b.id
-                                                ? "border border-[var(--selecao-borda)] bg-[var(--selecao-suave)]"
-                                                : "hover:bg-background border border-transparent"
-                                          }`}
+                                          }
+                                        }}
+                                        className={`group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-all ${
+                                          dragSnapshot.isDragging
+                                            ? "shadow-lg bg-card ring-2 ring-[var(--selecao-anel)]"
+                                            : activeBlockId === b.id
+                                              ? "border border-[var(--selecao-borda)] bg-[var(--selecao-suave)]"
+                                              : "hover:bg-background border border-transparent"
+                                        }`}
+                                      >
+                                        <div
+                                          {...dragProvided.dragHandleProps}
+                                          className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
+                                          onClick={(e) => e.stopPropagation()}
                                         >
-                                          <div
-                                            {...dragProvided.dragHandleProps}
-                                            className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            <GripVertical className="h-3 w-3 text-muted-foreground" />
-                                          </div>
-                                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted">
-                                            {def ? (
-                                              <def.icon className="h-3 w-3 text-foreground" />
-                                            ) : (
-                                              <LayoutGrid className="h-3 w-3 text-foreground" />
-                                            )}
-                                          </div>
-                                          <div className="min-w-0 flex-1">
-                                            <div className="text-xs font-medium truncate">
-                                              {b.title || b.resultTitle || def?.label || b.type}
-                                            </div>
-                                            <div className="text-[11px] text-muted-foreground truncate">
-                                              {def?.label ?? b.type}
-                                            </div>
-                                          </div>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              deleteBlock(b.id);
-                                            }}
-                                            className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
-                                            aria-label="Excluir componente"
-                                          >
-                                            <Trash2 className="h-3 w-3" />
-                                          </button>
+                                          <GripVertical className="h-3 w-3 text-muted-foreground" />
                                         </div>
-                                      )}
-                                    </Draggable>
-                                  );
-                                })}
-                                {moduleProvided.placeholder}
-                              </div>
-                            )}
-                          </Droppable>
-                        )}
-                      </div>
-                    )}
-                  </Draggable>
-                );
-              })}
-              {stepsProvided.placeholder}
-              {steps.length === 0 && (
-                <div className="text-center py-8 px-3 text-xs text-muted-foreground border border-dashed rounded-xl">
-                  <LayoutGrid className="h-5 w-5 mx-auto mb-1.5 opacity-40" />
-                  Nenhuma etapa ainda.
-                  <br />
-                  Adicione um bloco acima para começar.
-                </div>
-              )}
-            </div>
-          )}
-        </Droppable>
+                                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted">
+                                          {def ? (
+                                            <def.icon className="h-3 w-3 text-foreground" />
+                                          ) : (
+                                            <LayoutGrid className="h-3 w-3 text-foreground" />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="text-xs font-medium truncate">
+                                            {b.title || b.resultTitle || def?.label || b.type}
+                                          </div>
+                                          <div className="text-[11px] text-muted-foreground truncate">
+                                            {def?.label ?? b.type}
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteBlock(b.id);
+                                          }}
+                                          className="shrink-0 opacity-40 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                                          aria-label="Excluir componente"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                );
+                              })}
+                              {moduleProvided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      )}
+                    </div>
+                  )}
+                </Draggable>
+              );
+            })}
+            {stepsProvided.placeholder}
+            {steps.length === 0 && (
+              <div className="text-center py-8 px-3 text-xs text-muted-foreground border border-dashed rounded-xl">
+                <LayoutGrid className="h-5 w-5 mx-auto mb-1.5 opacity-40" />
+                Nenhuma etapa ainda.
+                <br />
+                Adicione um bloco acima para começar.
+              </div>
+            )}
+          </div>
+        )}
+      </Droppable>
+    </div>
+  );
+
+  /* Coluna da esquerda em abas, e não um rolo só.
+   *
+   * Medido no navegador em 07/10, neste mesmo quiz de 24 etapas: a coluna
+   * tinha 272px de largura, 796px visíveis e 4400px de conteúdo — 5,5 telas
+   * de rolagem —, e o título "Etapas (24)" começava a 2787px do topo. Para
+   * chegar na etapa 17 era preciso passar por cinquenta blocos de paleta.
+   * Três assuntos diferentes empilhados num scroll só não é organização, é
+   * ordem de chegada. */
+  const BlocksPalette = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 gap-0.5 border-b bg-muted/30 p-1">
+        {(
+          [
+            ["blocos", "Blocos", null],
+            ["modelos", "Modelos", null],
+            ["etapas", "Etapas", steps.length],
+          ] as const
+        ).map(([chave, rotulo, contagem]) => (
+          <button
+            key={chave}
+            type="button"
+            onClick={() => setAbaEsquerda(chave)}
+            aria-current={abaEsquerda === chave}
+            className={`flex flex-1 items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${
+              abaEsquerda === chave
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {rotulo}
+            {contagem !== null && (
+              <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+                {contagem}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
-    </>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {abaEsquerda === "blocos" && PainelBlocos}
+        {abaEsquerda === "modelos" && PainelModelos}
+        {abaEsquerda === "etapas" && PainelEtapas}
+      </div>
+    </div>
   );
 
   return createPortal(
@@ -1561,12 +1663,16 @@ function QuizBuilderPage() {
         <EditLockBanner trava={trava} />
 
         {tutorial.aberto && (
-          <TutorialGuiado passos={PASSOS_DO_CONSTRUTOR} onFechar={tutorial.fechar} />
+          <TutorialGuiado
+            passos={PASSOS_DO_CONSTRUTOR}
+            onFechar={tutorial.fechar}
+            onPainel={(painel) => setAbaEsquerda(painel as "blocos" | "modelos" | "etapas")}
+          />
         )}
 
         {/* 3-column layout on desktop, single column + drawers on mobile/tablet */}
         <div className="flex-1 flex overflow-hidden">
-          <aside className="hidden lg:block w-72 border-r bg-card overflow-y-auto">
+          <aside className="hidden w-72 shrink-0 overflow-hidden border-r bg-card lg:block">
             {isDesktop && BlocksPalette}
           </aside>
 
@@ -1584,6 +1690,10 @@ function QuizBuilderPage() {
                lista traz o canvas junto, e navegar no canvas muda o destino
                dos próximos componentes. */
               currentStepId={targetStep?.id ?? null}
+              /* A trilha mostra a conversão medida de cada etapa: é o mesmo
+                 número do selo da lista, agora visível enquanto se monta. */
+              conversaoPorEtapa={conversaoPorEtapa}
+              onAdicionarEtapa={addStep}
               onChangeStep={(stepId) => {
                 setActiveStepId(stepId);
                 setActiveBlockId(null);
