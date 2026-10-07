@@ -1,4 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import { prefixoDoQuiz, outroQuizUsaAMidia } from "../lib/midiaDoQuiz";
+
+/** Mesmo bucket do `mediaService`. */
+const BUCKET_DE_MIDIA = "quiz-media";
 import { MODELOS_DE_QUIZ } from "../quiz-templates";
 import type {
   QuizFunnel,
@@ -213,9 +217,77 @@ export const quizService = {
     return data as unknown as QuizFunnel;
   },
 
-  async remove(id: string): Promise<void> {
+  /**
+   * Lista tudo que existe sob um prefixo do bucket, descendo nas subpastas.
+   *
+   * `list` não é recursivo, e as respostas em vídeo moram em `<quiz>/respostas/`
+   * — sem descer, elas ficariam para trás e o "apagar junto" seria meia
+   * verdade.
+   */
+  async _listarMidia(prefixo: string, profundidade = 0): Promise<string[]> {
+    if (profundidade > 3) return [];
+    const { data, error } = await supabase.storage
+      .from(BUCKET_DE_MIDIA)
+      .list(prefixo.replace(/\/$/, ""), { limit: 1000 });
+    if (error || !data) return [];
+
+    const caminhos: string[] = [];
+    for (const item of data) {
+      const filho = `${prefixo}${item.name}`;
+      // Pasta vem sem `id`; arquivo vem com.
+      if (item.id) caminhos.push(filho);
+      else caminhos.push(...(await this._listarMidia(`${filho}/`, profundidade + 1)));
+    }
+    return caminhos;
+  },
+
+  /**
+   * Apaga o quiz e, junto, a mídia que só ele usa.
+   *
+   * O "só ele" não é detalhe: duplicar um quiz copia o schema com as MESMAS
+   * urls, então a cópia aponta para os arquivos do original. Apagar às cegas
+   * deixaria a cópia com imagem e vídeo quebrados, sem nada dizendo por quê.
+   *
+   * A mídia some ANTES do quiz. Se a limpeza falhar, o quiz continua lá e o
+   * erro aparece — melhor que perder o quiz e deixar os arquivos órfãos, que é
+   * o estado em que ninguém mais consegue encontrá-los.
+   */
+  async remove(
+    id: string,
+    companyId?: string,
+  ): Promise<{ arquivosApagados: number; midiaPreservada: boolean }> {
+    let arquivosApagados = 0;
+    let midiaPreservada = false;
+
+    if (companyId) {
+      const prefixo = prefixoDoQuiz(companyId, id);
+      const { data: outros } = await supabase
+        .from("quiz_funnels")
+        .select("id")
+        .eq("company_id", companyId)
+        .neq("id", id);
+
+      const schemas = await Promise.all(
+        ((outros ?? []) as { id: string }[]).map((q) =>
+          this.getLatestSchema(q.id).catch(() => null),
+        ),
+      );
+
+      if (outroQuizUsaAMidia(schemas, prefixo)) {
+        midiaPreservada = true;
+      } else {
+        const caminhos = await this._listarMidia(prefixo);
+        if (caminhos.length) {
+          const { error } = await supabase.storage.from(BUCKET_DE_MIDIA).remove(caminhos);
+          if (error) throw error;
+          arquivosApagados = caminhos.length;
+        }
+      }
+    }
+
     const { error } = await supabase.from("quiz_funnels").delete().eq("id", id);
     if (error) throw error;
+    return { arquivosApagados, midiaPreservada };
   },
 
   async updateSettings(params: {

@@ -64,8 +64,17 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir este quiz? Esta ação não pode ser desfeita.")) return;
     try {
-      await quizService.remove(id);
-      toast.success("Quiz excluído");
+      const r = await quizService.remove(id, company?.id);
+      /* Dizer o que aconteceu com a mídia, em vez de deixar o autor supondo.
+         "Preservada" é o caso em que outro quiz — normalmente uma cópia —
+         ainda aponta para os mesmos arquivos. */
+      toast.success(
+        r.midiaPreservada
+          ? "Quiz excluído — a mídia foi mantida porque outro quiz usa os mesmos arquivos"
+          : r.arquivosApagados > 0
+            ? `Quiz excluído, com ${r.arquivosApagados} arquivo(s) de mídia`
+            : "Quiz excluído",
+      );
       void refresh();
     } catch (e: unknown) {
       const msg = getErrorMessage(e);
