@@ -786,7 +786,13 @@ function PlayerRunner({
             <button
               type="button"
               onClick={voltarEtapa}
-              className="mb-3 -ml-1 flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              /* Alvo de 44px de altura, e não os 20px de antes.
+                 Medido no player publicado, num iPhone de 375x812: o botão
+                 saía com 62x20px — abaixo dos 24x24 mínimos da WCAG 2.5.8 e
+                 muito abaixo dos 44x44 que o dedo pede. O recuo negativo
+                 mantém o texto alinhado com o conteúdo da etapa: cresce a área
+                 de toque, não o desenho. */
+              className="-ml-2 mb-1 flex min-h-[44px] w-fit items-center gap-1 rounded-md px-2 py-2 text-xs font-medium opacity-60 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{ color: design.text, outlineColor: design.primary }}
               aria-label="Voltar para a etapa anterior"
             >
