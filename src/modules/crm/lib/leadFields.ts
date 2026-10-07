@@ -42,6 +42,12 @@ const INTERNAL_KEYS = new Set([
      cartão com o mapa de respostas em JSON, sob um rótulo "Responses" que
      ninguém traduziu, ao lado dos cartões das respostas de verdade. */
   "responses",
+  /* Encanamento do quiz, visto na ficha sob o título "O que ele quer": um
+     UUID de sessão e um "Sim" de concluído não são o que o lead quer.
+     `quiz_tier` e `quiz_score_pct` FICAM — classificação e pontuação são
+     exatamente a qualificação que esse cartão existe para mostrar. */
+  "session_id",
+  "quiz_completed",
   "visitor_id",
   "company_name",
   "source",

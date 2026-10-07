@@ -1601,11 +1601,15 @@ export function LeadDetailDialog({
                         >
                           <ValorOuVazio valor={lead.email} vazio="Sem e-mail" />
                         </PropFicha>
+                        {/* `getLeadCity` devolve `{label, inferred}`; o
+                            `String(city)` de antes imprimia "[object Object]" na
+                            ficha. E o rótulo mentia quando a cidade era a
+                            cadastrada de verdade: só o palpite vem do DDD. */}
                         <PropFicha
                           icone={<MapPin className="h-3.5 w-3.5" />}
-                          rotulo="Cidade (pelo DDD)"
+                          rotulo={city?.inferred ? "Cidade (pelo DDD)" : "Cidade"}
                         >
-                          <ValorOuVazio valor={city ? String(city) : null} vazio="Sem cidade" />
+                          <ValorOuVazio valor={city?.label ?? null} vazio="Sem cidade" />
                         </PropFicha>
                       </div>
                     </CartaoFicha>
@@ -1736,8 +1740,8 @@ export function LeadDetailDialog({
                         />
                         <Field
                           icon={<MapPin className="h-4 w-4" />}
-                          label="Cidade (pelo DDD)"
-                          value={city ? String(city) : null}
+                          label={city?.inferred ? "Cidade (pelo DDD)" : "Cidade"}
+                          value={city?.label ?? null}
                           placeholder="Sem cidade"
                           onSave={(cityName) => editMutation.mutate({ city: cityName })}
                         />

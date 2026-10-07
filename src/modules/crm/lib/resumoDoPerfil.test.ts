@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { humanizeValue, answerKind } from "./leadFields";
+import { humanizeValue, answerKind, getLeadAnswers } from "./leadFields";
 
 /**
  * O resumo do perfil não pode imprimir estrutura de máquina.
@@ -46,5 +46,32 @@ describe("answerKind com valor serializado", () => {
 
   it("valor de texto comum continua servindo de desempate", () => {
     expect(answerKind("resposta", "Minha renda é de 5 mil")).toBe("money");
+  });
+});
+
+/**
+ * A ficha do lead não pode mostrar encanamento como se fosse resposta.
+ *
+ * Tudo isto estava visível na ficha de um lead do cliente em 07/10, lado a
+ * lado com as respostas de verdade.
+ */
+describe("chaves internas fora da ficha", () => {
+  const ficha = (meta: Record<string, unknown>) =>
+    getLeadAnswers({ metadata: meta } as never).map((a) => a.key);
+
+  it("o payload cru da submissão não vira cartão", () => {
+    expect(ficha({ responses: { "b-dor": "o2" }, cor_favorita: "azul" })).toEqual(["cor_favorita"]);
+  });
+
+  it("id de sessão e flag de concluído ficam de fora", () => {
+    expect(ficha({ session_id: "417ae65e", quiz_completed: true, cidade: "Vitória" })).toEqual([
+      "cidade",
+    ]);
+  });
+
+  it("classificação e pontuação FICAM — são a qualificação", () => {
+    const k = ficha({ quiz_tier: "Lead A", quiz_score_pct: 72 });
+    expect(k).toContain("quiz_tier");
+    expect(k).toContain("quiz_score_pct");
   });
 });
