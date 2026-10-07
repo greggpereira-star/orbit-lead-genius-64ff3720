@@ -222,8 +222,11 @@ export function TrilhaDeEtapas({ etapas, icones, etapaAtualId, onEscolher, onAdi
                     )}
                   </span>
                   <span
+                    /* /50 e não /35: medido no cartão renderizado, 35% de
+                       alfa dava 3,25:1 sobre o fundo do cartão — abaixo do
+                       piso de 4,5:1 para 10px. */
                     className={`shrink-0 text-[10px] font-bold tabular-nums ${
-                      selecionada ? "text-neutral-400" : "text-white/35"
+                      selecionada ? "text-neutral-500" : "text-white/50"
                     }`}
                   >
                     {String(e.numero).padStart(2, "0")}
@@ -249,8 +252,10 @@ export function TrilhaDeEtapas({ etapas, icones, etapaAtualId, onEscolher, onAdi
                       "1 comp." aparecia em 14 das 24 etapas deste funil: a
                       linha existia e não distinguia 58% dos cartões. */}
                   <span
+                    /* Esta linha é o IDENTIFICADOR da etapa, não um rodapé:
+                       a 40% de alfa saía com 3,82:1, abaixo do piso. */
                     className={`block truncate text-[10px] leading-[1.4] ${
-                      selecionada ? "text-neutral-500" : "text-white/40"
+                      selecionada ? "text-neutral-600" : "text-white/55"
                     }`}
                   >
                     {e.rotuloDaNatureza}
