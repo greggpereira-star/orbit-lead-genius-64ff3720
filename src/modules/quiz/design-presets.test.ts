@@ -34,3 +34,21 @@ describe("contraste dos presets", () => {
     });
   }
 });
+
+describe("descrição dos presets", () => {
+  /* O cartão do preset tem `line-clamp: 1`. Medido na largura real em 07/10,
+     cabem ~23 caracteres; acima disso a descrição é cortada no meio e deixa de
+     distinguir o preset, que é a única coisa que ela faz. */
+  const LIMITE = 23;
+
+  /* "Dark premium" e "Clean" ficam: são termos correntes no vocabulário de
+     design no Brasil. "warm" saiu porque não é — era adjetivo solto em inglês
+     no meio de uma frase em português. Não há teste para isso: a régua é
+     julgamento de idioma, e um teste que listasse exceções para as palavras
+     que eu decidi manter não estaria verificando nada. */
+  for (const p of DESIGN_PRESETS) {
+    it(`${p.name}: cabe numa linha`, () => {
+      expect(p.description.length).toBeLessThanOrEqual(LIMITE);
+    });
+  }
+});
