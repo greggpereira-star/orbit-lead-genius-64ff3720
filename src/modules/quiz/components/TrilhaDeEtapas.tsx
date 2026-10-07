@@ -19,6 +19,13 @@ import { ROTULO_DA_NATUREZA, rolagemParaCentralizar } from "../lib/trilhaDeEtapa
  * leitura do funil inteiro.
  */
 
+/* 168px de cartão não é número redondo: é o que os nomes PEDEM.
+   Medido nos 24 nomes do funil do cliente, com a fonte e o peso reais do
+   cartão: mediana 105px, p90 123px, máximo 128px ("Histórico com estética").
+   O cartão de 136px deixava 96px para o nome e cortava até a mediana — com
+   isso "Detalhe da reg…" e "Desejo emocio…" ficavam indistinguíveis, que é
+   justamente o que a trilha existe para resolver. Caber menos cartão na tela
+   é melhor do que caber mais cartão ilegível. */
 const TINTA_DA_NATUREZA: Record<NaturezaDaEtapa, string> = {
   vazia: "#F59E0B",
   captura: "#38BDF8",
@@ -180,7 +187,7 @@ export function TrilhaDeEtapas({ etapas, etapaAtualId, onEscolher, onAdicionar }
                 ref={selecionada ? cartaoAtualRef : undefined}
                 onClick={() => onEscolher(e.id)}
                 title={e.titulo}
-                className={`group relative flex min-h-[38px] w-[136px] shrink-0 scroll-mx-2 flex-col justify-center gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
+                className={`group relative flex min-h-[38px] w-[168px] shrink-0 scroll-mx-2 flex-col justify-center gap-0.5 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
                   selecionada
                     ? "bg-white text-neutral-900"
                     : "bg-white/[0.07] text-white/70 hover:bg-white/[0.14] hover:text-white"
