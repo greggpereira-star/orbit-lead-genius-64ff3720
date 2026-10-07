@@ -171,8 +171,44 @@ function QuizResponsesPage() {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {filtradas.length === 0 ? (
-          <Card className="p-8 text-center text-sm text-muted-foreground">
-            {linhas.length === 0 ? "Nenhuma resposta ainda." : "Nada encontrado com esse filtro."}
+          /* Estado vazio que diz o PRÓXIMO PASSO, e o passo depende do estado
+             real do quiz: sem publicar, não há como chegar resposta nenhuma —
+             dizer "nenhuma resposta ainda" ali é descrever o sintoma e calar a
+             causa. Publicado, o que falta é tráfego, e o link é o que a pessoa
+             veio buscar. */
+          <Card className="p-10 text-center">
+            {linhas.length === 0 ? (
+              quiz?.status === "published" ? (
+                <>
+                  <p className="text-sm font-semibold">Ainda não chegou nenhuma resposta.</p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                    O quiz está no ar. Divulgue o link e as respostas aparecem aqui conforme as
+                    pessoas forem concluindo.
+                  </p>
+                  {quiz?.slug && (
+                    <code className="mt-3 inline-block rounded-md bg-muted px-2.5 py-1.5 text-xs">
+                      {`${typeof window === "undefined" ? "" : window.location.origin}/q/${quiz.slug}`}
+                    </code>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold">
+                    Este quiz ainda não está no ar — por isso não há respostas.
+                  </p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                    Publique no construtor para que ele comece a receber visitantes.
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="mt-3">
+                    <Link to="/quizzes/$id/builder" params={{ id }}>
+                      Voltar ao Builder
+                    </Link>
+                  </Button>
+                </>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground">Nada encontrado com esse filtro.</p>
+            )}
           </Card>
         ) : (
           <div className="overflow-x-auto rounded-xl border">

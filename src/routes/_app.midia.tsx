@@ -165,10 +165,25 @@ function BibliotecaDeMidia() {
       </div>
 
       {visiveis.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-          {arquivos.length === 0
-            ? "Nenhum arquivo enviado ainda."
-            : "Nada encontrado com esse filtro."}
+        /* "Nenhum arquivo enviado ainda" descreve o vazio e não diz como sair
+           dele — nem de onde vêm os arquivos, que é a dúvida real de quem chega
+           aqui pela primeira vez e não encontra botão de enviar. */
+        <div className="rounded-xl border border-dashed p-12 text-center">
+          {arquivos.length === 0 ? (
+            <>
+              <p className="text-sm font-semibold">Nenhum arquivo ainda.</p>
+              <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                Esta tela reúne o que os seus quizzes enviaram: imagens e vídeos dos blocos, e as
+                gravações que os visitantes fizeram. Não se envia nada por aqui — tudo entra pelo
+                construtor.
+              </p>
+              <Button asChild size="sm" variant="outline" className="mt-3">
+                <Link to="/quizzes">Ir para os quizzes</Link>
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nada encontrado com esse filtro.</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
