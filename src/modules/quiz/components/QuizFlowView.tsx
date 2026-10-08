@@ -391,7 +391,11 @@ function computeLayout(
 }
 
 function buildGraph(schema: QuizSchema, actions: QuizFlowActions) {
-  const steps = getSteps(schema);
+  /* `keepEmpty`: o fluxograma é tela de MONTAGEM. Uma etapa criada e ainda sem
+     bloco precisa aparecer aqui — é justamente nela que se vai apontar um
+     salto ou pôr o conteúdo depois. Sem a guarda ela sumia do desenho, e as
+     ações desta tela reescrevem `schema.steps` a partir desta lista. */
+  const steps = getSteps(schema, { keepEmpty: true });
   const blocksById = new Map(schema.blocks.map((b) => [b.id, b]));
 
   const rawEdges: { source: string; target: string; label?: string; branch: boolean }[] = [];
@@ -533,7 +537,7 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
     window.requestAnimationFrame(() => fitView({ padding: 0.2, duration: 400 }));
   }, [initialNodes, setNodes, fitView]);
 
-  const steps = useMemo(() => getSteps(schema), [schema]);
+  const steps = useMemo(() => getSteps(schema, { keepEmpty: true }), [schema]);
   const blocksById = useMemo(() => new Map(schema.blocks.map((b) => [b.id, b])), [schema]);
   const selectedStep = selectedStepId ? steps.find((s) => s.id === selectedStepId) : null;
   const selectedBlocks = selectedStep

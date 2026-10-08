@@ -41,9 +41,14 @@ describe("telas de montagem preservam etapa vazia", () => {
      meu que continuou descrevendo a chamada sem guarda depois de ela ter sido
      corrigida — prosa desatualizada sobre este ponto também falha aqui, e é
      bom que falhe. */
+  /* As ROTAS não bastam: a primeira versão deste teste cobria só elas, e o
+     `buildGraph` dentro do componente do fluxograma continuou podando — o
+     construtor manteve as três etapas e o desenho mostrou uma. Quem monta o
+     desenho também é tela de montagem. */
   const arquivos = {
     "fluxograma (rota)": "src/routes/_app.quizzes_.$id.flow.tsx",
     "construtor (rota)": "src/routes/_app.quizzes_.$id.builder.tsx",
+    "fluxograma (componente)": "src/modules/quiz/components/QuizFlowView.tsx",
   };
 
   for (const [nome, caminho] of Object.entries(arquivos)) {
