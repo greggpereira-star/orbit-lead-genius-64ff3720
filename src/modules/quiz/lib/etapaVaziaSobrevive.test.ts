@@ -49,6 +49,9 @@ describe("telas de montagem preservam etapa vazia", () => {
     "fluxograma (rota)": "src/routes/_app.quizzes_.$id.flow.tsx",
     "construtor (rota)": "src/routes/_app.quizzes_.$id.builder.tsx",
     "fluxograma (componente)": "src/modules/quiz/components/QuizFlowView.tsx",
+    /* O Design salva o schema inteiro: mexer numa cor gravava a lista podada.
+       Terceiro caso da mesma família, achado varrendo todas as chamadas. */
+    "design (rota)": "src/routes/_app.quizzes_.$id.design.tsx",
   };
 
   for (const [nome, caminho] of Object.entries(arquivos)) {
@@ -59,4 +62,42 @@ describe("telas de montagem preservam etapa vazia", () => {
       expect(semGuarda).toEqual([]);
     });
   }
+});
+
+/**
+ * O outro lado da regra, dito em voz alta.
+ *
+ * Depois de achar três telas de montagem podando, a tentação é espalhar
+ * `keepEmpty` por toda chamada de `getSteps`. Seria pior: o player mostraria
+ * tela em branco a quem responde, e a análise contaria como "chance de
+ * abandono" uma etapa que ninguém chega a ver.
+ *
+ * Montagem preserva. Runtime e análise podam. As duas metades precisam de
+ * trava, senão a próxima correção vai na direção errada.
+ */
+describe("telas de runtime e análise PODAM a etapa vazia", () => {
+  const arquivos = {
+    player: "src/modules/quiz/components/QuizPlayer.tsx",
+    "análise (rota)": "src/routes/_app.quizzes_.$id.insights.tsx",
+    "performance (rota)": "src/routes/_app.quizzes_.$id.performance.tsx",
+  };
+
+  for (const [nome, caminho] of Object.entries(arquivos)) {
+    it(`${nome}: nenhuma chamada de getSteps com keepEmpty`, () => {
+      const fonte = readFileSync(caminho, "utf8");
+      const chamadas = fonte.match(/getSteps\([^)]*\)/g) ?? [];
+      expect(chamadas.filter((c) => c.includes("keepEmpty"))).toEqual([]);
+    });
+  }
+
+  it("uma etapa vazia nunca chega a quem responde", () => {
+    const schema = {
+      blocks: [{ id: "b1", type: "heading" }],
+      steps: [
+        { id: "s1", blockIds: [] },
+        { id: "s2", blockIds: ["b1"] },
+      ],
+    } as unknown as QuizSchema;
+    expect(getSteps(schema).map((s) => s.id)).toEqual(["s2"]);
+  });
 });

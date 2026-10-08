@@ -1,39 +1,49 @@
-import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { DragDropContext } from '@hello-pangea/dnd';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { ArrowLeft, Loader2, AlertCircle, Check, Pipette, RotateCcw, Plus, X } from 'lucide-react';
-import { useAuth } from '@/core/auth/hooks/useAuth';
-import { quizService } from '@/modules/quiz/services/quizService';
-import { getSteps } from '@/modules/quiz/lib/steps';
-import { MediaUploader } from '@/modules/quiz/components/MediaUploader';
-import { QuizPreview } from '@/modules/quiz/components/QuizPreview';
-import { DEFAULT_DESIGN, DESIGN_PRESETS } from '@/modules/quiz/design-presets';
-import type { QuizDesign, QuizFunnel, QuizSchema } from '@/modules/quiz/types';
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { DragDropContext } from "@hello-pangea/dnd";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { ArrowLeft, Loader2, AlertCircle, Check, Pipette, RotateCcw, Plus, X } from "lucide-react";
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import { quizService } from "@/modules/quiz/services/quizService";
+import { getSteps } from "@/modules/quiz/lib/steps";
+import { MediaUploader } from "@/modules/quiz/components/MediaUploader";
+import { QuizPreview } from "@/modules/quiz/components/QuizPreview";
+import { DEFAULT_DESIGN, DESIGN_PRESETS } from "@/modules/quiz/design-presets";
+import type { QuizDesign, QuizFunnel, QuizSchema } from "@/modules/quiz/types";
 
-export const Route = createFileRoute('/_app/quizzes_/$id/design')({
+export const Route = createFileRoute("/_app/quizzes_/$id/design")({
   component: QuizDesignPage,
 });
 
 const FONTES = [
-  'Inter', 'Space Grotesk', 'Fredoka', 'Playfair Display',
-  'Poppins', 'Montserrat', 'Nunito', 'Plus Jakarta Sans',
+  "Inter",
+  "Space Grotesk",
+  "Fredoka",
+  "Playfair Display",
+  "Poppins",
+  "Montserrat",
+  "Nunito",
+  "Plus Jakarta Sans",
 ];
 
 /** Conta-gotas do navegador. Só Chromium expõe; onde não existe, o botão some. */
 type EyeDropperCtor = new () => { open: () => Promise<{ sRGBHex: string }> };
-const temContaGotas = () => typeof window !== 'undefined' && 'EyeDropper' in window;
+const temContaGotas = () => typeof window !== "undefined" && "EyeDropper" in window;
 
 function QuizDesignPage() {
-  const { id } = useParams({ from: '/_app/quizzes_/$id/design' });
+  const { id } = useParams({ from: "/_app/quizzes_/$id/design" });
   const { company, user } = useAuth();
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
-  const [schema, setSchema] = useState<QuizSchema>({ blocks: [], design: DEFAULT_DESIGN, results: [] });
+  const [schema, setSchema] = useState<QuizSchema>({
+    blocks: [],
+    design: DEFAULT_DESIGN,
+    results: [],
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -46,15 +56,21 @@ function QuizDesignPage() {
       .then(([q, s]) => {
         if (!mounted) return;
         setQuiz(q);
-        setSchema({ ...s, steps: getSteps(s) });
+        /* `keepEmpty`: esta tela SALVA o schema inteiro. Sem a guarda, abrir o
+           Design e mexer numa cor gravava a lista de etapas já podada, e as
+           etapas criadas e ainda não preenchidas sumiam — sem relação nenhuma
+           com o que a pessoa veio fazer aqui. */
+        setSchema({ ...s, steps: getSteps(s, { keepEmpty: true }) });
         setLoading(false);
       })
       .catch(() => {
         if (!mounted) return;
         setLoading(false);
-        toast.error('Não foi possível carregar este quiz agora.');
+        toast.error("Não foi possível carregar este quiz agora.");
       });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   const design: QuizDesign = useMemo(
@@ -76,9 +92,9 @@ function QuizDesignPage() {
       setSaveError(false);
       setLastSavedAt(new Date());
     } catch (e) {
-      console.error('Erro ao salvar o design', e);
+      console.error("Erro ao salvar o design", e);
       setSaveError(true);
-      toast.error('Não foi possível salvar o design. Suas alterações ainda estão só nesta aba.');
+      toast.error("Não foi possível salvar o design. Suas alterações ainda estão só nesta aba.");
     } finally {
       setSaving(false);
     }
@@ -86,7 +102,9 @@ function QuizDesignPage() {
 
   useEffect(() => {
     if (!dirty || loading) return;
-    const timer = setTimeout(() => { void handleSave(); }, 1200);
+    const timer = setTimeout(() => {
+      void handleSave();
+    }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema, dirty, loading]);
@@ -95,9 +113,12 @@ function QuizDesignPage() {
      1,2s de espera e um fechamento dentro dessa janela leva o trabalho junto. */
   useEffect(() => {
     if (!dirty) return;
-    const avisar = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', avisar);
-    return () => window.removeEventListener('beforeunload', avisar);
+    const avisar = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
   }, [dirty]);
 
   const guardarCor = (cor: string) => {
@@ -111,13 +132,28 @@ function QuizDesignPage() {
     if (!preset) return;
     /* As cores guardadas e a logo são do usuário, não do preset: trocar de
        preset é trocar a paleta, não apagar a marca dele. */
-    patch({ ...preset.design, savedColors: design.savedColors, logoUrl: design.logoUrl, logoWidth: design.logoWidth });
+    patch({
+      ...preset.design,
+      savedColors: design.savedColors,
+      logoUrl: design.logoUrl,
+      logoWidth: design.logoWidth,
+    });
     toast.success(`Tema "${preset.name}" aplicado`);
   };
 
   const restaurarPadrao = () => {
-    if (!window.confirm('Retornar ao design padrão? As cores e fontes atuais deste quiz serão substituídas.')) return;
-    patch({ ...DEFAULT_DESIGN, savedColors: design.savedColors, logoUrl: design.logoUrl, logoWidth: design.logoWidth });
+    if (
+      !window.confirm(
+        "Retornar ao design padrão? As cores e fontes atuais deste quiz serão substituídas.",
+      )
+    )
+      return;
+    patch({
+      ...DEFAULT_DESIGN,
+      savedColors: design.savedColors,
+      logoUrl: design.logoUrl,
+      logoWidth: design.logoWidth,
+    });
   };
 
   if (loading) {
@@ -133,11 +169,12 @@ function QuizDesignPage() {
       <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
         <Button asChild variant="ghost" size="sm">
           <Link to="/quizzes/$id/builder" params={{ id }}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Voltar ao Builder
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao Builder
           </Link>
         </Button>
         <div className="border-l pl-3">
-          <h1 className="text-sm font-bold leading-none">{quiz?.name ?? 'Quiz'}</h1>
+          <h1 className="text-sm font-bold leading-none">{quiz?.name ?? "Quiz"}</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Design</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -146,8 +183,11 @@ function QuizDesignPage() {
             <span className="hidden sm:inline">Retornar ao padrão</span>
           </Button>
           <EstadoDoSalvamento
-            saving={saving} dirty={dirty} saveError={saveError}
-            lastSavedAt={lastSavedAt} onRetry={() => void handleSave()}
+            saving={saving}
+            dirty={dirty}
+            saveError={saveError}
+            lastSavedAt={lastSavedAt}
+            onRetry={() => void handleSave()}
           />
         </div>
       </header>
@@ -163,13 +203,19 @@ function QuizDesignPage() {
                     type="button"
                     onClick={() => aplicarPreset(p.id)}
                     className={`relative rounded-xl border p-2.5 text-left transition-colors hover:border-primary ${
-                      design.presetId === p.id ? 'border-primary ring-1 ring-primary' : ''
+                      design.presetId === p.id ? "border-primary ring-1 ring-primary" : ""
                     }`}
                   >
                     <div className="mb-2 flex gap-1">
-                      {[p.design.primary, p.design.background, p.design.surface, p.design.text].map((c, i) => (
-                        <span key={i} className="h-5 w-5 rounded-md border" style={{ background: c }} />
-                      ))}
+                      {[p.design.primary, p.design.background, p.design.surface, p.design.text].map(
+                        (c, i) => (
+                          <span
+                            key={i}
+                            className="h-5 w-5 rounded-md border"
+                            style={{ background: c }}
+                          />
+                        ),
+                      )}
                     </div>
                     <span className="block text-xs font-semibold leading-tight">{p.name}</span>
                     {design.presetId === p.id && (
@@ -192,52 +238,146 @@ function QuizDesignPage() {
               {design.logoUrl && (
                 <>
                   <Medida
-                    rotulo="Largura da logo" valor={design.logoWidth ?? 120}
-                    min={48} max={320} passo={4} sufixo="px"
+                    rotulo="Largura da logo"
+                    valor={design.logoWidth ?? 120}
+                    min={48}
+                    max={320}
+                    passo={4}
+                    sufixo="px"
                     onChange={(v) => patch({ logoWidth: v })}
                   />
                   <Button
-                    variant="ghost" size="sm"
+                    variant="ghost"
+                    size="sm"
                     className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
                     onClick={() => patch({ logoUrl: undefined })}
                   >
-                    <X className="h-3 w-3" />Remover logo
+                    <X className="h-3 w-3" />
+                    Remover logo
                   </Button>
                 </>
               )}
             </Secao>
 
             <Secao titulo="Cores">
-              <Cor rotulo="Cor tema" valor={design.primary} onChange={(v) => patch({ primary: v })} onGuardar={guardarCor} salvas={design.savedColors} />
-              <Cor rotulo="Cor de fundo" valor={design.background} onChange={(v) => patch({ background: v })} onGuardar={guardarCor} salvas={design.savedColors} />
-              <Cor rotulo="Superfície (cartões)" valor={design.surface} onChange={(v) => patch({ surface: v })} onGuardar={guardarCor} salvas={design.savedColors} />
-              <Cor rotulo="Cor do título" valor={design.titleColor ?? design.text} onChange={(v) => patch({ titleColor: v })} onGuardar={guardarCor} salvas={design.savedColors} />
-              <Cor rotulo="Cor do texto" valor={design.text} onChange={(v) => patch({ text: v })} onGuardar={guardarCor} salvas={design.savedColors} />
-              <Cor rotulo="Texto secundário" valor={design.muted} onChange={(v) => patch({ muted: v })} onGuardar={guardarCor} salvas={design.savedColors} />
+              <Cor
+                rotulo="Cor tema"
+                valor={design.primary}
+                onChange={(v) => patch({ primary: v })}
+                onGuardar={guardarCor}
+                salvas={design.savedColors}
+              />
+              <Cor
+                rotulo="Cor de fundo"
+                valor={design.background}
+                onChange={(v) => patch({ background: v })}
+                onGuardar={guardarCor}
+                salvas={design.savedColors}
+              />
+              <Cor
+                rotulo="Superfície (cartões)"
+                valor={design.surface}
+                onChange={(v) => patch({ surface: v })}
+                onGuardar={guardarCor}
+                salvas={design.savedColors}
+              />
+              <Cor
+                rotulo="Cor do título"
+                valor={design.titleColor ?? design.text}
+                onChange={(v) => patch({ titleColor: v })}
+                onGuardar={guardarCor}
+                salvas={design.savedColors}
+              />
+              <Cor
+                rotulo="Cor do texto"
+                valor={design.text}
+                onChange={(v) => patch({ text: v })}
+                onGuardar={guardarCor}
+                salvas={design.savedColors}
+              />
+              <Cor
+                rotulo="Texto secundário"
+                valor={design.muted}
+                onChange={(v) => patch({ muted: v })}
+                onGuardar={guardarCor}
+                salvas={design.savedColors}
+              />
             </Secao>
 
             <Secao titulo="Tipografia">
-              <Fonte rotulo="Fonte dos títulos" valor={design.fontHeading} onChange={(v) => patch({ fontHeading: v })} />
-              <Fonte rotulo="Fonte do corpo" valor={design.fontBody} onChange={(v) => patch({ fontBody: v })} />
-              <Medida rotulo="Tamanho do título" valor={design.titleSize ?? 28} min={16} max={48} passo={1} sufixo="px" onChange={(v) => patch({ titleSize: v })} />
-              <Medida rotulo="Tamanho do texto" valor={design.contentSize ?? 16} min={12} max={22} passo={1} sufixo="px" onChange={(v) => patch({ contentSize: v })} />
+              <Fonte
+                rotulo="Fonte dos títulos"
+                valor={design.fontHeading}
+                onChange={(v) => patch({ fontHeading: v })}
+              />
+              <Fonte
+                rotulo="Fonte do corpo"
+                valor={design.fontBody}
+                onChange={(v) => patch({ fontBody: v })}
+              />
+              <Medida
+                rotulo="Tamanho do título"
+                valor={design.titleSize ?? 28}
+                min={16}
+                max={48}
+                passo={1}
+                sufixo="px"
+                onChange={(v) => patch({ titleSize: v })}
+              />
+              <Medida
+                rotulo="Tamanho do texto"
+                valor={design.contentSize ?? 16}
+                min={12}
+                max={22}
+                passo={1}
+                sufixo="px"
+                onChange={(v) => patch({ contentSize: v })}
+              />
             </Secao>
 
             <Secao titulo="Formato">
-              <Medida rotulo="Arredondamento" valor={design.radius} min={0} max={32} passo={1} sufixo="px" onChange={(v) => patch({ radius: v })} />
-              <Medida rotulo="Altura de botão e campo" valor={design.elementSize ?? 56} min={40} max={72} passo={2} sufixo="px" onChange={(v) => patch({ elementSize: v })} />
-              <Medida rotulo="Largura do conteúdo" valor={design.contentWidth ?? 448} min={360} max={720} passo={8} sufixo="px" onChange={(v) => patch({ contentWidth: v })} />
+              <Medida
+                rotulo="Arredondamento"
+                valor={design.radius}
+                min={0}
+                max={32}
+                passo={1}
+                sufixo="px"
+                onChange={(v) => patch({ radius: v })}
+              />
+              <Medida
+                rotulo="Altura de botão e campo"
+                valor={design.elementSize ?? 56}
+                min={40}
+                max={72}
+                passo={2}
+                sufixo="px"
+                onChange={(v) => patch({ elementSize: v })}
+              />
+              <Medida
+                rotulo="Largura do conteúdo"
+                valor={design.contentWidth ?? 448}
+                min={360}
+                max={720}
+                passo={8}
+                sufixo="px"
+                onChange={(v) => patch({ contentWidth: v })}
+              />
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Alinhamento vertical</Label>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {([
-                    { v: 'start', r: 'Topo' },
-                    { v: 'center', r: 'Centro' },
-                    { v: 'between', r: 'Espalhado' },
-                  ] as const).map((o) => (
+                  {(
+                    [
+                      { v: "start", r: "Topo" },
+                      { v: "center", r: "Centro" },
+                      { v: "between", r: "Espalhado" },
+                    ] as const
+                  ).map((o) => (
                     <Button
-                      key={o.v} type="button" size="sm"
-                      variant={(design.verticalAlign ?? 'between') === o.v ? 'default' : 'outline'}
+                      key={o.v}
+                      type="button"
+                      size="sm"
+                      variant={(design.verticalAlign ?? "between") === o.v ? "default" : "outline"}
                       className="h-8 text-xs"
                       onClick={() => patch({ verticalAlign: o.v })}
                     >
@@ -276,17 +416,26 @@ function QuizDesignPage() {
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{titulo}</h2>
+      <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        {titulo}
+      </h2>
       {children}
     </section>
   );
 }
 
 function Cor({
-  rotulo, valor, onChange, onGuardar, salvas,
+  rotulo,
+  valor,
+  onChange,
+  onGuardar,
+  salvas,
 }: {
-  rotulo: string; valor: string; onChange: (v: string) => void;
-  onGuardar: (v: string) => void; salvas?: string[];
+  rotulo: string;
+  valor: string;
+  onChange: (v: string) => void;
+  onGuardar: (v: string) => void;
+  salvas?: string[];
 }) {
   const pegarDaTela = async () => {
     try {
@@ -315,11 +464,25 @@ function Cor({
           spellCheck={false}
         />
         {temContaGotas() && (
-          <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={pegarDaTela} title="Selecionar cor na tela">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={pegarDaTela}
+            title="Selecionar cor na tela"
+          >
             <Pipette className="h-3.5 w-3.5" />
           </Button>
         )}
-        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => onGuardar(valor)} title="Guardar esta cor">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          onClick={() => onGuardar(valor)}
+          title="Guardar esta cor"
+        >
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -341,7 +504,15 @@ function Cor({
   );
 }
 
-function Fonte({ rotulo, valor, onChange }: { rotulo: string; valor: string; onChange: (v: string) => void }) {
+function Fonte({
+  rotulo,
+  valor,
+  onChange,
+}: {
+  rotulo: string;
+  valor: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs font-semibold">{rotulo}</Label>
@@ -352,7 +523,9 @@ function Fonte({ rotulo, valor, onChange }: { rotulo: string; valor: string; onC
         style={{ fontFamily: valor }}
       >
         {FONTES.map((f) => (
-          <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+          <option key={f} value={f} style={{ fontFamily: f }}>
+            {f}
+          </option>
         ))}
       </select>
     </div>
@@ -360,27 +533,54 @@ function Fonte({ rotulo, valor, onChange }: { rotulo: string; valor: string; onC
 }
 
 function Medida({
-  rotulo, valor, min, max, passo, sufixo, onChange,
+  rotulo,
+  valor,
+  min,
+  max,
+  passo,
+  sufixo,
+  onChange,
 }: {
-  rotulo: string; valor: number; min: number; max: number;
-  passo: number; sufixo: string; onChange: (v: number) => void;
+  rotulo: string;
+  valor: number;
+  min: number;
+  max: number;
+  passo: number;
+  sufixo: string;
+  onChange: (v: number) => void;
 }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <Label className="text-xs font-semibold">{rotulo}</Label>
-        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{valor}{sufixo}</span>
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+          {valor}
+          {sufixo}
+        </span>
       </div>
-      <Slider value={[valor]} min={min} max={max} step={passo} onValueChange={([v]) => onChange(v)} />
+      <Slider
+        value={[valor]}
+        min={min}
+        max={max}
+        step={passo}
+        onValueChange={([v]) => onChange(v)}
+      />
     </div>
   );
 }
 
 function EstadoDoSalvamento({
-  saving, dirty, saveError, lastSavedAt, onRetry,
+  saving,
+  dirty,
+  saveError,
+  lastSavedAt,
+  onRetry,
 }: {
-  saving: boolean; dirty: boolean; saveError: boolean;
-  lastSavedAt: Date | null; onRetry: () => void;
+  saving: boolean;
+  dirty: boolean;
+  saveError: boolean;
+  lastSavedAt: Date | null;
+  onRetry: () => void;
 }) {
   if (saveError) {
     return (
@@ -397,7 +597,8 @@ function EstadoDoSalvamento({
   if (saving) {
     return (
       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Salvando…
       </span>
     );
   }
@@ -406,7 +607,7 @@ function EstadoDoSalvamento({
     return (
       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Check className="h-3.5 w-3.5" />
-        Salvo {lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+        Salvo {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
       </span>
     );
   }
