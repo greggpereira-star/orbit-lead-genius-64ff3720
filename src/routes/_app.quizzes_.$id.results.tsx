@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { variaveisDisponiveis } from "@/modules/quiz/lib/variaveisDaMensagem";
 import { ArrowLeft, Loader2, Plus, Trash2, Trophy, AlertCircle } from "lucide-react";
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { quizService } from "@/modules/quiz/services/quizService";
@@ -240,6 +241,27 @@ function QuizResultsPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Mensagem de WhatsApp ao concluir</Label>
+                  {/* As variáveis, à mão.
+                      O editor de texto do construtor tem o botão `fx` com esta
+                      mesma lista; aqui o autor precisava saber os nomes de cor e
+                      digitá-los. Errar um não dá erro: o servidor troca chave
+                      sem valor por string vazia, e a mensagem sai com um buraco
+                      no meio da frase. Clicar insere no fim do texto. */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    {variaveisDisponiveis(schema.blocks ?? []).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() =>
+                          atualizar(i, { whatsappTemplate: `${t.whatsappTemplate ?? ""}{{${v}}}` })
+                        }
+                        title={`Inserir {{${v}}} no fim da mensagem`}
+                        className="rounded border border-dashed px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                      >
+                        {`{{${v}}}`}
+                      </button>
+                    ))}
+                  </div>
                   {/* A caixa cresce com o texto, até um teto.
                       Medido na tela em 07/10: a faixa com mensagem tinha 246
                       caracteres e 76px de conteúdo numa caixa de 58px — editava-se

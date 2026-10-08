@@ -1,6 +1,7 @@
 import type { QuizBlock, QuizSchema, QuizStep, ScoreTier } from "../types";
 import { getSteps } from "./steps";
 import { saltosEntreEtapas, saltosParaTras, etapasEmCiclo, listarEtapas } from "./ciclosDeSalto";
+import { variaveisQueNaoResolvem } from "./variaveisDaMensagem";
 
 export interface Achado {
   nivel: "bloqueia" | "avisa";
@@ -133,6 +134,23 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
 
   const faixas = tiers ?? [];
   if (faixas.length) {
+    /* Variável que ninguém resolve vira BURACO, não erro visível: o
+       interpolador do servidor troca chave sem valor por string vazia, então a
+       mensagem sai com a frase truncada no meio e nem o autor nem o lead têm
+       como saber que faltou coisa. É o último ponto antes de a mensagem chegar
+       a uma pessoa de verdade. */
+    const orfas = [
+      ...new Set(faixas.flatMap((t) => variaveisQueNaoResolvem(t.whatsappTemplate ?? "", blocos))),
+    ];
+    if (orfas.length) {
+      achados.push({
+        nivel: "avisa",
+        mensagem:
+          `A mensagem de WhatsApp cita ${orfas.map((v) => `{{${v}}}`).join(", ")}, ` +
+          "que não existe no quiz — esse trecho sai em branco para o lead.",
+      });
+    }
+
     const semMensagem = faixas.filter((t) => !t.whatsappTemplate?.trim());
     if (semMensagem.length) {
       achados.push({

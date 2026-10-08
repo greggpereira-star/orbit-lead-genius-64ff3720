@@ -141,3 +141,34 @@ describe("laço de saltos", () => {
     expect(achados.some((a) => /laço|volta para uma etapa/.test(a.mensagem))).toBe(false);
   });
 });
+
+describe("variável que não resolve na mensagem", () => {
+  const comVariaveis = (template: string) =>
+    validarPublicacao(
+      {
+        blocks: [
+          { id: "mail", type: "email", title: "E-mail" },
+          { id: "q", type: "single-choice", outputVariable: "dor_principal", options: [] },
+        ],
+        steps: [{ id: "s1", blockIds: ["mail", "q"] }],
+        design: {},
+      } as unknown as QuizSchema,
+      [{ id: "t", label: "A", minPercent: 0, whatsappTemplate: template }] as never,
+    );
+
+  it("avisa quando o nome não existe — é o que vira buraco na mensagem", () => {
+    const a = comVariaveis("Sobre {{dor_pricipal}}");
+    expect(a.some((x) => x.nivel === "avisa" && /dor_pricipal/.test(x.mensagem))).toBe(true);
+  });
+
+  it("não avisa com as embutidas nem com variável de saída existente", () => {
+    const a = comVariaveis("Olá {{nome}}, faixa {{faixa}}, dor {{dor_principal}}");
+    expect(a.some((x) => /não existe no quiz/.test(x.mensagem))).toBe(false);
+  });
+
+  it("avisa, não bloqueia: a mensagem ainda sai, só incompleta", () => {
+    const a = comVariaveis("{{inexistente}}");
+    const achado = a.find((x) => /não existe no quiz/.test(x.mensagem));
+    expect(achado?.nivel).toBe("avisa");
+  });
+});
