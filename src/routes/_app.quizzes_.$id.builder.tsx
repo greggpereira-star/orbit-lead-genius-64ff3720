@@ -28,6 +28,7 @@ import {
   Monitor,
   MoreHorizontal,
   Palette,
+  Pencil,
   Plus,
   Rocket,
   Save,
@@ -114,6 +115,9 @@ function QuizBuilderPage() {
   });
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [abaEsquerda, setAbaEsquerda] = useState<"blocos" | "modelos" | "etapas">("blocos");
+  /** Etapa sendo renomeada na lista lateral, e o texto em edição. */
+  const [renomeando, setRenomeando] = useState<string | null>(null);
+  const [rascunhoDoNome, setRascunhoDoNome] = useState("");
   const [buscaDeBloco, setBuscaDeBloco] = useState("");
   /** Etapa escolhida na barra lateral como destino dos próximos componentes. */
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
@@ -293,6 +297,27 @@ function QuizBuilderPage() {
    * Etapa nova só nasce por ação explícita. Antes ela nascia sozinha a cada
    * bloco adicionado, e por isso nenhuma etapa passava de um componente.
    */
+  /**
+   * Grava o nome da etapa.
+   *
+   * Nome em branco volta a `undefined`, e não vira string vazia: é
+   * `step.name` ausente que faz a trilha, a lista e o seletor de salto caírem
+   * no "Etapa N", e uma string vazia gravada passaria por "tem nome".
+   *
+   * Usa `applySteps`, que preserva etapa sem bloco — o `renameStep` do
+   * fluxograma chama `getSteps(prev)` sem `keepEmpty` e podaria a etapa recém
+   * criada no meio de um rename.
+   */
+  const confirmarNome = (stepId: string) => {
+    const nome = rascunhoDoNome.trim();
+    applySteps((prev) =>
+      getSteps(prev, { keepEmpty: true }).map((s) =>
+        s.id === stepId ? { ...s, name: nome || undefined } : s,
+      ),
+    );
+    setRenomeando(null);
+  };
+
   const addStep = () => {
     const newStep: QuizStep = { id: `step-${crypto.randomUUID()}`, blockIds: [] };
     updateSchema((prev) => ({
@@ -1227,9 +1252,39 @@ function QuizBuilderPage() {
                               nomes passaram a chegar cortados ("Vídeo de a…",
                               "Dor princi…"). Embaixo ele convive com a natureza
                               sem disputar espaço com nada. */}
-                          <div className="truncate text-xs font-semibold leading-[1.35]">
-                            {step.name || `Etapa ${stepIdx + 1}`}
-                          </div>
+                          {/* Renomear SEM sair da lista.
+                              Até aqui o nome da etapa só podia ser dado no
+                              fluxograma — e é ele que identifica o destino no
+                              seletor de salto, além de aparecer na trilha e
+                              nesta lista. Quem nunca abria o fluxograma ficava
+                              com todas as etapas sem nome, e o seletor caía no
+                              título do primeiro bloco. */}
+                          {renomeando === step.id ? (
+                            <input
+                              autoFocus
+                              value={rascunhoDoNome}
+                              onChange={(e) => setRascunhoDoNome(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onBlur={() => confirmarNome(step.id)}
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === "Enter") confirmarNome(step.id);
+                                if (e.key === "Escape") setRenomeando(null);
+                              }}
+                              placeholder={`Etapa ${stepIdx + 1}`}
+                              aria-label={`Nome da etapa ${stepIdx + 1}`}
+                              className="w-full rounded border bg-background px-1.5 py-0.5 text-xs font-semibold outline-none focus-visible:ring-1 focus-visible:ring-[var(--selecao)]"
+                            />
+                          ) : (
+                            <div
+                              className="truncate text-xs font-semibold leading-[1.35]"
+                              title={
+                                step.name ? undefined : "Sem nome — clique no lápis para nomear"
+                              }
+                            >
+                              {step.name || `Etapa ${stepIdx + 1}`}
+                            </div>
+                          )}
                           <div className="truncate text-[11px] leading-[1.35] text-muted-foreground">
                             <span className="tabular-nums">
                               {String(stepIdx + 1).padStart(2, "0")}
@@ -1243,6 +1298,18 @@ function QuizBuilderPage() {
                         <SeloDeConversao dados={conversaoPorEtapa.get(step.id)} />
                         {/* Duplicar e excluir só aparecem com o ponteiro em
                               cima: quatro ícones permanentes espremiam o nome. */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRascunhoDoNome(step.name ?? "");
+                            setRenomeando(step.id);
+                          }}
+                          className="hidden shrink-0 text-muted-foreground transition-opacity hover:text-foreground group-hover:block"
+                          aria-label={`Renomear ${step.name || `Etapa ${stepIdx + 1}`}`}
+                          title="Renomear etapa"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
