@@ -2095,8 +2095,23 @@ const ANSWERABLE_TYPES = new Set([
   "height",
 ]);
 
-function stepLabelFor(allBlocks: QuizBlock[], blockIds: string[], index: number): string {
-  const first = allBlocks.find((b) => b.id === blockIds[0]);
+/**
+ * Rótulo de uma etapa no seletor de salto.
+ *
+ * O NOME da etapa manda; o título do primeiro bloco é só o reserva. Num quiz
+ * de teste em 07/10, as três etapas de destino apareciam como "Etapa 2 ·
+ * Escreva seu título aqui", "Etapa 3 · Escreva seu título aqui"… — três linhas
+ * idênticas a menos do número, porque o rótulo vinha do bloco e o bloco estava
+ * com o texto padrão. É a etapa que se está escolhendo, e é ela que tem nome.
+ */
+function stepLabelFor(
+  allBlocks: QuizBlock[],
+  step: Pick<QuizStep, "blockIds" | "name">,
+  index: number,
+): string {
+  const nome = step.name?.trim();
+  if (nome) return `Etapa ${index + 1} · ${nome}`;
+  const first = allBlocks.find((b) => b.id === step.blockIds[0]);
   const def = first ? BLOCK_LIBRARY.find((d) => d.type === first.type) : undefined;
   const title = first?.title || first?.resultTitle || def?.label || "";
   return `Etapa ${index + 1}${title ? ` · ${title}` : ""}`;
@@ -2141,7 +2156,7 @@ function OptionJumpSelect({
           <SelectItem value="flow">Seguir fluxo normal</SelectItem>
           {targets.map((s) => (
             <SelectItem key={s.id} value={s.blockIds[0]}>
-              Pular para {stepLabelFor(allBlocks, s.blockIds, steps.indexOf(s))}
+              Pular para {stepLabelFor(allBlocks, s, steps.indexOf(s))}
             </SelectItem>
           ))}
         </SelectContent>

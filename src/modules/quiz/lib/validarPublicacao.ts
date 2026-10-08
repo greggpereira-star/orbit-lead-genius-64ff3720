@@ -1,5 +1,6 @@
 import type { QuizBlock, QuizSchema, QuizStep, ScoreTier } from "../types";
 import { getSteps } from "./steps";
+import { saltosEntreEtapas, saltosParaTras, etapasEmCiclo, listarEtapas } from "./ciclosDeSalto";
 
 export interface Achado {
   nivel: "bloqueia" | "avisa";
@@ -100,6 +101,34 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
       nivel: "bloqueia",
       mensagem: `${saltosQuebrados.length} salto(s) apontam para um componente que não existe mais.`,
     });
+  }
+
+  /* Laço fechado só por saltos: existe conjunto de respostas que faz a pessoa
+     sair de uma etapa e voltar a ela para sempre. Num funil de captação isso
+     não é incômodo, é perda total daquele visitante — por isso bloqueia.
+
+     Voltar atrás, sozinho, só avisa: "responda de novo" é uso legítimo, e o
+     que o autor precisa é notar que criou o caminho de volta. */
+  const saltos = saltosEntreEtapas(steps, blocos);
+  const ciclo = etapasEmCiclo(saltos);
+  if (ciclo.length) {
+    achados.push({
+      nivel: "bloqueia",
+      mensagem:
+        `${listarEtapas(ciclo)} formam um laço de saltos: quem cair nele responde e volta ` +
+        "para a mesma etapa sem nunca chegar ao fim.",
+    });
+  } else {
+    const paraTras = saltosParaTras(saltos);
+    if (paraTras.length) {
+      const origens = [...new Set(paraTras.map((s) => s.de))].sort((a, b) => a - b);
+      achados.push({
+        nivel: "avisa",
+        mensagem:
+          `${listarEtapas(origens)} tem salto que volta para uma etapa anterior. ` +
+          "Confirme que existe caminho de saída depois dela.",
+      });
+    }
   }
 
   const faixas = tiers ?? [];
