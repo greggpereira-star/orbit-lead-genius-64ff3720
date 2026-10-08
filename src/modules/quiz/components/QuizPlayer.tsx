@@ -34,6 +34,7 @@ import {
   nextStepIndex,
   isBlockVisible,
   classifyTemperature,
+  scorePercent,
   minPossibleScore,
   maxPossibleScore,
   type QuizRunState,
@@ -692,8 +693,19 @@ function PlayerRunner({
         if (mostrarTelaFinal) setDone(true);
         return;
       }
-      const max = maxPossibleScore(schema);
-      const temperature = classifyTemperature(finalState.score, max, minPossibleScore(schema, finalState.responses));
+      /* O teto entra COM as respostas, igual ao piso logo ao lado e igual ao
+         que o servidor faz para escolher a faixa. Antes aqui o par era
+         desencontrado: teto global, piso do visitante. Num quiz com exibição
+         condicional o denominador incluía blocos que a pessoa nunca viu, o
+         percentual saía menor que o real, e a mesma submissão era classificada
+         como faixa alta pelo servidor e `cold` por esta linha. */
+      const respostasDele = finalState.responses;
+      const max = maxPossibleScore(schema, respostasDele);
+      const temperature = classifyTemperature(
+        finalState.score,
+        max,
+        minPossibleScore(schema, respostasDele),
+      );
       const { email, phone, name } = extrairContato(finalState.responses, blocks);
       const enrichedTracking: Record<string, string> = {
         ...tracking,
@@ -2942,9 +2954,14 @@ function BlockView({
 function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState }) {
   const design = schema.design;
   const resultBlock = schema.blocks.find((b) => b.type === 'result');
-  const max = maxPossibleScore(schema);
-  const temperature = classifyTemperature(state.score, max, minPossibleScore(schema, state.responses));
-  const pct = max > 0 ? Math.round((state.score / max) * 100) : 0;
+  /* Mesmo par do servidor e do `finish`: teto e piso DESTE visitante. */
+  const max = maxPossibleScore(schema, state.responses);
+  const min = minPossibleScore(schema, state.responses);
+  const temperature = classifyTemperature(state.score, max, min);
+  /* `scorePercent`, e não `score / max`: a conta à mão ignorava o piso, então
+     num quiz com opção de pontuação negativa o número mostrado ao visitante
+     não era o mesmo que decidia a faixa dele. */
+  const pct = Math.round(scorePercent(state.score, max, min));
   // A tela de resultado é o lugar de maior valor pra personalização dinâmica —
   // "Baseado no seu peso de {{peso}}kg e IMC {{calc(peso/(altura/100)^2)}}...".
   const scope = resolveScope(schema.blocks, state.responses, { score: state.score });
