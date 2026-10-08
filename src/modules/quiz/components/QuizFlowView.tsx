@@ -262,11 +262,20 @@ function StepNode({ data }: { data: StepNodeData }) {
             <ProgressBar design={design} value={(index + 1) / Math.max(data.total, 1)} />
           </div>
           <div className="px-6 pb-8 flex flex-col gap-8">
-            {blocks.map((b) => (
-              <div key={b.id} className="pointer-events-none">
-                <BlockRenderer block={b} design={design} />
-              </div>
-            ))}
+            {/* Etapa criada e ainda não preenchida: o nó mostrava só a barra de
+                progresso e um rodapé vazio, e quem olhasse o fluxograma não
+                tinha como saber se era uma tela em branco ou um defeito. */}
+            {blocks.length === 0 ? (
+              <p className="py-16 text-center text-sm" style={{ color: design.muted }}>
+                Etapa vazia — escolha os componentes dela no Builder.
+              </p>
+            ) : (
+              blocks.map((b) => (
+                <div key={b.id} className="pointer-events-none">
+                  <BlockRenderer block={b} design={design} />
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

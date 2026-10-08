@@ -1,25 +1,29 @@
-import { createFileRoute, Link, useParams } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
-import { useAuth } from '@/core/auth/hooks/useAuth';
-import { quizService } from '@/modules/quiz/services/quizService';
-import { getSteps } from '@/modules/quiz/lib/steps';
-import { QuizFlowView } from '@/modules/quiz/components/QuizFlowView';
-import { DEFAULT_DESIGN } from '@/modules/quiz/design-presets';
-import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from '@/modules/quiz/types';
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import { quizService } from "@/modules/quiz/services/quizService";
+import { getSteps } from "@/modules/quiz/lib/steps";
+import { QuizFlowView } from "@/modules/quiz/components/QuizFlowView";
+import { DEFAULT_DESIGN } from "@/modules/quiz/design-presets";
+import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from "@/modules/quiz/types";
 
-export const Route = createFileRoute('/_app/quizzes_/$id/flow')({
+export const Route = createFileRoute("/_app/quizzes_/$id/flow")({
   component: QuizFlowPage,
 });
 
 function QuizFlowPage() {
-  const { id } = useParams({ from: '/_app/quizzes_/$id/flow' });
+  const { id } = useParams({ from: "/_app/quizzes_/$id/flow" });
   const { company, user } = useAuth();
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
-  const [schema, setSchema] = useState<QuizSchema>({ blocks: [], design: DEFAULT_DESIGN, results: [] });
+  const [schema, setSchema] = useState<QuizSchema>({
+    blocks: [],
+    design: DEFAULT_DESIGN,
+    results: [],
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -34,10 +38,12 @@ function QuizFlowPage() {
       // materializa schema.steps já na primeira carga (mesmo padrão do Builder) — assim
       // renomear/marcar meta/excluir sempre opera sobre uma lista de etapas explícita,
       // mesmo em quizzes antigos que nunca tiveram `steps` gravado.
-      setSchema({ ...s, steps: getSteps(s) });
+      setSchema({ ...s, steps: getSteps(s, { keepEmpty: true }) });
       setLoading(false);
     });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   const updateSchema = (updater: (prev: QuizSchema) => QuizSchema) => {
@@ -54,9 +60,9 @@ function QuizFlowPage() {
       setSaveError(false);
       setLastSavedAt(new Date());
     } catch (e) {
-      console.error('Erro ao salvar fluxograma', e);
+      console.error("Erro ao salvar fluxograma", e);
       setSaveError(true);
-      toast.error('Não foi possível salvar as alterações do fluxograma. Tente de novo.');
+      toast.error("Não foi possível salvar as alterações do fluxograma. Tente de novo.");
     } finally {
       setSaving(false);
     }
@@ -66,27 +72,38 @@ function QuizFlowPage() {
   // (renomear, excluir, marcar meta, inserir etapa) fique só nesta aba.
   useEffect(() => {
     if (!dirty || loading) return;
-    const timer = setTimeout(() => { handleSave(); }, 1200);
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema, dirty, loading]);
 
+  /* `keepEmpty: true` em TODA chamada de `getSteps` desta tela.
+     Sem ele, `getSteps` poda as etapas sem bloco — e como cada ação aqui
+     reescreve `schema.steps` com o resultado, qualquer uma delas apagava em
+     silêncio as etapas que o usuário criou e ainda não preencheu. Bastava
+     abrir o fluxograma e renomear uma etapa para perder as vazias. O
+     construtor guarda etapa vazia de propósito: é uma tela criada, não lixo.
+     Quem poda é o preview/player, que nunca deve mostrar tela em branco. */
   const renameStep = (stepId: string, name: string | undefined) => {
     updateSchema((prev) => ({
       ...prev,
-      steps: getSteps(prev).map((s) => (s.id === stepId ? { ...s, name } : s)),
+      steps: getSteps(prev, { keepEmpty: true }).map((s) => (s.id === stepId ? { ...s, name } : s)),
     }));
   };
 
   const toggleGoal = (stepId: string) => {
     updateSchema((prev) => ({
       ...prev,
-      steps: getSteps(prev).map((s) => (s.id === stepId ? { ...s, isGoal: !s.isGoal } : s)),
+      steps: getSteps(prev, { keepEmpty: true }).map((s) =>
+        s.id === stepId ? { ...s, isGoal: !s.isGoal } : s,
+      ),
     }));
   };
 
   const deleteStep = (stepId: string) => {
-    const currentSteps = getSteps(schema);
+    const currentSteps = getSteps(schema, { keepEmpty: true });
     const idx = currentSteps.findIndex((s) => s.id === stepId);
     if (idx === -1) return;
     const removedStep = currentSteps[idx];
@@ -102,24 +119,31 @@ function QuizFlowPage() {
         .map((b) => ({
           ...b,
           options: b.options?.map((o) =>
-            o.jumpToBlockId && removedBlockIds.has(o.jumpToBlockId) ? { ...o, jumpToBlockId: undefined } : o
+            o.jumpToBlockId && removedBlockIds.has(o.jumpToBlockId)
+              ? { ...o, jumpToBlockId: undefined }
+              : o,
           ),
           logicRules: b.logicRules?.filter((r) => !removedBlockIds.has(r.jumpToBlockId)),
         }));
-      const nextSteps = getSteps(prev).filter((s) => s.id !== stepId);
+      const nextSteps = getSteps(prev, { keepEmpty: true }).filter((s) => s.id !== stepId);
       return { ...prev, blocks: nextBlocks, steps: nextSteps };
     });
 
-    toast('Etapa excluída', {
-      description: removedStep.name || removedBlocks[0]?.title || `${removedBlocks.length} módulo(s)`,
+    toast("Etapa excluída", {
+      description:
+        removedStep.name || removedBlocks[0]?.title || `${removedBlocks.length} módulo(s)`,
       action: {
-        label: 'Desfazer',
+        label: "Desfazer",
         onClick: () => {
           updateSchema((prev) => {
-            const restoredSteps = Array.from(getSteps(prev));
+            const restoredSteps = Array.from(getSteps(prev, { keepEmpty: true }));
             restoredSteps.splice(Math.min(idx, restoredSteps.length), 0, removedStep);
             const nextBlocks = Array.from(prev.blocks);
-            nextBlocks.splice(blockIndex >= 0 ? blockIndex : nextBlocks.length, 0, ...removedBlocks);
+            nextBlocks.splice(
+              blockIndex >= 0 ? blockIndex : nextBlocks.length,
+              0,
+              ...removedBlocks,
+            );
             return { ...prev, blocks: nextBlocks, steps: restoredSteps };
           });
         },
@@ -130,29 +154,32 @@ function QuizFlowPage() {
   const insertStepAfter = (stepId: string) => {
     const newBlock: QuizBlock = {
       id: crypto.randomUUID(),
-      type: 'argument',
-      title: 'Nova etapa',
-      subtitle: 'Edite este conteúdo no Builder',
+      type: "argument",
+      title: "Nova etapa",
+      subtitle: "Edite este conteúdo no Builder",
     };
     updateSchema((prev) => {
-      const steps = getSteps(prev);
+      const steps = getSteps(prev, { keepEmpty: true });
       const idx = steps.findIndex((s) => s.id === stepId);
       const newStep: QuizStep = { id: `step-${newBlock.id}`, blockIds: [newBlock.id] };
       const nextSteps = Array.from(steps);
       nextSteps.splice(idx + 1, 0, newStep);
       return { ...prev, blocks: [...prev.blocks, newBlock], steps: nextSteps };
     });
-    toast.success('Etapa inserida — edite o conteúdo dela no Builder.');
+    toast.success("Etapa inserida — edite o conteúdo dela no Builder.");
   };
 
   return createPortal(
     <div className="fixed inset-0 flex flex-col bg-background z-40">
       <header className="h-14 border-b flex items-center gap-3 px-4 shrink-0">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/quizzes/$id/builder" params={{ id }}><ArrowLeft className="h-4 w-4 mr-2" />Voltar ao Builder</Link>
+          <Link to="/quizzes/$id/builder" params={{ id }}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao Builder
+          </Link>
         </Button>
         <div className="border-l pl-3">
-          <h1 className="font-bold text-sm leading-none">{quiz?.name ?? 'Quiz'}</h1>
+          <h1 className="font-bold text-sm leading-none">{quiz?.name ?? "Quiz"}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Fluxograma</p>
         </div>
         <div className="ml-auto">
@@ -169,30 +196,32 @@ function QuizFlowPage() {
             <div
               className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-medium ${
                 saving
-                  ? 'border-primary/40 bg-primary/10 text-primary'
+                  ? "border-primary/40 bg-primary/10 text-primary"
                   : dirty
-                    ? 'border-[var(--aviso-borda)] bg-[var(--aviso-suave)] text-[var(--aviso)]'
-                    : 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] text-[var(--sucesso)]'
+                    ? "border-[var(--aviso-borda)] bg-[var(--aviso-suave)] text-[var(--aviso)]"
+                    : "border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)] text-[var(--sucesso)]"
               }`}
               aria-live="polite"
             >
               {saving ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <span className={`h-1.5 w-1.5 rounded-full ${dirty ? 'bg-[var(--aviso)] animate-pulse' : 'bg-[var(--sucesso)]'}`} />
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${dirty ? "bg-[var(--aviso)] animate-pulse" : "bg-[var(--sucesso)]"}`}
+                />
               )}
               {/* Salvar grava rascunho: num quiz publicado, o visitante só vê
                   a mudança depois de publicar pelo Builder. */}
               <span className="hidden min-[420px]:inline">
                 {saving
-                  ? 'Salvando…'
+                  ? "Salvando…"
                   : dirty
-                    ? 'Não salvo'
-                    : quiz?.status === 'published'
-                      ? 'Salvo — fora do ar'
+                    ? "Não salvo"
+                    : quiz?.status === "published"
+                      ? "Salvo — fora do ar"
                       : lastSavedAt
-                        ? `Salvo ${lastSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                        : 'Salvo'}
+                        ? `Salvo ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                        : "Salvo"}
               </span>
             </div>
           )}
@@ -214,6 +243,6 @@ function QuizFlowPage() {
         )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

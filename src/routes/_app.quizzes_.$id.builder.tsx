@@ -180,7 +180,12 @@ function QuizBuilderPage() {
         ]);
         if (!mounted) return;
         setQuiz(q);
-        setSchema({ ...s, steps: getSteps(s) });
+        /* `keepEmpty` TAMBÉM na carga. Sem ele, abrir o construtor já podava
+           as etapas sem bloco do schema em memória, e a primeira edição salvava
+           a lista podada: criar as etapas, recarregar a página e encontrá-las
+           sumidas. O resto do arquivo usa `applySteps`, que preserva — era só
+           esta porta de entrada que descartava. */
+        setSchema({ ...s, steps: getSteps(s, { keepEmpty: true }) });
         setPublishedVersionId(pub.publishedVersionId);
         setLatestVersionId(pub.latestVersionId);
       } catch (e) {
@@ -304,9 +309,9 @@ function QuizBuilderPage() {
    * `step.name` ausente que faz a trilha, a lista e o seletor de salto caírem
    * no "Etapa N", e uma string vazia gravada passaria por "tem nome".
    *
-   * Usa `applySteps`, que preserva etapa sem bloco — o `renameStep` do
-   * fluxograma chama `getSteps(prev)` sem `keepEmpty` e podaria a etapa recém
-   * criada no meio de um rename.
+   * Usa `applySteps`, que preserva etapa sem bloco. O fluxograma tinha o
+   * mesmo rename lendo as etapas sem essa guarda e podava as vazias; já foi
+   * corrigido, e o teste `etapaVaziaSobrevive` agora cobre os dois arquivos.
    */
   const confirmarNome = (stepId: string) => {
     const nome = rascunhoDoNome.trim();
