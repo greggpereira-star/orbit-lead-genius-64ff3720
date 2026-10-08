@@ -14,6 +14,15 @@ interface Props {
   blockId: string;
   sessionId: string;
   design: Pick<QuizDesign, "primary" | "surface" | "text" | "muted" | "radius">;
+  /**
+   * Prévia do construtor: a gravação NÃO sai do navegador.
+   *
+   * A rota de envio aceita qualquer quiz publicado, então testar este bloco
+   * numa prévia gravava um arquivo de verdade no armazenamento do cliente e
+   * ele aparecia na Biblioteca de mídia como gravação de visitante. Quem está
+   * na prévia quer conferir o fluxo, não produzir dado.
+   */
+  preview?: boolean;
   onEnviado: (url: string) => void;
 }
 
@@ -31,7 +40,14 @@ interface Props {
  * 3. **O limite de tempo para sozinho.** Sem o corte, uma gravação esquecida
  *    estoura os 20MB e o envio falha depois de tudo, que é o pior momento.
  */
-export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnviado }: Props) {
+export function VideoAnswerRecorder({
+  quizId,
+  blockId,
+  sessionId,
+  design,
+  preview,
+  onEnviado,
+}: Props) {
   const [fase, setFase] = useState<Fase>("parado");
   const [segundos, setSegundos] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
@@ -132,6 +148,15 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
       return;
     }
     setFase("enviando");
+    /* Na prévia o arquivo fica só aqui: a URL local vale para rever o que foi
+       gravado e para a etapa se dar por respondida, que é o que se está
+       testando. Nada é enviado. */
+    if (preview) {
+      const local = URL.createObjectURL(blob);
+      setFase("pronto");
+      onEnviado(local);
+      return;
+    }
     try {
       const form = new FormData();
       form.append("video", new File([blob], "resposta.webm", { type: blob.type }));
@@ -152,7 +177,7 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
       setErro("Falha de conexão ao enviar.");
       setFase("erro");
     }
-  }, [quizId, blockId, sessionId, onEnviado]);
+  }, [quizId, blockId, sessionId, preview, onEnviado]);
 
   enviarRef.current = enviar;
 
@@ -260,7 +285,7 @@ export function VideoAnswerRecorder({ quizId, blockId, sessionId, design, onEnvi
               className="inline-flex items-center gap-1.5 text-sm font-semibold"
               style={{ color: design.primary }}
             >
-              <Check className="h-4 w-4" /> Vídeo enviado
+              <Check className="h-4 w-4" /> {preview ? "Gravado (prévia)" : "Vídeo enviado"}
             </span>
             {botao("Regravar", refazer, RotateCcw, false)}
           </>

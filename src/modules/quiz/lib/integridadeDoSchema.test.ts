@@ -134,3 +134,44 @@ describe("telas que salvam respeitam a trava de edição", () => {
     });
   }
 });
+
+/**
+ * A prévia não pode gravar nada fora da tela.
+ *
+ * O player já guardava os cinco caminhos que escrevem no banco. O que escapou
+ * foi a Resposta em vídeo: ela sobe por uma ROTA à parte, que aceita qualquer
+ * quiz publicado, então testar o bloco numa prévia gravava um arquivo de
+ * verdade no armazenamento do cliente — e ele aparecia na Biblioteca de mídia
+ * como gravação de visitante.
+ */
+describe("prévia não grava", () => {
+  const player = readFileSync("src/modules/quiz/components/QuizPlayer.tsx", "utf8");
+  const gravador = readFileSync("src/modules/quiz/components/VideoAnswerRecorder.tsx", "utf8");
+
+  it("todo trackEvent e todo envio do player passa por uma guarda de preview", () => {
+    // Conta as guardas em vez das chamadas: `preview` aparece no início de
+    // cada bloco que escreve, e sem nenhuma o invariante nem existe.
+    expect(player.match(/if \(!?preview\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+  });
+
+  it("o gravador de vídeo recebe o sinal de prévia", () => {
+    expect(player).toMatch(/<VideoAnswerRecorder[\s\S]{0,260}preview=\{preview\}/);
+    expect(gravador).toContain("preview?: boolean");
+  });
+
+  it("e desvia do envio antes de montar o FormData", () => {
+    const corpo = gravador.slice(gravador.indexOf("const enviar"));
+    const iGuarda = corpo.indexOf("if (preview)");
+    const iEnvio = corpo.indexOf("new FormData");
+    expect(iGuarda).toBeGreaterThan(-1);
+    expect(iGuarda).toBeLessThan(iEnvio);
+  });
+
+  it("o Container repassa quizId e sessionId ao filho", () => {
+    // Sem isso, uma Resposta em vídeo dentro de um container recebia quizId
+    // vazio e o envio era recusado por "dados incompletos".
+    const container = player.slice(player.indexOf("function ContainerView"));
+    expect(container).toContain("quizId={quizId}");
+    expect(container).toContain("sessionId={sessionId}");
+  });
+});

@@ -832,6 +832,9 @@ function PlayerRunner({
                       design={design}
                       scope={scope}
                       responses={state.responses}
+                      quizId={quizId}
+                      sessionId={sessionId.current}
+                      preview={preview}
                       terminal={isTerminal}
                       stepValid={allStepValid}
                       saving={saving}
@@ -871,6 +874,7 @@ function PlayerRunner({
                     scope={scope}
                     quizId={quizId}
                     sessionId={sessionId.current}
+                    preview={preview}
                     respostaAnterior={state.responses[b.id]}
                     resumo={resumoDasRespostas}
                     terminal={isTerminal}
@@ -1362,6 +1366,9 @@ function ContainerView({
   onValidChange,
   onDraftChange,
   onContainerSubmit,
+  quizId,
+  sessionId,
+  preview,
 }: {
   block: QuizBlock;
   allBlocks: QuizBlock[];
@@ -1371,6 +1378,13 @@ function ContainerView({
   terminal: boolean;
   stepValid: boolean;
   saving: boolean;
+  /* O Container repassa o que o bloco-filho precisa para existir sozinho.
+     Sem isto, uma Resposta em vídeo DENTRO de um container recebia `quizId`
+     vazio e o envio era recusado por "dados incompletos" — o bloco aparecia
+     na tela e não tinha como funcionar. */
+  quizId?: string;
+  sessionId?: string;
+  preview?: boolean;
   onValidChange: (childId: string, valid: boolean) => void;
   onDraftChange: (childId: string, value: unknown) => void;
   onContainerSubmit: () => void;
@@ -1410,6 +1424,9 @@ function ContainerView({
               block={child}
               design={design}
               scope={scope}
+              quizId={quizId}
+              sessionId={sessionId}
+              preview={preview}
               terminal={false}
               stepValid={stepValid}
               saving={saving}
@@ -1610,6 +1627,7 @@ function BlockView({
   scope,
   quizId,
   sessionId,
+  preview,
   terminal,
   stepValid = true,
   onSubmit,
@@ -1623,6 +1641,8 @@ function BlockView({
    *  confere se o bloco existe mesmo neste quiz antes de gravar o arquivo. */
   quizId?: string;
   sessionId?: string;
+  /** Prévia do construtor: nada pode ser gravado fora da tela. */
+  preview?: boolean;
   /** O que esta pessoa já respondeu neste bloco, quando voltou para cá. */
   respostaAnterior?: unknown;
   /** Respostas já dadas, em forma legível — usado pelo bloco Sumário. */
@@ -2053,6 +2073,7 @@ function BlockView({
               blockId={block.id}
               sessionId={sessionId ?? ''}
               design={design}
+              preview={preview}
               onEnviado={(url) => {
                 setValue(url);
                 if (terminal) onSubmit(url);
