@@ -1696,7 +1696,16 @@ function BlockView({
 
   const canSubmit = useMemo(() => {
     if (block.type === 'multi-choice') return multi.length > 0 || !block.required;
-    if (block.type === 'single-choice') return typeof value === 'string' && value.length > 0;
+    /* Escolha única nasce OBRIGATÓRIA e o interruptor só serve para afrouxar.
+       Antes a expressão ignorava `block.required` por completo: o inspetor
+       mostrava "Obrigatório" desligado, o autor ligava ou desligava e nada
+       mudava na tela. Ler `=== false` em vez de `=== true` é o que preserva
+       todo quiz já publicado — neles o campo nunca foi gravado, e `undefined`
+       continua significando obrigatório, como sempre se comportou. */
+    if (block.type === 'single-choice') {
+      if (block.required === false) return true;
+      return typeof value === 'string' && value.length > 0;
+    }
     if (block.type === 'rating') return typeof value === 'number';
     // A régua sempre carrega um valor numérico válido (nunca fica "vazia" como um
     // campo de texto) — diferente dos campos de texto abaixo, que checam string.

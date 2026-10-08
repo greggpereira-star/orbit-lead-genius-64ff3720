@@ -1558,10 +1558,16 @@ function BlockInspector({
                 checked={block.type === "multi-choice"}
                 onChange={(v) => onChange({ type: v ? "multi-choice" : "single-choice" })}
               />
+              {/* Os dois tipos têm padrões OPOSTOS, e o interruptor precisa
+                  mostrar o de cada um: escolha única nasce obrigatória, múltipla
+                  escolha nasce opcional. Com `=== true` para ambos, toda escolha
+                  única aparecia desligada enquanto se comportava como ligada. */}
               <Toggle
                 label="Obrigatório"
                 hint="Só avança depois de escolher"
-                checked={block.required === true}
+                checked={
+                  block.type === "single-choice" ? block.required !== false : block.required === true
+                }
                 onChange={(v) => onChange({ required: v })}
               />
               {block.type === "single-choice" && (
