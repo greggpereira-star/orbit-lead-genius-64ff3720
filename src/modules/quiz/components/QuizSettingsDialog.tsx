@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -7,33 +7,65 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
-  Loader2, Globe, Webhook, Search, Code, Sparkles, Timer, Plus, Trash2,
-  CheckCircle2, Gift, Users, Star, Flame, Bell, Columns3, Target,
-} from 'lucide-react';
-import { StageSelect } from '@/modules/crm/components/StageSelect';
-import { quizService } from '../services/quizService';
-import { companyService } from '@/modules/company/services/companyService';
-import { ROOT_DOMAIN } from '../lib/tenant';
-import type { QuizFunnel, SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings, ScoreTier } from '../types';
-import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from '../types';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2,
+  Globe,
+  Webhook,
+  Search,
+  Code,
+  Sparkles,
+  Timer,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Gift,
+  Users,
+  Star,
+  Flame,
+  Bell,
+  Columns3,
+  Target,
+} from "lucide-react";
+import { StageSelect } from "@/modules/crm/components/StageSelect";
+import { quizService } from "../services/quizService";
+import { companyService } from "@/modules/company/services/companyService";
+import { ROOT_DOMAIN } from "../lib/tenant";
+import type {
+  QuizFunnel,
+  SocialProofSettings,
+  SocialProofMessage,
+  SocialProofIcon,
+  UrgencyBarSettings,
+  ScoreTier,
+} from "../types";
+import { DEFAULT_SOCIAL_PROOF, DEFAULT_URGENCY_BAR } from "../types";
 
-const SOCIAL_PROOF_ICONS: { value: SocialProofIcon; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: 'check', label: 'Check', icon: CheckCircle2 },
-  { value: 'gift', label: 'Presente', icon: Gift },
-  { value: 'users', label: 'Pessoas', icon: Users },
-  { value: 'star', label: 'Estrela', icon: Star },
-  { value: 'fire', label: 'Fogo', icon: Flame },
-  { value: 'bell', label: 'Sino', icon: Bell },
+const SOCIAL_PROOF_ICONS: {
+  value: SocialProofIcon;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { value: "check", label: "Check", icon: CheckCircle2 },
+  { value: "gift", label: "Presente", icon: Gift },
+  { value: "users", label: "Pessoas", icon: Users },
+  { value: "star", label: "Estrela", icon: Star },
+  { value: "fire", label: "Fogo", icon: Flame },
+  { value: "bell", label: "Sino", icon: Bell },
 ];
 
 interface Props {
@@ -47,25 +79,25 @@ interface Props {
 export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSaved }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [customDomain, setCustomDomain] = useState('');
-  const [publicSlug, setPublicSlug] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [customHeadScript, setCustomHeadScript] = useState('');
-  const [seoTitle, setSeoTitle] = useState('');
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
+  const [publicSlug, setPublicSlug] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [customHeadScript, setCustomHeadScript] = useState("");
+  const [seoTitle, setSeoTitle] = useState("");
   const [mostrarAssinatura, setMostrarAssinatura] = useState(false);
-  const [seoDescription, setSeoDescription] = useState('');
-  const [seoOgImage, setSeoOgImage] = useState('');
+  const [seoDescription, setSeoDescription] = useState("");
+  const [seoOgImage, setSeoOgImage] = useState("");
   const [socialProof, setSocialProof] = useState<SocialProofSettings>(DEFAULT_SOCIAL_PROOF);
   const [urgencyBar, setUrgencyBar] = useState<UrgencyBarSettings>(DEFAULT_URGENCY_BAR);
   const [companySubdomain, setCompanySubdomain] = useState<string | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string | null>(null);
   const [tiers, setTiers] = useState<ScoreTier[]>([]);
-  const [metaPixelId, setMetaPixelId] = useState('');
-  const [googleConversionId, setGoogleConversionId] = useState('');
-  const [googleLeadLabel, setGoogleLeadLabel] = useState('');
-  const [googleCompleteLabel, setGoogleCompleteLabel] = useState('');
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [googleConversionId, setGoogleConversionId] = useState("");
+  const [googleLeadLabel, setGoogleLeadLabel] = useState("");
+  const [googleCompleteLabel, setGoogleCompleteLabel] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -87,24 +119,32 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         setName(quiz.name);
         setSlug(quiz.slug);
         setPublicSlug(quiz.slug);
-        setCustomDomain((settings.custom_domain as string) ?? '');
-        setWebhookUrl((settings.webhook_url as string) ?? '');
-        setCustomHeadScript((settings.custom_head_script as string) ?? '');
-        setSeoTitle((settings.seo_title as string) ?? '');
+        setCustomDomain((settings.custom_domain as string) ?? "");
+        setWebhookUrl((settings.webhook_url as string) ?? "");
+        setCustomHeadScript((settings.custom_head_script as string) ?? "");
+        setSeoTitle((settings.seo_title as string) ?? "");
         setMostrarAssinatura(settings.mostrar_assinatura === true);
-        setSeoDescription((settings.seo_description as string) ?? '');
-        setSeoOgImage((settings.seo_og_image as string) ?? '');
-        setSocialProof({ ...DEFAULT_SOCIAL_PROOF, ...(settings.social_proof as Partial<SocialProofSettings> | undefined) });
-        setUrgencyBar({ ...DEFAULT_URGENCY_BAR, ...(settings.urgency_bar as Partial<UrgencyBarSettings> | undefined) });
+        setSeoDescription((settings.seo_description as string) ?? "");
+        setSeoOgImage((settings.seo_og_image as string) ?? "");
+        setSocialProof({
+          ...DEFAULT_SOCIAL_PROOF,
+          ...(settings.social_proof as Partial<SocialProofSettings> | undefined),
+        });
+        setUrgencyBar({
+          ...DEFAULT_URGENCY_BAR,
+          ...(settings.urgency_bar as Partial<UrgencyBarSettings> | undefined),
+        });
         setDefaultStageId((settings.default_stage_id as string | undefined) ?? null);
         setTiers((settings.score_tiers as ScoreTier[] | undefined) ?? []);
-        setMetaPixelId((settings.meta_pixel_id as string) ?? '');
-        setGoogleConversionId((settings.google_conversion_id as string) ?? '');
-        setGoogleLeadLabel((settings.google_lead_label as string) ?? '');
-        setGoogleCompleteLabel((settings.google_complete_label as string) ?? '');
+        setMetaPixelId((settings.meta_pixel_id as string) ?? "");
+        setGoogleConversionId((settings.google_conversion_id as string) ?? "");
+        setGoogleLeadLabel((settings.google_lead_label as string) ?? "");
+        setGoogleCompleteLabel((settings.google_complete_label as string) ?? "");
       })
       .catch((e: unknown) => {
-        toast.error('Erro ao carregar configurações: ' + (e instanceof Error ? e.message : String(e)));
+        toast.error(
+          "Erro ao carregar configurações: " + (e instanceof Error ? e.message : String(e)),
+        );
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -116,7 +156,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error('Informe o nome do quiz');
+      toast.error("Informe o nome do quiz");
       return;
     }
     setSaving(true);
@@ -144,24 +184,35 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
       });
       setSlug(updated.slug);
       setPublicSlug(updated.slug);
-      toast.success('Configurações salvas');
+      toast.success("Configurações salvas");
       onSaved?.(updated);
       onOpenChange(false);
     } catch (e: unknown) {
-      toast.error('Erro ao salvar: ' + (e instanceof Error ? e.message : String(e)));
+      toast.error("Erro ao salvar: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setSaving(false);
     }
   };
 
-  const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/q/${publicSlug}` : `/q/${publicSlug}`;
+  const publicUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/q/${publicSlug}`
+      : `/q/${publicSlug}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Configurações do funil</DialogTitle>
-          <DialogDescription>Nome, link público, domínio, integrações e SEO deste quiz.</DialogDescription>
+          {/* Mesmo caso da tela de Resultados: isto grava em
+              `quiz_funnels.settings`, que o quiz publicado lê direto. Trocar o
+              link aqui muda o endereço no ar imediatamente. */}
+          <DialogDescription>
+            Nome, link público, domínio, integrações e SEO deste quiz.{" "}
+            <span className="font-medium text-[var(--aviso)]">
+              O que for salvo aqui vale na hora, sem publicar.
+            </span>
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -171,30 +222,57 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         ) : (
           <Tabs defaultValue="geral">
             <TabsList>
-              <TabsTrigger value="geral" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Geral</TabsTrigger>
-              <TabsTrigger value="engajamento" className="gap-1.5"><Sparkles className="h-3.5 w-3.5" />Engajamento</TabsTrigger>
-              <TabsTrigger value="avancado" className="gap-1.5"><Webhook className="h-3.5 w-3.5" />Avançado</TabsTrigger>
-              <TabsTrigger value="seo" className="gap-1.5"><Search className="h-3.5 w-3.5" />SEO</TabsTrigger>
+              <TabsTrigger value="geral" className="gap-1.5">
+                <Globe className="h-3.5 w-3.5" />
+                Geral
+              </TabsTrigger>
+              <TabsTrigger value="engajamento" className="gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                Engajamento
+              </TabsTrigger>
+              <TabsTrigger value="avancado" className="gap-1.5">
+                <Webhook className="h-3.5 w-3.5" />
+                Avançado
+              </TabsTrigger>
+              <TabsTrigger value="seo" className="gap-1.5">
+                <Search className="h-3.5 w-3.5" />
+                SEO
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="geral" className="space-y-4 pt-4">
               <div className="space-y-1.5">
                 <Label htmlFor="quiz-settings-name">Nome do funil</Label>
-                <Input id="quiz-settings-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Quiz do Imóvel Ideal" />
+                <Input
+                  id="quiz-settings-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Quiz do Imóvel Ideal"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="quiz-settings-slug">Slug do funil</Label>
-                <Input id="quiz-settings-slug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="quiz-do-imovel-ideal" />
+                <Input
+                  id="quiz-settings-slug"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="quiz-do-imovel-ideal"
+                />
                 <p className="text-xs text-muted-foreground break-all">
                   Prévia da URL: <span className="font-mono">{publicUrl}</span>
                 </p>
                 {companySubdomain && (
                   <p className="text-xs text-muted-foreground break-all">
-                    Link personalizado: <span className="font-mono">https://{companySubdomain}.{ROOT_DOMAIN}/q/{publicSlug}</span>
+                    Link personalizado:{" "}
+                    <span className="font-mono">
+                      https://{companySubdomain}.{ROOT_DOMAIN}/q/{publicSlug}
+                    </span>
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">Se o slug já estiver em uso, um sufixo numérico será adicionado automaticamente.</p>
+                <p className="text-xs text-muted-foreground">
+                  Se o slug já estiver em uso, um sufixo numérico será adicionado automaticamente.
+                </p>
               </div>
 
               <div className="space-y-1.5 pt-2 border-t">
@@ -209,9 +287,17 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                 />
                 {customDomain.trim() && (
                   <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2 space-y-1">
-                    <p>Para ativar, aponte um registro <span className="font-mono">CNAME</span> do seu domínio para:</p>
-                    <p className="font-mono text-foreground">{typeof window !== 'undefined' ? window.location.host : ''}</p>
-                    <p>Depois de configurar o DNS, entre em contato para finalizarmos o certificado SSL do domínio.</p>
+                    <p>
+                      Para ativar, aponte um registro <span className="font-mono">CNAME</span> do
+                      seu domínio para:
+                    </p>
+                    <p className="font-mono text-foreground">
+                      {typeof window !== "undefined" ? window.location.host : ""}
+                    </p>
+                    <p>
+                      Depois de configurar o DNS, entre em contato para finalizarmos o certificado
+                      SSL do domínio.
+                    </p>
                   </div>
                 )}
               </div>
@@ -243,17 +329,22 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   </Label>
                   <Switch
                     checked={urgencyBar.enabled}
-                    onCheckedChange={(checked) => setUrgencyBar((u) => ({ ...u, enabled: checked }))}
+                    onCheckedChange={(checked) =>
+                      setUrgencyBar((u) => ({ ...u, enabled: checked }))
+                    }
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Contagem regressiva fixa no topo do quiz, visível em todas as etapas. Cada visitante tem seu
-                  próprio cronômetro (evergreen) a partir do momento em que abre o quiz.
+                  Contagem regressiva fixa no topo do quiz, visível em todas as etapas. Cada
+                  visitante tem seu próprio cronômetro (evergreen) a partir do momento em que abre o
+                  quiz.
                 </p>
                 {urgencyBar.enabled && (
                   <div className="space-y-3 rounded-lg border p-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="quiz-urgency-label" className="text-xs">Texto</Label>
+                      <Label htmlFor="quiz-urgency-label" className="text-xs">
+                        Texto
+                      </Label>
                       <Input
                         id="quiz-urgency-label"
                         value={urgencyBar.label}
@@ -275,9 +366,16 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                       <Label className="text-xs">Quando chegar a zero</Label>
                       <Select
                         value={urgencyBar.onExpire}
-                        onValueChange={(v) => setUrgencyBar((u) => ({ ...u, onExpire: v as UrgencyBarSettings['onExpire'] }))}
+                        onValueChange={(v) =>
+                          setUrgencyBar((u) => ({
+                            ...u,
+                            onExpire: v as UrgencyBarSettings["onExpire"],
+                          }))
+                        }
                       >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="restart">Reiniciar (recomendado)</SelectItem>
                           <SelectItem value="freeze">Congelar em 00:00</SelectItem>
@@ -296,12 +394,14 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   </Label>
                   <Switch
                     checked={socialProof.enabled}
-                    onCheckedChange={(checked) => setSocialProof((s) => ({ ...s, enabled: checked }))}
+                    onCheckedChange={(checked) =>
+                      setSocialProof((s) => ({ ...s, enabled: checked }))
+                    }
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Notificações flutuantes que aparecem por cima do quiz e somem sozinhas, sem interromper o
-                  visitante — mostram mensagens que você define, em rodízio.
+                  Notificações flutuantes que aparecem por cima do quiz e somem sozinhas, sem
+                  interromper o visitante — mostram mensagens que você define, em rodízio.
                 </p>
                 {socialProof.enabled && (
                   <div className="space-y-4 rounded-lg border p-3">
@@ -310,9 +410,16 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                         <Label className="text-xs">Posição</Label>
                         <Select
                           value={socialProof.position}
-                          onValueChange={(v) => setSocialProof((s) => ({ ...s, position: v as SocialProofSettings['position'] }))}
+                          onValueChange={(v) =>
+                            setSocialProof((s) => ({
+                              ...s,
+                              position: v as SocialProofSettings["position"],
+                            }))
+                          }
                         >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="bottom-left">Inferior esq.</SelectItem>
                             <SelectItem value="bottom-center">Inferior centro</SelectItem>
@@ -328,7 +435,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                           max={30}
                           step={1}
                           value={[socialProof.startDelaySeconds]}
-                          onValueChange={([v]) => setSocialProof((s) => ({ ...s, startDelaySeconds: v }))}
+                          onValueChange={([v]) =>
+                            setSocialProof((s) => ({ ...s, startDelaySeconds: v }))
+                          }
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -338,7 +447,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                           max={60}
                           step={1}
                           value={[socialProof.intervalSeconds]}
-                          onValueChange={([v]) => setSocialProof((s) => ({ ...s, intervalSeconds: v }))}
+                          onValueChange={([v]) =>
+                            setSocialProof((s) => ({ ...s, intervalSeconds: v }))
+                          }
                         />
                       </div>
                     </div>
@@ -367,7 +478,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   placeholder="https://sua-automacao.com/webhook"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Dispara um POST com os dados da resposta sempre que alguém completar este quiz. Enviado diretamente do navegador do visitante — o endpoint precisa aceitar requisições CORS.
+                  Dispara um POST com os dados da resposta sempre que alguém completar este quiz.
+                  Enviado diretamente do navegador do visitante — o endpoint precisa aceitar
+                  requisições CORS.
                 </p>
               </div>
 
@@ -390,36 +503,71 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                         className="flex-1"
                         value={t.label}
                         placeholder="Lead A"
-                        onChange={(e) => setTiers((v) => v.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                        onChange={(e) =>
+                          setTiers((v) =>
+                            v.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)),
+                          )
+                        }
                       />
                       <div className="relative w-28 shrink-0">
                         <Input
-                          type="number" min={0} max={100}
+                          type="number"
+                          min={0}
+                          max={100}
                           value={t.minPercent}
-                          onChange={(e) => setTiers((v) => v.map((x, j) => j === i ? { ...x, minPercent: Number(e.target.value) } : x))}
+                          onChange={(e) =>
+                            setTiers((v) =>
+                              v.map((x, j) =>
+                                j === i ? { ...x, minPercent: Number(e.target.value) } : x,
+                              ),
+                            )
+                          }
                         />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">% ou +</span>
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                          % ou +
+                        </span>
                       </div>
-                      <Button variant="ghost" size="icon" className="shrink-0"
-                        onClick={() => setTiers((v) => v.filter((_, j) => j !== i))} aria-label="Remover faixa">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => setTiers((v) => v.filter((_, j) => j !== i))}
+                        aria-label="Remover faixa"
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                     <Textarea
-                      rows={3} className="text-xs"
-                      value={t.whatsappTemplate ?? ''}
+                      rows={3}
+                      className="text-xs"
+                      value={t.whatsappTemplate ?? ""}
                       placeholder="Olá, {{nome}}. Recebemos seu diagnóstico…"
-                      onChange={(e) => setTiers((v) => v.map((x, j) => j === i ? { ...x, whatsappTemplate: e.target.value } : x))}
+                      onChange={(e) =>
+                        setTiers((v) =>
+                          v.map((x, j) =>
+                            j === i ? { ...x, whatsappTemplate: e.target.value } : x,
+                          ),
+                        )
+                      }
                     />
                   </div>
                 ))}
 
-                <Button variant="outline" size="sm" className="gap-1.5"
-                  onClick={() => setTiers((v) => [...v, { id: `t${Date.now()}`, label: '', minPercent: 0, whatsappTemplate: '' }])}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    setTiers((v) => [
+                      ...v,
+                      { id: `t${Date.now()}`, label: "", minPercent: 0, whatsappTemplate: "" },
+                    ])
+                  }
+                >
                   <Plus className="h-3.5 w-3.5" /> Adicionar faixa
                 </Button>
                 <p className="text-[11px] text-muted-foreground">
-                  Na mensagem valem <code>{'{{nome}}'}</code>, <code>{'{{faixa}}'}</code> e qualquer
+                  Na mensagem valem <code>{"{{nome}}"}</code>, <code>{"{{faixa}}"}</code> e qualquer
                   variável que os blocos exportem.
                 </p>
               </div>
@@ -437,7 +585,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="quiz-settings-meta-pixel" className="text-xs">ID do Pixel do Meta</Label>
+                    <Label htmlFor="quiz-settings-meta-pixel" className="text-xs">
+                      ID do Pixel do Meta
+                    </Label>
                     <Input
                       id="quiz-settings-meta-pixel"
                       inputMode="numeric"
@@ -447,7 +597,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="quiz-settings-google-id" className="text-xs">ID de conversão do Google Ads</Label>
+                    <Label htmlFor="quiz-settings-google-id" className="text-xs">
+                      ID de conversão do Google Ads
+                    </Label>
                     <Input
                       id="quiz-settings-google-id"
                       value={googleConversionId}
@@ -456,7 +608,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="quiz-settings-google-lead" className="text-xs">Rótulo — contato capturado</Label>
+                    <Label htmlFor="quiz-settings-google-lead" className="text-xs">
+                      Rótulo — contato capturado
+                    </Label>
                     <Input
                       id="quiz-settings-google-lead"
                       value={googleLeadLabel}
@@ -465,7 +619,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="quiz-settings-google-complete" className="text-xs">Rótulo — quiz concluído</Label>
+                    <Label htmlFor="quiz-settings-google-complete" className="text-xs">
+                      Rótulo — quiz concluído
+                    </Label>
                     <Input
                       id="quiz-settings-google-complete"
                       value={googleCompleteLabel}
@@ -489,7 +645,8 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   className="font-mono text-xs"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Injetado na página pública do quiz (ex: pixel do Meta, Google Tag Manager). Só use scripts em que você confia.
+                  Injetado na página pública do quiz (ex: pixel do Meta, Google Tag Manager). Só use
+                  scripts em que você confia.
                 </p>
               </div>
             </TabsContent>
@@ -501,7 +658,7 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   id="quiz-settings-seo-title"
                   value={seoTitle}
                   onChange={(e) => setSeoTitle(e.target.value)}
-                  placeholder={name || 'Quiz interativo'}
+                  placeholder={name || "Quiz interativo"}
                 />
               </div>
               <div className="space-y-1.5">
@@ -523,7 +680,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                   onChange={(e) => setMostrarAssinatura(e.target.checked)}
                 />
                 <span>
-                  <span className="block text-sm font-medium">Mostrar "Criado via altleadflow" no rodapé</span>
+                  <span className="block text-sm font-medium">
+                    Mostrar "Criado via altleadflow" no rodapé
+                  </span>
                   <span className="block text-xs text-muted-foreground">
                     Aparece discreto no fim do funil público, com link de indicação. Desligado por
                     padrão: o funil é visto pelo cliente do seu cliente, e a marca na página dele é
@@ -532,7 +691,9 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                 </span>
               </label>
               <div className="space-y-1.5">
-                <Label htmlFor="quiz-settings-seo-image">Imagem de compartilhamento (OG image)</Label>
+                <Label htmlFor="quiz-settings-seo-image">
+                  Imagem de compartilhamento (OG image)
+                </Label>
                 <Input
                   id="quiz-settings-seo-image"
                   value={seoOgImage}
@@ -545,9 +706,11 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button onClick={handleSave} disabled={saving || loading}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -573,7 +736,9 @@ function SocialProofMessagesEditor({
                 <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
                   <IconComp className="h-3 w-3 text-primary" />
                 </div>
-                <span className="text-[11px] font-semibold text-muted-foreground">Mensagem {i + 1}</span>
+                <span className="text-[11px] font-semibold text-muted-foreground">
+                  Mensagem {i + 1}
+                </span>
               </div>
               <Button
                 size="sm"
@@ -592,11 +757,16 @@ function SocialProofMessagesEditor({
                   onChange(next);
                 }}
               >
-                <SelectTrigger className="w-28 shrink-0"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-28 shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {SOCIAL_PROOF_ICONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      <span className="flex items-center gap-1.5"><opt.icon className="h-3.5 w-3.5" />{opt.label}</span>
+                      <span className="flex items-center gap-1.5">
+                        <opt.icon className="h-3.5 w-3.5" />
+                        {opt.label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -613,7 +783,7 @@ function SocialProofMessagesEditor({
             </div>
             <Input
               placeholder="Texto secundário (opcional)"
-              value={msg.body ?? ''}
+              value={msg.body ?? ""}
               onChange={(e) => {
                 const next = [...messages];
                 next[i] = { ...msg, body: e.target.value };
@@ -628,10 +798,7 @@ function SocialProofMessagesEditor({
         variant="outline"
         className="w-full gap-2"
         onClick={() =>
-          onChange([
-            ...messages,
-            { id: crypto.randomUUID(), icon: 'check', title: '', body: '' },
-          ])
+          onChange([...messages, { id: crypto.randomUUID(), icon: "check", title: "", body: "" }])
         }
       >
         <Plus className="h-3.5 w-3.5" /> Adicionar mensagem

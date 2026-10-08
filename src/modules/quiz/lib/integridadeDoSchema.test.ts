@@ -175,3 +175,39 @@ describe("prévia não grava", () => {
     expect(container).toContain("sessionId={sessionId}");
   });
 });
+
+/**
+ * Duas regras de publicação convivem no produto, e a diferença precisa estar
+ * dita na tela.
+ *
+ * Bloco é VERSIONADO: o servidor lê o schema de `published_version_id`, então
+ * editar um bloco só chega ao visitante depois de Publicar. Faixa, mensagem de
+ * WhatsApp, link público, SEO e integrações ficam em `quiz_funnels.settings`,
+ * que o servidor lê DIRETO — valem no instante em que são salvos.
+ *
+ * Nenhuma das duas telas que editam `settings` dizia isso, enquanto o
+ * construtor ao lado exibe "fora do ar" e um botão "Publicar", ensinando o
+ * oposto. Quem corrige uma mensagem de WhatsApp precisa saber que ela já está
+ * valendo; quem troca o link precisa saber que o endereço no ar mudou agora.
+ */
+describe("o que vale na hora diz que vale na hora", () => {
+  const telas = {
+    resultados: "src/routes/_app.quizzes_.$id.results.tsx",
+    "configurações do funil": "src/modules/quiz/components/QuizSettingsDialog.tsx",
+  };
+
+  for (const [nome, caminho] of Object.entries(telas)) {
+    it(`${nome}: avisa que salvar aqui não espera publicação`, () => {
+      const fonte = readFileSync(caminho, "utf8");
+      expect(fonte).toMatch(/vale na hora, sem publicar/);
+    });
+  }
+
+  it("as duas gravam em settings, que o servidor lê sem passar pela versão", () => {
+    const servidor = readFileSync("src/routes/api/public/quiz-completed.ts", "utf8");
+    // A faixa sai de `settings`; o schema, de `published_version_id`. São
+    // caminhos diferentes de propósito — e é essa diferença que o aviso cobre.
+    expect(servidor).toContain("q.settings?.score_tiers");
+    expect(servidor).toContain("published_version_id");
+  });
+});

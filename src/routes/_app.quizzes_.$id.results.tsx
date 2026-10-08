@@ -150,6 +150,16 @@ function QuizResultsPage() {
               <p className="text-xs text-muted-foreground">
                 A faixa decide a classificação do lead e qual mensagem de WhatsApp sai ao concluir.
               </p>
+              {/* Faixa e mensagem NÃO são versionadas: ficam em
+                  `quiz_funnels.settings` e o servidor as lê direto dali, sem
+                  passar pela versão publicada. Enquanto isso o construtor diz
+                  "fora do ar" e oferece "Publicar", ensinando o contrário. Quem
+                  corrige uma mensagem aqui precisa saber que ela já vale — e
+                  quem espera publicar para valer precisa saber que não é o
+                  caso. */}
+              <p className="mt-0.5 text-xs font-medium text-[var(--aviso)]">
+                O que você salvar aqui vale na hora, sem publicar.
+              </p>
             </div>
             <div className="text-right">
               <div className="font-mono text-sm tabular-nums">
