@@ -3,6 +3,7 @@
  import { User as SupabaseUser } from '@supabase/supabase-js';
 import { logger } from '@/core/observability/logger';
 import { toast } from 'sonner';
+import { mensagemDoErro, erroContem } from '@/core/auth/lib/mensagemDoErro';
   import { AuthState, UserProfile, Company, Membership } from '../types/index';
   import { WorkspaceOrchestrator } from '../services/WorkspaceOrchestrator';
 
@@ -201,8 +202,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        
         logger.info('Auth lifecycle complete: READY', { companyId: result.company?.id, traceId });
       } catch (err: any) {
-        logger.error('Failed to orchestrate workspace', { error: err.message, traceId });
-        setError(`Workspace bootstrap failed: ${err.message}`);
+        logger.error('Failed to orchestrate workspace', { error: mensagemDoErro(err), erroCru: err, traceId });
+        setError(`Workspace bootstrap failed: ${mensagemDoErro(err)}`);
         setState('ERROR');
       } finally {
         isOrchestrating.current = null;
@@ -235,12 +236,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
             setState('UNAUTHENTICATED');
           }
        } catch (err: any) {
-         logger.error('AuthTrace: Initialization failed', { error: err.message, traceId });
-         if (err.message.includes('configuration missing') || err.message.includes('required')) {
+         logger.error('AuthTrace: Initialization failed', { error: mensagemDoErro(err), erroCru: err, traceId });
+         if (erroContem(err, 'configuration missing') || erroContem(err, 'required')) {
            setEnvError('Supabase configuration is missing. Please check your project settings and environment variables.');
            setState('ERROR');
          } else {
-           handleAuthFailure(`Initialization error: ${err.message}`);
+           handleAuthFailure(`Initialization error: ${mensagemDoErro(err)}`);
          }
        }
      };
@@ -294,14 +295,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        });
        
        if (error) {
-         if (error.message.includes('Email not confirmed')) {
+         if (erroContem(error, 'Email not confirmed')) {
            toast.info('E-mail ainda não confirmado. Verifique sua caixa de entrada.', { id: loadingToast });
            setState('EMAIL_SENT');
            // Set the user email for the verify screen even if not logged in
            setUser({ id: '', email, name: email.split('@')[0] });
            throw error;
          }
-         toast.error(error.message, { id: loadingToast });
+         toast.error(mensagemDoErro(error), { id: loadingToast });
          throw error;
        }
        
@@ -309,10 +310,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        toast.success('Acesso liberado!', { id: loadingToast });
        return data;
      } catch (err: any) {
-       if (err.message.includes('Email not confirmed')) {
+       if (erroContem(err, 'Email not confirmed')) {
          throw err;
        }
-       handleAuthFailure(err.message, false);
+       handleAuthFailure(mensagemDoErro(err), false);
        throw err;
      }
    };
@@ -337,8 +338,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        });
        
        if (error) {
-         logger.error('AuthTrace: Signup failed', { error: error.message, traceId });
-         toast.error(error.message, { id: loadingToast });
+         logger.error('AuthTrace: Signup failed', { error: mensagemDoErro(error), erroCru: error, traceId });
+         toast.error(mensagemDoErro(error), { id: loadingToast });
          setState('ERROR');
          throw error;
        }
@@ -360,7 +361,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        
        return data;
      } catch (err: any) {
-       handleAuthFailure(err.message, false);
+       handleAuthFailure(mensagemDoErro(err), false);
        throw err;
      }
    };
@@ -375,8 +376,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
        if (error) throw error;
        toast.success('E-mail de verificação reenviado!');
      } catch (err: any) {
-       logger.error('AuthTrace: Resend failed', { error: err.message, traceId });
-       toast.error(`Falha ao reenviar: ${err.message}`);
+       logger.error('AuthTrace: Resend failed', { error: mensagemDoErro(err), erroCru: err, traceId });
+       toast.error(`Falha ao reenviar: ${mensagemDoErro(err)}`);
      }
    };
 
@@ -392,7 +393,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       });
       if (error) throw error;
     } catch (err: any) {
-      handleAuthFailure(`Google OAuth failed: ${err.message}`);
+      handleAuthFailure(`Google OAuth failed: ${mensagemDoErro(err)}`);
     }
   };
 
@@ -407,7 +408,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
       });
       if (error) throw error;
     } catch (err: any) {
-      handleAuthFailure(`Meta OAuth failed: ${err.message}`);
+      handleAuthFailure(`Meta OAuth failed: ${mensagemDoErro(err)}`);
     }
   };
 

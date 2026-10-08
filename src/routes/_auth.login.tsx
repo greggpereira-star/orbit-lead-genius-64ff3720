@@ -4,6 +4,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
   import { useState } from 'react';
   import { toast } from 'sonner';
  import { useAuth } from '@/core/auth/hooks/useAuth';
+import { erroContem } from '@/core/auth/lib/mensagemDoErro';
  import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
  import { Label } from '@/components/ui/label';
@@ -34,7 +35,10 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
           await login(email, password);
           navigate({ to: '/dashboard' });
         } catch (error: any) {
-          if (error.message.includes('Email not confirmed')) {
+          /* `erroContem` em vez de ler o campo de texto do erro direto: sem
+             esse campo, o próprio `catch` lançava `TypeError` e a causa
+             original se perdia antes de chegar à tela. */
+          if (erroContem(error, 'Email not confirmed')) {
             navigate({ to: '/verify-email' });
             return;
           }
