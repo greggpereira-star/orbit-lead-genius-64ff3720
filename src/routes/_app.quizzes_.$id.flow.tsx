@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/core/auth/hooks/useAuth";
+import { useEditLock } from "@/modules/quiz/hooks/useEditLock";
+import { EditLockBanner } from "@/modules/quiz/components/EditLockBanner";
 import { quizService } from "@/modules/quiz/services/quizService";
 import { getSteps } from "@/modules/quiz/lib/steps";
 import { QuizFlowView } from "@/modules/quiz/components/QuizFlowView";
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/_app/quizzes_/$id/flow")({
 function QuizFlowPage() {
   const { id } = useParams({ from: "/_app/quizzes_/$id/flow" });
   const { company, user } = useAuth();
+  const trava = useEditLock(id, user?.name || user?.email || undefined, true, user?.id);
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
   const [schema, setSchema] = useState<QuizSchema>({
     blocks: [],
@@ -53,6 +56,14 @@ function QuizFlowPage() {
 
   const handleSave = async () => {
     if (!company?.id || !user?.id) return;
+    /* Mesma guarda do construtor, pelo mesmo motivo: esta tela grava o SCHEMA
+       INTEIRO. Sem ela, mexer aqui numa aba sobrescrevia em silêncio tudo o
+       que outra aba estava montando — exatamente o conflito que a trava foi
+       criada para impedir, e que ficou aberto porque só o construtor a usava. */
+    if (!trava.souDono) {
+      toast.error("A edição deste quiz está com outra aba. Peça o controle para poder salvar.");
+      return;
+    }
     setSaving(true);
     try {
       await quizService.saveSchema({ quizId: id, companyId: company.id, userId: user.id, schema });
@@ -71,13 +82,15 @@ function QuizFlowPage() {
   // Autosave (mesmo padrão do Builder): evita que uma edição feita aqui no fluxograma
   // (renomear, excluir, marcar meta, inserir etapa) fique só nesta aba.
   useEffect(() => {
-    if (!dirty || loading) return;
+    /* Sem a posse, nem tenta: `handleSave` já barra, mas o autosave reagenda a
+       cada mudança e encheria a tela de avisos iguais. */
+    if (!dirty || loading || !trava.souDono) return;
     const timer = setTimeout(() => {
       handleSave();
     }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, dirty, loading]);
+  }, [schema, dirty, loading, trava.souDono]);
 
   /* `keepEmpty: true` em TODA chamada de `getSteps` desta tela.
      Sem ele, `getSteps` poda as etapas sem bloco — e como cada ação aqui
@@ -227,6 +240,8 @@ function QuizFlowPage() {
           )}
         </div>
       </header>
+
+      <EditLockBanner trava={trava} />
       <div className="flex-1">
         {loading ? (
           <div className="flex items-center justify-center h-full">

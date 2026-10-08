@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ArrowLeft, Loader2, AlertCircle, Check, Pipette, RotateCcw, Plus, X } from "lucide-react";
 import { useAuth } from "@/core/auth/hooks/useAuth";
+import { useEditLock } from "@/modules/quiz/hooks/useEditLock";
+import { EditLockBanner } from "@/modules/quiz/components/EditLockBanner";
 import { quizService } from "@/modules/quiz/services/quizService";
 import { getSteps } from "@/modules/quiz/lib/steps";
 import { MediaUploader } from "@/modules/quiz/components/MediaUploader";
@@ -38,6 +40,7 @@ const temContaGotas = () => typeof window !== "undefined" && "EyeDropper" in win
 function QuizDesignPage() {
   const { id } = useParams({ from: "/_app/quizzes_/$id/design" });
   const { company, user } = useAuth();
+  const trava = useEditLock(id, user?.name || user?.email || undefined, true, user?.id);
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
   const [schema, setSchema] = useState<QuizSchema>({
     blocks: [],
@@ -85,6 +88,14 @@ function QuizDesignPage() {
 
   const handleSave = async () => {
     if (!company?.id || !user?.id) return;
+    /* Mesma guarda do construtor, pelo mesmo motivo: esta tela grava o SCHEMA
+       INTEIRO. Sem ela, mexer aqui numa aba sobrescrevia em silêncio tudo o
+       que outra aba estava montando — exatamente o conflito que a trava foi
+       criada para impedir, e que ficou aberto porque só o construtor a usava. */
+    if (!trava.souDono) {
+      toast.error("A edição deste quiz está com outra aba. Peça o controle para poder salvar.");
+      return;
+    }
     setSaving(true);
     try {
       await quizService.saveSchema({ quizId: id, companyId: company.id, userId: user.id, schema });
@@ -101,13 +112,15 @@ function QuizDesignPage() {
   };
 
   useEffect(() => {
-    if (!dirty || loading) return;
+    /* Sem a posse, nem tenta: `handleSave` já barra, mas o autosave reagenda a
+       cada mudança e encheria a tela de avisos iguais. */
+    if (!dirty || loading || !trava.souDono) return;
     const timer = setTimeout(() => {
       void handleSave();
     }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, dirty, loading]);
+  }, [schema, dirty, loading, trava.souDono]);
 
   /* Fechar a aba com alteração pendente não pode ser silencioso: o autosave tem
      1,2s de espera e um fechamento dentro dessa janela leva o trabalho junto. */
@@ -191,6 +204,8 @@ function QuizDesignPage() {
           />
         </div>
       </header>
+
+      <EditLockBanner trava={trava} />
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <aside className="w-full shrink-0 overflow-y-auto border-b p-5 lg:w-[380px] lg:border-b-0 lg:border-r">

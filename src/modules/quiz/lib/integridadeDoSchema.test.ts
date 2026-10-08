@@ -101,3 +101,36 @@ describe("telas de runtime e análise PODAM a etapa vazia", () => {
     expect(getSteps(schema).map((s) => s.id)).toEqual(["s2"]);
   });
 });
+
+/**
+ * Quem grava o schema inteiro precisa da trava de edição.
+ *
+ * O construtor tinha; o Design e o Fluxograma, não — e os três salvam o schema
+ * COMPLETO. Bastava mexer numa cor com o construtor aberto noutra aba para
+ * sobrescrever tudo que estava sendo montado lá. É exatamente o conflito que a
+ * trava foi criada para impedir, e ficou aberto porque só uma das três telas a
+ * usava.
+ */
+describe("telas que salvam respeitam a trava de edição", () => {
+  const telas = {
+    construtor: "src/routes/_app.quizzes_.$id.builder.tsx",
+    design: "src/routes/_app.quizzes_.$id.design.tsx",
+    fluxograma: "src/routes/_app.quizzes_.$id.flow.tsx",
+  };
+
+  for (const [nome, caminho] of Object.entries(telas)) {
+    const fonte = readFileSync(caminho, "utf8");
+
+    it(`${nome}: usa useEditLock`, () => {
+      expect(fonte).toContain("useEditLock");
+    });
+
+    it(`${nome}: barra o save sem a posse`, () => {
+      expect(fonte).toMatch(/if\s*\(!trava\.souDono\)/);
+    });
+
+    it(`${nome}: mostra ao usuário quem está com a edição`, () => {
+      expect(fonte).toContain("EditLockBanner");
+    });
+  }
+});
