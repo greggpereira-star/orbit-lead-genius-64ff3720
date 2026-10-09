@@ -323,30 +323,68 @@ export function QuizPreview({
                                     : {}),
                                 }}
                               >
+                                {/* Alça de arraste na CALHA, fora da caixa do bloco.
+
+                                    Ela ficava em `left-1 top-1`, DENTRO do `p-3`
+                                    do bloco: 28px de alça (4px de margem + 6px de
+                                    recuo + 16px de ícone) sobre um conteúdo que
+                                    começa aos 12px cobriam 20px do texto. E com
+                                    `opacity-40` o estrago era permanente, não só
+                                    no hover — a primeira letra do título ficava
+                                    tampada o tempo todo.
+
+                                    Abrir recuo no bloco para caber a alça não é
+                                    opção: esta prévia existe para mostrar a quebra
+                                    de linha e a dobra exatamente como o visitante
+                                    vê, e empurrar o conteúdo 28px mudaria as duas.
+                                    Então quem sai é a alça. O droppable já tem
+                                    `p-8`, e 28px cabem nos 32px de calha com 4px
+                                    de folga, sem encostar no conteúdo. */}
                                 <div
                                   {...dragProvided.dragHandleProps}
-                                  className="absolute left-1 top-1 z-10 opacity-40 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1.5 rounded-md select-none"
-                                  style={{ background: design.surface }}
+                                  className={`absolute -left-8 top-0 z-10 grid h-7 w-7 cursor-grab select-none place-items-center rounded-lg transition-opacity active:cursor-grabbing focus-visible:opacity-100 group-hover:opacity-100 ${
+                                    activeBlockId === b.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                  style={{ background: design.surface, color: design.muted }}
                                   onClick={(e) => e.stopPropagation()}
+                                  title="Arraste para reordenar"
+                                  aria-label="Arraste para reordenar este bloco"
                                 >
-                                  <GripVertical
-                                    className="h-4 w-4"
-                                    style={{ color: design.muted }}
-                                  />
+                                  <GripVertical className="h-4 w-4" />
                                 </div>
                                 {b.showIf?.enabled && (
-                                  <div
-                                    className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--aviso)]"
-                                    title="Este bloco só aparece quando a condição configurada for verdadeira"
-                                  >
-                                    <Eye className="h-2.5 w-2.5" /> condicional
-                                  </div>
+                                  <>
+                                    {/* Em repouso, só um traço na borda: 3px dentro
+                                        do recuo de 12px do bloco, então não encosta
+                                        no texto. O selo escrito cobria o canto
+                                        superior direito do conteúdo de forma
+                                        permanente; agora ele aparece na calha de
+                                        cima, no hover, onde não tapa nada. */}
+                                    <span
+                                      className="pointer-events-none absolute inset-y-2 left-0 w-[3px] rounded-full"
+                                      style={{ background: "var(--aviso)" }}
+                                      aria-hidden
+                                    />
+                                    <span className="sr-only">
+                                      Bloco condicional: só aparece quando a condição configurada
+                                      for verdadeira
+                                    </span>
+                                    <span
+                                      className="pointer-events-none absolute -top-6 left-0 z-10 flex items-center gap-1 rounded-full border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--aviso)] opacity-0 transition-opacity group-hover:opacity-100"
+                                      aria-hidden
+                                    >
+                                      <Eye className="h-2.5 w-2.5" /> condicional
+                                    </span>
+                                  </>
                                 )}
                                 {/* Estilo do bloco (abas Layout/Aparência) num
                                       embrulho: sem ele cada bloco teria que
                                       aplicar margem e cor por conta própria, e
                                       37 tipos divergiriam em uma semana. */}
-                                <div className={classeDeAlinhamento(b)} style={resolveBlockStyle(b)}>
+                                <div
+                                  className={classeDeAlinhamento(b)}
+                                  style={resolveBlockStyle(b)}
+                                >
                                   <BlockRenderer
                                     block={b}
                                     design={design}
