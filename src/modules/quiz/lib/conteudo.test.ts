@@ -14,7 +14,7 @@ describe('sumário das respostas', () => {
   it('mostra o RÓTULO da opção, não o id guardado', () => {
     // "o1" não diz nada a ninguém.
     const r = montarResumo(blocks, { q1: 'o1' });
-    expect(r).toEqual([{ pergunta: 'Qual sua dor?', resposta: 'Rugas' }]);
+    expect(r).toEqual([{ blockId: 'q1', pergunta: 'Qual sua dor?', resposta: 'Rugas' }]);
   });
 
   it('múltipla escolha vira lista separada por vírgula', () => {

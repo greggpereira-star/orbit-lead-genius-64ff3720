@@ -35,6 +35,7 @@ import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import { CountdownTimer } from "./CountdownTimer";
 import { AudioPlayer } from "./AudioPlayer";
 import { ItensDeConteudo, SumarioDasRespostas, RedesSociais } from "./blocosDeConteudo";
+import { getVideoEmbed } from "../lib/videoEmbed";
 import { SchedulingField } from "./SchedulingField";
 
 const CONTAINER_ALIGN_CSS: Record<string, React.CSSProperties["alignItems"]> = {
@@ -49,19 +50,6 @@ const CONTAINER_JUSTIFY_CSS: Record<string, React.CSSProperties["justifyContent"
   end: "flex-end",
   stretch: "space-between",
 };
-
-function getVideoEmbed(
-  url: string,
-  provider?: string,
-): { kind: "iframe" | "mp4"; src: string } | null {
-  if (!url) return null;
-  if (provider === "mp4" || /\.mp4($|\?)/i.test(url)) return { kind: "mp4", src: url };
-  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
-  if (yt) return { kind: "iframe", src: `https://www.youtube.com/embed/${yt[1]}` };
-  const vim = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  if (vim) return { kind: "iframe", src: `https://player.vimeo.com/video/${vim[1]}` };
-  return { kind: "iframe", src: url };
-}
 
 interface Props {
   schema: QuizSchema;
@@ -837,7 +825,7 @@ export function BlockRenderer({
           >
             {embed?.kind === "iframe" ? (
               <iframe src={embed.src} className="w-full h-full" allowFullScreen title="video" />
-            ) : embed?.kind === "mp4" ? (
+            ) : embed?.kind === "arquivo" ? (
               <video
                 src={embed.src}
                 controls
@@ -878,7 +866,13 @@ export function BlockRenderer({
           <SumarioDasRespostas
             block={block}
             design={design}
-            resumo={[{ pergunta: "Exemplo de pergunta", resposta: "Resposta do visitante" }]}
+            resumo={[
+              {
+                blockId: "exemplo",
+                pergunta: "Exemplo de pergunta",
+                resposta: "Resposta do visitante",
+              },
+            ]}
           />
         </div>
       );

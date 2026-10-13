@@ -43,6 +43,8 @@ import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 import { AudioPlayer } from './AudioPlayer';
 import { ItensDeConteudo, SumarioDasRespostas, RedesSociais } from './blocosDeConteudo';
+import { montarResumo as montarResumoDoQuiz, type LinhaDoResumo } from '../lib/resumoDasRespostas';
+import { getVideoEmbed } from '../lib/videoEmbed';
 import { VideoAnswerRecorder } from './VideoAnswerRecorder';
 import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft, ArrowDown } from 'lucide-react';
 import type { SocialProofSettings, SocialProofMessage, SocialProofIcon, UrgencyBarSettings } from '../types';
@@ -480,7 +482,7 @@ function PlayerRunner({
   /* Calculado aqui, onde as respostas existem: o bloco Sumário só recebe o
      resultado pronto. */
   const resumoDasRespostas = useMemo(
-    () => montarResumo(blocks, state.responses),
+    () => montarResumoDoQuiz(blocks, state.responses),
     [blocks, state.responses],
   );
 
@@ -1662,7 +1664,7 @@ function BlockView({
   /** O que esta pessoa já respondeu neste bloco, quando voltou para cá. */
   respostaAnterior?: unknown;
   /** Respostas já dadas, em forma legível — usado pelo bloco Sumário. */
-  resumo?: { pergunta: string; resposta: string }[];
+  resumo?: LinhaDoResumo[];
   block: QuizBlock;
   design: QuizSchema['design'];
   scope: VariableScope;
@@ -2051,14 +2053,12 @@ function BlockView({
 
     case 'video': {
       const url = block.mediaUrl ?? '';
-      const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
-      const vim = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-      const src = yt
-        ? `https://www.youtube.com/embed/${yt[1]}`
-        : vim
-          ? `https://player.vimeo.com/video/${vim[1]}`
-          : url;
-      const isMp4 = /\.mp4($|\?)/i.test(url) || block.mediaProvider === 'mp4';
+      /* Mesma função que a prévia usa. Eram duas cópias, e as duas ignoravam o
+         provedor `file` do seletor "Upload" — `.webm` e `.mov` enviados saíam
+         como iframe em vez de `<video controls>`. */
+      const embed = getVideoEmbed(url, block.mediaProvider);
+      const src = embed?.src ?? url;
+      const isArquivo = embed?.kind === 'arquivo';
       return (
         <div>
           {heading}
@@ -2078,8 +2078,12 @@ function BlockView({
                 <PlayCircle className="h-8 w-8" style={{ color: withAlpha(design.text, 0.35) }} />
                 <span className="text-sm" style={{ color: design.muted }}>Vídeo ainda não adicionado</span>
               </div>
-            ) : isMp4 ? (
-              <video src={src} controls className="w-full h-full" />
+            ) : isArquivo ? (
+              /* `poster` só existia na prévia: o autor via a capa ao montar e o
+                 visitante recebia o primeiro quadro, que num MP4 costuma ser
+                 preto. YouTube e Vimeo ignoram o atributo e trazem miniatura
+                 própria, por isso ele só entra aqui. */
+              <video src={src} poster={block.posterUrl} controls className="w-full h-full" />
             ) : (
               <iframe src={src} className="w-full h-full" allowFullScreen title="video" />
             )}
@@ -3198,35 +3202,12 @@ function executarScriptDoBloco(bloco: QuizBlock, resposta: unknown): void {
  * resumo exibia linhas como "Como funciona → true": o título de um bloco de
  * conteúdo apresentado como se fosse resposta do visitante.
  */
-const BLOCOS_QUE_PERGUNTAM = new Set<QuizBlock['type']>([
-  'single-choice', 'multi-choice', 'rating',
-  'short-text', 'long-text', 'email', 'phone',
-  'weight', 'height',
-]);
-
-export function montarResumo(
-  blocks: QuizBlock[],
-  responses: Record<string, unknown>,
-): { pergunta: string; resposta: string }[] {
-  const linhas: { pergunta: string; resposta: string }[] = [];
-  for (const b of blocks) {
-    if (!BLOCOS_QUE_PERGUNTAM.has(b.type)) continue;
-    const v = responses[b.id];
-    if (v === undefined || v === null || v === '') continue;
-    const rotuloDaOpcao = (id: string) =>
-      (b.options ?? []).find((o) => o.id === id)?.label ?? id;
-
-    let resposta: string;
-    if (Array.isArray(v)) resposta = v.map((x) => rotuloDaOpcao(String(x))).join(', ');
-    else if (b.options?.length) resposta = rotuloDaOpcao(String(v));
-    else if (typeof v === 'object' || typeof v === 'boolean') continue;
-    else resposta = String(v);
-
-    if (!resposta.trim()) continue;
-    linhas.push({ pergunta: b.title?.trim() || b.type, resposta });
-  }
-  return linhas;
-}
+/* `montarResumo` mudou de casa para `lib/resumoDasRespostas`: o inspetor
+   precisa da mesma lista de tipos para montar a escolha de perguntas, e
+   importar o player inteiro de dentro do inspetor seria pior do que a
+   duplicata que isso evita. Reexportado porque testes e telas já o
+   importavam daqui. */
+export { montarResumo, BLOCOS_QUE_PERGUNTAM } from '../lib/resumoDasRespostas';
 
 /**
  * Grade e Cards.

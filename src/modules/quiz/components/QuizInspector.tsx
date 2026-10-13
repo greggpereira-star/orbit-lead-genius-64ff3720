@@ -60,6 +60,8 @@ import { RichTextEditor } from "./RichTextEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Palette, SlidersHorizontal } from "lucide-react";
 import { BUTTON_STYLE_OPTIONS, getButtonStyle } from "../lib/buttonStyles";
+import { BLOCOS_QUE_PERGUNTAM } from "../lib/resumoDasRespostas";
+import { aceitaCapa } from "../lib/videoEmbed";
 import { applyRichTextMark, type RichTextMark } from "../lib/richtext";
 import {
   resolveContainerLayout,
@@ -1171,11 +1173,18 @@ function BlockInspector({
             )}
 
             {block.type === "summary" && (
-              <p className="text-[11px] text-muted-foreground">
-                Repete as perguntas já respondidas, com o rótulo da opção escolhida. Formulário e
-                agendamento ficam de fora — eles têm tela própria. Sem nenhuma resposta ainda, o
-                bloco não aparece.
-              </p>
+              <>
+                <p className="text-[11px] text-muted-foreground">
+                  Repete as perguntas já respondidas, com o rótulo da opção escolhida. Formulário e
+                  agendamento ficam de fora — eles têm tela própria. Sem nenhuma resposta ainda, o
+                  bloco não aparece.
+                </p>
+                <EscolhaDasPerguntasDoResumo
+                  block={block}
+                  allBlocks={allBlocks}
+                  onChange={onChange}
+                />
+              </>
             )}
 
             {block.type === "chart" && (
@@ -1392,6 +1401,25 @@ function BlockInspector({
                       placeholder="https://..."
                     />
                   )}
+                </Field>
+              )}
+              {block.type === "video" && aceitaCapa(block.mediaUrl, block.mediaProvider) && (
+                <Field label="Capa do vídeo (opcional)">
+                  {/* Só aparece para arquivo direto: YouTube e Vimeo trazem
+                      miniatura própria e ignoram `poster`. O campo existia no
+                      schema desde sempre, nenhuma tela o gravava, e o player
+                      nem o lia — só a prévia, o que mostrava ao autor uma capa
+                      que o visitante nunca veria. */}
+                  <MediaUploader
+                    quizId={quizId}
+                    accept="image"
+                    value={block.posterUrl}
+                    onChange={(url) => onChange({ posterUrl: url || undefined })}
+                  />
+                  <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    Mostrada antes de dar play. Sem ela, aparece o primeiro quadro do vídeo — que
+                    costuma ser preto.
+                  </p>
                 </Field>
               )}
               {block.type === "before-after" && (
@@ -2172,6 +2200,86 @@ function AparenciaTab({
  * as duas pontas.
  */
 const OBRIGATORIO_POR_PADRAO = new Set(["single-choice", "rating"]);
+
+/**
+ * Quais perguntas o bloco de Resumo repete.
+ *
+ * `resumirBlocos` existe no schema desde sempre e NENHUMA tela o gravava —
+ * medido em 13/10: zero ocorrências em 40 versões publicadas e 5 funis. O
+ * resumo mostrava tudo, e quem quisesse enxugar precisava editar o schema à
+ * mão.
+ *
+ * Lista vazia continua significando TODAS, que é o que o bloco sempre fez.
+ * Marcar nada e marcar tudo dão no mesmo de propósito: um resumo vazio é uma
+ * caixa dizendo "o que você nos contou" sem contar nada.
+ */
+function EscolhaDasPerguntasDoResumo({
+  block,
+  allBlocks,
+  onChange,
+}: {
+  block: QuizBlock;
+  allBlocks: QuizBlock[];
+  onChange: (p: Partial<QuizBlock>) => void;
+}) {
+  const perguntas = allBlocks.filter((b) => BLOCOS_QUE_PERGUNTAM.has(b.type));
+  const escolhidas = block.resumirBlocos ?? [];
+  const todas = escolhidas.length === 0;
+
+  if (!perguntas.length) {
+    return (
+      <p className="text-[11px] text-muted-foreground">
+        Este funil ainda não tem pergunta nenhuma para resumir.
+      </p>
+    );
+  }
+
+  const alternar = (id: string) => {
+    /* Sair de "todas" marcando uma única deixaria o autor com um resumo de uma
+       linha só por um clique que ele leu como "destacar esta". Então o primeiro
+       clique parte de TODAS e tira a que foi clicada. */
+    const base = todas ? perguntas.map((p) => p.id) : escolhidas;
+    const nova = base.includes(id) ? base.filter((x) => x !== id) : [...base, id];
+    onChange({ resumirBlocos: nova.length === perguntas.length ? undefined : nova });
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold">Perguntas que aparecem</Label>
+        {!todas && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => onChange({ resumirBlocos: undefined })}
+          >
+            Mostrar todas
+          </Button>
+        )}
+      </div>
+      <div className="space-y-1 rounded-md border p-2">
+        {perguntas.map((p, i) => (
+          <label key={p.id} className="flex cursor-pointer items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 shrink-0"
+              checked={todas || escolhidas.includes(p.id)}
+              onChange={() => alternar(p.id)}
+            />
+            <span className="truncate">{p.title?.trim() || `Pergunta ${i + 1}`}</span>
+          </label>
+        ))}
+      </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        {todas
+          ? "Todas aparecem. Desmarque para esconder alguma."
+          : `${escolhidas.length} de ${perguntas.length} aparecem.`}
+      </p>
+    </div>
+  );
+}
 
 /**
  * Tipos cuja resposta entra na pontuação, e portanto os únicos onde "peso"

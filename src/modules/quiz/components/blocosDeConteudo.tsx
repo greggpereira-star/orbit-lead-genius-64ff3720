@@ -1,4 +1,5 @@
 import type { QuizBlock, QuizDesign } from "../types";
+import type { LinhaDoResumo } from "../lib/resumoDasRespostas";
 import { withAlpha } from "../lib/color";
 
 /**
@@ -111,10 +112,14 @@ export function SumarioDasRespostas({
 }: {
   block: QuizBlock;
   design: QuizDesign;
-  resumo: { pergunta: string; resposta: string }[];
+  resumo: LinhaDoResumo[];
 }) {
+  /* Filtra por ID do bloco, não por posição na lista. Só entra na lista quem
+     foi respondido, então a posição 2 é uma pergunta para quem respondeu tudo
+     e outra para quem pulou uma — o mesmo filtro mostrava respostas diferentes
+     para visitantes diferentes. Lista vazia continua significando "todas". */
   const filtradas = block.resumirBlocos?.length
-    ? resumo.filter((_, i) => block.resumirBlocos!.includes(String(i)))
+    ? resumo.filter((l) => block.resumirBlocos!.includes(l.blockId))
     : resumo;
 
   if (!filtradas.length) return null;
