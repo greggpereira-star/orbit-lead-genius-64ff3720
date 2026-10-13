@@ -2089,6 +2089,30 @@ function AparenciaTab({
 }
 
 // Tipos de bloco cuja resposta pode alimentar uma condição de exibição.
+/**
+ * Blocos cuja resposta pode virar condição, origem de "mostrar se" ou
+ * variável de saída.
+ *
+ * O critério NÃO é "guarda resposta" — é "guarda resposta COMPARÁVEL". O
+ * `compara` do motor reduz o valor a `String(bruto)` antes de testar, e a
+ * interpolação de `{{variável}}` faz o mesmo. Então quem guarda objeto
+ * entraria aqui para produzir regra que nunca bate e mensagem com
+ * "[object Object]" no meio da frase.
+ *
+ * Medido no `draftValue` do player: treze tipos gravam valor próprio. Quatro
+ * ficam de fora, e cada um por um motivo diferente:
+ *
+ * - `form` guarda `{name, email, phone}` — objeto.
+ * - `scheduling` guarda `{data, hora}` — objeto.
+ * - `reveal` guarda sempre `true` depois de revelado; como condição seria uma
+ *   regra constante, que não separa ninguém.
+ * - `video-answer` guarda a URL do vídeo, que é string: este ENTRA. Ficava de
+ *   fora sem motivo — quem gravava vídeo não podia ramificar o funil por ele
+ *   nem mandar o link na mensagem.
+ *
+ * Fazer `form` e `scheduling` funcionarem exige o motor alcançar campo dentro
+ * do objeto (`agendamento.data`), que é recurso novo, não conserto.
+ */
 const ANSWERABLE_TYPES = new Set([
   "single-choice",
   "multi-choice",
@@ -2099,6 +2123,7 @@ const ANSWERABLE_TYPES = new Set([
   "phone",
   "weight",
   "height",
+  "video-answer",
 ]);
 
 /**
@@ -3575,21 +3600,14 @@ function LogicRulesSection({
 }) {
   const regras = block.logicRules ?? [];
 
-  /* Só blocos que carregam resposta servem de origem. Oferecer um parágrafo
-     como campo de teste criaria uma regra que nunca bate, sem nenhum aviso. */
-  const origens = allBlocks.filter((b) =>
-    [
-      "single-choice",
-      "multi-choice",
-      "rating",
-      "short-text",
-      "long-text",
-      "email",
-      "phone",
-      "weight",
-      "height",
-    ].includes(b.type),
-  );
+  /* Só blocos que carregam resposta comparável servem de origem. Oferecer um
+     parágrafo como campo de teste criaria uma regra que nunca bate, sem aviso.
+
+     Esta lista era uma SEGUNDA cópia dos mesmos nove tipos, ao lado de
+     `ANSWERABLE_TYPES`. Duas listas que precisam concordar e ninguém obriga a
+     concordar divergem — e o custo da divergência é silencioso: o tipo some do
+     seletor e o autor conclui que o produto não faz aquilo. */
+  const origens = allBlocks.filter((b) => ANSWERABLE_TYPES.has(b.type));
   const destinos = allBlocks.filter((b) => b.id !== block.id);
 
   const etiquetas = [
