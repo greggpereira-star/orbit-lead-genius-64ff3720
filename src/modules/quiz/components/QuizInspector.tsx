@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Droppable, Draggable, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
-import { GripVertical, Copy, Workflow, RotateCcw, Code2 } from "lucide-react";
+import { GripVertical, Copy, Workflow, RotateCcw, Code2, Scale } from "lucide-react";
 import { Rows3, AlignCenter as AlignCenterIcon } from "lucide-react";
 import { Baseline } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1653,6 +1653,44 @@ function BlockInspector({
 
           <PosicaoSection block={block} onChange={onChange} />
 
+          {PESA_NA_PONTUACAO.has(block.type) && (
+            <Section title="Peso na pontuação" icon={Scale}>
+              {/* O motor sempre soube pesar pergunta: `evaluateResponse` lê
+                  `block.scoreWeight ?? 1` desde que a pontuação existe, e o teto
+                  e o piso usam o mesmo peso — então a porcentagem continua
+                  comparável. O que nunca existiu foi onde escrever o número: o
+                  campo só era alcançável editando o schema à mão. */}
+              <Field label="Peso">
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={block.scoreWeight ?? ""}
+                  placeholder="1"
+                  onChange={(e) => {
+                    const bruto = e.target.value;
+                    if (bruto === "") return onChange({ scoreWeight: undefined });
+                    const n = Number(bruto);
+                    /* Guardar `undefined` no peso 1 em vez do número: 1 é o que
+                       `?? 1` já significa, e gravar o padrão encheria o schema de
+                       todo funil publicado com um campo que não muda nada.
+                       Negativo inverteria o sinal da resposta sem avisar, então
+                       o piso é zero — e zero é útil: tira a pergunta da conta sem
+                       apagá-la. */
+                    if (!Number.isFinite(n) || n < 0) return;
+                    onChange({ scoreWeight: n === 1 ? undefined : n });
+                  }}
+                />
+              </Field>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Multiplica o que esta pergunta vale. <strong>1</strong> é o normal;{" "}
+                <strong>2</strong> faz valer o dobro e <strong>0</strong> tira da conta sem apagar a
+                pergunta. O máximo alcançável acompanha, então a porcentagem do lead continua
+                comparável entre funis.
+              </p>
+            </Section>
+          )}
+
           <Section title="Script no clique" icon={Code2}>
             <Textarea
               value={block.onClickScript ?? ""}
@@ -2134,6 +2172,18 @@ function AparenciaTab({
  * as duas pontas.
  */
 const OBRIGATORIO_POR_PADRAO = new Set(["single-choice", "rating"]);
+
+/**
+ * Tipos cuja resposta entra na pontuação, e portanto os únicos onde "peso"
+ * quer dizer alguma coisa.
+ *
+ * Vem do motor, não de gosto: `evaluateResponse` multiplica por
+ * `scoreWeight` só nestes três, e `maxPossibleScore`/`minPossibleScore` usam o
+ * mesmo peso para o teto e o piso. Oferecer o campo num parágrafo seria mais
+ * um controle que não faz nada — o defeito que esta auditoria já corrigiu duas
+ * vezes.
+ */
+const PESA_NA_PONTUACAO = new Set(["single-choice", "multi-choice", "rating"]);
 
 const ANSWERABLE_TYPES = new Set([
   "single-choice",
