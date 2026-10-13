@@ -63,6 +63,7 @@ import { BUTTON_STYLE_OPTIONS, getButtonStyle } from "../lib/buttonStyles";
 import { BLOCOS_QUE_PERGUNTAM } from "../lib/resumoDasRespostas";
 import { aceitaCapa } from "../lib/videoEmbed";
 import { ROTULO_DO_OPERADOR } from "../lib/rotuloDaCondicao";
+import { destinoComoEtapa } from "../lib/edicaoDeSalto";
 import { applyRichTextMark, type RichTextMark } from "../lib/richtext";
 import {
   resolveContainerLayout,
@@ -1737,7 +1738,12 @@ function BlockInspector({
             </p>
           </Section>
 
-          <LogicRulesSection block={block} allBlocks={allBlocks} onChange={onChange} />
+          <LogicRulesSection
+            block={block}
+            allBlocks={allBlocks}
+            steps={allSteps}
+            onChange={onChange}
+          />
 
           {block.type !== "result" && (
             <AbTestSection quizId={quizId} block={block} onChange={onChange} />
@@ -2360,7 +2366,13 @@ function OptionJumpSelect({
   return (
     <div className="flex items-center gap-1.5 pl-1">
       <CornerDownRight className="h-3 w-3 text-muted-foreground shrink-0" />
-      <Select value={value ?? "flow"} onValueChange={(v) => onSelect(v === "flow" ? undefined : v)}>
+      {/* Mesma normalização do seletor de regra: salto gravado apontando para o
+          meio de uma etapa aparece na etapa certa, e não em branco. Sem isto, um
+          quiz antigo mostraria "Seguir fluxo normal" para um salto que existe. */}
+      <Select
+        value={destinoComoEtapa(steps, value) || "flow"}
+        onValueChange={(v) => onSelect(v === "flow" ? undefined : v)}
+      >
         <SelectTrigger className="h-7 text-[11px] text-muted-foreground border-dashed">
           <SelectValue placeholder="Seguir fluxo normal" />
         </SelectTrigger>
@@ -3780,10 +3792,13 @@ const ROTULO_DO_MODO: Record<
 function LogicRulesSection({
   block,
   allBlocks,
+  steps,
   onChange,
 }: {
   block: QuizBlock;
   allBlocks: QuizBlock[];
+  /** As etapas REAIS do schema, na ordem real. */
+  steps: QuizStep[];
   onChange: (p: Partial<QuizBlock>) => void;
 }) {
   const regras = block.logicRules ?? [];
@@ -3796,7 +3811,23 @@ function LogicRulesSection({
      concordar divergem — e o custo da divergência é silencioso: o tipo some do
      seletor e o autor conclui que o produto não faz aquilo. */
   const origens = allBlocks.filter((b) => ANSWERABLE_TYPES.has(b.type));
-  const destinos = allBlocks.filter((b) => b.id !== block.id);
+  /* Destino é ETAPA, não bloco.
+
+     Era `allBlocks.filter(b => b.id !== block.id)`: a lista trazia TODOS os
+     blocos do quiz — títulos, parágrafos, depoimentos, opções de resultado —
+     dezenas de linhas, com textos longos e repetidos, sem dizer de que etapa
+     cada uma era.
+
+     E o pior não era o tamanho: era oferecer escolha que não existe. Quem
+     navega é a etapa (`findStepIndexForBlock` leva o visitante para a etapa que
+     contém o bloco), então apontar para o terceiro bloco da etapa 5 faz
+     exatamente o mesmo que apontar para o primeiro. A lista mostrava quatro
+     "Perfil — Harmonia Facial Individual" como se fossem destinos diferentes.
+
+     O salto por OPÇÃO já tinha sido corrigido assim; este seletor irmão ficou
+     para trás — duas implementações da mesma coisa, de novo. */
+  const etapaDaOrigem = steps.findIndex((s) => s.blockIds.includes(block.id));
+  const destinos = steps.filter((_, i) => i !== etapaDaOrigem);
 
   const etiquetas = [
     ...new Set(
@@ -3940,14 +3971,17 @@ function LogicRulesSection({
             <div className="flex items-center gap-1.5">
               <span className="shrink-0 text-[11px] text-muted-foreground">então vai para</span>
               <select
-                value={regra.jumpToBlockId}
+                /* Valor normalizado para a etapa: regra antiga apontando para o
+                   meio de uma etapa aparece selecionada na etapa certa, em vez
+                   de em branco. */
+                value={destinoComoEtapa(steps, regra.jumpToBlockId)}
                 onChange={(e) => atualizar(i, { jumpToBlockId: e.target.value })}
                 className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
               >
                 <option value="">Escolha o destino…</option>
-                {destinos.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.title || b.resultTitle || b.type}
+                {destinos.map((s) => (
+                  <option key={s.id} value={s.blockIds[0] ?? ""}>
+                    {stepLabelFor(allBlocks, s, steps.indexOf(s))}
                   </option>
                 ))}
               </select>

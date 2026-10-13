@@ -151,3 +151,24 @@ export function adicionarSalto(schema: QuizSchema, novo: SaltoNovo): QuizSchema 
 
   return { ...schema, blocks };
 }
+
+/**
+ * O id que REPRESENTA a etapa de destino, a partir de qualquer bloco dela.
+ *
+ * O salto é gravado como id de BLOCO, mas quem navega é a etapa:
+ * `findStepIndexForBlock` leva o visitante para a etapa que contém aquele
+ * bloco. Então apontar para o terceiro bloco da etapa 5 tem exatamente o mesmo
+ * efeito que apontar para o primeiro — e oferecer os dois como se fossem
+ * destinos diferentes é oferecer uma escolha que não existe.
+ *
+ * Serve também para ler valor antigo: regra gravada apontando para o meio de
+ * uma etapa passa a aparecer selecionada na etapa certa, em vez de em branco.
+ */
+export function destinoComoEtapa(
+  steps: QuizStep[],
+  jumpToBlockId: string | null | undefined,
+): string {
+  if (!jumpToBlockId) return "";
+  const etapa = steps.find((s) => s.blockIds.includes(jumpToBlockId));
+  return etapa?.blockIds[0] ?? "";
+}
