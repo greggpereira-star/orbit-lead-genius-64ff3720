@@ -264,7 +264,7 @@ function PlayerRunner({
      editando quer ver o quiz do começo a cada olhada, não de onde parou. */
   useEffect(() => {
     if (preview) return;
-    const salvo = lerProgresso(quizId, blocks, steps.length);
+    const salvo = lerProgresso(quizId, blocks, steps);
     if (!salvo) return;
     sessionId.current = salvo.sessionId;
     retomou.current = true;
@@ -282,7 +282,7 @@ function PlayerRunner({
        continuava no navegador depois de concluir. */
     if (done || jaSalvou.current) { limparProgresso(quizId); return; }
     if (retomou.current) { retomou.current = false; return; }
-    salvarProgresso(quizId, sessionId.current, state);
+    salvarProgresso(quizId, sessionId.current, state, steps[state.currentStepIndex]?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, done, saving, preview, quizId]);
   const currentStep = steps[state.currentStepIndex];

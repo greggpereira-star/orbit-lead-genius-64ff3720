@@ -1,4 +1,4 @@
-import type { QuizBlock } from '../types';
+import type { QuizBlock, QuizStep } from '../types';
 import type { QuizRunState } from '../engine';
 
 interface Guardado {
@@ -6,6 +6,18 @@ interface Guardado {
   ts: number;
   sessionId: string;
   state: QuizRunState;
+  /**
+   * Qual etapa, pelo ID — não pela posição.
+   *
+   * A posição deixa de significar a mesma coisa assim que o autor reordena as
+   * etapas ou insere uma no meio: o visitante voltava para o índice 3 e caía
+   * noutra etapa, sem nada acusar. O id sobrevive às duas edições.
+   *
+   * Opcional porque progresso gravado ANTES desta mudança não tem o campo. Ali
+   * não dá para fazer melhor que o comportamento antigo, e a validade de 24h
+   * faz esse caso desaparecer sozinho em um dia.
+   */
+  stepId?: string;
 }
 
 /** Depois disto, retomar é mais confuso do que útil: a pessoa já esqueceu. */
@@ -27,9 +39,14 @@ const chave = (quizId: string) => `lf.q.${quizId}`;
  * A sessão é guardada junto de propósito: sem ela, quem voltasse viraria um
  * lead NOVO, e a captura antecipada do primeiro acesso ficaria órfã.
  */
-export function salvarProgresso(quizId: string, sessionId: string, state: QuizRunState): void {
+export function salvarProgresso(
+  quizId: string,
+  sessionId: string,
+  state: QuizRunState,
+  stepId?: string,
+): void {
   try {
-    const dado: Guardado = { v: 1, ts: Date.now(), sessionId, state };
+    const dado: Guardado = { v: 1, ts: Date.now(), sessionId, state, stepId };
     localStorage.setItem(chave(quizId), JSON.stringify(dado));
   } catch {
     /* Aba anônima, cota cheia, storage bloqueado: seguir sem salvar é melhor
@@ -53,7 +70,7 @@ export function limparProgresso(quizId: string): void {
 export function lerProgresso(
   quizId: string,
   blocks: QuizBlock[],
-  totalDeEtapas: number,
+  steps: QuizStep[],
 ): { sessionId: string; state: QuizRunState } | null {
   try {
     const cru = localStorage.getItem(chave(quizId));
@@ -70,7 +87,32 @@ export function lerProgresso(
     // Etapa fora do funil atual (o quiz encurtou): recomeçar é mais seguro que
     // cair numa etapa que não existe.
     const idx = dado.state.currentStepIndex;
-    if (typeof idx !== 'number' || idx < 0 || idx >= totalDeEtapas) { limparProgresso(quizId); return null; }
+    if (typeof idx !== 'number' || idx < 0 || idx >= steps.length) { limparProgresso(quizId); return null; }
+
+    /* A etapa é reencontrada pelo ID, e a posição é RECALCULADA.
+     *
+     * O guarda acima só pegava quiz que encurtou. Reordenar as etapas, ou
+     * inserir uma no meio, mantinha o índice dentro da faixa e o visitante
+     * voltava para outra etapa — calado, porque nada no sistema sabe que a
+     * posição 3 de ontem não é a posição 3 de hoje.
+     *
+     * Reencontrar conserta em vez de descartar: quem parou em "Dor principal"
+     * volta para "Dor principal", esteja ela onde estiver agora. Descartar
+     * seria mais simples e custaria o progresso de quem não fez nada de errado.
+     *
+     * Etapa APAGADA é outro caso: não há para onde voltar, e recomeçar é a
+     * única saída honesta.
+     */
+    if (dado.stepId) {
+      const posicaoAgora = steps.findIndex((s) => s.id === dado.stepId);
+      if (posicaoAgora < 0) { limparProgresso(quizId); return null; }
+      if (posicaoAgora !== idx) {
+        return {
+          sessionId: dado.sessionId,
+          state: { ...dado.state, currentStepIndex: posicaoAgora },
+        };
+      }
+    }
 
     // Nada guardado de útil: deixa o visitante começar do zero sem aviso.
     if (respondidos.length === 0 && idx === 0) return null;
