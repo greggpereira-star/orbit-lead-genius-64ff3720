@@ -61,6 +61,12 @@ export interface LeadDetails {
 
 const EMPTY_METADATA: Record<string, Json> = {};
 
+import {
+  acharDuplicado,
+  finalDoTelefone,
+  normalizarEmail,
+} from "@/modules/crm/lib/identidadeDoLead";
+
 function normalizeText(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -170,7 +176,64 @@ export async function listMetaFormsForCompany(companyId: string): Promise<MetaFo
 }
 
 
+/**
+ * Lead que já existe com o mesmo contato, na mesma empresa.
+ *
+ * A busca no banco é LARGA e a conferência é ESTREITA, de propósito: o telefone
+ * fica gravado como foi digitado, com máscara, então procurar pela forma
+ * normalizada não acharia nada. Busca-se pelo fim do número e confirma-se com
+ * `mesmaPessoa`, que compara já normalizado. Assim nenhum palpite vira fusão.
+ */
+export async function acharLeadComMesmoContato(
+  companyId: string,
+  contato: { email?: string; phone?: string },
+): Promise<Pick<LeadRow, "id" | "name" | "email" | "phone"> | null> {
+  const email = normalizarEmail(contato.email);
+  const fim = finalDoTelefone(contato.phone);
+  if (!email && !fim) return null;
+
+  const filtros: string[] = [];
+  if (email) filtros.push(`email.ilike.${email}`);
+  if (fim) filtros.push(`phone.like.%${fim}`);
+
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, name, email, phone")
+    .eq("company_id", companyId)
+    .or(filtros.join(","))
+    .limit(25);
+
+  /* Falha de consulta não pode impedir a criação: o pior caso de não achar o
+     duplicado é um lead a mais, e o pior caso de barrar é perder o lead. */
+  if (error) return null;
+
+  const candidatos = (data ?? []) as Pick<LeadRow, "id" | "name" | "email" | "phone">[];
+  return acharDuplicado({ email: contato.email, phone: contato.phone }, candidatos);
+}
+
+/** Criação barrada porque o contato já existe. Carrega para ONDE ir. */
+export class LeadDuplicadoError extends Error {
+  constructor(public readonly leadExistente: { id: string; name: string | null }) {
+    super(
+      `Já existe um lead com este contato: ${leadExistente.name?.trim() || "sem nome"}. Abra o lead existente em vez de criar outro.`,
+    );
+    this.name = "LeadDuplicadoError";
+  }
+}
+
 export async function createLead(input: CreateLeadInput): Promise<LeadRow> {
+  /* Medido na base em 13/10: 28 linhas excedentes em 560 leads, 5% do CRM.
+     Duplicata não é ruído de contagem — é o vendedor ligando para quem outro
+     vendedor já ligou, e a mesma pessoa recebendo a automação duas vezes.
+
+     Aqui BARRA em vez de fundir: numa criação manual quem está na tela sabe o
+     que quer, e fundir sem perguntar tiraria dele a escolha. */
+  const duplicado = await acharLeadComMesmoContato(input.companyId, {
+    email: input.email,
+    phone: input.phone,
+  });
+  if (duplicado) throw new LeadDuplicadoError(duplicado);
+
   const metadata: Record<string, Json> = {
     created_manually: true,
     created_from: 'lead_list',

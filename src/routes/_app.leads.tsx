@@ -54,6 +54,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import {
   createLead,
+  LeadDuplicadoError,
   deleteLead,
   deleteLeads,
   getLeadDisplayName,
@@ -214,6 +215,19 @@ function LeadsPage() {
       navigate({ to: '/leads/$id', params: { id: lead.id } });
     },
     onError: (error) => {
+      /* Duplicata não é erro de sistema, é um desencontro de informação: o
+         contato já está no CRM. Dizer só "já existe" obrigaria a pessoa a
+         procurar o lead à mão — por isso o aviso leva até ele. */
+      if (error instanceof LeadDuplicadoError) {
+        const { id, name } = error.leadExistente;
+        toast.warning(`Este contato já é um lead: ${name?.trim() || "sem nome"}.`, {
+          action: {
+            label: "Abrir o existente",
+            onClick: () => navigate({ to: "/leads/$id", params: { id } }),
+          },
+        });
+        return;
+      }
       toast.error(error instanceof Error ? error.message : 'Não foi possível criar o lead.');
     },
   });
