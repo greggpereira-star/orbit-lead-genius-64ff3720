@@ -187,7 +187,11 @@ export function QuizPlayer({
   return (
     <>
       {preview && (
-        <div className="fixed top-2 right-2 z-50 px-3 py-1 rounded-full bg-[var(--aviso)] text-black text-xs font-semibold shadow">
+        <div /* Texto BRANCO, não preto: medido, preto sobre `--aviso` dava 4,24:1
+             mesmo ANTES de escurecer o token — já estava abaixo do piso. Branco
+             sobre a cor nova dá 5,82:1. */
+          className="fixed top-2 right-2 z-50 px-3 py-1 rounded-full bg-[var(--aviso)] text-white text-xs font-semibold shadow"
+        >
           Preview (rascunho)
         </div>
       )}

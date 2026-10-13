@@ -133,10 +133,15 @@
      antigo — o `emerald-600` que o código usava dá 3,8:1 sobre branco, abaixo
      dos 4,5:1 que a AA exige para texto normal. Escurecido até passar nos dois
      fundos: 4,93:1 sobre branco e 4,64:1 sobre a superfície tonal. */
-  --sucesso: oklch(0.52 0.145 163);      /* #008150 */
+  /* Escurecidos em 13/10 por medição, não por gosto: no fundo `-suave` (12%
+     da própria cor) o texto dava 4,19:1 para sucesso e 4,20:1 para aviso, com
+     letra de 9px no selo de condicional — abaixo do piso de 4,5:1. Hue e croma
+     intactos; só a luminosidade desceu. Agora 4,84:1 e 4,89:1.
+     O comentado antes (#B45309) nem era a cor: aquele oklch rendia #AA5C00. */
+  --sucesso: oklch(0.48 0.145 163);      /* #007545 */
   --sucesso-suave: color-mix(in oklch, var(--sucesso) 12%, transparent);
   --sucesso-borda: color-mix(in oklch, var(--sucesso) 28%, transparent);
-  --aviso: oklch(0.555 0.137 62);        /* #B45309 */
+  --aviso: oklch(0.515 0.137 62);        /* #9D5100 */
   --aviso-suave: color-mix(in oklch, var(--aviso) 12%, transparent);
   --aviso-borda: color-mix(in oklch, var(--aviso) 28%, transparent);
 
