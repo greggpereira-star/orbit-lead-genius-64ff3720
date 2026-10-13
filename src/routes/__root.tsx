@@ -22,6 +22,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { SCRIPT_ANTI_PISCADA } from "@/core/theme/tema";
 
 function NotFoundComponent() {
   return (
@@ -143,6 +144,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Antes de QUALQUER coisa: aplica o tema guardado na primeira pintura.
+            Depois do React, a página nasceria clara e viraria escura na
+            hidratação — um clarão branco em todo carregamento. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_ANTI_PISCADA }} />
         <HeadContent />
       </head>
       <body>

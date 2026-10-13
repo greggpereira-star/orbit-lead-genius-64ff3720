@@ -11,6 +11,7 @@
    DropdownMenuTrigger,
  } from '@/components/ui/dropdown-menu';
  import { useAuth } from '@/core/auth/hooks/useAuth';
+import { AlternadorDeTema } from "./AlternadorDeTema";
  import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
  
  export function Topbar() {
@@ -31,6 +32,7 @@
            </div>
          </div>
        <div className="flex items-center gap-4">
+        <AlternadorDeTema />
          <Button variant="ghost" size="icon" className="relative">
            <Bell className="h-5 w-5 text-muted-foreground" />
            <span className="absolute top-2 right-2 h-2 w-2 bg-destructive rounded-full border-2 border-background" />
