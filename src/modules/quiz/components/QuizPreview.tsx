@@ -813,9 +813,14 @@ export function BlockRenderer({
           >
             {block.resultTitle || title}
           </h2>
-          <p className="text-sm max-w-md mx-auto" style={{ color: design.muted }}>
-            {block.resultBody || sub || "Personalize este resultado no inspetor."}
-          </p>
+          {/* Mesma troca do player: sem isto o autor formatava no inspetor e
+              não via o resultado nem na própria prévia. */}
+          <RichText
+            doc={block.resultBodyRich}
+            fallback={block.resultBody || sub || "Personalize este resultado no inspetor."}
+            className="quiz-rich text-sm max-w-md mx-auto"
+            style={{ color: design.muted }}
+          />
           <Btn design={design} textStyle={resolveTextStyle(block, "button")}>
             {block.ctaLabel || "Continuar"}
           </Btn>

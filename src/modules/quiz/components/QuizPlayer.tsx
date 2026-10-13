@@ -2979,7 +2979,6 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
   // "Baseado no seu peso de {{peso}}kg e IMC {{calc(peso/(altura/100)^2)}}...".
   const scope = resolveScope(schema.blocks, state.responses, { score: state.score });
   const resultTitle = interpolateText(resultBlock?.resultTitle, scope);
-  const resultBody = interpolateText(resultBlock?.resultBody, scope);
 
   // O visitante nunca deveria ler que o sistema o classificou como "frio" — a badge é sempre
   // uma mensagem positiva por padrão; quem quiser diferenciar por faixa pode personalizar cada
@@ -3003,12 +3002,24 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
       <h2 className="text-3xl sm:text-4xl font-bold" style={resultBlock ? resolveTextStyle(resultBlock, 'title', { fontFamily: design.fontHeading }) : { fontFamily: design.fontHeading }}>
         {resultTitle || 'Seu resultado está pronto'}
       </h2>
-      <p
-        className="text-base max-w-md mx-auto"
+      {/* O inspetor oferece editor de texto rico para o corpo do resultado e
+          grava `resultBodyRich`, mas o visitante recebia só `resultBody`, que
+          é a versão em texto puro gravada ao lado. Negrito, link e lista que o
+          autor aplicasse sumiam na entrega — e logo nesta tela, que é onde o
+          funil paga o que prometeu.
+
+          `titleRich` e `subtitleRich` sempre foram desenhados assim, nos dois
+          renderizadores; só o corpo do resultado ficou de fora. Com `doc`
+          vazio, `RichText` desenha o `fallback` e interpola igual — por isso o
+          texto cru entra aqui, e não o já interpolado: interpolar duas vezes
+          faria uma resposta que contivesse `{{...}}` ser expandida de novo. */}
+      <RichText
+        doc={resultBlock?.resultBodyRich}
+        fallback={resultBlock?.resultBody || 'Obrigado por completar o quiz.'}
+        scope={scope}
+        className="quiz-rich text-base max-w-md mx-auto"
         style={resultBlock ? resolveTextStyle(resultBlock, 'subtitle', { color: design.muted }) : { color: design.muted }}
-      >
-        {resultBody || 'Obrigado por completar o quiz.'}
-      </p>
+      />
       <div className="text-5xl font-bold pt-4" style={{ color: design.primary, fontFamily: design.fontHeading }}>
         {pct}%
       </div>
