@@ -8,7 +8,7 @@ const QUIZ = 'quiz-1';
 const blocks = [{ id: 'a' }, { id: 'b' }] as QuizBlock[];
 
 /** Três etapas com id, que é como o funil real é. */
-const etapas = (ids: string[] = ['s0', 's1', 's2']): QuizStep[] =>
+const etapas = (ids: string[] = ["s0", "s1", "s2"]): QuizStep[] =>
   ids.map((id) => ({ id, blockIds: [] })) as QuizStep[];
 const estado = (over: Partial<QuizRunState> = {}): QuizRunState => ({
   currentStepIndex: 1,
