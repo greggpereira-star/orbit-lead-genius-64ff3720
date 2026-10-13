@@ -12,9 +12,11 @@ import { getSteps } from "@/modules/quiz/lib/steps";
 import { QuizFlowView } from "@/modules/quiz/components/QuizFlowView";
 import { DEFAULT_DESIGN } from "@/modules/quiz/design-presets";
 import {
+  adicionarSalto,
   aplicarEdicaoDeSalto,
   type MudancaDoSalto,
   type OrigemDoSalto,
+  type SaltoNovo,
 } from "@/modules/quiz/lib/edicaoDeSalto";
 import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from "@/modules/quiz/types";
 
@@ -109,6 +111,10 @@ function QuizFlowPage() {
      editar pelo fluxograma produz o mesmo schema que editar pelo inspetor. */
   const editarSalto = (origem: OrigemDoSalto, mudanca: MudancaDoSalto) => {
     updateSchema((prev) => aplicarEdicaoDeSalto(prev, origem, mudanca));
+  };
+
+  const criarSalto = (novo: SaltoNovo) => {
+    updateSchema((prev) => adicionarSalto(prev, novo));
   };
 
   const renameStep = (stepId: string, name: string | undefined) => {
@@ -263,6 +269,7 @@ function QuizFlowPage() {
           <QuizFlowView
             schema={schema}
             onEditarSalto={editarSalto}
+            onCriarSalto={criarSalto}
             onRenameStep={renameStep}
             onToggleGoal={toggleGoal}
             onDeleteStep={deleteStep}

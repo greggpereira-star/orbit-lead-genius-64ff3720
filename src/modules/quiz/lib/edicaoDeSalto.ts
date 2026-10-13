@@ -1,4 +1,5 @@
-import type { BlockLogicOp, QuizSchema } from "../types";
+import type { BlockLogicOp, QuizBlock, QuizSchema, QuizStep } from "../types";
+import { BLOCOS_QUE_PERGUNTAM } from "./resumoDasRespostas";
 
 /**
  * De onde uma seta do fluxograma saiu.
@@ -75,4 +76,78 @@ export function aplicarEdicaoDeSalto(
   });
 
   return { ...schema, blocks: blocos };
+}
+
+/** Um salto a criar, arrastando de uma etapa para outra no fluxograma. */
+export type SaltoNovo =
+  | { tipo: "opcao"; blockId: string; optionId: string; jumpToBlockId: string }
+  | {
+      tipo: "regra";
+      blockId: string;
+      op: BlockLogicOp;
+      value: string | number;
+      jumpToBlockId: string;
+    };
+
+/**
+ * Blocos de uma etapa que podem originar um salto.
+ *
+ * Salto depende de resposta, então só quem pergunta serve de origem — a mesma
+ * lista que monta o resumo, importada e não recopiada.
+ *
+ * Para o salto por OPÇÃO ainda é preciso ter opções: um campo de texto aceita
+ * regra ("se contém X"), mas não tem opção onde pendurar um destino.
+ */
+export function origensPossiveis(schema: QuizSchema, step: QuizStep): QuizBlock[] {
+  return step.blockIds
+    .map((id) => schema.blocks.find((b) => b.id === id))
+    .filter((b): b is QuizBlock => !!b && BLOCOS_QUE_PERGUNTAM.has(b.type));
+}
+
+/**
+ * Cria um salto, devolvendo um schema novo.
+ *
+ * Grava nos MESMOS campos que o inspetor escreve. Um segundo caminho de escrita
+ * só se justifica se produzir o mesmo resultado que o primeiro — os testes
+ * conferem isso contra o motor, não contra o formato.
+ *
+ * Destino igual à própria etapa de origem é recusado: é o laço que o validador
+ * de publicação já bloqueia, e deixar criar aqui seria oferecer o erro.
+ */
+export function adicionarSalto(schema: QuizSchema, novo: SaltoNovo): QuizSchema {
+  const bloco = schema.blocks.find((b) => b.id === novo.blockId);
+  if (!bloco) return schema;
+
+  const etapaDaOrigem = schema.steps?.find((st) => st.blockIds.includes(novo.blockId));
+  if (etapaDaOrigem?.blockIds.includes(novo.jumpToBlockId)) return schema;
+
+  const blocks = schema.blocks.map((b) => {
+    if (b.id !== novo.blockId) return b;
+
+    if (novo.tipo === "opcao") {
+      const opcoes = b.options ?? [];
+      if (!opcoes.some((o) => o.id === novo.optionId)) return b;
+      return {
+        ...b,
+        options: opcoes.map((o) =>
+          o.id === novo.optionId ? { ...o, jumpToBlockId: novo.jumpToBlockId } : o,
+        ),
+      };
+    }
+
+    return {
+      ...b,
+      logicRules: [
+        ...(b.logicRules ?? []),
+        {
+          fieldBlockId: novo.blockId,
+          op: novo.op,
+          value: novo.value,
+          jumpToBlockId: novo.jumpToBlockId,
+        },
+      ],
+    };
+  });
+
+  return { ...schema, blocks };
 }

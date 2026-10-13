@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resumirCondicao } from "../lib/rotuloDaCondicao";
-import type { OrigemDoSalto, MudancaDoSalto } from "../lib/edicaoDeSalto";
+import {
+  origensPossiveis,
+  type MudancaDoSalto,
+  type OrigemDoSalto,
+  type SaltoNovo,
+} from "../lib/edicaoDeSalto";
 import {
   ReactFlow,
   Background,
@@ -73,6 +78,8 @@ const typeMeta = new Map(BLOCK_LIBRARY.map((def) => [def.type, def]));
 export interface QuizFlowActions {
   /** Salvar a edição de UM salto, feita clicando na seta. */
   onEditarSalto?: (origem: OrigemDoSalto, mudanca: MudancaDoSalto) => void;
+  /** Criar um salto, arrastando de uma etapa para outra. */
+  onCriarSalto?: (novo: SaltoNovo) => void;
   onSelectStep?: (stepId: string) => void;
   onRenameStep?: (stepId: string, name: string | undefined) => void;
   onDeleteStep?: (stepId: string) => void;
@@ -133,9 +140,14 @@ function StepNode({ data }: { data: StepNodeData }) {
       style={{ width: STEP_WIDTH, borderColor, boxShadow }}
       onClick={() => onSelectStep?.(step.id)}
     >
+      {/* As alças laterais desenham o fluxo SEQUENCIAL, que vem da ordem das
+          etapas e não de uma linha traçada. Deixá-las conectáveis convidaria a
+          um arrasto que não produz nada — pior do que não poder arrastar. A
+          ramificação é pelas alças âmbar, em cima e embaixo. */}
       <Handle
         type="target"
         position={Position.Left}
+        isConnectable={false}
         className="!w-3 !h-3"
         style={themeHandleStyle}
       />
@@ -307,6 +319,7 @@ function StepNode({ data }: { data: StepNodeData }) {
       <Handle
         type="source"
         position={Position.Right}
+        isConnectable={false}
         className="!w-3 !h-3"
         style={themeHandleStyle}
       />
@@ -650,6 +663,186 @@ function DialogoDeSalto({
   );
 }
 
+/**
+ * Criar um salto arrastando de uma etapa para outra.
+ *
+ * O arrasto entrega as duas pontas e mais nada: de qual etapa e para qual. O
+ * que falta é de QUAL bloco e sob QUE condição — e isso o fluxograma não tem
+ * como adivinhar, porque uma etapa pode ter mais de uma pergunta e um salto
+ * pode nascer de uma opção ou de uma regra. Então o arrasto abre esta tela em
+ * vez de criar algo no escuro.
+ *
+ * O padrão cai em "opção" quando o bloco tem opções, porque é o salto que
+ * dispensa escrever condição: marcou aquilo, vai para lá.
+ */
+function DialogoDeSaltoNovo({
+  etapaDeOrigem,
+  etapaDeDestino,
+  schema,
+  steps,
+  onFechar,
+  onCriar,
+}: {
+  etapaDeOrigem: QuizStep;
+  etapaDeDestino: QuizStep;
+  schema: QuizSchema;
+  steps: QuizStep[];
+  onFechar: () => void;
+  onCriar: (novo: SaltoNovo) => void;
+}) {
+  const origens = origensPossiveis(schema, etapaDeOrigem);
+  const [blocoId, setBlocoId] = useState(origens[0]?.id ?? "");
+  const bloco = origens.find((b) => b.id === blocoId);
+  const opcoes = bloco?.options ?? [];
+  const [modo, setModo] = useState<"opcao" | "regra">(opcoes.length ? "opcao" : "regra");
+  const [opcaoId, setOpcaoId] = useState(opcoes[0]?.id ?? "");
+  const [op, setOp] = useState<BlockLogicOp>("eq");
+  const [valor, setValor] = useState("");
+
+  const destino = etapaDeDestino.blockIds[0];
+  const rotulo = (st: QuizStep) =>
+    st.name?.trim() ||
+    schema.blocks.find((b) => st.blockIds.includes(b.id) && b.title?.trim())?.title?.trim() ||
+    `Etapa ${steps.indexOf(st) + 1}`;
+
+  const podeSalvar =
+    !!bloco && !!destino && (modo === "opcao" ? !!opcaoId : valor.trim().length > 0);
+
+  return (
+    <Dialog open onOpenChange={(aberto) => !aberto && onFechar()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo salto</DialogTitle>
+          <DialogDescription>
+            De <strong>{rotulo(etapaDeOrigem)}</strong> para{" "}
+            <strong>{rotulo(etapaDeDestino)}</strong>.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!origens.length ? (
+          <p className="text-sm text-muted-foreground">
+            Esta etapa não tem nenhuma pergunta. Um salto depende de uma resposta, então não há de
+            onde partí-lo — acrescente uma pergunta aqui primeiro.
+          </p>
+        ) : !destino ? (
+          <p className="text-sm text-muted-foreground">
+            A etapa de destino está vazia. Ponha um componente nela para poder receber o salto.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {origens.length > 1 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">A partir de qual pergunta</Label>
+                <select
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  value={blocoId}
+                  onChange={(e) => {
+                    setBlocoId(e.target.value);
+                    const novo = origens.find((b) => b.id === e.target.value);
+                    setModo(novo?.options?.length ? "opcao" : "regra");
+                    setOpcaoId(novo?.options?.[0]?.id ?? "");
+                  }}
+                >
+                  {origens.map((b, i) => (
+                    <option key={b.id} value={b.id}>
+                      {b.title?.trim() || `Pergunta ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {opcoes.length > 0 && (
+              <div className="flex gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={modo === "opcao" ? "default" : "outline"}
+                  onClick={() => setModo("opcao")}
+                >
+                  Ao escolher uma opção
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={modo === "regra" ? "default" : "outline"}
+                  onClick={() => setModo("regra")}
+                >
+                  Por condição
+                </Button>
+              </div>
+            )}
+
+            {modo === "opcao" ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Qual opção</Label>
+                <select
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  value={opcaoId}
+                  onChange={(e) => setOpcaoId(e.target.value)}
+                >
+                  {opcoes.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Operador</Label>
+                  <select
+                    className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    value={op}
+                    onChange={(e) => setOp(e.target.value as BlockLogicOp)}
+                  >
+                    {(Object.keys(ROTULO_DO_OPERADOR) as BlockLogicOp[]).map((o) => (
+                      <option key={o} value={o}>
+                        {ROTULO_DO_OPERADOR[o]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Valor</Label>
+                  <Input value={valor} onChange={(e) => setValor(e.target.value)} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={!podeSalvar}
+            onClick={() => {
+              if (!bloco || !destino) return;
+              onCriar(
+                modo === "opcao"
+                  ? { tipo: "opcao", blockId: bloco.id, optionId: opcaoId, jumpToBlockId: destino }
+                  : {
+                      tipo: "regra",
+                      blockId: bloco.id,
+                      op,
+                      value:
+                        valor.trim() !== "" && !Number.isNaN(Number(valor)) ? Number(valor) : valor,
+                      jumpToBlockId: destino,
+                    },
+              );
+            }}
+          >
+            Criar salto
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlowActions }) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const fullActions = useMemo<QuizFlowActions>(
@@ -663,6 +856,7 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
   } = useMemo(() => buildGraph(schema, fullActions), [schema, fullActions]);
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(initialNodes);
   const [saltoEmEdicao, setSaltoEmEdicao] = useState<OrigemDoSalto | null>(null);
+  const [saltoNovo, setSaltoNovo] = useState<{ de: string; para: string } | null>(null);
   const { fitView } = useReactFlow();
   // Só re-posicionar manualmente arrastado é "sagrado" — inserir/excluir uma etapa muda o
   // índice sequencial de TODAS as etapas depois dela, então preservar a posição de todo mundo
@@ -726,6 +920,14 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
+        onConnect={(ligacao) => {
+          /* Só a alça de ramificação cria salto. As laterais desenham o fluxo
+             sequencial, que vem da ordem das etapas — e já estão travadas, mas
+             a checagem fica porque o React Flow também liga por teclado. */
+          if (ligacao.sourceHandle !== "branch-source") return;
+          if (!ligacao.source || !ligacao.target || ligacao.source === ligacao.target) return;
+          setSaltoNovo({ de: ligacao.source, para: ligacao.target });
+        }}
         onEdgeClick={(_, aresta) => {
           const origem = origemPorAresta.get(aresta.id);
           /* Sem origem é a seta do fluxo normal (etapa → próxima), que não é
@@ -749,6 +951,26 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
           maskColor="rgba(0,0,0,0.06)"
         />
       </ReactFlow>
+
+      {saltoNovo &&
+        (() => {
+          const de = steps.find((st) => st.id === saltoNovo.de);
+          const para = steps.find((st) => st.id === saltoNovo.para);
+          if (!de || !para) return null;
+          return (
+            <DialogoDeSaltoNovo
+              etapaDeOrigem={de}
+              etapaDeDestino={para}
+              schema={schema}
+              steps={steps}
+              onFechar={() => setSaltoNovo(null)}
+              onCriar={(novo) => {
+                actions.onCriarSalto?.(novo);
+                setSaltoNovo(null);
+              }}
+            />
+          );
+        })()}
 
       {saltoEmEdicao && (
         <DialogoDeSalto
