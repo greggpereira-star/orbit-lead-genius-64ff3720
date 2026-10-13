@@ -102,9 +102,9 @@ import { ConsentimentoLGPD } from './ConsentimentoLGPD';
                name="name"
                render={({ field }) => (
                  <FormItem>
-                   <FormLabel className="text-sm font-semibold">What is your full name?</FormLabel>
+                   <FormLabel className="text-sm font-semibold">Qual é o seu nome completo?</FormLabel>
                    <FormControl>
-                     <Input placeholder="John Doe" className="h-12 text-lg focus-visible:ring-2" {...field} />
+                     <Input placeholder="Maria Silva" className="h-12 text-lg focus-visible:ring-2" {...field} />
                    </FormControl>
                    <FormMessage />
                  </FormItem>
@@ -115,9 +115,9 @@ import { ConsentimentoLGPD } from './ConsentimentoLGPD';
                name="email"
                render={({ field }) => (
                  <FormItem>
-                   <FormLabel className="text-sm font-semibold">Your work email address</FormLabel>
+                   <FormLabel className="text-sm font-semibold">Seu melhor e-mail</FormLabel>
                    <FormControl>
-                     <Input placeholder="john@example.com" className="h-12 text-lg focus-visible:ring-2" {...field} />
+                     <Input placeholder="maria@email.com" className="h-12 text-lg focus-visible:ring-2" {...field} />
                    </FormControl>
                    <FormMessage />
                  </FormItem>
@@ -136,7 +136,7 @@ import { ConsentimentoLGPD } from './ConsentimentoLGPD';
                name="phone"
                render={({ field }) => (
                  <FormItem>
-                   <FormLabel className="text-sm font-semibold">Phone number (optional)</FormLabel>
+                   <FormLabel className="text-sm font-semibold">Telefone (opcional)</FormLabel>
                    <FormControl>
                      <Input placeholder="+1..." className="h-12 text-lg focus-visible:ring-2" {...field} />
                    </FormControl>
@@ -149,7 +149,7 @@ import { ConsentimentoLGPD } from './ConsentimentoLGPD';
                name="company"
                render={({ field }) => (
                  <FormItem>
-                   <FormLabel className="text-sm font-semibold">Company name (optional)</FormLabel>
+                   <FormLabel className="text-sm font-semibold">Nome da empresa (opcional)</FormLabel>
                    <FormControl>
                      <Input placeholder="Acme Inc" className="h-12 text-lg focus-visible:ring-2" {...field} />
                    </FormControl>

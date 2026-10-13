@@ -19,11 +19,11 @@ import { Label } from '@/components/ui/label';
 
     const handleUpdatePassword = async () => {
       if (newPassword !== confirmPassword) {
-        toast.error('Passwords do not match');
+        toast.error('As senhas não são iguais');
         return;
       }
       if (newPassword.length < 8) {
-        toast.error('Password must be at least 8 characters');
+        toast.error('A senha precisa ter ao menos 8 caracteres');
         return;
       }
 
@@ -31,11 +31,11 @@ import { Label } from '@/components/ui/label';
       try {
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw error;
-        toast.success('Password updated successfully');
+        toast.success('Senha trocada');
         setNewPassword('');
         setConfirmPassword('');
       } catch (error: any) {
-        toast.error(error.message || 'Failed to update password');
+        toast.error(error.message || 'Não consegui trocar a senha');
       } finally {
         setIsLoading(false);
       }
@@ -47,13 +47,13 @@ import { Label } from '@/components/ui/label';
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5 text-primary" />
-              Change Password
+              Trocar senha
             </CardTitle>
-            <CardDescription>Update your password to keep your account secure.</CardDescription>
+            <CardDescription>Troque a senha de tempos em tempos para manter a conta segura.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="new">New Password</Label>
+              <Label htmlFor="new">Nova senha</Label>
               <Input 
                 id="new" 
                 type="password" 
@@ -62,7 +62,7 @@ import { Label } from '@/components/ui/label';
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="confirm">Confirm New Password</Label>
+              <Label htmlFor="confirm">Repita a nova senha</Label>
               <Input 
                 id="confirm" 
                 type="password" 
@@ -71,7 +71,7 @@ import { Label } from '@/components/ui/label';
               />
             </div>
             <Button onClick={handleUpdatePassword} disabled={isLoading}>
-              {isLoading ? 'Updating...' : 'Update Password'}
+              {isLoading ? 'Trocando...' : 'Trocar senha'}
             </Button>
           </CardContent>
         </Card>
@@ -80,13 +80,13 @@ import { Label } from '@/components/ui/label';
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
-              Two-Factor Authentication
+              Verificação em duas etapas
             </CardTitle>
-            <CardDescription>Add an extra layer of security to your account.</CardDescription>
+            <CardDescription>Uma segunda barreira além da senha. Ainda não disponível.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => toast.info('2FA configuration coming soon')}>
-              Enable 2FA
+            <Button variant="outline" onClick={() => toast.info('Ainda não disponível')}>
+              Ativar
             </Button>
           </CardContent>
         </Card>
@@ -95,37 +95,27 @@ import { Label } from '@/components/ui/label';
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              Audit Logs
+              Registro de auditoria
             </CardTitle>
-            <CardDescription>Review recent administrative actions and security events.</CardDescription>
+            <CardDescription>Ações administrativas e eventos de segurança.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { id: 1, user: 'Admin User', action: 'Connected Meta Pixel', ip: '192.168.1.1', time: '10 mins ago' },
-                { id: 2, user: 'Sales Manager', action: 'Changed Pipeline Stage: Lead #123', ip: '10.0.0.5', time: '1 hour ago' },
-                { id: 3, user: 'System', action: 'Automated Lead Enrichment', ip: 'internal', time: '2 hours ago' },
-                { id: 4, user: 'Admin User', action: 'Updated API Credentials', ip: '192.168.1.1', time: '5 hours ago' },
-              ].map((log) => (
-                <div key={log.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/5">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                      <User className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{log.action}</p>
-                      <p className="text-[10px] text-muted-foreground">{log.user} • IP: {log.ip}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {log.time}
-                  </div>
-                </div>
-              ))}
-              <Button variant="ghost" className="w-full text-xs text-primary font-bold">
-                View Full Audit Trail
-              </Button>
+              {/* Aqui havia quatro registros FIXOS e inventados: "Admin User
+                  conectou o Meta Pixel de 192.168.1.1 há 10 minutos", e outros
+                  três no mesmo tom. Nenhum aconteceu. Numa tela de SEGURANÇA
+                  isso é pior do que não ter a lista: quem olhasse veria
+                  movimento onde não houve, e um acesso indevido de verdade
+                  ficaria indistinguível do enfeite — a tela mostraria as mesmas
+                  quatro linhas de qualquer jeito.
+
+                  Até existir registro de verdade, a tela diz que não existe. */}
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <p className="text-sm font-medium">Ainda não há registro de auditoria</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Quando o histórico de ações administrativas estiver disponível, ele aparece aqui.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -54,7 +54,7 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
              </div>
              <div className="flex items-center gap-4">
                <Link to="/login">
-                 <Button variant="ghost" className="text-sm font-bold">Sign in</Button>
+                 <Button variant="ghost" className="text-sm font-bold">Entrar</Button>
                </Link>
                 <Link to="/register">
                   <Button className="bg-primary hover:bg-primary-hover text-sm font-bold px-5 py-2.5 shadow-lg shadow-primary/20 text-white rounded-[12px]">
@@ -132,10 +132,10 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
            <div className="max-w-7xl mx-auto px-6">
              <div className="text-center space-y-4 mb-20">
                <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-slate-900">
-                 Everything you need to <span className="text-primary">win</span>.
+                 Tudo que você precisa para <span className="text-primary">vender</span>.
                </h2>
                <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                 A complete set of tools designed for the modern sales cycle, from first click to closed deal.
+                 Um conjunto completo de ferramentas para o ciclo de vendas de hoje, do primeiro clique ao negócio fechado.
                </p>
              </div>
  
@@ -208,10 +208,10 @@ import { WhatsAppWidget } from '@/modules/capture/components/WhatsAppWidget';
              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/20 to-transparent" />
              <div className="relative z-10 max-w-2xl space-y-8">
                <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight leading-tight">
-                 Ready to scale your <span className="text-primary italic">sales machine</span>?
+                 Pronto para escalar sua <span className="text-primary italic">máquina de vendas</span>?
                </h2>
                <p className="text-slate-400 text-xl leading-relaxed">
-                 Start your 14-day trial today and see the difference intelligence makes.
+                 Comece os 14 dias grátis hoje e veja a diferença.
                </p>
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                    <Link to="/register">

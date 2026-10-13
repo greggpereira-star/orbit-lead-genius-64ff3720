@@ -178,7 +178,7 @@ function ObservabilityPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Observability Center</h1>
-          <p className="text-muted-foreground text-sm font-medium">Real-time system health and forensic auth tracking.</p>
+          <p className="text-muted-foreground text-sm font-medium">Saúde do sistema em tempo real e rastreio das autenticações.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => observabilityQuery.refetch()} className="gap-2 font-bold">
@@ -190,7 +190,7 @@ function ObservabilityPage() {
 
       <Tabs defaultValue="system" className="w-full">
         <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger value="system">System Health</TabsTrigger>
+          <TabsTrigger value="system">Saúde do sistema</TabsTrigger>
           <TabsTrigger value="cvcrm">CV.CRM Delivery</TabsTrigger>
           <TabsTrigger value="auth">Auth Forensic</TabsTrigger>
         </TabsList>
@@ -205,7 +205,7 @@ function ObservabilityPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5 text-primary" />
-                  System Log Stream
+                  Fluxo de registros do sistema
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -299,7 +299,7 @@ function ObservabilityPage() {
                   <Fingerprint className="h-5 w-5 text-primary" />
                   Live Session Context
                 </CardTitle>
-                <CardDescription>Real-time state machine inspection</CardDescription>
+                <CardDescription>Inspeção da máquina de estados em tempo real</CardDescription>
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 <div className="grid grid-cols-2 gap-8">
@@ -398,7 +398,7 @@ function ObservabilityPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-[11px] font-medium leading-relaxed text-muted-foreground">
-                    The current architecture prevents rendering protected modules if state !== <b>READY</b>. 
+                    A arquitetura atual impede desenhar módulos protegidos se o estado !== <b>READY</b>. 
                     This ensures race conditions never expose null company contexts.
                   </p>
                 </CardContent>

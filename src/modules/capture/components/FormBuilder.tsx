@@ -1263,7 +1263,7 @@ const normalizeFieldForEditor = (field: any, index: number) => {
                               settings: { ...currentSettings, success_message: e.target.value }
                             };
                           })}
-                          placeholder="Thank you for your interest!" 
+                          placeholder="Obrigado pelo seu interesse!" 
                         />
                       </div>
                      <div className="space-y-2">

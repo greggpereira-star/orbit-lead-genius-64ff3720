@@ -16,20 +16,20 @@
      <Card className="border-none shadow-sm">
        <CardHeader>
          <CardTitle>Profile Information</CardTitle>
-         <CardDescription>Update your personal details and how others see you.</CardDescription>
+         <CardDescription>Seus dados e como o time te vê.</CardDescription>
        </CardHeader>
        <CardContent className="space-y-6">
          <div className="grid grid-cols-2 gap-4">
            <div className="space-y-2">
-             <Label htmlFor="name">Full Name</Label>
+             <Label htmlFor="name">Nome completo</Label>
              <Input id="name" defaultValue={user?.name} />
            </div>
            <div className="space-y-2">
-             <Label htmlFor="email">Email Address</Label>
+             <Label htmlFor="email">E-mail</Label>
              <Input id="email" defaultValue={user?.email} disabled />
            </div>
          </div>
-         <Button>Save Changes</Button>
+         <Button>Salvar</Button>
        </CardContent>
      </Card>
    );

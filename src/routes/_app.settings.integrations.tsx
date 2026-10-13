@@ -141,8 +141,8 @@ function IntegrationsSettings() {
                   <div className="space-y-4 border rounded-xl p-4 bg-muted/30">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-sm font-bold">Automatic Lead Forwarding</Label>
-                        <p className="text-[11px] text-muted-foreground">Send leads directly to CV.CRM as soon as they are captured.</p>
+                        <Label className="text-sm font-bold">Envio automático de leads</Label>
+                        <p className="text-[11px] text-muted-foreground">Manda o lead para o CV.CRM assim que ele é captado.</p>
                       </div>
                       <Switch checked={integrationStatus?.is_active} />
                     </div>
@@ -153,7 +153,7 @@ function IntegrationsSettings() {
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
                           <Label className="text-sm font-bold text-[var(--sucesso)]">Test Delivery</Label>
-                          <p className="text-[11px] text-[var(--sucesso)]">Push a sample lead into CV.CRM to verify the full pipeline.</p>
+                          <p className="text-[11px] text-[var(--sucesso)]">Envia um lead de teste ao CV.CRM para conferir o caminho inteiro.</p>
                         </div>
                         <Button 
                           size="sm" 
@@ -204,7 +204,7 @@ function IntegrationsSettings() {
 
                   {integrationStatus && (
                     <div className="space-y-2 p-4 rounded-xl border bg-primary/[0.02]">
-                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Integration Health</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Saúde da integração</p>
                       <div className="flex items-center justify-between text-xs">
                         <span>Status:</span>
                         <Badge className={integrationStatus.connection_status === 'connected' ? 'bg-[var(--sucesso)]' : 'bg-destructive'}>

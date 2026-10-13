@@ -3,7 +3,7 @@
 import { User, Building, Shield, Bell, Share2, Zap, Users, Code2, MessageCircle, Sparkles, Rocket } from 'lucide-react';
 
 export const Route = createFileRoute('/_app/settings')({
-  component: SettingsLayout,
+  component: ConfiguraçõesLayout,
 });
 
 const settingsNav = [
@@ -20,12 +20,12 @@ const settingsNav = [
    { title: 'Notifications', icon: Bell, to: '/settings/notifications' },
 ];
  
- function SettingsLayout() {
+ function ConfiguraçõesLayout() {
    return (
      <div className="space-y-6">
        <div>
-         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-         <p className="text-muted-foreground text-sm">Manage your account and platform preferences.</p>
+         <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
+         <p className="text-muted-foreground text-sm">Sua conta e as preferências da plataforma.</p>
        </div>
  
        <div className="flex flex-col lg:flex-row gap-8">

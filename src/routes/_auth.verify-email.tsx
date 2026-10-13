@@ -77,7 +77,7 @@ function VerifyEmailPage() {
             <Mail className="h-10 w-10 text-primary" />
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-3xl font-black tracking-tight uppercase">Check your inbox</CardTitle>
+            <CardTitle className="text-3xl font-black tracking-tight uppercase">Confira sua caixa de entrada</CardTitle>
             <CardDescription className="text-base">
               We sent a confirmation link to <span className="font-bold text-foreground">{user?.email || 'your email'}</span>
             </CardDescription>
@@ -86,7 +86,7 @@ function VerifyEmailPage() {
         <CardContent className="space-y-6">
           <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed text-center">
-              Confirm your email to activate your workspace and access the CRM dashboard.
+              Confirme seu e-mail para ativar a conta e entrar no painel.
             </p>
           </div>
 
@@ -112,7 +112,7 @@ function VerifyEmailPage() {
         <CardFooter className="flex flex-col gap-4 border-t pt-6 bg-muted/30">
           <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
             <button onClick={() => navigate({ to: '/register' })} className="hover:text-primary transition-colors flex items-center gap-1">
-              Wrong email? <ArrowRight className="h-3 w-3" />
+              Errou o e-mail? <ArrowRight className="h-3 w-3" />
             </button>
             <button onClick={logout} className="hover:text-destructive transition-colors flex items-center gap-1 font-semibold uppercase">
               Logout <LogOut className="h-3 w-3" />

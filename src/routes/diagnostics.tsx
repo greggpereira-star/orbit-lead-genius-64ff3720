@@ -58,7 +58,7 @@ function DiagnosticsPage() {
 
           <Card className="border-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider">Health Status</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-wider">Situação do sistema</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -126,7 +126,7 @@ function DiagnosticsPage() {
             Recalibrate Runtime
           </Button>
           <Button variant="outline" className="h-12 px-8 font-bold" onClick={() => window.location.href = '/'}>
-            Back Home
+            Voltar ao início
           </Button>
         </div>
 

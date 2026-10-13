@@ -105,8 +105,8 @@ export function WhatsAppWidget() {
                       <MessageSquare className="h-6 w-6" />
                     </div>
                     <div>
-                      <CardTitle className="text-sm font-bold">Speak with an agent</CardTitle>
-                      <p className="text-[10px] opacity-80">Usually replies in minutes</p>
+                      <CardTitle className="text-sm font-bold">Fale com a gente</CardTitle>
+                      <p className="text-[10px] opacity-80">Costuma responder em minutos</p>
                     </div>
                   </div>
                   <Button
@@ -114,6 +114,7 @@ export function WhatsAppWidget() {
                     size="icon"
                     className="h-8 w-8 text-white hover:bg-white/10"
                     onClick={() => setIsOpen(false)}
+                    aria-label="Fechar"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -122,10 +123,10 @@ export function WhatsAppWidget() {
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="wa-name" className="text-xs">Your Name</Label>
+                    <Label htmlFor="wa-name" className="text-xs">Seu nome</Label>
                     <Input 
                       id="wa-name" 
-                      placeholder="John Doe" 
+                      placeholder="Maria Silva" 
                       required 
                       className="h-9" 
                       value={name}
@@ -133,11 +134,11 @@ export function WhatsAppWidget() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="wa-email" className="text-xs">Work Email</Label>
+                    <Label htmlFor="wa-email" className="text-xs">Seu e-mail</Label>
                     <Input 
                       id="wa-email" 
                       type="email" 
-                      placeholder="john@company.com" 
+                      placeholder="maria@email.com" 
                       required 
                       className="h-9" 
                       value={email}
@@ -150,7 +151,7 @@ export function WhatsAppWidget() {
                     disabled={isSubmitting}
                   >
                     <Send className="h-4 w-4" />
-                    Start Conversation
+                    Começar conversa
                   </Button>
                 </form>
               </CardContent>
@@ -168,12 +169,13 @@ export function WhatsAppWidget() {
               exit={{ opacity: 0, x: 20 }}
               className="absolute right-20 top-0 bg-white shadow-lg border p-3 rounded-lg w-48 text-xs font-medium text-black"
             >
-              Hi! How can I help you today?
+              Oi! Como posso ajudar?
               <Button
                 variant="ghost"
                 size="icon"
                 className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-white border"
                 onClick={() => setShowNotification(false)}
+                aria-label="Fechar aviso"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -188,6 +190,7 @@ export function WhatsAppWidget() {
             setIsOpen(!isOpen);
             setShowNotification(false);
           }}
+          aria-label={isOpen ? "Fechar conversa" : "Falar no WhatsApp"}
         >
           <MessageSquare className="h-7 w-7 group-hover:rotate-12 transition-transform" />
         </Button>

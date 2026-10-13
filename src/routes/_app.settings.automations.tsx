@@ -8,9 +8,9 @@ import { Switch } from '@/components/ui/switch';
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              Recent Automation Runs
+              Automações executadas
             </CardTitle>
-            <CardDescription>Monitor the execution status of your automated workflows.</CardDescription>
+            <CardDescription>O que rodou, quando rodou e como terminou.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -52,23 +52,23 @@ export const Route = createFileRoute('/_app/settings/automations')({
          <CardHeader>
            <CardTitle className="flex items-center gap-2">
              <Zap className="h-5 w-5 text-primary" />
-             Automation Engine Settings
+             Regras das automações
            </CardTitle>
-           <CardDescription>Configure global behaviors for your sales and marketing workflows.</CardDescription>
+           <CardDescription>Valem para todos os fluxos de venda e marketing.</CardDescription>
          </CardHeader>
          <CardContent className="space-y-6">
            <div className="space-y-4">
              <div className="flex items-center justify-between">
                <div className="space-y-0.5">
-                 <Label>Auto-Enrich Leads</Label>
-                 <p className="text-xs text-muted-foreground">Automatically find social profiles and company data for new leads.</p>
+                 <Label>Completar dados do lead</Label>
+                 <p className="text-xs text-muted-foreground">Busca perfis sociais e dados da empresa a cada lead novo.</p>
                </div>
                <Switch defaultChecked onCheckedChange={() => toast.success('Settings updated')} />
              </div>
              <div className="flex items-center justify-between pt-4 border-t">
                <div className="space-y-0.5">
-                 <Label>Strict Deduplication</Label>
-                 <p className="text-xs text-muted-foreground">Prevent duplicate leads by matching both email and phone numbers.</p>
+                 <Label>Evitar lead repetido</Label>
+                 <p className="text-xs text-muted-foreground">Considera repetido quando e-mail E telefone batem.</p>
                </div>
                <Switch defaultChecked onCheckedChange={() => toast.success('Settings updated')} />
              </div>
@@ -80,22 +80,22 @@ export const Route = createFileRoute('/_app/settings/automations')({
          <CardHeader>
            <CardTitle className="flex items-center gap-2">
              <ArrowRightLeft className="h-5 w-5 text-primary" />
-             Lead Distribution (Round Robin)
+             Distribuição de leads (rodízio)
            </CardTitle>
-           <CardDescription>Automatically assign incoming leads to your sales team members.</CardDescription>
+           <CardDescription>Cada lead que entra vai para um vendedor, em rodízio.</CardDescription>
          </CardHeader>
          <CardContent className="space-y-6">
            <div className="space-y-4">
              <div className="flex items-center justify-between">
                <div className="space-y-0.5">
-                 <Label>Enable Round Robin</Label>
-                 <p className="text-xs text-muted-foreground">Toggle automatic lead assignment for all new incoming leads.</p>
+                 <Label>Ativar rodízio</Label>
+                 <p className="text-xs text-muted-foreground">Vale para todo lead que entrar a partir de agora.</p>
                </div>
                <Switch defaultChecked onCheckedChange={() => toast.success('Lead routing enabled')} />
              </div>
              
              <div className="pt-4 border-t">
-               <Label className="text-sm font-medium mb-3 block">Active Sales Queue</Label>
+               <Label className="text-sm font-medium mb-3 block">Vendedores no rodízio</Label>
                <div className="space-y-3">
                  {[
                    { name: 'Alice Johnson', weight: 'High', status: 'Active' },

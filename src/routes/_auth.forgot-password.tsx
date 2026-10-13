@@ -38,11 +38,11 @@ function ForgotPasswordPage() {
   return (
     <Card className="border-none shadow-xl">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Reset password</CardTitle>
+        <CardTitle className="text-2xl font-bold">Recuperar senha</CardTitle>
         <CardDescription>
           {isSent 
-            ? "Check your email for the reset link" 
-            : "Enter your email to receive a password reset link"}
+            ? "Enviamos o link para o seu e-mail"
+            : "Informe seu e-mail para receber o link de recuperação"}
         </CardDescription>
       </CardHeader>
       {!isSent ? (
@@ -67,7 +67,7 @@ function ForgotPasswordPage() {
               </Button>
               <p className="text-xs text-center text-muted-foreground">
                 <Link to="/login" className="text-primary hover:underline font-medium">
-                  Back to login
+                  Voltar para o login
                 </Link>
               </p>
             </div>
@@ -76,7 +76,7 @@ function ForgotPasswordPage() {
       ) : (
         <CardContent className="pt-6">
           <Button className="w-full" asChild>
-            <Link to="/login">Back to login</Link>
+            <Link to="/login">Voltar para o login</Link>
           </Button>
         </CardContent>
       )}

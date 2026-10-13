@@ -49,9 +49,9 @@ import { erroContem } from '@/core/auth/lib/mensagemDoErro';
    return (
      <Card className="border-none shadow-xl">
        <CardHeader className="space-y-1">
-         <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
+         <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
          <CardDescription>
-           Enter your email to sign in to your account
+           Use o e-mail da sua conta
          </CardDescription>
        </CardHeader>
        <form onSubmit={handleSubmit}>
@@ -62,7 +62,7 @@ import { erroContem } from '@/core/auth/lib/mensagemDoErro';
                 id="email" 
                 name="email"
                 type="email" 
-                placeholder="name@company.com" 
+                placeholder="voce@suaempresa.com.br" 
                 required 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -70,12 +70,12 @@ import { erroContem } from '@/core/auth/lib/mensagemDoErro';
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Senha</Label>
                 <Link 
                   to="/forgot-password" 
                   className="text-xs text-primary hover:underline"
                 >
-                  Forgot password?
+                  Esqueci minha senha
                 </Link>
               </div>
               <Input 
@@ -95,12 +95,12 @@ import { erroContem } from '@/core/auth/lib/mensagemDoErro';
                 type="submit" 
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? 'Entrando...' : 'Entrar'}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                Don't have an account?{' '}
+                Ainda não tem conta?{' '}
                 <Link to="/register" className="text-primary hover:underline font-medium">
-                  Create one
+                  Criar agora
                 </Link>
               </p>
             </div>
@@ -113,7 +113,7 @@ import { erroContem } from '@/core/auth/lib/mensagemDoErro';
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">
-              Or continue with enterprise SSO
+              ou entre com SSO corporativo
             </span>
           </div>
         </div>

@@ -121,15 +121,15 @@ function ResetPasswordPage() {
   return (
     <Card className="border-none shadow-xl">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">New password</CardTitle>
+        <CardTitle className="text-2xl font-bold">Nova senha</CardTitle>
         <CardDescription>
-          Enter your new password below
+          Escolha a senha que vai usar a partir de agora
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="password">New Password</Label>
+            <Label htmlFor="password">Nova senha</Label>
             <Input 
               id="password" 
               type="password" 
@@ -140,7 +140,7 @@ function ResetPasswordPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Label htmlFor="confirmPassword">Repita a nova senha</Label>
             <Input 
               id="confirmPassword" 
               type="password" 

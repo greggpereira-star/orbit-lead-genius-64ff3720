@@ -65,38 +65,38 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
      <div className="space-y-6">
        <Card className="border-none shadow-xl">
          <CardHeader className="space-y-1">
-           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+           <CardTitle className="text-2xl font-bold">Criar conta</CardTitle>
            <CardDescription>
-             Start your 14-day free trial. No credit card required.
+             14 dias grátis. Sem cartão de crédito.
            </CardDescription>
          </CardHeader>
          <form onSubmit={handleSubmit}>
            <CardContent className="space-y-4">
              <div className="space-y-2">
-               <Label htmlFor="company">Company Name</Label>
+               <Label htmlFor="company">Nome da empresa</Label>
                <Input 
                  id="company" 
                 name="company"
-                 placeholder="Acme Inc" 
+                 placeholder="Minha Empresa" 
                  required 
                  value={companyName}
                  onChange={(e) => setCompanyName(e.target.value)}
                />
              </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Work Email</Label>
+                <Label htmlFor="email">E-mail de trabalho</Label>
                 <Input 
                   id="email" 
                 name="email"
                   type="email" 
-                  placeholder="name@company.com" 
+                  placeholder="voce@suaempresa.com.br" 
                   required 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Senha</Label>
                 <Input 
                   id="password" 
                 name="password"
@@ -121,14 +121,14 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
                   </div>
                 )}
                 <p className="text-[10px] text-muted-foreground">
-                  Min. 8 characters with numbers and symbols
+                  Mínimo de 8 caracteres, com números e símbolos
                 </p>
               </div>
              <div className="space-y-3 pt-2">
                {[
-                 'Lead intelligence & scoring',
-                 'Meta CAPI & Pixel integration',
-                 'Automated sales workflows'
+                 'Pontuação e qualificação de leads',
+                 'Integração com Pixel e CAPI da Meta',
+                 'Fluxos de venda automatizados'
                ].map((feature) => (
                  <div key={feature} className="flex items-center gap-2 text-xs text-muted-foreground">
                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
@@ -143,12 +143,12 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
                 type="submit"
                 disabled={isLoading}
               >
-                 {state === 'CREATING_ACCOUNT' ? 'Iniciando Workspace...' : isLoading ? 'Processando...' : 'Get Started Free'}
+                 {state === 'CREATING_ACCOUNT' ? 'Iniciando Workspace...' : isLoading ? 'Processando...' : 'Começar grátis'}
               </button>
              <p className="text-xs text-center text-muted-foreground">
-               Already have an account?{' '}
+               Já tem conta?{' '}
                <Link to="/login" className="text-primary hover:underline font-medium">
-                 Sign in
+                 Entrar
                </Link>
              </p>
            </CardFooter>
@@ -160,7 +160,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-background px-2 text-muted-foreground">
-              Or register with enterprise identity
+              ou cadastre-se com identidade corporativa
             </span>
           </div>
         </div>
@@ -168,7 +168,7 @@ import { SocialLogin } from '@/components/auth/SocialLogin';
       </div>
        </Card>
        <p className="text-[10px] text-center text-muted-foreground px-6 leading-relaxed">
-         By clicking "Get Started Free", you agree to our Terms of Service and Privacy Policy.
+         Ao clicar em "Começar grátis" você aceita os Termos de Uso e a Política de Privacidade.
        </p>
      </div>
    );
