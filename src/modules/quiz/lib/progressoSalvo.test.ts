@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync } from "fs";
 import { salvarProgresso, lerProgresso, limparProgresso } from './progressoSalvo';
 import type { QuizBlock, QuizStep } from '../types';
 import type { QuizRunState } from '../engine';
@@ -80,48 +80,50 @@ describe('progresso salvo', () => {
    * visitante voltava calado para outra etapa, porque nada no sistema sabe que
    * a posição 3 de ontem não é a posição 3 de hoje.
    */
-  it('etapa reordenada: volta para a MESMA etapa, na posição nova', () => {
-    // Parou na etapa 's1' (posição 1). O autor moveu 's1' para o fim.
-    salvarProgresso(QUIZ, 's', estado({ currentStepIndex: 1 }), 's1');
-    const lido = lerProgresso(QUIZ, blocks, etapas(['s0', 's2', 's1']));
+  it("etapa reordenada: volta para a MESMA etapa, na posição nova", () => {
+    // Parou na etapa "s1" (posição 1). O autor moveu "s1" para o fim.
+    salvarProgresso(QUIZ, "s", estado({ currentStepIndex: 1 }), "s1");
+    const lido = lerProgresso(QUIZ, blocks, etapas(["s0", "s2", "s1"]));
     expect(lido?.state.currentStepIndex).toBe(2);
   });
 
-  it('etapa inserida antes: o índice acompanha', () => {
-    salvarProgresso(QUIZ, 's', estado({ currentStepIndex: 1 }), 's1');
-    const lido = lerProgresso(QUIZ, blocks, etapas(['nova', 's0', 's1', 's2']));
+  it("etapa inserida antes: o índice acompanha", () => {
+    salvarProgresso(QUIZ, "s", estado({ currentStepIndex: 1 }), "s1");
+    const lido = lerProgresso(QUIZ, blocks, etapas(["nova", "s0", "s1", "s2"]));
     expect(lido?.state.currentStepIndex).toBe(2);
   });
 
-  it('nada mudou: o índice fica como estava', () => {
-    salvarProgresso(QUIZ, 's', estado({ currentStepIndex: 1 }), 's1');
+  it("nada mudou: o índice fica como estava", () => {
+    salvarProgresso(QUIZ, "s", estado({ currentStepIndex: 1 }), "s1");
     expect(lerProgresso(QUIZ, blocks, etapas())?.state.currentStepIndex).toBe(1);
   });
 
-  it('etapa apagada: recomeça, porque não há para onde voltar', () => {
-    salvarProgresso(QUIZ, 's', estado({ currentStepIndex: 1 }), 's1');
-    expect(lerProgresso(QUIZ, blocks, etapas(['s0', 's2']))).toBeNull();
+  it("etapa apagada: recomeça, porque não há para onde voltar", () => {
+    salvarProgresso(QUIZ, "s", estado({ currentStepIndex: 1 }), "s1");
+    expect(lerProgresso(QUIZ, blocks, etapas(["s0", "s2"]))).toBeNull();
   });
 
-  it('progresso gravado ANTES desta mudança não quebra', () => {
+  it("progresso gravado ANTES desta mudança não quebra", () => {
     /* Sem `stepId` não dá para fazer melhor que o comportamento antigo — e a
        validade de 24h faz esse caso sumir sozinho em um dia. O que não pode é
        derrubar quem está no meio do quiz agora. */
-    salvarProgresso(QUIZ, 's', estado({ currentStepIndex: 1 }));
-    const chave = 'lf.q.' + QUIZ;
+    salvarProgresso(QUIZ, "s", estado({ currentStepIndex: 1 }));
+    const chave = "lf.q." + QUIZ;
     const d = JSON.parse(localStorage.getItem(chave)!);
     delete d.stepId;
     localStorage.setItem(chave, JSON.stringify(d));
     expect(lerProgresso(QUIZ, blocks, etapas())?.state.currentStepIndex).toBe(1);
   });
 
-  it('o player realmente grava o id da etapa', () => {
+  it("o player realmente grava o id da etapa", () => {
     /* Sem isto o conserto inteiro fica desligado e NENHUM outro teste acusa:
        `lerProgresso` continua sabendo reencontrar a etapa, mas nunca recebe o
        id para reencontrar. Verifiquei — tirando o argumento do player, os 820
        testes seguiam verdes. */
-    const player = readFileSync('src/modules/quiz/components/QuizPlayer.tsx', 'utf8');
-    expect(player).toContain('salvarProgresso(quizId, sessionId.current, state, steps[state.currentStepIndex]?.id)');
+    const player = readFileSync("src/modules/quiz/components/QuizPlayer.tsx", "utf8");
+    expect(player).toContain(
+      "salvarProgresso(quizId, sessionId.current, state, steps[state.currentStepIndex]?.id)",
+    );
   });
 
   it('cada quiz tem a sua chave', () => {

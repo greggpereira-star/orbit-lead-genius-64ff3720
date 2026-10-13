@@ -105,7 +105,10 @@ export function lerProgresso(
      */
     if (dado.stepId) {
       const posicaoAgora = steps.findIndex((s) => s.id === dado.stepId);
-      if (posicaoAgora < 0) { limparProgresso(quizId); return null; }
+      if (posicaoAgora < 0) {
+        limparProgresso(quizId);
+        return null;
+      }
       if (posicaoAgora !== idx) {
         return {
           sessionId: dado.sessionId,
