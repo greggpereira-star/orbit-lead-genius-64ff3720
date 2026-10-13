@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { resumirCondicao } from "../lib/rotuloDaCondicao";
+import type { OrigemDoSalto, MudancaDoSalto } from "../lib/edicaoDeSalto";
 import {
   ReactFlow,
   Background,
@@ -33,7 +35,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { BLOCK_LIBRARY } from "../blocks-library";
 import { getSteps, findStepIndexForBlock } from "../lib/steps";
-import type { QuizBlock, QuizDesign, QuizSchema, QuizStep } from "../types";
+import type { BlockLogicOp, QuizBlock, QuizDesign, QuizSchema, QuizStep } from "../types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ROTULO_DO_OPERADOR } from "../lib/rotuloDaCondicao";
 import { BlockRenderer, ProgressBar } from "./QuizPreview";
 import { resumirEtapa } from "../lib/trilhaDeEtapas";
 
@@ -58,6 +71,8 @@ const typeMeta = new Map(BLOCK_LIBRARY.map((def) => [def.type, def]));
 // só-leitura, ex.: nenhum handler passado). Espelha o padrão de mutação/autosave já
 // usado no Builder (updateSchema + toast de confirmação/desfazer).
 export interface QuizFlowActions {
+  /** Salvar a edição de UM salto, feita clicando na seta. */
+  onEditarSalto?: (origem: OrigemDoSalto, mudanca: MudancaDoSalto) => void;
   onSelectStep?: (stepId: string) => void;
   onRenameStep?: (stepId: string, name: string | undefined) => void;
   onDeleteStep?: (stepId: string) => void;
@@ -398,19 +413,29 @@ function buildGraph(schema: QuizSchema, actions: QuizFlowActions) {
   const steps = getSteps(schema, { keepEmpty: true });
   const blocksById = new Map(schema.blocks.map((b) => [b.id, b]));
 
-  const rawEdges: { source: string; target: string; label?: string; branch: boolean }[] = [];
+  /* A aresta carrega QUEM a produziu. Antes guardava só etapa→etapa mais um
+     rótulo, o que bastava para desenhar e não bastava para editar: clicando
+     nela não havia como saber de qual opção ou de qual regra ela saiu. */
+  const rawEdges: {
+    source: string;
+    target: string;
+    label?: string;
+    branch: boolean;
+    origem?: OrigemDoSalto;
+  }[] = [];
   const addedKeys = new Set<string>();
   const pushEdge = (
     sourceStepId: string,
     targetStepId: string,
     label: string | undefined,
     branch: boolean,
+    origem?: OrigemDoSalto,
   ) => {
     if (sourceStepId === targetStepId) return;
     const key = `${sourceStepId}->${targetStepId}::${label ?? ""}`;
     if (addedKeys.has(key)) return;
     addedKeys.add(key);
-    rawEdges.push({ source: sourceStepId, target: targetStepId, label, branch });
+    rawEdges.push({ source: sourceStepId, target: targetStepId, label, branch, origem });
   };
 
   steps.forEach((s, i) => {
@@ -423,12 +448,26 @@ function buildGraph(schema: QuizSchema, actions: QuizFlowActions) {
       for (const opt of b.options ?? []) {
         if (!opt.jumpToBlockId) continue;
         const targetIdx = findStepIndexForBlock(steps, opt.jumpToBlockId);
-        if (targetIdx >= 0) pushEdge(s.id, steps[targetIdx].id, opt.label, true);
+        if (targetIdx >= 0)
+          pushEdge(s.id, steps[targetIdx].id, opt.label, true, {
+            tipo: "opcao",
+            blockId: b.id,
+            optionId: opt.id,
+          });
       }
-      for (const rule of b.logicRules ?? []) {
+      b.logicRules?.forEach((rule, indice) => {
         const targetIdx = findStepIndexForBlock(steps, rule.jumpToBlockId);
-        if (targetIdx >= 0) pushEdge(s.id, steps[targetIdx].id, "condição", true);
-      }
+        /* O rótulo era a palavra "condição" para TODA regra. Além de não dizer
+           nada, isso fazia duas regras da mesma etapa para o mesmo destino
+           colapsarem numa seta só — a chave de deduplicação inclui o rótulo.
+           Mostrar a condição real resolve as duas coisas de uma vez. */
+        if (targetIdx >= 0)
+          pushEdge(s.id, steps[targetIdx].id, resumirCondicao(rule), true, {
+            tipo: "regra",
+            blockId: b.id,
+            indice,
+          });
+      });
     }
   });
 
@@ -456,10 +495,15 @@ function buildGraph(schema: QuizSchema, actions: QuizFlowActions) {
   // (drop-shadow) nas duas pra um acabamento mais bonito. A sequencial também ganha um botão
   // "+" no meio pra inserir uma etapa nova ali (mesmo padrão do "edgeWithButton" do Funilix).
   const AMBER = "#f59e0b";
+  /* O React Flow entrega só o id da aresta no clique; este mapa é a volta
+     daquele id para a opção ou regra que a gerou. */
+  const origemPorAresta = new Map<string, OrigemDoSalto>();
   const edges: Edge[] = rawEdges.map((e) => {
     const color = e.branch ? AMBER : design.primary;
+    const id = `${e.source}->${e.target}::${e.label ?? ""}`;
+    if (e.origem) origemPorAresta.set(id, e.origem);
     return {
-      id: `${e.source}->${e.target}::${e.label ?? ""}`,
+      id,
       source: e.source,
       target: e.target,
       sourceHandle: e.branch ? "branch-source" : undefined,
@@ -484,7 +528,126 @@ function buildGraph(schema: QuizSchema, actions: QuizFlowActions) {
     };
   });
 
-  return { nodes, edges };
+  return { nodes, edges, origemPorAresta };
+}
+
+/**
+ * Edição de UM salto, aberta clicando na seta.
+ *
+ * Até aqui o fluxograma era só leitura: via-se a seta e a edição acontecia no
+ * inspetor, em outra tela, escolhendo o bloco de origem num seletor. A pergunta
+ * "onde eu edito ISTO?" não tinha resposta onde ela nasce.
+ *
+ * Grava pelos MESMOS campos do inspetor (`options[].jumpToBlockId` e
+ * `logicRules[]`), via `aplicarEdicaoDeSalto`. Duas telas escrevendo o mesmo
+ * campo por caminhos diferentes é como nascem as divergências.
+ */
+function DialogoDeSalto({
+  origem,
+  schema,
+  steps,
+  onFechar,
+  onSalvar,
+}: {
+  origem: OrigemDoSalto;
+  schema: QuizSchema;
+  steps: QuizStep[];
+  onFechar: () => void;
+  onSalvar: (mudanca: MudancaDoSalto) => void;
+}) {
+  const bloco = schema.blocks.find((b) => b.id === origem.blockId);
+  const opcao =
+    origem.tipo === "opcao" ? bloco?.options?.find((o) => o.id === origem.optionId) : undefined;
+  const regra = origem.tipo === "regra" ? bloco?.logicRules?.[origem.indice] : undefined;
+
+  const destinoAtual = origem.tipo === "opcao" ? opcao?.jumpToBlockId : regra?.jumpToBlockId;
+  const [destino, setDestino] = useState<string>(destinoAtual ?? "");
+  const [op, setOp] = useState<BlockLogicOp>(regra?.op ?? "eq");
+  const [valor, setValor] = useState<string>(String(regra?.value ?? ""));
+
+  /* A etapa de onde o salto parte nunca entra como destino: saltar para si
+     mesma é o laço que o validador de publicação já bloqueia. */
+  const indiceDaOrigem = steps.findIndex((st) => st.blockIds.includes(origem.blockId));
+  const destinos = steps.filter((_, i) => i !== indiceDaOrigem);
+
+  const rotuloDaEtapa = (st: QuizStep, i: number) =>
+    st.name?.trim() ||
+    schema.blocks.find((b) => st.blockIds.includes(b.id) && b.title?.trim())?.title?.trim() ||
+    `Etapa ${i + 1}`;
+
+  return (
+    <Dialog open onOpenChange={(aberto) => !aberto && onFechar()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{origem.tipo === "opcao" ? "Salto da opção" : "Regra de salto"}</DialogTitle>
+          <DialogDescription>
+            {origem.tipo === "opcao"
+              ? `Quando o visitante escolher "${opcao?.label ?? "esta opção"}" em ${bloco?.title?.trim() || "este bloco"}.`
+              : `Quando a resposta de ${bloco?.title?.trim() || "este bloco"} satisfizer a condição abaixo.`}
+          </DialogDescription>
+        </DialogHeader>
+
+        {origem.tipo === "regra" && (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Operador</Label>
+              <select
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                value={op}
+                onChange={(e) => setOp(e.target.value as BlockLogicOp)}
+              >
+                {(Object.keys(ROTULO_DO_OPERADOR) as BlockLogicOp[]).map((o) => (
+                  <option key={o} value={o}>
+                    {ROTULO_DO_OPERADOR[o]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Valor</Label>
+              <Input value={valor} onChange={(e) => setValor(e.target.value)} />
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">Vai para</Label>
+          <select
+            className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+          >
+            {origem.tipo === "opcao" && <option value="">Seguir fluxo normal</option>}
+            {destinos.map((st) => (
+              <option key={st.id} value={st.blockIds[0] ?? ""}>
+                {rotuloDaEtapa(st, steps.indexOf(st))}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={() =>
+              onSalvar({
+                /* String vazia significa "seguir fluxo normal", e isso só existe
+                   para opção: regra sem destino não é regra. */
+                jumpToBlockId: destino === "" ? null : destino,
+                ...(origem.tipo === "regra"
+                  ? { op, value: Number(valor) || valor === "0" ? Number(valor) : valor }
+                  : {}),
+              })
+            }
+          >
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlowActions }) {
@@ -493,11 +656,13 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
     () => ({ ...actions, onSelectStep: (stepId) => setSelectedStepId(stepId) }),
     [actions],
   );
-  const { nodes: initialNodes, edges } = useMemo(
-    () => buildGraph(schema, fullActions),
-    [schema, fullActions],
-  );
+  const {
+    nodes: initialNodes,
+    edges,
+    origemPorAresta,
+  } = useMemo(() => buildGraph(schema, fullActions), [schema, fullActions]);
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState(initialNodes);
+  const [saltoEmEdicao, setSaltoEmEdicao] = useState<OrigemDoSalto | null>(null);
   const { fitView } = useReactFlow();
   // Só re-posicionar manualmente arrastado é "sagrado" — inserir/excluir uma etapa muda o
   // índice sequencial de TODAS as etapas depois dela, então preservar a posição de todo mundo
@@ -561,6 +726,12 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
+        onEdgeClick={(_, aresta) => {
+          const origem = origemPorAresta.get(aresta.id);
+          /* Sem origem é a seta do fluxo normal (etapa → próxima), que não é
+             uma condição e portanto não tem o que editar. */
+          if (origem) setSaltoEmEdicao(origem);
+        }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -578,6 +749,19 @@ function FlowCanvas({ schema, actions }: { schema: QuizSchema; actions: QuizFlow
           maskColor="rgba(0,0,0,0.06)"
         />
       </ReactFlow>
+
+      {saltoEmEdicao && (
+        <DialogoDeSalto
+          origem={saltoEmEdicao}
+          schema={schema}
+          steps={steps}
+          onFechar={() => setSaltoEmEdicao(null)}
+          onSalvar={(mudanca) => {
+            actions.onEditarSalto?.(saltoEmEdicao, mudanca);
+            setSaltoEmEdicao(null);
+          }}
+        />
+      )}
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <Button onClick={handleReorganize} size="sm" className="gap-2 shadow-lg rounded-full px-4">

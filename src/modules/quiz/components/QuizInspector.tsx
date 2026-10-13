@@ -62,6 +62,7 @@ import { Sparkles, Palette, SlidersHorizontal } from "lucide-react";
 import { BUTTON_STYLE_OPTIONS, getButtonStyle } from "../lib/buttonStyles";
 import { BLOCOS_QUE_PERGUNTAM } from "../lib/resumoDasRespostas";
 import { aceitaCapa } from "../lib/videoEmbed";
+import { ROTULO_DO_OPERADOR } from "../lib/rotuloDaCondicao";
 import { applyRichTextMark, type RichTextMark } from "../lib/richtext";
 import {
   resolveContainerLayout,
@@ -3737,17 +3738,6 @@ function CarouselEditor({
     </div>
   );
 }
-
-const ROTULO_DO_OPERADOR: Record<BlockLogicOp, string> = {
-  eq: "é igual a",
-  neq: "é diferente de",
-  contains: "contém",
-  gt: "é maior que",
-  gte: "é maior ou igual a",
-  lt: "é menor que",
-  lte: "é menor ou igual a",
-  between: "está entre",
-};
 
 const ROTULO_DO_MODO: Record<
   NonNullable<BlockLogicRule["kind"]>,

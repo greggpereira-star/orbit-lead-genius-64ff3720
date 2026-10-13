@@ -11,6 +11,11 @@ import { quizService } from "@/modules/quiz/services/quizService";
 import { getSteps } from "@/modules/quiz/lib/steps";
 import { QuizFlowView } from "@/modules/quiz/components/QuizFlowView";
 import { DEFAULT_DESIGN } from "@/modules/quiz/design-presets";
+import {
+  aplicarEdicaoDeSalto,
+  type MudancaDoSalto,
+  type OrigemDoSalto,
+} from "@/modules/quiz/lib/edicaoDeSalto";
 import type { QuizBlock, QuizFunnel, QuizSchema, QuizStep } from "@/modules/quiz/types";
 
 export const Route = createFileRoute("/_app/quizzes_/$id/flow")({
@@ -99,6 +104,13 @@ function QuizFlowPage() {
      abrir o fluxograma e renomear uma etapa para perder as vazias. O
      construtor guarda etapa vazia de propósito: é uma tela criada, não lixo.
      Quem poda é o preview/player, que nunca deve mostrar tela em branco. */
+  /* A edição em si mora em `aplicarEdicaoDeSalto`, fora da tela: aqui só
+     entregamos o schema e guardamos o resultado. É o que permite provar que
+     editar pelo fluxograma produz o mesmo schema que editar pelo inspetor. */
+  const editarSalto = (origem: OrigemDoSalto, mudanca: MudancaDoSalto) => {
+    updateSchema((prev) => aplicarEdicaoDeSalto(prev, origem, mudanca));
+  };
+
   const renameStep = (stepId: string, name: string | undefined) => {
     updateSchema((prev) => ({
       ...prev,
@@ -250,6 +262,7 @@ function QuizFlowPage() {
         ) : (
           <QuizFlowView
             schema={schema}
+            onEditarSalto={editarSalto}
             onRenameStep={renameStep}
             onToggleGoal={toggleGoal}
             onDeleteStep={deleteStep}
