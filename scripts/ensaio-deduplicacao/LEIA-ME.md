@@ -22,9 +22,9 @@ verdade — de propósito, porque é o schema real, as funções reais e o quiz
 publicado real que precisam ser exercitados — e desfaz tudo no fim. Se algum
 teste falhar, a transação aborta e também não grava.
 
-**Já foi executado em 13/10 e passou nos 7 testes.** Depois dele, conferido:
-`leads` seguia com 560 linhas, nenhum resíduo `@ensaio.invalid`, e nem a função
-`normalizar_telefone_br` nem os índices tinham sido criados.
+**Já foi executado em 13/10 e passou nos 9 testes.** Depois dele, conferido:
+nenhum resíduo `@ensaio.invalid`, e nem a função `normalizar_telefone_br` nem os
+índices tinham sido criados.
 
 O que cada teste cobre:
 
@@ -37,25 +37,26 @@ O que cada teste cobre:
 | 5 | quem é novo mesmo continua entrando |
 | 6 | normalização do telefone, caso a caso |
 | 7 | 5 submissões viram 3 leads — a contagem que faltava |
-| 8 | **não é teste, é aviso** — veja abaixo |
+| 8 | nome já gravado resiste à submissão seguinte |
+| 9 | mas lead **sem** nome continua sendo preenchido |
 
-## 2. Decidir o ponto 8 antes de aplicar
+## 2. O nome gravado não é sobrescrito
 
-O ensaio termina avisando:
+Decidido em 13/10: **o nome já gravado manda**, e a resposta nova só preenche
+quando o lead está sem nome.
 
-> o nome do lead ficou: "ANA (digitado torto)"
+Era o contrário. Dentro da mesma sessão isso passava despercebido, porque a
+captura antecipada guarda o e-mail antes de existir nome. Com o lead sendo
+encontrado também por contato, um nome digitado torto numa segunda resposta
+passaria a trocar o nome do lead — desfazendo correção feita à mão no CRM, e
+sem aviso, que é o pior: ninguém vai conferir se o nome continua certo.
 
-O trecho de atualização **sobrescreve o nome** quando a submissão nova traz um.
-Isso já era assim dentro da mesma sessão, onde faz sentido. Agora que o lead
-também é encontrado por contato, um nome digitado diferente numa segunda
-resposta passa a trocar o nome do lead existente.
-
-**Se o seu time corrige nome na mão no CRM, isso vai desfazer a correção.** É
-uma linha para mudar — peça antes de aplicar.
+Os testes 8 e 9 cobrem os dois lados: o nome existente resiste, e o lead sem
+nome continua sendo preenchido.
 
 ## 3. Aplicar de verdade
 
-Só depois do ensaio passar e do ponto 8 estar decidido:
+Só depois do ensaio passar:
 
 ```bash
 cat supabase/migrations/20261013120000_lead_sem_duplicata.sql \

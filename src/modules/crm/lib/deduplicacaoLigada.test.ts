@@ -66,6 +66,25 @@ describe("a deduplicação está ligada nos dois caminhos", () => {
     expect(j, "a busca por contato não vem depois da busca por sessão").toBeGreaterThan(i);
   });
 
+  it("o nome já gravado não é sobrescrito", () => {
+    /* Quem corrige nome à mão no CRM está consertando o que o visitante
+       digitou errado. Deixar a submissão seguinte vencer anularia esse
+       trabalho — e sem aviso, que é pior: ninguém confere de novo.
+
+       A ordem do `coalesce` é a regra inteira: o campo da TABELA vem primeiro.
+       Invertê-la devolve o defeito, e o ensaio em `scripts/ensaio-deduplicacao`
+       reprova nos testes 8 e 9. */
+    expect(sql).toContain(
+      "name        = coalesce(nullif(btrim(name), ''), nullif(btrim(p_name), ''))",
+    );
+  });
+
+  it("mas o lead sem nome continua sendo preenchido", () => {
+    // É o caso da captura antecipada: o e-mail entra antes de existir nome.
+    const i = sql.indexOf("name        = coalesce");
+    expect(sql.slice(i, i + 120)).toContain("nullif(btrim(p_name), '')");
+  });
+
   it("o lead mais antigo é o que fica", () => {
     // Ele já pode ter responsável, etapa e histórico.
     expect(sql).toContain("ORDER BY l.created_at ASC");

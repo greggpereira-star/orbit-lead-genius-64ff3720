@@ -120,18 +120,34 @@ BEGIN
   END IF;
 
   ----------------------------------------------------------------------------
-  -- 8. OLHE ESTE. Não é falha, é decisão a tomar.
+  -- 8. O nome já gravado não pode ser trocado pela submissão seguinte.
   --
-  -- O ramo de UPDATE sobrescreve o nome quando a submissão nova traz um.
-  -- Isso já era assim dentro da MESMA sessão, onde faz sentido. Agora que o
-  -- lead também é encontrado por contato, um nome digitado diferente numa
-  -- segunda resposta passa a trocar o nome do lead existente.
-  --
-  -- Se o seu time corrige nome na mão no CRM, isso vai desfazer a correção.
+  -- Quem corrige nome à mão no CRM está consertando o que o visitante digitou
+  -- errado. Deixar a próxima resposta vencer anularia esse trabalho — e sem
+  -- aviso, o que é pior: ninguém vai conferir se o nome continua certo.
   ----------------------------------------------------------------------------
   PERFORM quiz_capture_lead(v_quiz, 'ensaio-sessao-6', 'ana@ensaio.invalid', NULL, 'ANA (digitado torto)');
   SELECT name INTO v_nome FROM leads WHERE id = a;
-  RAISE NOTICE 'ATENÇÃO 8 — o nome do lead ficou: "%". Se isso não for o desejado, me diga e eu troco o UPDATE para não sobrescrever nome já existente.', v_nome;
+  IF v_nome IS DISTINCT FROM 'Ana' THEN
+    RAISE WARNING 'FALHOU 8: o nome gravado era "Ana" e virou "%".', v_nome;
+    v_erros := v_erros + 1;
+  ELSE
+    RAISE NOTICE 'ok 8 — nome já gravado resistiu à submissão seguinte';
+  END IF;
+
+  ----------------------------------------------------------------------------
+  -- 9. Mas lead SEM nome continua recebendo o nome que chegar. É o caso da
+  --    captura antecipada: o e-mail entra antes de existir nome.
+  ----------------------------------------------------------------------------
+  PERFORM quiz_capture_lead(v_quiz, 'ensaio-sessao-7', 'carla@ensaio.invalid', NULL, NULL);
+  PERFORM quiz_capture_lead(v_quiz, 'ensaio-sessao-7', 'carla@ensaio.invalid', NULL, 'Carla');
+  SELECT name INTO v_nome FROM leads WHERE email = 'carla@ensaio.invalid';
+  IF v_nome IS DISTINCT FROM 'Carla' THEN
+    RAISE WARNING 'FALHOU 9: lead sem nome deveria receber "Carla", ficou "%".', coalesce(v_nome, '(vazio)');
+    v_erros := v_erros + 1;
+  ELSE
+    RAISE NOTICE 'ok 9 — lead sem nome continua sendo preenchido';
+  END IF;
 
   ----------------------------------------------------------------------------
   RAISE NOTICE '--- fim do ensaio: % falha(s) ---', v_erros;

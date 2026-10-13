@@ -172,7 +172,18 @@ BEGIN
     -- garante que a resposta nova enriquece sem sobrescrever: nome, e-mail e
     -- telefone já preenchidos ficam, e o que faltava entra.
     UPDATE leads SET
-      name        = coalesce(nullif(btrim(p_name), ''),  name),
+      -- O NOME JÁ GRAVADO MANDA, e a resposta nova só preenche quando falta.
+      --
+      -- Era o contrário: o nome novo substituía o antigo. Dentro da mesma
+      -- sessão isso passava despercebido, porque a captura antecipada guarda o
+      -- e-mail antes de existir nome e a conclusão só preenchia o vazio.
+      --
+      -- Com o lead sendo encontrado também por CONTATO, a conta mudava: um
+      -- nome digitado torto numa segunda resposta passaria a trocar o nome do
+      -- lead existente, desfazendo correção feita à mão no CRM. Quem corrige no
+      -- CRM está consertando o que o visitante digitou errado; deixar a próxima
+      -- submissão vencer anularia justamente esse trabalho.
+      name        = coalesce(nullif(btrim(name), ''), nullif(btrim(p_name), '')),
       email       = coalesce(nullif(btrim(p_email), ''), email),
       phone       = coalesce(nullif(btrim(p_phone), ''), phone),
       score       = greatest(coalesce(score, 0), coalesce(p_score, 0)),
