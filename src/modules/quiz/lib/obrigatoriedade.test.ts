@@ -23,10 +23,15 @@ const inspetor = readFileSync("src/modules/quiz/components/QuizInspector.tsx", "
 describe("padrão de obrigatoriedade", () => {
   /* Fatia a partir de `canSubmit`, e não da primeira menção ao tipo: a
      primeira é o valor pré-selecionado, noutro ponto do arquivo. A primeira
-     versão deste teste mirou nela e falhou por olhar o lugar errado. */
+     versão deste teste mirou nela e falhou por olhar o lugar errado.
+
+     O fim é o próximo marco do arquivo, não uma contagem de caracteres. Era
+     1600 fixo, e bastou a função crescer um ramo para a fatia parar antes do
+     fim — um teste que passa a olhar menos do que pensa que olha não avisa
+     ninguém de que parou de cobrir. */
   const canSubmit = player.slice(
     player.indexOf("const canSubmit"),
-    player.indexOf("const canSubmit") + 1600,
+    player.indexOf("onValidChange?.(canSubmit)"),
   );
 
   it("escolha única: o player só afrouxa com `required === false`", () => {
@@ -38,7 +43,85 @@ describe("padrão de obrigatoriedade", () => {
   });
 
   it("o interruptor mostra o padrão de CADA tipo", () => {
-    expect(inspetor).toContain('block.type === "single-choice" ? block.required !== false');
+    // Pela LISTA compartilhada, não pela forma da expressão: a versão anterior
+    // casava o texto `block.type === "single-choice" ? ...` e quebrou quando o
+    // mesmo comportamento passou a sair de um conjunto nomeado. Teste preso à
+    // escrita reprova refatoração correta e não pega defeito nenhum.
+    expect(inspetor).toContain("OBRIGATORIO_POR_PADRAO.has(block.type)");
+    expect(inspetor).toContain("? block.required !== false");
+  });
+});
+
+/**
+ * Varredura das duas pontas: o que o player EXIGE e o que o inspetor OFERECE.
+ *
+ * O defeito da escolha única (interruptor sem efeito) e o da nota (efeito sem
+ * interruptor) são o mesmo defeito visto dos dois lados — duas listas de tipo
+ * que precisam concordar e nada obriga. A nota era pior: `canSubmit` nem olhava
+ * `block.required`, então toda nota era obrigatória e não havia como soltar.
+ * Numa pergunta de satisfação no meio do funil, parada forçada custa conclusão.
+ */
+describe("exigir e oferecer andam juntos", () => {
+  const canSubmit = player.slice(
+    player.indexOf("const canSubmit"),
+    player.indexOf("onValidChange?.(canSubmit)"),
+  );
+
+  const exigidosPeloPlayer = new Set(
+    [...canSubmit.matchAll(/block\.type === '([a-z-]+)'/g)].map((m) => m[1]),
+  );
+
+  const lista = (fonte: string, nome: string): Set<string> => {
+    const i = fonte.indexOf(nome);
+    if (i < 0) throw new Error(`não achei ${nome}`);
+    const trecho = fonte.slice(i, fonte.indexOf("]", i));
+    return new Set([...trecho.matchAll(/"([a-z-]+)"/g)].map((m) => m[1]));
+  };
+
+  const oferecidosSemOpcao = lista(inspetor, "const honraObrigatorio = [");
+  const padraoLigado = lista(inspetor, "const OBRIGATORIO_POR_PADRAO = new Set([");
+  /* Escolha única e múltipla têm interruptor próprio, no bloco de opções. */
+  const oferecidos = new Set([...oferecidosSemOpcao, "single-choice", "multi-choice"]);
+
+  /**
+   * Exigidos que NÃO ganham interruptor, com o motivo registrado. Tipo novo
+   * nesta situação tem que entrar aqui com razão escrita, ou ser oferecido.
+   */
+  const SEM_INTERRUPTOR: Record<string, string> = {
+    weight: "a régua nasce com número (70), nunca fica vazia: não há o que exigir",
+    height: "a régua nasce com número (170), mesma razão",
+    form: "quem manda são os interruptores de campo (nome/e-mail/telefone), não `required`",
+    reveal: "revelar É a interação do bloco; exigir outra coisa não faria sentido",
+  };
+
+  it("a varredura achou os ramos de verdade", () => {
+    // Sem isto, um `canSubmit` reescrito devolveria conjunto vazio e tudo
+    // abaixo passaria sem checar nada.
+    expect(exigidosPeloPlayer.size).toBeGreaterThanOrEqual(12);
+    expect(oferecidos.size).toBeGreaterThanOrEqual(8);
+  });
+
+  it("tudo que o player exige, o inspetor oferece ou tem motivo escrito", () => {
+    const mudos = [...exigidosPeloPlayer].filter((t) => !oferecidos.has(t) && !SEM_INTERRUPTOR[t]);
+    expect(mudos, `exigidos sem interruptor nem motivo: ${mudos.join(", ")}`).toEqual([]);
+  });
+
+  it("nada é oferecido sem o player exigir — interruptor sem efeito é mentira", () => {
+    const inuteis = [...oferecidos].filter((t) => !exigidosPeloPlayer.has(t));
+    expect(inuteis, `oferecidos sem efeito: ${inuteis.join(", ")}`).toEqual([]);
+  });
+
+  it("todo tipo de padrão ligado afrouxa com `required === false` no player", () => {
+    for (const tipo of padraoLigado) {
+      const i = canSubmit.indexOf(`block.type === '${tipo}'`);
+      expect(i, `${tipo} não aparece em canSubmit`).toBeGreaterThan(-1);
+      expect(canSubmit.slice(i, i + 260), tipo).toContain("block.required === false");
+    }
+  });
+
+  it("nenhuma exceção sobrevive depois que o player para de exigir o tipo", () => {
+    const obsoletas = Object.keys(SEM_INTERRUPTOR).filter((t) => !exigidosPeloPlayer.has(t));
+    expect(obsoletas, `exceções obsoletas: ${obsoletas.join(", ")}`).toEqual([]);
   });
 });
 

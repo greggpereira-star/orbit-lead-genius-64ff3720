@@ -1722,7 +1722,16 @@ function BlockView({
       if (block.required === false) return true;
       return typeof value === 'string' && value.length > 0;
     }
-    if (block.type === 'rating') return typeof value === 'number';
+    /* A nota nasce OBRIGATÓRIA e o interruptor só serve para afrouxar, igual
+       à escolha única. Antes a expessão nem olhava `block.required`: toda nota
+       era obrigatória e não havia como soltar — o inspetor sequer mostrava o
+       interruptor para este tipo. Numa pergunta de satisfação no meio do
+       funil, isso é uma parada forçada que custa conclusão.
+
+       `=== false` em vez de `=== true` preserva o que já está no ar: nos
+       quizzes publicados o campo nunca foi gravado, e `undefined` continua
+       significando obrigatório, como sempre se comportou. */
+    if (block.type === 'rating') return block.required === false || typeof value === 'number';
     // A régua sempre carrega um valor numérico válido (nunca fica "vazia" como um
     // campo de texto) — diferente dos campos de texto abaixo, que checam string.
     if (block.type === 'weight' || block.type === 'height') return typeof value === 'number';

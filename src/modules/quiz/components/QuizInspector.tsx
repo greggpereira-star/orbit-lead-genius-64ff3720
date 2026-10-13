@@ -202,6 +202,7 @@ function BlockInspector({
     "phone",
     "scheduling",
     "video-answer",
+    "rating",
   ].includes(block?.type ?? "");
 
   const ctaEligible = [
@@ -1544,7 +1545,11 @@ function BlockInspector({
               <Toggle
                 label="Obrigatório"
                 hint="Só avança depois de responder"
-                checked={block.required === true}
+                checked={
+                  OBRIGATORIO_POR_PADRAO.has(block.type)
+                    ? block.required !== false
+                    : block.required === true
+                }
                 onChange={(v) => onChange({ required: v })}
               />
             </Section>
@@ -1566,7 +1571,9 @@ function BlockInspector({
                 label="Obrigatório"
                 hint="Só avança depois de escolher"
                 checked={
-                  block.type === "single-choice" ? block.required !== false : block.required === true
+                  OBRIGATORIO_POR_PADRAO.has(block.type)
+                    ? block.required !== false
+                    : block.required === true
                 }
                 onChange={(v) => onChange({ required: v })}
               />
@@ -2113,6 +2120,21 @@ function AparenciaTab({
  * Fazer `form` e `scheduling` funcionarem exige o motor alcançar campo dentro
  * do objeto (`agendamento.data`), que é recurso novo, não conserto.
  */
+/**
+ * Tipos cujo "Obrigatório" nasce LIGADO, e cujo interruptor portanto só serve
+ * para afrouxar.
+ *
+ * Não é gosto: é o que esses dois já faziam antes de existir interruptor
+ * algum. Escolha única sem resposta não é meia resposta, e a nota nunca teve
+ * como ser pulada. Ler `=== true` para eles faria o inspetor mostrar
+ * "desligado" enquanto o player bloqueia — e trocar o PADRÃO tornaria opcional
+ * toda pergunta de todo funil já publicado, onde o campo nunca foi gravado.
+ *
+ * O player precisa concordar com esta lista; o teste de obrigatoriedade compara
+ * as duas pontas.
+ */
+const OBRIGATORIO_POR_PADRAO = new Set(["single-choice", "rating"]);
+
 const ANSWERABLE_TYPES = new Set([
   "single-choice",
   "multi-choice",
