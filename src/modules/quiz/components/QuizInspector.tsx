@@ -2730,6 +2730,7 @@ function OptionEditor({
     option.actionUrl ? "url" : option.jumpToBlockId ? "step" : "flow",
   );
   const labelInputRef = useRef<HTMLInputElement>(null);
+  const [editandoRotulo, setEditandoRotulo] = useState(false);
 
   function applyMark(mark: RichTextMark) {
     const el = labelInputRef.current;
@@ -2765,41 +2766,20 @@ function OptionEditor({
             <ImageIcon className="h-3 w-3 text-muted-foreground" />
           )}
         </div>
+        {/* O texto da opção é o conteúdo da linha; o resto é ferramenta.
+            Medido com o CSS compilado: com negrito, itálico e sublinhado SEMPRE
+            na linha, sobravam 32px para o campo num painel de 300px — zero
+            caractere visível. O autor via uma caixa cinza vazia e só descobria
+            que o texto estava lá ao digitar, porque aí o campo rolava até o
+            cursor. Com as marcas fora da linha, o mesmo painel dá 158px. */}
         <Input
           ref={labelInputRef}
           value={option.label}
           onChange={(e) => onUpdate({ label: e.target.value })}
-          className="h-8"
+          onFocus={() => setEditandoRotulo(true)}
+          onBlur={() => setEditandoRotulo(false)}
+          className="h-8 min-w-0"
         />
-        <div className="flex shrink-0 gap-0.5">
-          <button
-            type="button"
-            onClick={() => applyMark("bold")}
-            className="p-1.5 text-muted-foreground hover:text-foreground"
-            aria-label="Negrito"
-            title="Negrito (**texto**)"
-          >
-            <Bold className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => applyMark("italic")}
-            className="p-1.5 text-muted-foreground hover:text-foreground"
-            aria-label="Itálico"
-            title="Itálico (_texto_)"
-          >
-            <Italic className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => applyMark("underline")}
-            className="p-1.5 text-muted-foreground hover:text-foreground"
-            aria-label="Sublinhado"
-            title="Sublinhado (__texto__)"
-          >
-            <Underline className="h-3.5 w-3.5" />
-          </button>
-        </div>
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -2816,16 +2796,6 @@ function OptionEditor({
         <Button
           size="sm"
           variant="ghost"
-          onClick={onDuplicate}
-          className="h-8 w-8 shrink-0 p-0"
-          aria-label="Duplicar opção"
-          title="Duplicar — copia mídia, pontuação e ação junto"
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
           onClick={onDelete}
           className="h-8 w-8 p-0 shrink-0 text-muted-foreground hover:text-destructive"
           aria-label="Excluir opção"
@@ -2834,8 +2804,56 @@ function OptionEditor({
         </Button>
       </div>
 
+      {(editandoRotulo || expanded) && (
+        /* Aparece ao focar o campo — que é o único momento em que marcar texto
+           faz sentido — e fica fixa enquanto a opção está aberta.
+
+           `onMouseDown` com `preventDefault` é o que mantém isto funcionando:
+           sem ele o clique tira o foco do campo ANTES do `onClick`, a barra
+           desaparece junto e a seleção some — o botão marcaria o lugar errado,
+           ou lugar nenhum. */
+        <div className="flex items-center gap-0.5 border-t px-2 py-1">
+          {(
+            [
+              { marca: "bold", Icone: Bold, nome: "Negrito", dica: "Negrito (**texto**)" },
+              { marca: "italic", Icone: Italic, nome: "Itálico", dica: "Itálico (_texto_)" },
+              {
+                marca: "underline",
+                Icone: Underline,
+                nome: "Sublinhado",
+                dica: "Sublinhado (__texto__)",
+              },
+            ] as const
+          ).map(({ marca, Icone, nome, dica }) => (
+            <button
+              key={marca}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applyMark(marca)}
+              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={nome}
+              title={dica}
+            >
+              <Icone className="h-3.5 w-3.5" />
+            </button>
+          ))}
+          <span className="ml-auto text-[10px] text-muted-foreground">
+            marca o trecho selecionado
+          </span>
+        </div>
+      )}
+
       {expanded && (
         <div className="space-y-2.5 p-2.5 pt-0 border-t mt-0">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onDuplicate}
+            className="h-8 w-full justify-start gap-2"
+            title="Duplicar — copia mídia, pontuação e ação junto"
+          >
+            <Copy className="h-3.5 w-3.5" /> Duplicar opção
+          </Button>
           <Field label="Mídia">
             <div className="grid grid-cols-3 gap-1.5">
               <button
