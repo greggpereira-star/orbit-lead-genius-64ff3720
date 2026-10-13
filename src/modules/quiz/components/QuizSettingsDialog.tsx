@@ -40,6 +40,8 @@ import {
   Bell,
   Columns3,
   Target,
+  Copy,
+  Check,
 } from "lucide-react";
 import { StageSelect } from "@/modules/crm/components/StageSelect";
 import { quizService } from "../services/quizService";
@@ -199,6 +201,24 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
       ? `${window.location.origin}/q/${publicSlug}`
       : `/q/${publicSlug}`;
 
+  /* Incorporação: altura em `100vh` dentro do iframe acompanha a janela de
+     quem incorpora, e `border:0` tira a moldura que o navegador desenha por
+     padrão e que não combina com nenhum site. */
+  const codigoDeIncorporacao = `<iframe src="${publicUrl}" style="width:100%;height:100vh;border:0"></iframe>`;
+
+  const [copiado, setCopiado] = useState<"link" | "embed" | null>(null);
+  const copiar = async (texto: string, qual: "link" | "embed") => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(qual);
+      setTimeout(() => setCopiado((c) => (c === qual ? null : c)), 2000);
+    } catch {
+      /* contexto sem permissão de área de transferência (http, iframe sem
+         allow): o texto continua selecionável na tela, que é a saída manual */
+      toast.error("Não consegui copiar — selecione o texto e copie à mão.");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
@@ -273,6 +293,54 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                 <p className="text-xs text-muted-foreground">
                   Se o slug já estiver em uso, um sufixo numérico será adicionado automaticamente.
                 </p>
+
+                {/* Vindo da rota `/publish`, que foi removida.
+                    Aquela tela era o ÚNICO lugar do produto que montava o
+                    código de incorporação — e ninguém chegava nela: nenhum menu,
+                    botão ou link apontava para lá, só digitando a URL. Pior, ela
+                    publicava chamando `quizService.publish` direto, sem passar
+                    por `validarPublicacao`: era uma porta dos fundos que pulava
+                    a checagem de laço de salto, salto quebrado e variável que
+                    não resolve. O que ela tinha de útil mora aqui agora, ao lado
+                    do link que já estava nesta tela. */}
+                <div className="space-y-1.5 pt-2">
+                  <Label>Link e incorporação</Label>
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={publicUrl} className="font-mono text-xs" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copiar(publicUrl, "link")}
+                      aria-label="Copiar link público"
+                    >
+                      {copiado === "link" ? (
+                        <Check className="h-4 w-4 text-[var(--sucesso)]" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={codigoDeIncorporacao} className="font-mono text-xs" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copiar(codigoDeIncorporacao, "embed")}
+                      aria-label="Copiar código de incorporação"
+                    >
+                      {copiado === "embed" ? (
+                        <Check className="h-4 w-4 text-[var(--sucesso)]" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    O link só responde depois de publicar, no construtor.
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-1.5 pt-2 border-t">

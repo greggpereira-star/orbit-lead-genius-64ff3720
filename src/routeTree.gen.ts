@@ -69,7 +69,6 @@ import { Route as AppQuizzesIdInsightsRouteImport } from './routes/_app.quizzes_
 import { Route as AppQuizzesIdLeadsRouteImport } from './routes/_app.quizzes_.$id.leads'
 import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizzes_.$id.performance'
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
-import { Route as AppQuizzesIdPublishRouteImport } from './routes/_app.quizzes_.$id.publish'
 import { Route as AppQuizzesIdResponsesRouteImport } from './routes/_app.quizzes_.$id.responses'
 import { Route as AppQuizzesIdResultsRouteImport } from './routes/_app.quizzes_.$id.results'
 import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/api/public/cron/automation-dispatch'
@@ -381,11 +380,6 @@ const AppQuizzesIdPreviewRoute = AppQuizzesIdPreviewRouteImport.update({
   path: '/quizzes/$id/preview',
   getParentRoute: () => AppRoute,
 } as any)
-const AppQuizzesIdPublishRoute = AppQuizzesIdPublishRouteImport.update({
-  id: '/quizzes_/$id/publish',
-  path: '/quizzes/$id/publish',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppQuizzesIdResponsesRoute = AppQuizzesIdResponsesRouteImport.update({
   id: '/quizzes_/$id/responses',
   path: '/quizzes/$id/responses',
@@ -479,7 +473,6 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
-  '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
@@ -545,7 +538,6 @@ export interface FileRoutesByTo {
   '/quizzes/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/quizzes/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
-  '/quizzes/$id/publish': typeof AppQuizzesIdPublishRoute
   '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
@@ -615,7 +607,6 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/leads': typeof AppQuizzesIdLeadsRoute
   '/_app/quizzes_/$id/performance': typeof AppQuizzesIdPerformanceRoute
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
-  '/_app/quizzes_/$id/publish': typeof AppQuizzesIdPublishRoute
   '/_app/quizzes_/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/_app/quizzes_/$id/results': typeof AppQuizzesIdResultsRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
@@ -684,7 +675,6 @@ export interface FileRouteTypes {
     | '/quizzes/$id/leads'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
-    | '/quizzes/$id/publish'
     | '/quizzes/$id/responses'
     | '/quizzes/$id/results'
     | '/api/public/cron/automation-dispatch'
@@ -750,7 +740,6 @@ export interface FileRouteTypes {
     | '/quizzes/$id/leads'
     | '/quizzes/$id/performance'
     | '/quizzes/$id/preview'
-    | '/quizzes/$id/publish'
     | '/quizzes/$id/responses'
     | '/quizzes/$id/results'
     | '/api/public/cron/automation-dispatch'
@@ -819,7 +808,6 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/leads'
     | '/_app/quizzes_/$id/performance'
     | '/_app/quizzes_/$id/preview'
-    | '/_app/quizzes_/$id/publish'
     | '/_app/quizzes_/$id/responses'
     | '/_app/quizzes_/$id/results'
     | '/api/public/cron/automation-dispatch'
@@ -1278,13 +1266,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdPreviewRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/quizzes_/$id/publish': {
-      id: '/_app/quizzes_/$id/publish'
-      path: '/quizzes/$id/publish'
-      fullPath: '/quizzes/$id/publish'
-      preLoaderRoute: typeof AppQuizzesIdPublishRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/quizzes_/$id/responses': {
       id: '/_app/quizzes_/$id/responses'
       path: '/quizzes/$id/responses'
@@ -1408,7 +1389,6 @@ interface AppRouteChildren {
   AppQuizzesIdLeadsRoute: typeof AppQuizzesIdLeadsRoute
   AppQuizzesIdPerformanceRoute: typeof AppQuizzesIdPerformanceRoute
   AppQuizzesIdPreviewRoute: typeof AppQuizzesIdPreviewRoute
-  AppQuizzesIdPublishRoute: typeof AppQuizzesIdPublishRoute
   AppQuizzesIdResponsesRoute: typeof AppQuizzesIdResponsesRoute
   AppQuizzesIdResultsRoute: typeof AppQuizzesIdResultsRoute
 }
@@ -1435,7 +1415,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuizzesIdLeadsRoute: AppQuizzesIdLeadsRoute,
   AppQuizzesIdPerformanceRoute: AppQuizzesIdPerformanceRoute,
   AppQuizzesIdPreviewRoute: AppQuizzesIdPreviewRoute,
-  AppQuizzesIdPublishRoute: AppQuizzesIdPublishRoute,
   AppQuizzesIdResponsesRoute: AppQuizzesIdResponsesRoute,
   AppQuizzesIdResultsRoute: AppQuizzesIdResultsRoute,
 }
