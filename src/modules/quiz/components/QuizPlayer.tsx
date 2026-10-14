@@ -255,6 +255,10 @@ function PlayerRunner({
   });
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  /* Falha ao gravar a submissão. Mora no estado, e não num toast, porque o
+     visitante precisa poder TENTAR DE NOVO — e porque nesse momento as
+     respostas só existem na memória desta aba. */
+  const [erroAoGravar, setErroAoGravar] = useState(false);
   const [stepValidity, setStepValidity] = useState<Record<string, boolean>>({});
 
   const blocks = schema.blocks;
@@ -686,12 +690,7 @@ function PlayerRunner({
       return;
     }
     jaSalvou.current = true;
-    /* Limpa o progresso guardado AQUI, e não só quando `done` vira verdadeiro.
-       Quando a última etapa tem um bloco de resultado visível, o quiz termina
-       sem passar pela tela final interna: a submissão e o lead são gravados,
-       mas `done` continua falso — e o progresso ficava no navegador as 24h
-       inteiras. O sinal honesto de "acabou" é ter gravado, não a tela. */
-    if (!preview) limparProgresso(quizId);
+    setErroAoGravar(false);
     setSaving(true);
     try {
       if (preview) {
@@ -731,6 +730,17 @@ function PlayerRunner({
         sessionId: sessionId.current,
       });
       setSubmissionId(id);
+      /* O progresso só é descartado DEPOIS de a submissão existir no servidor.
+         Antes ele era limpo logo no começo do `finish`: se a gravação falhasse
+         — rede caindo no último clique, que é quando mais cai —, o visitante
+         ficava sem submissão E sem o que tinha respondido. Recarregar a página
+         o devolvia ao começo de um quiz que ele acabara de terminar.
+
+         A limpeza precisa continuar acontecendo aqui, e não só quando `done`
+         vira verdadeiro: com um bloco de resultado na última etapa, o quiz
+         termina sem passar pela tela final interna e `done` segue falso. O
+         sinal honesto de "acabou" é ter gravado. */
+      if (!preview) limparProgresso(quizId);
       await quizService
         .trackEvent({
           quizId,
@@ -770,6 +780,13 @@ function PlayerRunner({
       /* Sem isto a exceção subia para o manipulador do clique e sumia. A trava
          volta atrás para a próxima tentativa poder gravar. */
       jaSalvou.current = false;
+      /* E o visitante precisa SABER. Antes a falha ia só para o console: ele
+         clicava em concluir, o botão parava de girar, nada acontecia na tela e
+         ele ficava na última etapa sem explicação. Quem respondeu um quiz
+         inteiro merece saber que o envio não foi, e poder tentar de novo —
+         principalmente porque as respostas ainda estão aqui, na memória desta
+         aba, e uma recarga as perderia. */
+      setErroAoGravar(true);
       console.error('Falha ao gravar a submissão do quiz', e);
     } finally {
       setSaving(false);
@@ -910,6 +927,30 @@ function PlayerRunner({
                   </div>
                 );
               })
+            )}
+
+            {/* O envio falhou e o visitante precisa saber.
+                Antes isto ia só para o console: ele clicava em concluir, o
+                botão parava de girar, nada mudava na tela e ele ficava na
+                última etapa sem explicação nenhuma. Quem respondeu o quiz
+                inteiro merece saber que não foi — e tentar de novo AQUI, sem
+                recarregar, porque as respostas só existem nesta aba. */}
+            {erroAoGravar && (
+              <div
+                role="alert"
+                className="mt-6 rounded-xl border p-4 text-center"
+                style={{ borderColor: withAlpha(design.text, 0.25) }}
+              >
+                <p className="text-sm font-semibold">Não consegui enviar suas respostas.</p>
+                <p className="mt-1 text-xs" style={{ color: design.muted }}>
+                  Pode ter sido a conexão. Suas respostas continuam aqui — não recarregue a página.
+                </p>
+                <div className="mt-3">
+                  <PrimaryBtn design={design} disabled={saving} onClick={() => void finish(state)}>
+                    {saving ? "Enviando…" : "Tentar de novo"}
+                  </PrimaryBtn>
+                </div>
+              </div>
             )}
           </div>
         </div>
