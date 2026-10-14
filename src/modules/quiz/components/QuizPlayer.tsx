@@ -12,6 +12,7 @@ import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
 import { designDaEtapa, varsDoBloco } from '../lib/temaDoBloco';
 import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
 import { origemDaVisita } from "../lib/origemDaVisita";
+import { escolherNome } from "../lib/nomeDoLead";
 import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
@@ -1181,16 +1182,14 @@ function extrairContato(responses: Record<string, unknown>, blocks: QuizBlock[])
     return t || undefined;
   };
 
-  /* O nome sai do primeiro `Texto curto` do quiz — mas NÃO de um que tenha
-     máscara: um campo mascarado é um telefone, um CPF, um CEP, nunca um nome.
-     Sem esta exclusão o lead nascia chamado "(27) 98877-5544", porque o mesmo
-     campo servia de telefone e de nome ao mesmo tempo. */
-  const semMascara = blocks.filter((b) => !b.fieldMask || b.fieldMask === 'livre');
-
+  /* O nome NÃO sai mais do "primeiro Texto curto do quiz". Essa regra errou
+     duas vezes: o lead nascia "(27) 98877-5544" (campo de telefone) e depois
+     "@geadasd" (campo de Instagram). Ver `escolherNome`: só vale campo que se
+     declara nome, e o nome do Formulário vem antes. */
   return {
     email: extract(responses, blocks, 'email') ?? limpar(doForm?.email),
     phone: extract(responses, blocks, 'phone') ?? limpar(doForm?.phone),
-    name: extract(responses, semMascara, 'short-text') ?? limpar(doForm?.name),
+    name: escolherNome(responses, blocks, doForm),
   };
 }
 
