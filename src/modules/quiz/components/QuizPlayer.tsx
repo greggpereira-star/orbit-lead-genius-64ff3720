@@ -519,9 +519,23 @@ function PlayerRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep?.id]);
 
+  /* Uma visualização por bloco, por visita.
+   *
+   * `submissionId` estava nas dependências, e ele muda no FIM do quiz, quando a
+   * submissão é criada: o efeito rodava de novo e disparava a rajada inteira
+   * outra vez, para os mesmos blocos da etapa onde a pessoa estava. Somado a
+   * quem volta uma etapa, deu 219 eventos para 156 pares sessão-bloco nesta
+   * base — 40% de inflação numa métrica de abandono.
+   *
+   * O conjunto resolve as duas origens de uma vez, e é mais honesto que mexer
+   * só nas dependências: "este visitante viu este bloco" acontece uma vez, por
+   * mais que a tela se redesenhe. */
+  const blocosJaVistos = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (preview) return;
     for (const b of stepBlocks) {
+      if (blocosJaVistos.current.has(b.id)) continue;
+      blocosJaVistos.current.add(b.id);
       quizService
         .trackEvent({
           quizId,

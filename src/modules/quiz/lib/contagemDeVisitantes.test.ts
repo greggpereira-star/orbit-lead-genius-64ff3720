@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
-import { contarVisitantes, taxaDeConclusao, type EventoContavel } from "./contagemDeVisitantes";
+import {
+  contarVisitantes,
+  taxaDeConclusao,
+  visitantesPorBloco,
+  type EventoContavel,
+  type EventoDeBloco,
+} from "./contagemDeVisitantes";
 
 /**
  * O defeito: a taxa de conversão do quiz contava EVENTOS `start`, e o `start`
@@ -75,6 +81,61 @@ describe("taxaDeConclusao", () => {
   });
 });
 
+describe("visitantesPorBloco", () => {
+  const v = (block_id: string, session_id?: string | null): EventoDeBloco => ({
+    event_type: "block_view",
+    block_id,
+    session_id,
+  });
+
+  it("a mesma sessão vendo o mesmo bloco várias vezes é um visitante", () => {
+    // Quem volta uma etapa vê de novo; e o efeito reemitia a rajada quando o
+    // `submissionId` mudava, no fim do quiz.
+    expect(visitantesPorBloco([v("b1", "s1"), v("b1", "s1"), v("b1", "s1")]).get("b1")).toBe(1);
+  });
+
+  it("sessões diferentes somam", () => {
+    expect(visitantesPorBloco([v("b1", "s1"), v("b1", "s2")]).get("b1")).toBe(2);
+  });
+
+  it("cada bloco tem a sua conta", () => {
+    const r = visitantesPorBloco([v("b1", "s1"), v("b2", "s1"), v("b2", "s2")]);
+    expect(r.get("b1")).toBe(1);
+    expect(r.get("b2")).toBe(2);
+  });
+
+  it("ignora evento de outro tipo e sem bloco", () => {
+    const outros = [
+      { event_type: "start", session_id: "s1" },
+      { event_type: "block_view", session_id: "s1", block_id: null },
+    ] as EventoDeBloco[];
+    expect(visitantesPorBloco(outros).size).toBe(0);
+  });
+
+  it("evento sem sessão conta como visitante próprio", () => {
+    expect(visitantesPorBloco([v("b1", null), v("b1", null), v("b1", "s1")]).get("b1")).toBe(3);
+  });
+
+  it("o caso real medido: 219 eventos para 156 pares", () => {
+    const eventos: EventoDeBloco[] = [];
+    // 107 pares vistos 1x, 40 vistos 2x, 6 vistos 3x, 1 visto 4x, 2 vistos 5x
+    let par = 0;
+    const empurra = (vezes: number, quantos: number) => {
+      for (let i = 0; i < quantos; i++) {
+        par += 1;
+        for (let k = 0; k < vezes; k++) eventos.push(v(`b${par}`, `s${par}`));
+      }
+    };
+    empurra(1, 107);
+    empurra(2, 40);
+    empurra(3, 6);
+    empurra(4, 1);
+    empurra(5, 2);
+    expect(eventos.length).toBe(219);
+    expect(visitantesPorBloco(eventos).size).toBe(156);
+  });
+});
+
 describe("o serviço usa a contagem por sessão", () => {
   const servico = readFileSync("src/modules/quiz/services/quizService.ts", "utf8");
 
@@ -88,6 +149,24 @@ describe("o serviço usa a contagem por sessão", () => {
 
   it("pede session_id ao banco — sem ele a contagem não teria o que deduplicar", () => {
     expect(servico).toContain('.select("event_type, block_id, created_at, session_id")');
+  });
+
+  it("o abandono por bloco conta visitantes, e não eventos", () => {
+    /* O denominador é `starts`, que conta SESSÕES. Comparar sessões com
+       eventos misturava as unidades e produzia abandono negativo, que o
+       `Math.max(0, …)` escondia como 0% — a tela dizia "ninguém desistiu
+       aqui" justamente onde a conta tinha quebrado. */
+    expect(servico).toContain("visitantesPorBloco(evs)");
+    expect(servico, "voltou a somar evento por bloco").not.toContain(
+      "blockViews.set(e.block_id, (blockViews.get(e.block_id) ?? 0) + 1)",
+    );
+  });
+
+  it("o player emite uma visualização por bloco, por visita", () => {
+    const player = readFileSync("src/modules/quiz/components/QuizPlayer.tsx", "utf8");
+    expect(player).toContain("blocosJaVistos");
+    const i = player.indexOf("eventType: 'block_view'");
+    expect(player.slice(i - 400, i)).toContain("blocosJaVistos.current.has(b.id)");
   });
 
   it("o gráfico diário também deduplica por sessão", () => {

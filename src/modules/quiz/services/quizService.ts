@@ -21,7 +21,7 @@ import type {
 import { DEFAULT_DESIGN } from "../design-presets";
 import { DEFAULT_ACCESS_RULES } from "../types";
 import { parseSubdomain } from "../lib/tenant";
-import { contarVisitantes, taxaDeConclusao } from "../lib/contagemDeVisitantes";
+import { contarVisitantes, taxaDeConclusao, visitantesPorBloco } from "../lib/contagemDeVisitantes";
 import { resolveEntryStageId, newLeadBoardOrder } from "@/modules/crm/services/stageService";
 
 function slugify(input: string): string {
@@ -1238,11 +1238,11 @@ export const quizService = {
     }
     const dailySeries = Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v }));
 
-    const blockViews = new Map<string, number>();
-    for (const e of evs) {
-      if (e.event_type !== "block_view" || !e.block_id) continue;
-      blockViews.set(e.block_id, (blockViews.get(e.block_id) ?? 0) + 1);
-    }
+    /* Visitantes por bloco, não eventos. O denominador logo abaixo é `starts`,
+       que agora conta SESSÕES — comparar sessões com eventos misturava as
+       unidades e produzia abandono negativo, que o `Math.max(0, …)` escondia
+       como 0%. Medido nesta base: 219 eventos para 156 pares sessão-bloco. */
+    const blockViews = visitantesPorBloco(evs);
     let previousViews = starts;
     const dropOffByBlock = schema.blocks.map((block) => {
       const views = blockViews.get(block.id) ?? 0;

@@ -53,3 +53,43 @@ export function taxaDeConclusao(visitantes: number, conclusoes: number): number 
   if (visitantes <= 0) return null;
   return (conclusoes / visitantes) * 100;
 }
+
+export interface EventoDeBloco extends EventoContavel {
+  block_id?: string | null;
+}
+
+/**
+ * Quantos visitantes distintos VIRAM cada bloco.
+ *
+ * Mesmo motivo da contagem de `start`, com um agravante próprio: o efeito que
+ * emite `block_view` reemitia a rajada inteira quando o `submissionId` mudava,
+ * no fim do quiz. Somado a quem volta uma etapa, deu 219 eventos para 156
+ * pares sessão-bloco nesta base — 40% de inflação.
+ *
+ * Quarenta pares foram vistos duas vezes, seis três, e dois cinco. Um bloco
+ * "visto" cinco vezes pela mesma pessoa não é cinco visitantes.
+ */
+export function visitantesPorBloco(eventos: EventoDeBloco[]): Map<string, number> {
+  const porBloco = new Map<string, Set<string>>();
+  const semSessao = new Map<string, number>();
+
+  for (const e of eventos) {
+    if (e.event_type !== "block_view" || !e.block_id) continue;
+    const s = e.session_id?.trim();
+    if (s) {
+      let set = porBloco.get(e.block_id);
+      if (!set) {
+        set = new Set();
+        porBloco.set(e.block_id, set);
+      }
+      set.add(s);
+    } else {
+      semSessao.set(e.block_id, (semSessao.get(e.block_id) ?? 0) + 1);
+    }
+  }
+
+  const total = new Map<string, number>();
+  for (const [bloco, set] of porBloco) total.set(bloco, set.size);
+  for (const [bloco, n] of semSessao) total.set(bloco, (total.get(bloco) ?? 0) + n);
+  return total;
+}
