@@ -21,6 +21,7 @@ import type {
 import { DEFAULT_DESIGN } from "../design-presets";
 import { DEFAULT_ACCESS_RULES } from "../types";
 import { parseSubdomain } from "../lib/tenant";
+import { contarVisitantes, taxaDeConclusao } from "../lib/contagemDeVisitantes";
 import { resolveEntryStageId, newLeadBoardOrder } from "@/modules/crm/services/stageService";
 
 function slugify(input: string): string {
@@ -1147,7 +1148,9 @@ export const quizService = {
     const [{ data: events }, { data: subs }, schema] = await Promise.all([
       supabase
         .from("quiz_events")
-        .select("event_type, block_id, created_at")
+        /* `session_id` entra aqui porque visitante se conta por sessão, não
+           por evento — o `start` dispara a cada carregamento. */
+        .select("event_type, block_id, created_at, session_id")
         .eq("quiz_id", quizId)
         .gte("created_at", since),
       supabase
@@ -1162,6 +1165,7 @@ export const quizService = {
       event_type: string;
       block_id: string | null;
       created_at: string;
+      session_id: string | null;
     }>;
     const subsData = (subs ?? []) as unknown as Array<{
       score: number | null;
@@ -1172,14 +1176,20 @@ export const quizService = {
       tracking: Record<string, string> | null;
     }>;
 
-    const starts = evs.filter((e) => e.event_type === "start").length;
-    const completions = evs.filter((e) => e.event_type === "complete").length;
+    /* VISITANTES, não eventos. O `start` dispara a cada carregamento, e a
+       retomada preserva a sessão de propósito — para quem volta continuar
+       sendo o mesmo lead. Contando eventos, quem voltava para terminar virava
+       dois visitantes com uma conclusão só, e a taxa caía sem nada ter
+       piorado. Medido em 14/10: 35 eventos para 28 sessões, 22,9% no lugar de
+       28,6%. */
+    const starts = contarVisitantes(evs, "start");
+    const completions = contarVisitantes(evs, "complete");
     const submissions = subsData.length;
     const leadsCaptured = subsData.filter((s) => {
       const c = (s.answers?._contact ?? {}) as { email?: string | null; phone?: string | null };
       return !!(c.email || c.phone);
     }).length;
-    const conversionRate = starts > 0 ? (completions / starts) * 100 : 0;
+    const conversionRate = taxaDeConclusao(starts, completions) ?? 0;
     const scored = subsData.filter((s) => typeof s.score === "number");
     const avgScore =
       scored.length > 0 ? scored.reduce((a, b) => a + (b.score ?? 0), 0) / scored.length : 0;
@@ -1196,12 +1206,35 @@ export const quizService = {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
       dayMap.set(d, { starts: 0, completions: 0 });
     }
+    /* O gráfico por dia tinha a mesma contagem por evento. Uma sessão que
+       atravessa a virada do dia aparece nos dois, o que está certo: ela
+       visitou nos dois dias. O que não pode é aparecer duas vezes no MESMO
+       dia. */
+    const sessoesPorDia = new Map<string, { starts: Set<string>; completions: Set<string> }>();
     for (const e of evs) {
       const d = e.created_at.slice(0, 10);
       const bucket = dayMap.get(d);
       if (!bucket) continue;
+      if (e.event_type !== "start" && e.event_type !== "complete") continue;
+
+      const sessao = e.session_id?.trim();
+      if (!sessao) {
+        // Sem sessão não há como deduplicar: conta como visitante próprio.
+        if (e.event_type === "start") bucket.starts++;
+        else bucket.completions++;
+        continue;
+      }
+
+      let vistas = sessoesPorDia.get(d);
+      if (!vistas) {
+        vistas = { starts: new Set(), completions: new Set() };
+        sessoesPorDia.set(d, vistas);
+      }
+      const conjunto = e.event_type === "start" ? vistas.starts : vistas.completions;
+      if (conjunto.has(sessao)) continue;
+      conjunto.add(sessao);
       if (e.event_type === "start") bucket.starts++;
-      else if (e.event_type === "complete") bucket.completions++;
+      else bucket.completions++;
     }
     const dailySeries = Array.from(dayMap.entries()).map(([date, v]) => ({ date, ...v }));
 
