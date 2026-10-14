@@ -151,6 +151,54 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
       });
     }
 
+    /* NENHUMA faixa cobrindo o fundo da escala.
+     *
+     * O servidor escolhe a faixa com `pct >= minPercent`, da maior para a
+     * menor. Se a menor começa em 40%, quem pontua 20% não casa com nenhuma e
+     * o envio devolve `sem_faixa_correspondente`: o lead entra sem
+     * classificação no CRM e sem mensagem nenhuma, calado.
+     *
+     * Quem configurou as faixas provavelmente achou que estava escolhendo QUEM
+     * recebe o quê, e não quem fica de fora de tudo. */
+    const menorFaixa = Math.min(...faixas.map((t) => t.minPercent ?? 0));
+    if (menorFaixa > 0) {
+      achados.push({
+        nivel: "avisa",
+        mensagem:
+          `A faixa mais baixa começa em ${menorFaixa}% — quem pontuar abaixo disso ` +
+          "fica sem classificação no CRM e sem mensagem. Use 0% na última faixa para cobrir todo mundo.",
+      });
+    }
+
+    /* Duas faixas no mesmo ponto de corte: qual delas vale vira acaso da
+       ordenação, e o autor não tem como saber qual mensagem vai sair. */
+    const cortes = faixas.map((t) => t.minPercent ?? 0);
+    const repetidos = [...new Set(cortes.filter((c, i) => cortes.indexOf(c) !== i))];
+    if (repetidos.length) {
+      achados.push({
+        nivel: "avisa",
+        mensagem:
+          `Mais de uma faixa começa em ${repetidos.join("% e ")}% — ` +
+          "qual delas vale fica por conta da ordem, e a mensagem enviada pode não ser a esperada.",
+      });
+    }
+
+    /* Faixas configuradas e NADA pontuando.
+     *
+     * `maxPossibleScore` devolve 0, e o envio para antes de classificar
+     * (`sem_pontuacao`). Não é uma faixa que falha: é o sistema inteiro de
+     * classificação e de WhatsApp que não roda para ninguém. */
+    const temPontuacao = blocos.some((b) => (b.options ?? []).some((o) => (o.score ?? 0) !== 0));
+    const temNota = blocos.some((b) => b.type === "rating");
+    if (!temPontuacao && !temNota) {
+      achados.push({
+        nivel: "avisa",
+        mensagem:
+          "Há faixas de pontuação, mas nenhuma opção vale pontos — todo mundo fica com 0 e " +
+          "ninguém é classificado nem recebe mensagem. Dê pontos às opções ou remova as faixas.",
+      });
+    }
+
     const semMensagem = faixas.filter((t) => !t.whatsappTemplate?.trim());
     if (semMensagem.length) {
       achados.push({
@@ -162,6 +210,28 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
     achados.push({
       nivel: "avisa",
       mensagem: "Nenhuma faixa de pontuação configurada — todos os leads chegam sem classificação.",
+    });
+  }
+
+  /* Mesma variável de saída em dois blocos.
+   *
+   * `resolveScope` monta um mapa por NOME: o segundo bloco sobrescreve o
+   * primeiro, e `{{dor_principal}}` passa a trazer a resposta de outra
+   * pergunta. A mensagem sai completa e plausível, dizendo a coisa errada —
+   * que é pior do que sair com um buraco, porque ninguém desconfia. */
+  const nomesDeVariavel = blocos
+    .map((b) => b.outputVariable?.trim())
+    .filter((n): n is string => !!n);
+  const variaveisRepetidas = [
+    ...new Set(nomesDeVariavel.filter((n, i) => nomesDeVariavel.indexOf(n) !== i)),
+  ];
+  if (variaveisRepetidas.length) {
+    achados.push({
+      nivel: "avisa",
+      mensagem:
+        `${variaveisRepetidas.map((v) => `{{${v}}}`).join(", ")} ` +
+        `${variaveisRepetidas.length > 1 ? "estão" : "está"} em mais de uma pergunta — ` +
+        "vale a última respondida, e a mensagem pode citar a resposta de outra pergunta.",
     });
   }
 

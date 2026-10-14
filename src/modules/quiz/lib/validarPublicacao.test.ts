@@ -9,8 +9,13 @@ const schema = (blocks: QuizBlock[], steps?: QuizSchema["steps"]): QuizSchema =>
   }) as QuizSchema;
 const b = (id: string, type: string, extra: Record<string, unknown> = {}) =>
   ({ id, type, ...extra }) as unknown as QuizBlock;
+/* Duas faixas, e a de baixo em 0%: é o que um quiz saudável tem. A versão
+   anterior tinha uma só, começando em 50%, e deixava sem classificação e sem
+   mensagem quem pontuasse abaixo disso — o cenário "completo" do teste não era
+   completo, e a checagem nova flagrou. */
 const TIER: ScoreTier[] = [
   { id: "t", label: "A", minPercent: 50, whatsappTemplate: "Oi" },
+  { id: "t0", label: "B", minPercent: 0, whatsappTemplate: "Oi tambem" },
 ] as ScoreTier[];
 
 const bloqueia = (s: QuizSchema, t?: ScoreTier[]) =>
@@ -67,15 +72,106 @@ describe("validação antes de publicar", () => {
 
   it("quiz completo passa sem nenhum achado", () => {
     expect(
-      validarPublicacao(schema([b("q", "single-choice"), b("e", "email"), b("r", "result")]), TIER),
+      validarPublicacao(
+        schema([
+          b("q", "single-choice", { options: [{ id: "o1", label: "Sim", score: 10 }] }),
+          b("e", "email"),
+          b("r", "result"),
+        ]),
+        TIER,
+      ),
     ).toEqual([]);
   });
 
   it("faixa sem mensagem AVISA, não barra — é escolha legítima", () => {
-    const semMsg: ScoreTier[] = [{ id: "t", label: "A", minPercent: 50 }] as ScoreTier[];
-    const achados = validarPublicacao(schema([b("e", "email"), b("r", "result")]), semMsg);
+    const semMsg: ScoreTier[] = [{ id: "t", label: "A", minPercent: 0 }] as ScoreTier[];
+    const achados = validarPublicacao(
+      schema([
+        b("q", "single-choice", { options: [{ id: "o1", label: "Sim", score: 10 }] }),
+        b("e", "email"),
+        b("r", "result"),
+      ]),
+      semMsg,
+    );
     expect(achados.every((a) => a.nivel === "avisa")).toBe(true);
     expect(achados.some((a) => /WhatsApp/.test(a.mensagem))).toBe(true);
+  });
+});
+
+/**
+ * Quatro jeitos de o quiz falhar em SILÊNCIO, lidos do caminho de envio em
+ * `api/public/quiz-completed.ts`. Nenhum deles gera erro em lugar nenhum: o
+ * visitante responde, a submissão é gravada, e o que falha é invisível.
+ */
+describe("falhas silenciosas de classificação", () => {
+  const comPontos = (extra: unknown[] = []) =>
+    schema([
+      b("q", "single-choice", { options: [{ id: "o1", label: "Sim", score: 10 }] }),
+      b("e", "email"),
+      b("r", "result"),
+      ...(extra as QuizBlock[]),
+    ]);
+  const avisos = (sc: QuizSchema, t?: ScoreTier[]) =>
+    validarPublicacao(sc, t).map((a) => a.mensagem);
+
+  it("faixa mais baixa acima de 0%: quem pontua pouco fica sem nada", () => {
+    /* O servidor escolhe com `pct >= minPercent`, da maior para a menor. Abaixo
+       da menor não casa nenhuma: `sem_faixa_correspondente`, lead sem
+       classificação no CRM e sem mensagem. */
+    const t = [{ id: "a", label: "A", minPercent: 40, whatsappTemplate: "Oi" }] as ScoreTier[];
+    expect(avisos(comPontos(), t).some((m) => /faixa mais baixa começa em 40%/.test(m))).toBe(true);
+  });
+
+  it("faixa em 0% não acusa nada", () => {
+    const t = [{ id: "a", label: "A", minPercent: 0, whatsappTemplate: "Oi" }] as ScoreTier[];
+    expect(avisos(comPontos(), t).some((m) => /faixa mais baixa/.test(m))).toBe(false);
+  });
+
+  it("duas faixas no mesmo corte: qual vale vira acaso da ordem", () => {
+    const t = [
+      { id: "a", label: "A", minPercent: 50, whatsappTemplate: "Oi" },
+      { id: "b", label: "B", minPercent: 50, whatsappTemplate: "Oi" },
+      { id: "c", label: "C", minPercent: 0, whatsappTemplate: "Oi" },
+    ] as ScoreTier[];
+    expect(avisos(comPontos(), t).some((m) => /Mais de uma faixa começa em 50%/.test(m))).toBe(
+      true,
+    );
+  });
+
+  it("faixas configuradas e nada pontuando: ninguém é classificado", () => {
+    /* `maxPossibleScore` devolve 0 e o envio para ANTES de classificar
+       (`sem_pontuacao`). Não é uma faixa que falha — é o sistema inteiro. */
+    const semPontos = schema([b("q", "single-choice"), b("e", "email"), b("r", "result")]);
+    const t = [{ id: "a", label: "A", minPercent: 0, whatsappTemplate: "Oi" }] as ScoreTier[];
+    expect(avisos(semPontos, t).some((m) => /nenhuma opção vale pontos/.test(m))).toBe(true);
+  });
+
+  it("bloco de Nota conta como pontuação", () => {
+    // `maxPossibleScore` soma `maxRating`, então aqui há teto maior que zero.
+    const comNota = schema([b("n", "rating"), b("e", "email"), b("r", "result")]);
+    const t = [{ id: "a", label: "A", minPercent: 0, whatsappTemplate: "Oi" }] as ScoreTier[];
+    expect(avisos(comNota, t).some((m) => /nenhuma opção vale pontos/.test(m))).toBe(false);
+  });
+
+  it("variável de saída repetida: a mensagem cita a resposta de outra pergunta", () => {
+    /* `resolveScope` monta um mapa por NOME e o segundo bloco sobrescreve o
+       primeiro. A mensagem sai completa e plausível, dizendo a coisa errada —
+       pior que sair com buraco, porque ninguém desconfia. */
+    const repetida = comPontos([
+      b("q2", "short-text", { outputVariable: "dor" }),
+      b("q3", "short-text", { outputVariable: "dor" }),
+    ]);
+    expect(
+      avisos(repetida, TIER).some((m) => /\{\{dor\}\} está em mais de uma pergunta/.test(m)),
+    ).toBe(true);
+  });
+
+  it("variáveis distintas não acusam nada", () => {
+    const ok = comPontos([
+      b("q2", "short-text", { outputVariable: "dor" }),
+      b("q3", "short-text", { outputVariable: "desejo" }),
+    ]);
+    expect(avisos(ok, TIER).some((m) => /mais de uma pergunta/.test(m))).toBe(false);
   });
 });
 
