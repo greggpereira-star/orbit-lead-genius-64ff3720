@@ -177,8 +177,11 @@ describe("o player usa a validação nos TRÊS caminhos", () => {
     /* O `const` existir não basta — foi o que a primeira versão deste teste
        conferia, e ela passava com a variável calculada e NUNCA usada. O que
        bloqueia é o `return` consultá-la. */
-    expect(canSubmit, "telefoneInvalido é calculado mas não entra no return").toContain(
-      "return !telefoneInvalido && (",
+    expect(canSubmit, "telefoneInvalido não alimenta o veredito").toContain(
+      "const contatoInvalido = telefoneInvalido || emailInvalido;",
+    );
+    expect(canSubmit, "o veredito é calculado mas não entra no return").toContain(
+      "return !contatoInvalido && (",
     );
   });
 
@@ -199,7 +202,12 @@ describe("o player usa a validação nos TRÊS caminhos", () => {
 
   it("o botão não fica mudo: quem não passa vê o motivo", () => {
     /* Botão desabilitado sem explicação é tela que mente por omissão. */
-    expect(player).toContain("{avisoDoTelefone}");
+    // O bloco simples serve telefone E e-mail pelo mesmo <input>: o motivo
+    // vem de `avisoDoCampo`, que para campo de telefone é `avisoDoTelefone`.
+    expect(player).toContain("{avisoDoCampo}");
+    expect(player).toContain(
+      "const avisoDoCampo = ehCampoDeTelefone(block) ? avisoDoTelefone : avisoDoEmail;",
+    );
     expect(player).toContain("{avisoDoTelefoneDoForm}");
   });
 });

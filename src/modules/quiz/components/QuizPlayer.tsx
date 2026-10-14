@@ -13,6 +13,7 @@ import { designDaEtapa, varsDoBloco } from '../lib/temaDoBloco';
 import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
 import { origemDaVisita } from "../lib/origemDaVisita";
 import { escolherNome } from "../lib/nomeDoLead";
+import { avisoVisivelDoEmail, sugerirCorrecao, validarEmail } from "../lib/email";
 import {
   avisoVisivelDoTelefone,
   ehCampoDeTelefone,
@@ -1779,11 +1780,31 @@ function BlockView({
      quando o número já tem tamanho de número. Mostrar "inválido" no primeiro
      dígito digitado é acusar quem ainda está escrevendo. */
   const [telefoneTocado, setTelefoneTocado] = useState(false);
+  const [emailTocado, setEmailTocado] = useState(false);
   const avisoDoTelefone = ehCampoDeTelefone(block)
     ? avisoVisivelDoTelefone(typeof value === "string" ? value : "", telefoneTocado)
     : null;
   const avisoDoTelefoneDoForm =
     block.type === "form" ? avisoVisivelDoTelefone(formValue.phone, telefoneTocado) : null;
+  const avisoDoEmail =
+    block.type === "email"
+      ? avisoVisivelDoEmail(typeof value === "string" ? value : "", emailTocado)
+      : null;
+  const avisoDoEmailDoForm =
+    block.type === "form" ? avisoVisivelDoEmail(formValue.email, emailTocado) : null;
+  /* Um aviso só por campo: telefone e e-mail dividem o mesmo `<input>`. */
+  const avisoDoCampo = ehCampoDeTelefone(block) ? avisoDoTelefone : avisoDoEmail;
+  /* A sugestão de domínio só aparece depois de sair do campo: "gmail.co" é um
+     passo no caminho de "gmail.com", e sugerir no meio da digitação seria
+     corrigir quem ainda está escrevendo. */
+  const sugestaoDeEmail =
+    block.type === "email" && emailTocado && !avisoDoEmail
+      ? sugerirCorrecao(typeof value === "string" ? value : "")
+      : null;
+  const sugestaoDeEmailDoForm =
+    block.type === "form" && emailTocado && !avisoDoEmailDoForm
+      ? sugerirCorrecao(formValue.email)
+      : null;
   // Régua de peso/altura: guarda a unidade EXIBIDA localmente; o valor sempre fica
   // salvo internamente na unidade métrica (kg/cm), pra não quebrar o motor de
   // variáveis/fórmulas caso o visitante alterne a unidade no meio do caminho.
@@ -1837,7 +1858,12 @@ function BlockView({
          tipos — sem nada ter regredido no comportamento. */
       const telefoneInvalido =
         ehCampoDeTelefone(block) && texto.trim() !== "" && validarTelefone(texto) !== null;
-      return !telefoneInvalido && (!block.required || texto.trim().length > 0);
+      /* E-mail: o campo é `type="email"`, mas isso só vale para envio de
+         `<form>`, e o botão do quiz não é um — `abc` passava. */
+      const emailInvalido =
+        block.type === "email" && texto.trim() !== "" && validarEmail(texto) !== null;
+      const contatoInvalido = telefoneInvalido || emailInvalido;
+      return !contatoInvalido && (!block.required || texto.trim().length > 0);
     }
     if (block.type === 'form') {
       const ff = block.formFields ?? { name: true, email: true, phone: true };
@@ -1845,6 +1871,9 @@ function BlockView({
          que servir. Era a única entrada de contato sem NENHUMA conferência —
          nem máscara, nem tamanho; só o e-mail era olhado. */
       if (ff.phone && formValue.phone.trim() && validarTelefone(formValue.phone) !== null)
+        return false;
+      /* O e-mail do Formulário era obrigatório, e só conferia "não vazio". */
+      if (ff.email && formValue.email.trim() && validarEmail(formValue.email) !== null)
         return false;
       return !ff.email || formValue.email.trim().length > 0;
     }
@@ -2117,11 +2146,15 @@ function BlockView({
                   : aplicarMascara(e.target.value, block.fieldMask),
               )
             }
-            onBlur={() => setTelefoneTocado(true)}
-            aria-invalid={ehCampoDeTelefone(block) && avisoDoTelefone ? true : undefined}
-            aria-describedby={
-              ehCampoDeTelefone(block) && avisoDoTelefone ? `aviso-${block.id}` : undefined
-            }
+            onBlur={() => {
+              setTelefoneTocado(true);
+              setEmailTocado(true);
+            }}
+            autoComplete={block.type === "email" ? "email" : undefined}
+            autoCapitalize={block.type === "email" ? "none" : undefined}
+            spellCheck={block.type === "email" ? false : undefined}
+            aria-invalid={avisoDoCampo ? true : undefined}
+            aria-describedby={avisoDoCampo ? `aviso-${block.id}` : undefined}
             className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 mb-6 text-base"
             style={{
               borderRadius: design.radius,
@@ -2131,14 +2164,31 @@ function BlockView({
               outlineColor: design.primary,
             }}
           />
-          {ehCampoDeTelefone(block) && avisoDoTelefone && (
+          {avisoDoCampo && (
             <p
               id={`aviso-${block.id}`}
               role="alert"
               className="-mt-4 mb-6 text-sm"
               style={{ color: design.muted }}
             >
-              {avisoDoTelefone}
+              {avisoDoCampo}
+            </p>
+          )}
+          {sugestaoDeEmail && (
+            <p className="-mt-4 mb-6 text-sm" style={{ color: design.muted }}>
+              Você quis dizer{" "}
+              <button
+                type="button"
+                className="font-semibold underline"
+                style={{ color: design.text }}
+                onClick={() => {
+                  setValue(sugestaoDeEmail);
+                  setEmailTocado(false);
+                }}
+              >
+                {sugestaoDeEmail}
+              </button>
+              ?
             </p>
           )}
           <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
@@ -2667,12 +2717,46 @@ function BlockView({
                 <input
                   id={`field-${block.id}-email`}
                   type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   placeholder="E-mail"
                   value={formValue.email}
                   onChange={(e) => setFormValue((f) => ({ ...f, email: e.target.value }))}
+                  onBlur={() => setEmailTocado(true)}
+                  aria-invalid={avisoDoEmailDoForm ? true : undefined}
+                  aria-describedby={avisoDoEmailDoForm ? `aviso-${block.id}-email` : undefined}
                   className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
                   style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${withAlpha(design.text, 0.14)}`, outlineColor: design.primary }}
                 />
+                {avisoDoEmailDoForm && (
+                  <p
+                    id={`aviso-${block.id}-email`}
+                    role="alert"
+                    className="text-sm"
+                    style={{ color: design.muted }}
+                  >
+                    {avisoDoEmailDoForm}
+                  </p>
+                )}
+                {sugestaoDeEmailDoForm && (
+                  <p className="text-sm" style={{ color: design.muted }}>
+                    Você quis dizer{" "}
+                    <button
+                      type="button"
+                      className="font-semibold underline"
+                      style={{ color: design.text }}
+                      onClick={() => {
+                        setFormValue((f) => ({ ...f, email: sugestaoDeEmailDoForm }));
+                        setEmailTocado(false);
+                      }}
+                    >
+                      {sugestaoDeEmailDoForm}
+                    </button>
+                    ?
+                  </p>
+                )}
               </>
             )}
             {ff.phone && (
