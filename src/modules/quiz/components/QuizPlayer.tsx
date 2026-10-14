@@ -13,6 +13,12 @@ import { designDaEtapa, varsDoBloco } from '../lib/temaDoBloco';
 import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
 import { origemDaVisita } from "../lib/origemDaVisita";
 import { escolherNome } from "../lib/nomeDoLead";
+import {
+  avisoVisivelDoTelefone,
+  ehCampoDeTelefone,
+  formatarEnquantoDigita,
+  validarTelefone,
+} from "../lib/telefone";
 import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
@@ -1769,6 +1775,15 @@ function BlockView({
     };
   });
   const [revealed, setRevealed] = useState(false);
+  /* O aviso de telefone só aparece depois que a pessoa saiu do campo, ou
+     quando o número já tem tamanho de número. Mostrar "inválido" no primeiro
+     dígito digitado é acusar quem ainda está escrevendo. */
+  const [telefoneTocado, setTelefoneTocado] = useState(false);
+  const avisoDoTelefone = ehCampoDeTelefone(block)
+    ? avisoVisivelDoTelefone(typeof value === "string" ? value : "", telefoneTocado)
+    : null;
+  const avisoDoTelefoneDoForm =
+    block.type === "form" ? avisoVisivelDoTelefone(formValue.phone, telefoneTocado) : null;
   // Régua de peso/altura: guarda a unidade EXIBIDA localmente; o valor sempre fica
   // salvo internamente na unidade métrica (kg/cm), pra não quebrar o motor de
   // variáveis/fórmulas caso o visitante alterne a unidade no meio do caminho.
@@ -1810,10 +1825,27 @@ function BlockView({
       block.type === 'short-text' || block.type === 'long-text' || block.type === 'email' ||
       block.type === 'phone'
     ) {
-      return !block.required || (typeof value === 'string' && value.trim().length > 0);
+      const texto = typeof value === "string" ? value : "";
+      /* Campo de telefone: se tem conteúdo, tem que ser um telefone. Antes só
+         se exigia "não vazio", e `2121121221212` (13 dígitos) virava lead. Vazio
+         continua sendo decidido por `required`, como sempre.
+
+         Escrito como expressão, e não como `if` aninhado, de propósito: o teste
+         de obrigatório alcançável lê este ramo dividindo o corpo em `if (` e
+         procurando `block.required` em cada pedaço. Um `if` a mais separava o
+         `required` do `block.type` e o teste deixava de enxergar os quatro
+         tipos — sem nada ter regredido no comportamento. */
+      const telefoneInvalido =
+        ehCampoDeTelefone(block) && texto.trim() !== "" && validarTelefone(texto) !== null;
+      return !telefoneInvalido && (!block.required || texto.trim().length > 0);
     }
     if (block.type === 'form') {
       const ff = block.formFields ?? { name: true, email: true, phone: true };
+      /* Telefone do Formulário: opcional como era, mas se vier preenchido tem
+         que servir. Era a única entrada de contato sem NENHUMA conferência —
+         nem máscara, nem tamanho; só o e-mail era olhado. */
+      if (ff.phone && formValue.phone.trim() && validarTelefone(formValue.phone) !== null)
+        return false;
       return !ff.email || formValue.email.trim().length > 0;
     }
     if (block.type === 'video-answer') {
@@ -2078,7 +2110,18 @@ function BlockView({
                 ? 'numeric'
                 : undefined
             }
-            onChange={(e) => setValue(aplicarMascara(e.target.value, block.fieldMask))}
+            onChange={(e) =>
+              setValue(
+                ehCampoDeTelefone(block)
+                  ? formatarEnquantoDigita(e.target.value)
+                  : aplicarMascara(e.target.value, block.fieldMask),
+              )
+            }
+            onBlur={() => setTelefoneTocado(true)}
+            aria-invalid={ehCampoDeTelefone(block) && avisoDoTelefone ? true : undefined}
+            aria-describedby={
+              ehCampoDeTelefone(block) && avisoDoTelefone ? `aviso-${block.id}` : undefined
+            }
             className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 mb-6 text-base"
             style={{
               borderRadius: design.radius,
@@ -2088,6 +2131,16 @@ function BlockView({
               outlineColor: design.primary,
             }}
           />
+          {ehCampoDeTelefone(block) && avisoDoTelefone && (
+            <p
+              id={`aviso-${block.id}`}
+              role="alert"
+              className="-mt-4 mb-6 text-sm"
+              style={{ color: design.muted }}
+            >
+              {avisoDoTelefone}
+            </p>
+          )}
           <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(value)} disabled={!canSubmit || !stepValid || saving}>
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
@@ -2629,11 +2682,28 @@ function BlockView({
                   id={`field-${block.id}-phone`}
                   type="tel"
                   placeholder="Telefone"
+                  inputMode="tel"
+                  autoComplete="tel"
                   value={formValue.phone}
-                  onChange={(e) => setFormValue((f) => ({ ...f, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setFormValue((f) => ({ ...f, phone: formatarEnquantoDigita(e.target.value) }))
+                  }
+                  onBlur={() => setTelefoneTocado(true)}
+                  aria-invalid={avisoDoTelefoneDoForm ? true : undefined}
+                  aria-describedby={avisoDoTelefoneDoForm ? `aviso-${block.id}-phone` : undefined}
                   className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
                   style={{ borderRadius: design.radius, background: design.surface, color: design.text, border: `1px solid ${withAlpha(design.text, 0.14)}`, outlineColor: design.primary }}
                 />
+                {avisoDoTelefoneDoForm && (
+                  <p
+                    id={`aviso-${block.id}-phone`}
+                    role="alert"
+                    className="text-sm"
+                    style={{ color: design.muted }}
+                  >
+                    {avisoDoTelefoneDoForm}
+                  </p>
+                )}
               </>
             )}
           </div>
