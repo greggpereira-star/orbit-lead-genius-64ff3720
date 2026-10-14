@@ -11,6 +11,7 @@ import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars'
 import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
 import { designDaEtapa, varsDoBloco } from '../lib/temaDoBloco';
 import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
+import { origemDaVisita } from "../lib/origemDaVisita";
 import { aplicarMascara, tamanhoDaMascara, formatarPreco } from '../lib/fieldMask';
 import { SchedulingField, type ValorAgendamento } from './SchedulingField';
 import { parseRichText } from '../lib/richtext';
@@ -259,6 +260,20 @@ function PlayerRunner({
      visitante precisa poder TENTAR DE NOVO — e porque nesse momento as
      respostas só existem na memória desta aba. */
   const [erroAoGravar, setErroAoGravar] = useState(false);
+
+  /* O `tracking` que chega por prop sai SÓ da query string. `landing_page` e
+     `referrer` não estão nela e nunca eram escritos por ninguém: as colunas
+     existiam e ficavam vazias para todo lead de quiz.
+
+     Montado na hora do uso, e não uma vez na montagem: o player renderiza no
+     servidor, onde `window` não existe, e um valor calculado lá divergiria do
+     do navegador. Os dois pontos que enviam o tracking passam por aqui — a
+     captura antecipada é onde o lead NASCE, e o `UPDATE` do envio final não
+     toca nessas duas colunas, então só o primeiro ponto realmente as grava. */
+  const trackingDaVisita = (): Record<string, string> => ({
+    ...(typeof window === "undefined" ? {} : origemDaVisita(window.location, document.referrer)),
+    ...tracking,
+  });
   const [stepValidity, setStepValidity] = useState<Record<string, boolean>>({});
 
   const blocks = schema.blocks;
@@ -655,7 +670,7 @@ function PlayerRunner({
           phone: phoneNow,
           name: nomeNow,
           score: nextState.score,
-          tracking,
+          tracking: trackingDaVisita(),
           responses: nextResponses,
           completed: false,
         }).catch(() => {});
@@ -727,7 +742,7 @@ function PlayerRunner({
       );
       const { email, phone, name } = extrairContato(finalState.responses, blocks);
       const enrichedTracking: Record<string, string> = {
-        ...tracking,
+        ...trackingDaVisita(),
         user_agent: navigator.userAgent,
       };
       const id = await quizService.submitPublic({
