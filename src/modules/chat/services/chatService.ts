@@ -178,11 +178,15 @@ export const chatService = {
 
   async markRead(conversationId: string, side: 'agent' | 'visitor'): Promise<void> {
     const patch = side === 'agent' ? { unread_agent: 0 } : { unread_visitor: 0 };
-    await supabase.from(CONV).update(patch as never).eq('id' as never, conversationId as never);
+    const { error } = await supabase.from(CONV).update(patch as never).eq('id' as never, conversationId as never);
+    if (error) throw error;
   },
 
   async closeConversation(conversationId: string): Promise<void> {
-    await supabase.from(CONV).update({ status: 'closed' } as never).eq('id' as never, conversationId as never);
+    /* Sem checar o erro, "Encerrar" não fazia nada e não dizia nada quando a
+       permissão negava a escrita: o atendente achava que tinha encerrado. */
+    const { error } = await supabase.from(CONV).update({ status: 'closed' } as never).eq('id' as never, conversationId as never);
+    if (error) throw error;
   },
 
   async rateConversation(conversationId: string, rating: number, comment?: string, client?: Client): Promise<void> {

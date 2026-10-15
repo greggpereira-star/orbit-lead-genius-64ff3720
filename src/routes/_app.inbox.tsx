@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -174,7 +175,8 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
   }, [text, filteredReplies.length]);
 
   useEffect(() => {
-    chatService.markRead(conversation.id, 'agent');
+    // Marcar como lida é conveniência: se falhar, não pode virar rejeição solta.
+    chatService.markRead(conversation.id, 'agent').catch(() => {});
   }, [conversation.id, messages.length]);
 
   useEffect(() => {
@@ -205,8 +207,15 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
         content,
       });
       setText('');
+    } catch (e) {
+      /* Antes não havia `catch`: a mensagem não saía, o texto continuava no
+         campo e nada avisava — o atendente achava que tinha respondido. */
+      toast.error(e instanceof Error && e.message ? `Não foi possível enviar: ${e.message}` : 'Não foi possível enviar a mensagem.');
     } finally {
       setSending(false);
+      // O campo fica desabilitado durante o envio e perde o foco: sem devolvê-lo,
+      // cada resposta exigia um clique antes de digitar a próxima.
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
   }
 
@@ -238,9 +247,14 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
             variant="outline"
             size="sm"
             onClick={async () => {
-              await chatService.closeConversation(conversation.id);
-              queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', conversation.company_id] });
+              try {
+                await chatService.closeConversation(conversation.id);
+                queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', conversation.company_id] });
+              } catch (e) {
+                toast.error(e instanceof Error && e.message ? `Não foi possível encerrar: ${e.message}` : 'Não foi possível encerrar a conversa.');
+              }
             }}
+            disabled={conversation.status === 'closed'}
           >
             Encerrar
           </Button>
@@ -301,7 +315,7 @@ function ConversationView({ conversation, agentId }: { conversation: ChatConvers
             placeholder="Escreva uma resposta… ( / para atalhos)"
             disabled={sending || conversation.status === 'closed'}
             onKeyDown={(e) => {
-              if (e.key === 'Tab' && filteredReplies.length > 0) {
+              if (e.key === 'Tab' && showReplies && filteredReplies.length > 0) {
                 e.preventDefault();
                 applyReply(filteredReplies[0]);
               } else if (e.key === 'Escape') {
@@ -360,6 +374,8 @@ function TransferPopover({ conversation, onDone }: { conversation: ChatConversat
       setOpen(false);
       setNote('');
       onDone();
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? `Não foi possível transferir: ${e.message}` : 'Não foi possível transferir a conversa.');
     } finally {
       setSaving(false);
     }
@@ -437,6 +453,10 @@ function OnlineVisitorsPopover({ companyId }: { companyId: string | undefined })
         firstMessage: msg,
       });
       queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', companyId] });
+      setMessageByVisitor((prev) => ({ ...prev, [v.visitor_id]: '' }));
+      toast.success('Conversa iniciada.');
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? `Não foi possível iniciar: ${e.message}` : 'Não foi possível iniciar a conversa.');
     } finally {
       setOpeningId(null);
     }
