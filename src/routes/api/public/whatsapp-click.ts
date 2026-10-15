@@ -27,6 +27,12 @@ const cors = {
 };
 
 const sanitizePhone = (raw: string) => raw.replace(/\D+/g, '');
+/** Texto vindo do navegador: aparado e com teto, para a rota pública não gravar lixo sem limite. */
+const limpar = (v: unknown, max: number): string | null => {
+  if (typeof v !== 'string') return null;
+  const t = v.trim().slice(0, max);
+  return t === '' ? null : t;
+};
 const buildWaUrl = (phone: string, msg?: string) =>
   msg ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/${phone}`;
 
@@ -49,7 +55,15 @@ export const Route = createFileRoute('/api/public/whatsapp-click')({
           return new Response(JSON.stringify({ error: 'invalid_json' }), { status: 400, headers: { ...cors, 'content-type': 'application/json' } });
         }
 
-        const phone = body.phone ? sanitizePhone(body.phone) : '';
+        /* Entradas aparadas e limitadas antes de qualquer uso. Antes um
+           `name: "   "` contava como "tem nome" e criava lead em branco. */
+        body.name = limpar(body.name, 120) ?? undefined;
+        body.email = limpar(body.email, 254)?.toLowerCase() ?? undefined;
+        body.message = limpar(body.message, 1000) ?? undefined;
+        body.pageUrl = limpar(body.pageUrl, 2048) ?? undefined;
+        body.visitorId = limpar(body.visitorId, 128) ?? undefined;
+
+        const phone = typeof body.phone === 'string' ? sanitizePhone(body.phone) : '';
         if (!body.companyId || !phone) {
           log('warn', traceId, 'missing_fields');
           return new Response(JSON.stringify({ error: 'missing_fields' }), { status: 400, headers: { ...cors, 'content-type': 'application/json' } });
@@ -67,7 +81,23 @@ export const Route = createFileRoute('/api/public/whatsapp-click')({
           const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
 
           let leadId: string | null = null;
-          if (body.email || body.name) {
+          /* O mesmo visitante clicando de novo (ou voltando com o mesmo e-mail)
+             reaproveita o lead. Antes cada clique inseria uma linha nova: o CRM
+             enchia de duplicatas do mesmo contato, cada uma com um clique só. */
+          if (body.visitorId || body.email) {
+            let busca = supabaseAdmin
+              .from('leads')
+              .select('id')
+              .eq('company_id', body.companyId)
+              .eq('source', 'whatsapp_widget');
+            busca = body.visitorId
+              ? busca.eq('metadata->>visitor_id' as never, body.visitorId)
+              : busca.eq('email', body.email as string);
+            const { data: existente } = await busca.order('created_at', { ascending: true }).limit(1);
+            leadId = (existente as { id: string }[] | null)?.[0]?.id ?? null;
+          }
+
+          if (!leadId && (body.email || body.name)) {
             const { data: lead, error: leadErr } = await supabaseAdmin.from('leads').insert({
               company_id: body.companyId,
               name: body.name ?? body.email ?? 'Visitante WhatsApp',
