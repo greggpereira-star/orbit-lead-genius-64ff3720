@@ -12,7 +12,8 @@ const envio = rota.slice(rota.indexOf("const destino"));
 describe("quiz-completed não é um relé de WhatsApp", () => {
   it("o número vem do lead da sessão, nunca do corpo", () => {
     expect(rota).toContain("const destino = leadDoQuiz?.phone?.trim() || '';");
-    expect(rota).toContain("canal.provider.sendText(canal.canal, numero, texto)");
+    expect(rota).toContain("enviarFaixaDoQuiz(supabaseAdmin,");
+    expect(rota).toContain("numero,");
     expect(rota).toContain("const numero = toWhatsAppNumber(destino);");
     expect(rota).not.toMatch(/sendText\([^)]*body\.telefone/);
   });
@@ -21,8 +22,8 @@ describe("quiz-completed não é um relé de WhatsApp", () => {
     expect(rota).toContain("numeroEmOptout(supabaseAdmin as never, q.company_id, numero)");
   });
 
-  it("sem lead resolvido não há envio", () => {
-    expect(envio).toMatch(/if \(!faixa\.whatsappTemplate\?\.trim\(\) \|\| !destino\)/);
+  it("sem lead resolvido (sem telefone) não há envio — nem com template", () => {
+    expect(envio).toContain("!faixa.waTemplate?.nome?.trim()) || !destino");
   });
 
   it("uma mensagem por lead a cada 24h, reclamada de forma atômica antes do envio", () => {
@@ -31,10 +32,10 @@ describe("quiz-completed não é um relé de WhatsApp", () => {
     const reclame = envio.indexOf(".is('metadata->>quiz_tier_sent_at'");
     expect(reclame).toBeGreaterThan(-1);
     // o reclame vem ANTES do envio pelo provedor
-    expect(reclame).toBeLessThan(envio.indexOf("canal.provider.sendText("));
+    expect(reclame).toBeLessThan(envio.indexOf("enviarFaixaDoQuiz("));
   });
 
   it("falha de envio devolve a reserva", () => {
-    expect((envio.match(/await liberar\(\)/g) ?? []).length).toBe(4);
+    expect((envio.match(/await liberar\(\)/g) ?? []).length).toBe(3);
   });
 });

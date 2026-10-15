@@ -11,6 +11,7 @@
  * intervalo mínimo entre envios e uma saudação por lead (índice único no banco).
  */
 
+import { empresaTemNumeroOficial } from "./whatsapp/canal";
 import { evolutionProvider } from "./whatsapp/evolution-provider";
 import { toWhatsAppNumber } from "./whatsapp/numero";
 import { decidirEnvio, horaEmSaoPaulo, numeroEmOptout } from "./whatsapp/politica";
@@ -99,6 +100,27 @@ export async function dispatchLeadWhatsApp(
 
     if (!settings) return result;
     const cfg = settings as Settings;
+
+    /* Empresa na API OFICIAL: este caminho (texto livre pela Evolution) não vale
+       mais. Texto livre a quem nunca escreveu é recusado pela Meta, e o aviso
+       ao corretor também precisa de template. A substituta são as regras de
+       automação (ações "Enviar template"). Registra o motivo em vez de falhar
+       calado: quem ligou a saudação precisa saber por que ela não sai. */
+    if (await empresaTemNumeroOficial(admin, input.companyId)) {
+      if ((cfg.greeting_enabled || cfg.broker_alert_enabled) && input.phone) {
+        await logMessage(admin, {
+          company_id: input.companyId,
+          lead_id: input.leadId,
+          direction: "outbound",
+          kind: "greeting",
+          to_phone: input.phone,
+          body: "",
+          status: "skipped",
+          skipped_reason: "API oficial ativa: use uma regra de automação com template",
+        });
+      }
+      return result;
+    }
 
     if (!instance?.instance_name || instance.status !== "connected") {
       const reason = "WhatsApp não conectado";

@@ -1,36 +1,43 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 /**
- * A ação `enviar_whatsapp` do motor de automação enviava para quem pediu para
- * parar e fora do horário. Só o caminho legado respeitava as duas regras.
+ * A ação de envio do motor de automação enviava para quem pediu para parar e
+ * fora do horário. A política mora agora em `acoesDeWhatsApp.ts` (extraída do
+ * despachante para ser testada de verdade — ver `acoesDeWhatsApp.test.ts`);
+ * aqui fica o guarda de estrutura: ninguém pode reintroduzir um envio que
+ * contorne a decisão.
  */
-const fonte = readFileSync("src/routes/api/public/cron/automation-dispatch.ts", "utf8");
-const acao = fonte.slice(fonte.indexOf("case 'enviar_whatsapp'"), fonte.indexOf("case 'webhook'"));
+const fonte = readFileSync("src/lib/automacao/acoesDeWhatsApp.ts", "utf8");
+const despachante = readFileSync("src/routes/api/public/cron/automation-dispatch.ts", "utf8");
 
-describe("ação enviar_whatsapp passa pela política", () => {
+describe("ações de WhatsApp passam pela política", () => {
   it("consulta opt-out e horário", () => {
-    expect(acao).toContain("numeroEmOptout(admin, job.company_id, numero)");
-    expect(acao).toContain("janelaDaEmpresa(admin, job.company_id)");
-    expect(acao).toContain("decidirEnvio({");
+    expect(fonte).toContain("numeroEmOptout(admin, job.company_id, numero)");
+    expect(fonte).toContain("janelaDaEmpresa(admin, job.company_id)");
+    expect(fonte).toContain("decidirEnvio({");
   });
 
-  it("a decisão vem ANTES do envio", () => {
-    expect(acao.indexOf("decidirEnvio({")).toBeGreaterThan(-1);
-    expect(acao.indexOf("decidirEnvio({")).toBeLessThan(acao.indexOf("canal.provider.sendText("));
+  it("a decisão vem ANTES de qualquer envio", () => {
+    const decisao = fonte.indexOf("decidirEnvio({");
+    expect(decisao).toBeGreaterThan(-1);
+    expect(decisao).toBeLessThan(fonte.indexOf("enviarTemplateNaConversa(db"));
+    expect(decisao).toBeLessThan(fonte.indexOf("enviarTextoNaConversa(db"));
+    expect(decisao).toBeLessThan(fonte.indexOf("canal.provider.sendText("));
   });
 
   it("bloqueio é registrado como skipped, com o motivo", () => {
-    expect(acao).toContain("status: 'skipped'");
-    expect(acao).toContain("skipped_reason: decisao.texto");
+    expect(fonte).toContain('status: "skipped"');
+    expect(fonte).toContain("skipped_reason: decisao.texto");
   });
 
-  it("alerta a número fixo da empresa não passa por opt-out de lead", () => {
-    expect(acao).toContain("const paraLead = !String(cfg.para ?? '').trim();");
-    expect(acao).toContain("if (paraLead) {");
+  it("alerta a número fixo da empresa não passa pela política de lead", () => {
+    expect(fonte).toContain('const paraLead = !String(cfg.para ?? "").trim();');
+    expect(fonte).toContain("if (paraLead) {");
   });
 
-  it("não fala com a Evolution direto", () => {
-    expect(acao).not.toContain("evolution.server");
+  it("o despachante não fala com provedor nenhum direto", () => {
+    expect(despachante).not.toContain("evolution.server");
+    expect(despachante).not.toContain("sendText(");
   });
 });

@@ -20,6 +20,11 @@ export const EVENTOS = [
   { valor: 'lead_created', rotulo: 'Lead criado', ajuda: 'Qualquer lead novo, de qualquer origem.' },
   { valor: 'stage_changed', rotulo: 'Mudou de etapa', ajuda: 'O card foi movido no pipeline.' },
   { valor: 'form_abandoned', rotulo: 'Formulário abandonado', ajuda: 'Parou de preencher e não voltou em 30 min.' },
+  {
+    valor: 'whatsapp_message_received',
+    rotulo: 'Mensagem recebida no WhatsApp',
+    ajuda: 'O cliente escreveu. Só mensagens dele: respostas da equipe e histórico importado não contam.',
+  },
 ] as const;
 
 export const OPERADORES = [
@@ -38,13 +43,17 @@ export const CAMPOS_POR_EVENTO: Record<string, string[]> = {
                  'utm_source', 'utm_medium', 'utm_campaign', 'landing_page'],
   stage_changed: ['etapa', 'score', 'temperatura', 'nome', 'email', 'telefone'],
   form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign'],
+  whatsapp_message_received: ['texto', 'primeira_mensagem', 'veio_de_anuncio', 'tipo_mensagem',
+                              'nome', 'email', 'telefone', 'score', 'temperatura', 'origem'],
 };
 
 export const ACOES = [
   { valor: 'etiquetar', rotulo: 'Aplicar etiqueta' },
   { valor: 'mover_etapa', rotulo: 'Mover para etapa' },
   { valor: 'atribuir_responsavel', rotulo: 'Atribuir responsável' },
-  { valor: 'enviar_whatsapp', rotulo: 'Enviar WhatsApp' },
+  { valor: 'enviar_whatsapp', rotulo: 'Enviar texto no WhatsApp (janela de 24h aberta)' },
+  { valor: 'enviar_template', rotulo: 'Enviar template do WhatsApp' },
+  { valor: 'atribuir_conversa', rotulo: 'Atribuir conversa do WhatsApp' },
   { valor: 'webhook', rotulo: 'Chamar webhook' },
 ] as const;
 

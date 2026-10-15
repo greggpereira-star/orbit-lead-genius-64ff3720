@@ -18,6 +18,7 @@ import {
 } from '../services/automationService';
 import type { Stage } from '@/modules/crm/services/stageService';
 import type { MembroDaEquipe } from '@/modules/crm/services/teamService';
+import { useTemplatesAprovados } from '@/modules/atendimento/hooks/useAtendimento';
 
 /** Operadores que não pedem valor — pedir seria um campo que não faz nada. */
 const SEM_VALOR = new Set(['preenchido', 'vazio']);
@@ -215,7 +216,7 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
                       </Button>
                     </div>
                     <ConfigDaAcao
-                      acao={a} etapas={etapas} equipe={equipe} campos={campos}
+                      acao={a} etapas={etapas} equipe={equipe} campos={campos} companyId={companyId}
                       onMudar={(cfg) => setAcoes((x) => x.map((y, j) => j === i ? { ...y, config: cfg } : y))}
                     />
                   </div>
@@ -246,9 +247,10 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
 }
 
 function ConfigDaAcao({
-  acao, etapas, equipe, campos, onMudar,
+  acao, etapas, equipe, campos, companyId, onMudar,
 }: {
   acao: Acao;
+  companyId: string;
   etapas: Stage[];
   equipe: MembroDaEquipe[];
   campos: string[];
@@ -318,6 +320,28 @@ function ConfigDaAcao({
         </div>
       );
 
+    case 'enviar_template':
+      return <EditorDeTemplate cfg={cfg} campos={campos} companyId={companyId} onMudar={set} />;
+
+    case 'atribuir_conversa':
+      return (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold text-muted-foreground">
+            Responsável — vazio usa o responsável pelo lead
+          </Label>
+          <Select value={cfg.user_id ?? ''} onValueChange={(v) => set({ user_id: v === '__lead__' ? '' : v })}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Responsável pelo lead" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__lead__">Responsável pelo lead</SelectItem>
+              {equipe.map((m) => <SelectItem key={m.userId} value={m.userId}>{m.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            Só faz efeito em regras do evento "Mensagem recebida no WhatsApp", que é quando existe uma conversa.
+          </p>
+        </div>
+      );
+
     case 'webhook':
       return (
         <div className="space-y-2.5">
@@ -338,4 +362,79 @@ function ConfigDaAcao({
     default:
       return null;
   }
+}
+
+/**
+ * Escolha de template e mapeamento das variáveis `{{1}}`, `{{2}}`… para dados do
+ * evento (`{{nome}}`). Só aparecem templates APROVADOS: um pendente não envia.
+ */
+function EditorDeTemplate({
+  cfg, campos, companyId, onMudar,
+}: {
+  cfg: Record<string, any>;
+  campos: string[];
+  companyId: string;
+  onMudar: (patch: Record<string, any>) => void;
+}) {
+  const templates = useTemplatesAprovados(companyId);
+  const lista = templates.data ?? [];
+  const escolhido = lista.find((t) => t.name === cfg.template && t.language === (cfg.idioma ?? 'pt_BR')) ?? null;
+  const corpo = String(
+    escolhido?.components.find((c) => String(c.type).toUpperCase() === 'BODY')?.text ?? '',
+  );
+  const n = new Set([...corpo.matchAll(/\{\{\s*(\d+)\s*\}\}/g)].map((m) => m[1])).size;
+  const variaveis: Record<string, string> = cfg.variaveis ?? {};
+
+  return (
+    <div className="space-y-2.5">
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">Template aprovado</Label>
+        <Select
+          value={escolhido ? `${escolhido.name}|${escolhido.language}` : ''}
+          onValueChange={(v) => {
+            const [nome, idioma] = v.split('|');
+            onMudar({ template: nome, idioma, variaveis: {} });
+          }}
+        >
+          <SelectTrigger className="h-9"><SelectValue placeholder="Escolha o template" /></SelectTrigger>
+          <SelectContent>
+            {lista.map((t) => (
+              <SelectItem key={t.id} value={`${t.name}|${t.language}`}>{t.name} · {t.language}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!templates.isLoading && lista.length === 0 && (
+          <p className="text-[11px] text-destructive">
+            Nenhum template aprovado. Crie em Configurações › WhatsApp oficial.
+          </p>
+        )}
+      </div>
+
+      {escolhido && (
+        <>
+          <p className="rounded-lg bg-muted/50 p-2.5 text-[12px] whitespace-pre-wrap">{corpo}</p>
+          {Array.from({ length: n }, (_, i) => String(i + 1)).map((k) => (
+            <div key={k} className="space-y-1">
+              <Label className="text-[11px] font-semibold text-muted-foreground">{`Valor de {{${k}}}`}</Label>
+              <Input className="h-9" placeholder="{{nome}}" value={variaveis[k] ?? ''}
+                onChange={(e) => onMudar({ variaveis: { ...variaveis, [k]: e.target.value } })} />
+            </div>
+          ))}
+          {n > 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              Use dados do evento: {campos.map((c) => `{{${c}}}`).join('  ')}
+            </p>
+          )}
+        </>
+      )}
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">
+          Para — vazio envia ao telefone do próprio lead
+        </Label>
+        <Input className="h-9" placeholder="27999998888 (opcional)"
+          value={cfg.para ?? ''} onChange={(e) => onMudar({ para: e.target.value })} />
+      </div>
+    </div>
+  );
 }

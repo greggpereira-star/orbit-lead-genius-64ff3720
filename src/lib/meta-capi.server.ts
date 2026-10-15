@@ -50,6 +50,12 @@ export interface MetaCapiInput {
     ctwaClid: string;
     /** A página do Facebook dona da conversa. */
     pageId?: string | null;
+    /**
+     * A conta do WhatsApp Business (WABA) dona do número. Com a API oficial é
+     * ela que identifica a conversa — a Meta aceita `page_id` OU este campo, e
+     * exige um dos dois quando a fonte é `business_messaging`.
+     */
+    whatsappBusinessAccountId?: string | null;
   } | null;
 
   /**
@@ -119,16 +125,7 @@ export async function sendMetaCapiEvent(input: MetaCapiInput): Promise<MetaCapiR
   // O `ctwa_clid` vai CRU. É a única chave aqui que não é hasheada — ela já é um
   // identificador opaco da Meta, e hashear faria o evento ser recusado.
   const mensageria = input.messaging ?? null;
-  if (mensageria) {
-    userData.ctwa_clid = mensageria.ctwaClid;
-    if (mensageria.pageId) userData.page_id = mensageria.pageId;
-    // Num evento de mensageria não existe navegador: mandar user agent ou IP
-    // inventado só piora a correspondência.
-    delete userData.client_user_agent;
-    delete userData.client_ip_address;
-    delete userData.fbc;
-    delete userData.fbp;
-  }
+  if (mensageria) aplicarMensageria(userData, mensageria);
 
   const payload = {
     data: [
@@ -175,4 +172,29 @@ export async function sendMetaCapiEvent(input: MetaCapiInput): Promise<MetaCapiR
   } catch (err) {
     return { ok: false, status: 'failed', error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * `user_data` de um evento de mensageria (WhatsApp vindo de anúncio).
+ *
+ * Pura e exportada para ser testada: é aqui que mora a regra que, quebrada,
+ * devolve 400 com subcódigo 2804116 — a Meta exige `page_id` OU
+ * `whatsapp_business_account_id` quando a fonte é `business_messaging`.
+ */
+export function aplicarMensageria(
+  userData: Record<string, unknown>,
+  m: { ctwaClid: string; pageId?: string | null; whatsappBusinessAccountId?: string | null },
+): Record<string, unknown> {
+  // O `ctwa_clid` vai CRU: é um identificador opaco da Meta; hashear faz o
+  // evento ser recusado.
+  userData.ctwa_clid = m.ctwaClid;
+  if (m.pageId) userData.page_id = m.pageId;
+  if (m.whatsappBusinessAccountId) userData.whatsapp_business_account_id = m.whatsappBusinessAccountId;
+  // Num evento de mensageria não existe navegador: user agent, IP, fbc e fbp
+  // inventados só pioram a correspondência.
+  delete userData.client_user_agent;
+  delete userData.client_ip_address;
+  delete userData.fbc;
+  delete userData.fbp;
+  return userData;
 }

@@ -184,3 +184,105 @@ BEGIN
   RAISE NOTICE 'wa_fase2: 8 testes passaram';
 END
 $t$;
+
+-- ===========================================================================
+-- Fase 4: automação
+-- ===========================================================================
+DO $t$
+DECLARE
+  v_emp uuid; v_conv uuid; v_regra uuid; v_regra2 uuid; v_n int; v_lead uuid;
+  v_payload jsonb; v_r record; v_conv2 uuid;
+BEGIN
+  IF to_regclass('public.automation_rules') IS NULL OR to_regprocedure('public.wa_obter_ou_criar_conversa(uuid,text,uuid,text)') IS NULL THEN
+    RAISE NOTICE 'fase 4 ausente (motor ou migração): pulando';
+    RETURN;
+  END IF;
+  SELECT id INTO v_emp FROM public.companies LIMIT 1;
+  SELECT id INTO v_lead FROM public.leads WHERE company_id = v_emp LIMIT 1;
+  IF v_lead IS NULL THEN
+    -- base sem lead nenhum: cria um descartável (a transação é desfeita)
+    INSERT INTO public.leads (company_id) VALUES (v_emp) RETURNING id INTO v_lead;
+  END IF;
+
+  -- T30: o vocabulário aceita o evento e as ações novas
+  INSERT INTO public.automation_rules (company_id, name, trigger_event, conditions)
+    VALUES (v_emp, 'Primeira mensagem', 'whatsapp_message_received',
+            '[{"campo":"primeira_mensagem","operador":"igual","valor":"true"}]'::jsonb)
+    RETURNING id INTO v_regra;
+  INSERT INTO public.automation_actions (rule_id, company_id, action_type, config, sort_order)
+    VALUES (v_regra, v_emp, 'enviar_template', '{"template":"boas_vindas"}'::jsonb, 0),
+           (v_regra, v_emp, 'atribuir_conversa', '{}'::jsonb, 1);
+
+  -- e continua recusando o que não existe
+  BEGIN
+    INSERT INTO public.automation_actions (rule_id, company_id, action_type) VALUES (v_regra, v_emp, 'enviar_email');
+    RAISE EXCEPTION 'T30 aceitou ação inexistente';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+
+  -- regra por palavra-chave
+  INSERT INTO public.automation_rules (company_id, name, trigger_event, conditions)
+    VALUES (v_emp, 'Pediu orçamento', 'whatsapp_message_received',
+            '[{"campo":"texto","operador":"contem","valor":"orçamento"}]'::jsonb)
+    RETURNING id INTO v_regra2;
+  INSERT INTO public.automation_actions (rule_id, company_id, action_type, config)
+    VALUES (v_regra2, v_emp, 'atribuir_conversa', '{}'::jsonb);
+
+  -- T31: mensagem do cliente enfileira só as regras cujas condições passam
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527911110001','Duda','inbound','customer',
+    'wamid.AUT1','text','Olá, tudo bem?','{}'::jsonb, now(), NULL);
+  SELECT count(*) INTO v_n FROM public.automation_jobs WHERE trigger_event = 'whatsapp_message_received';
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T31 esperava 1 job (primeira mensagem), veio %', v_n; END IF;
+
+  -- T32: o payload leva a conversa, o texto e a primeira mensagem
+  SELECT payload INTO v_payload FROM public.automation_jobs
+   WHERE trigger_event = 'whatsapp_message_received' ORDER BY created_at LIMIT 1;
+  IF v_payload ->> 'primeira_mensagem' <> 'true' OR v_payload ->> 'texto' <> 'Olá, tudo bem?'
+     OR v_payload ->> 'conversation_id' IS NULL OR v_payload ->> 'wa_id' <> '5527911110001' THEN
+    RAISE EXCEPTION 'T32 payload incompleto: %', v_payload; END IF;
+
+  -- T33: a segunda mensagem NÃO é "primeira"; a palavra-chave dispara a outra regra
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527911110001','Duda','inbound','customer',
+    'wamid.AUT2','text','Quero um orçamento','{}'::jsonb, now(), NULL);
+  SELECT count(*) INTO v_n FROM public.automation_jobs j
+   WHERE j.rule_id = v_regra2;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T33 regra por palavra-chave: % jobs', v_n; END IF;
+  SELECT count(*) INTO v_n FROM public.automation_jobs j WHERE j.rule_id = v_regra;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T33 primeira-mensagem disparou de novo: % jobs', v_n; END IF;
+
+  -- T34: REENTREGA do mesmo wamid não enfileira de novo
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527911110001','Duda','inbound','customer',
+    'wamid.AUT2','text','Quero um orçamento','{}'::jsonb, now(), NULL);
+  SELECT count(*) INTO v_n FROM public.automation_jobs WHERE trigger_event = 'whatsapp_message_received';
+  IF v_n <> 2 THEN RAISE EXCEPTION 'T34 reentrega enfileirou: % jobs', v_n; END IF;
+
+  -- T35: eco do app e histórico NÃO disparam automação
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527911110001',NULL,'outbound','app_echo',
+    'wamid.AUT3','text','orçamento enviado','{}'::jsonb, now(), NULL);
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527911110001',NULL,'inbound','history',
+    'wamid.AUT4','text','orçamento antigo','{}'::jsonb, now() - interval '30 days', NULL, 'received');
+  SELECT count(*) INTO v_n FROM public.automation_jobs WHERE trigger_event = 'whatsapp_message_received';
+  IF v_n <> 2 THEN RAISE EXCEPTION 'T35 eco/histórico dispararam: % jobs', v_n; END IF;
+
+  -- T36: conversa garantida para quem nunca escreveu (lead de formulário)
+  v_conv := public.wa_obter_ou_criar_conversa(v_emp, '5527922220002', v_lead, 'Lead do Form');
+  IF v_conv IS NULL THEN RAISE EXCEPTION 'T36 sem conversa'; END IF;
+  -- idempotente: a segunda chamada devolve a MESMA conversa
+  v_conv2 := public.wa_obter_ou_criar_conversa(v_emp, '5527922220002', NULL, NULL);
+  IF v_conv2 <> v_conv THEN RAISE EXCEPTION 'T36 criou conversa duplicada'; END IF;
+  -- e não abre a janela de 24h (nenhuma mensagem do cliente)
+  IF (SELECT last_inbound_at FROM public.wa_conversations WHERE id = v_conv) IS NOT NULL THEN
+    RAISE EXCEPTION 'T36 abriu a janela sem mensagem do cliente'; END IF;
+  -- o vínculo com o lead fica
+  IF (SELECT lead_id FROM public.wa_conversations WHERE id = v_conv) IS DISTINCT FROM v_lead THEN
+    RAISE EXCEPTION 'T36 lead não vinculado'; END IF;
+
+  -- T37: sem número ativo é erro identificável
+  UPDATE public.wa_phone_numbers SET status = 'disconnected' WHERE phone_number_id = 'PNID_ENSAIO';
+  BEGIN
+    PERFORM public.wa_obter_ou_criar_conversa(v_emp, '5527933330003', NULL, NULL);
+    RAISE EXCEPTION 'T37 aceitou empresa sem número ativo';
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN NULL; END;
+
+  RAISE NOTICE 'wa_fase4: 8 testes passaram';
+END
+$t$;

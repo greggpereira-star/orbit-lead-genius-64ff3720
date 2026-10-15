@@ -9,7 +9,7 @@
 
 import { numeroEmOptout } from "../politica";
 import type { AdminDb, ConsultaDb } from "../provider";
-import { criarCloudProvider } from "./cloud-provider";
+import { criarCloudProvider, type ResultadoCloud } from "./cloud-provider";
 import { estadoDaJanela } from "./janela";
 import { renderizarTexto } from "./render";
 import { parametrosDoCorpo, variaveisDe } from "./templates";
@@ -24,7 +24,7 @@ export type MotivoDeRecusa =
 
 export type ResultadoDoEnvio =
   | { ok: true; messageId: string; providerMessageId: string }
-  | { ok: false; motivo: MotivoDeRecusa; texto: string };
+  | { ok: false; motivo: MotivoDeRecusa; texto: string; retentavel?: boolean };
 
 export async function enviarTextoNaConversa(
   db: DbWa,
@@ -96,7 +96,13 @@ export async function enviarTextoNaConversa(
     texto,
   );
   if (!r.ok || !r.data?.messageId) {
-    return { ok: false, motivo: "provedor", texto: r.error ?? "Falha ao enviar." };
+    return {
+      ok: false,
+      motivo: "provedor",
+      texto: r.error ?? "Falha ao enviar.",
+      // Só o que a Meta classifica como temporário volta para a fila.
+      retentavel: (r as ResultadoCloud).erroMeta?.retentavel ?? false,
+    };
   }
 
   // 4) registro (aplica status que já tenham chegado)
@@ -133,7 +139,7 @@ export type MotivoDeRecusaDeTemplate =
 
 export type ResultadoDoEnvioDeTemplate =
   | { ok: true; messageId: string; providerMessageId: string; texto: string }
-  | { ok: false; motivo: MotivoDeRecusaDeTemplate; texto: string };
+  | { ok: false; motivo: MotivoDeRecusaDeTemplate; texto: string; retentavel?: boolean };
 
 /**
  * Envia um template aprovado. É o caminho de retomar conversa FORA da janela de
@@ -247,7 +253,13 @@ export async function enviarTemplateNaConversa(
     componentes,
   );
   if (!r.ok || !r.data?.messageId) {
-    return { ok: false, motivo: "provedor", texto: r.error ?? "Falha ao enviar." };
+    return {
+      ok: false,
+      motivo: "provedor",
+      texto: r.error ?? "Falha ao enviar.",
+      // Só o que a Meta classifica como temporário volta para a fila.
+      retentavel: (r as ResultadoCloud).erroMeta?.retentavel ?? false,
+    };
   }
 
   const texto = renderizarTexto(corpo, entrada.valores);

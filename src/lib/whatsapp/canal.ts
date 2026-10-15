@@ -14,6 +14,20 @@ export type CanalResolvido =
   | { ok: true; provider: WhatsAppProvider; canal: CanalWhatsApp }
   | { ok: false; motivo: "nao_configurado" | "sem_canal" | "desconectado"; texto: string };
 
+/**
+ * A empresa já tem número na API oficial?
+ *
+ * Erro de consulta (migração `wa_*` ainda não aplicada) conta como "não": o
+ * caminho antigo segue valendo até a empresa ser migrada.
+ */
+export async function empresaTemNumeroOficial(admin: AdminDb, companyId: string): Promise<boolean> {
+  const { data, error } = await (admin.from("wa_phone_numbers") as ConsultaDb)
+    .select("phone_number_id")
+    .eq("company_id", companyId)
+    .limit(1);
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
 export async function resolverCanal(admin: AdminDb, companyId: string): Promise<CanalResolvido> {
   /* A Cloud API tem PRIORIDADE: empresa com número oficial conectado usa ele,
      e a instância da Evolution deixa de ser consultada (corte seco por cliente,

@@ -881,6 +881,54 @@ templates ficam em `/settings/whatsapp`.
 
 ---
 
+## 12e. Fase 4 — automação sobre o canal oficial
+
+| Entrega | Onde | Verificação |
+|---|---|---|
+| Evento **"Mensagem recebida no WhatsApp"** (só do cliente; eco, saída e histórico não disparam) | `20261015200000_wa_automacao.sql` | **8 testes SQL** num Postgres 16 com as definições REAIS do motor; mutação (tirar o `WHEN` do gatilho) detectada |
+| Ações **Enviar template** e **Atribuir conversa** | `src/lib/automacao/acoesDeWhatsApp.ts` | 29 testes; 3 mutações detectadas |
+| Conversa garantida para lead que nunca escreveu | função `wa_obter_ou_criar_conversa` | idempotente, não abre a janela de 24h |
+| **Retentativa sem repetir o que deu certo** | `executarAcoes.ts` | mutação detectada (ver abaixo) |
+| Faixa do quiz → **template aprovado** | `faixaDoQuiz.ts` + campo na tela de faixas | texto só vai com janela aberta; senão devolve o que configurar |
+| Conversão `business_messaging` com `whatsapp_business_account_id` | `meta-capi.server.ts` | `aplicarMensageria` pura e testada |
+| Envio legado aposentado para quem está na API oficial | `whatsapp-automation.server.ts` | pula e **registra o motivo** |
+
+### Defeito encontrado e corrigido no motor (vale para qualquer ação)
+
+Na retentativa, o job **reexecutava todas as ações**, inclusive as que já tinham
+dado certo. Numa regra "enviar mensagem → mover etapa", uma falha em "mover
+etapa" fazia a mensagem sair **de novo, até 4 vezes**. Agora o resultado de cada
+ação é identificado pelo id e o que terminou em `ok` ou `pulada` não repete.
+
+### Decisões de comportamento
+
+- **Texto livre** só vai com a janela de 24h aberta; fora dela a ação é
+  *pulada* com o motivo ("use Enviar template"). Não é tentado: cada recusa da
+  Meta (131047) pesa na qualidade do número.
+- Erro **não retentável** (número fora do WhatsApp, template reprovado) vira
+  *pulada*; só o que a Meta marca como temporário (limite de taxa, 5xx) volta à fila.
+- Política de opt-out e horário vale para mensagem a **lead**; alerta a número
+  fixo da empresa não passa por ela (como já era).
+- Quiz: horário **não** se aplica (a pessoa acabou de concluir e espera).
+
+### Desvio do plano original
+
+O plano previa uma tabela `wa_outbox`. **Não foi criada**: `automation_jobs` já é
+a fila (tentativas, teto, cron por minuto, deduplicação) e uma segunda fila
+duplicaria estado. Limite de taxa e *backoff* vêm do lote de 25/min e do retorno
+a `pending` em erro temporário. Reavaliar se houver disparo em massa.
+
+### Limites desta fase
+
+- A tela de regras e o campo de template na faixa **não foram abertos num
+  navegador**: build, tipos e testes de lógica.
+- Template com variável em cabeçalho/botão continua recusado.
+- Disparo em massa (campanha) **não existe**: a fila atende gatilhos por evento.
+- `whatsapp_automation_settings` (saudação/alerta legados) ainda existe e é
+  usado pelas empresas na Evolution; some no corte (Fase 5).
+
+---
+
 ## 13. Perguntas originais (respondidas em §11)
 
 1. **Coexistência ou número dedicado** como padrão? (§4.3)

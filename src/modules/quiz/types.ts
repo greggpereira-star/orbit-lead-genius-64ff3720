@@ -541,6 +541,12 @@ export interface ScoreTier {
   color?: string;
   /** Mensagem de WhatsApp disparada ao concluir. Vazia = não envia nada. */
   whatsappTemplate?: string;
+  /**
+   * Template APROVADO da API oficial. É o que chega a quem acabou de concluir o
+   * quiz: texto livre só vai com a janela de 24h aberta, e ela quase nunca está.
+   * `variaveis` mapeia `{{1}}`, `{{2}}`… para `{{nome}}`, `{{faixa}}` etc.
+   */
+  waTemplate?: { nome: string; idioma?: string; variaveis?: Record<string, string> };
 }
 
 export interface QuizSchema {

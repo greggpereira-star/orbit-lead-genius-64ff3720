@@ -160,6 +160,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
 
         const tiers = (q.settings?.score_tiers ?? []) as Array<{
           id: string; label: string; minPercent: number; whatsappTemplate?: string;
+          waTemplate?: { nome: string; idioma?: string; variaveis?: Record<string, string> };
         }>;
         if (!tiers.length) return json({ status: 'sem_faixas' });
 
@@ -219,7 +220,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
            é achado pela sessão e é quem de fato respondeu o quiz. Sem lead, não
            há para quem enviar. */
         const destino = leadDoQuiz?.phone?.trim() || '';
-        if (!faixa.whatsappTemplate?.trim() || !destino) {
+        if ((!faixa.whatsappTemplate?.trim() && !faixa.waTemplate?.nome?.trim()) || !destino) {
           return json({ status: 'classificado', faixa: faixa.label, enviou: false });
         }
 
@@ -250,7 +251,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
           }
         }
 
-        const texto = interpolar(faixa.whatsappTemplate, {
+        const texto = interpolar(faixa.whatsappTemplate ?? '', {
           nome: body.nome ?? '',
           faixa: faixa.label,
           ...(body.variaveis ?? {}),
@@ -283,20 +284,27 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
             await liberar().catch(() => {});
             return json({ status: 'classificado', faixa: faixa.label, enviou: false, motivo: 'opt_out_ou_numero_invalido' });
           }
-          const canal = await resolverCanal(supabaseAdmin as never, q.company_id);
-          if (!canal.ok) {
-            await liberar().catch(() => {});
-            return json({ status: 'classificado', faixa: faixa.label, enviou: false, motivo: canal.texto });
-          }
-          const r = await canal.provider.sendText(canal.canal, numero, texto);
-          if (!r.ok) {
+          const { enviarFaixaDoQuiz } = await import('@/lib/automacao/faixaDoQuiz');
+          const r = await enviarFaixaDoQuiz(supabaseAdmin, {
+            companyId: q.company_id,
+            leadId: leadDoQuiz?.id ?? null,
+            numero,
+            nome: body.nome ?? null,
+            texto,
+            template: faixa.waTemplate ?? null,
+            dados: { nome: body.nome ?? '', faixa: faixa.label, ...(body.variaveis ?? {}) },
+          });
+          if (!r.enviou) {
             await liberar().catch(() => {});
             console.error(JSON.stringify({
               scope: 'quiz-completed', msg: 'whatsapp_falhou',
-              company_id: q.company_id, faixa: faixa.label, erro: r.error,
+              company_id: q.company_id, faixa: faixa.label, erro: r.motivo,
             }));
           }
-          return json({ status: 'classificado', faixa: faixa.label, enviou: r.ok });
+          return json({
+            status: 'classificado', faixa: faixa.label, enviou: r.enviou,
+            ...(r.enviou ? {} : { motivo: r.motivo ?? null }),
+          });
         } catch (err) {
           await liberar().catch(() => {});
           console.error(JSON.stringify({

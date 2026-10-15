@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTemplatesAprovados } from "@/modules/atendimento/hooks/useAtendimento";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -618,6 +619,13 @@ export function QuizSettingsDialog({ quizId, companyId, open, onOpenChange, onSa
                         )
                       }
                     />
+                    <TemplateDaFaixa
+                      companyId={companyId}
+                      valor={t.waTemplate}
+                      onMudar={(waTemplate) =>
+                        setTiers((v) => v.map((x, j) => (j === i ? { ...x, waTemplate } : x)))
+                      }
+                    />
                   </div>
                 ))}
 
@@ -875,6 +883,78 @@ function SocialProofMessagesEditor({
         <p className="text-xs text-muted-foreground text-center py-2">
           Nenhuma mensagem ainda. Adicione ao menos uma pra ativar o rodízio.
         </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Template da API oficial para a faixa. Sem ele, a mensagem de texto só chega se
+ * a pessoa tiver escrito para o WhatsApp nas últimas 24h — o que, para quem
+ * acabou de responder um quiz, quase nunca é o caso.
+ */
+function TemplateDaFaixa({
+  companyId,
+  valor,
+  onMudar,
+}: {
+  companyId: string;
+  valor: ScoreTier["waTemplate"];
+  onMudar: (v: ScoreTier["waTemplate"]) => void;
+}) {
+  const templates = useTemplatesAprovados(companyId);
+  const lista = templates.data ?? [];
+  // Sem número oficial conectado (ou sem templates), não há o que escolher: some
+  // em vez de mostrar um seletor vazio que parece quebrado.
+  if (!templates.isLoading && lista.length === 0 && !valor?.nome) return null;
+
+  const escolhido =
+    lista.find((t) => t.name === valor?.nome && t.language === (valor?.idioma ?? "pt_BR")) ?? null;
+  const corpo = String(
+    escolhido?.components.find((c) => String(c.type).toUpperCase() === "BODY")?.text ?? "",
+  );
+  const n = new Set([...corpo.matchAll(/\{\{\s*(\d+)\s*\}\}/g)].map((m) => m[1])).size;
+  const variaveis = valor?.variaveis ?? {};
+
+  return (
+    <div className="space-y-2 border-t pt-2">
+      <label className="text-[11px] font-semibold text-muted-foreground">
+        Template do WhatsApp oficial (recomendado)
+      </label>
+      <select
+        className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+        value={escolhido ? `${escolhido.name}|${escolhido.language}` : ""}
+        onChange={(e) => {
+          if (!e.target.value) return onMudar(undefined);
+          const [nome, idioma] = e.target.value.split("|");
+          onMudar({ nome, idioma, variaveis: {} });
+        }}
+      >
+        <option value="">Só texto (chega apenas com a janela de 24h aberta)</option>
+        {lista.map((t) => (
+          <option key={t.id} value={`${t.name}|${t.language}`}>
+            {t.name} · {t.language}
+          </option>
+        ))}
+      </select>
+      {escolhido && n > 0 && (
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          {Array.from({ length: n }, (_, i) => String(i + 1)).map((k) => (
+            <input
+              key={k}
+              className="rounded-md border bg-background px-2 py-1 text-xs"
+              placeholder={`{{${k}}} ← {{nome}}`}
+              value={variaveis[k] ?? ""}
+              onChange={(e) =>
+                onMudar({
+                  nome: valor!.nome,
+                  idioma: valor!.idioma,
+                  variaveis: { ...variaveis, [k]: e.target.value },
+                })
+              }
+            />
+          ))}
+        </div>
       )}
     </div>
   );

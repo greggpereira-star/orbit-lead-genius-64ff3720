@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { executarAcoes, type ResultadoDeAcao } from '@/lib/automacao/executarAcoes';
+import { acaoAtribuirConversa, acaoEnviarWhatsApp, preencher } from '@/lib/automacao/acoesDeWhatsApp';
 
 /**
  * Executa a fila de automação.
@@ -25,6 +27,8 @@ interface Job {
   lead_id: string | null;
   payload: Record<string, any>;
   attempts: number;
+  /** Resultado da tentativa anterior: o que já deu certo não se repete. */
+  resultado?: ResultadoDeAcao[] | null;
 }
 
 interface Acao {
@@ -35,14 +39,6 @@ interface Acao {
 }
 
 type Resultado = { acao: string; status: 'ok' | 'pulada' | 'falhou'; detalhe?: string };
-
-/** Troca `{{campo}}` pelo valor do payload. Campo ausente vira string vazia. */
-function preencher(modelo: string, payload: Record<string, any>): string {
-  return modelo.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, chave) => {
-    const v = payload[chave];
-    return v == null ? '' : String(v);
-  });
-}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -65,7 +61,7 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
 
         const { data: pendentes, error } = await admin
           .from('automation_jobs')
-          .select('id, company_id, rule_id, trigger_event, lead_id, payload, attempts')
+          .select('id, company_id, rule_id, trigger_event, lead_id, payload, attempts, resultado')
           .eq('status', 'pending')
           // Teto de tentativas: sem ele, uma ação que nunca vai passar — webhook
           // de um domínio que saiu do ar, WhatsApp desconectado — ficaria sendo
@@ -86,7 +82,7 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
             .update({ status: 'running', attempts: job.attempts + 1, started_at: new Date().toISOString() })
             .eq('id', job.id);
 
-          const resultados: Resultado[] = [];
+          let resultados: ResultadoDeAcao[] = [];
 
           try {
             const { data: acoes } = await admin
@@ -95,14 +91,15 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
               .eq('rule_id', job.rule_id)
               .order('sort_order', { ascending: true });
 
-            for (const acao of (acoes ?? []) as Acao[]) {
-              resultados.push(await executar(admin, job, acao));
-            }
+            const saida = await executarAcoes((acoes ?? []) as Acao[], job.resultado, (acao) =>
+              executar(admin, job, acao as Acao),
+            );
+            resultados = saida.resultados;
 
             // Uma ação que falhou derruba o job para nova tentativa. As que
             // deram certo ficam registradas em `resultado` — assim a próxima
             // tentativa é auditável, e não um mistério.
-            const algumaFalhou = resultados.some((r) => r.status === 'falhou');
+            const algumaFalhou = saida.algumaFalhou;
             // Esgotada a última tentativa, o job vira 'failed' e não 'pending'.
             // Deixá-lo em 'pending' faria a tela dizer "na fila" para sempre,
             // porque a consulta do lote filtra por `attempts < MAX_TENTATIVAS`
@@ -218,77 +215,12 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
         return { acao: tipo, status: 'ok', detalhe: userId };
       }
 
-      case 'enviar_whatsapp': {
-        const { resolverCanal } = await import('@/lib/whatsapp/canal');
-        const canal = await resolverCanal(admin, job.company_id);
-        if (!canal.ok) {
-          return {
-            acao: tipo,
-            status: 'pulada',
-            detalhe: canal.motivo === 'nao_configurado' ? 'Evolution não configurada' : 'WhatsApp não conectado',
-          };
-        }
+      case 'enviar_whatsapp':
+      case 'enviar_template':
+        return acaoEnviarWhatsApp(admin, job, cfg, tipo);
 
-        // Destino: número fixo da configuração (alerta ao corretor) ou o
-        // telefone do próprio lead.
-        const destino = String(cfg.para ?? job.payload?.telefone ?? '').trim();
-        const texto = preencher(String(cfg.mensagem ?? ''), job.payload ?? {}).trim();
-        if (!destino || !texto) {
-          return { acao: tipo, status: 'pulada', detalhe: 'sem destino ou sem mensagem' };
-        }
-
-        /* A POLÍTICA DE ENVIO vale quando a mensagem vai para o LEAD.
-           Esta ação enviava para quem tinha pedido para parar e fora do
-           horário — só o caminho legado (`dispatchLeadWhatsApp`) respeitava as
-           duas regras. Alerta a um número fixo da empresa (`cfg.para`) é
-           interno e não passa por opt-out de lead, como já era no legado. */
-        const paraLead = !String(cfg.para ?? '').trim();
-        if (paraLead) {
-          const { toWhatsAppNumber } = await import('@/lib/whatsapp/numero');
-          const { decidirEnvio, horaEmSaoPaulo, janelaDaEmpresa, numeroEmOptout } = await import(
-            '@/lib/whatsapp/politica'
-          );
-          const numero = toWhatsAppNumber(destino);
-          const decisao = decidirEnvio({
-            numero,
-            optedOut: numero ? await numeroEmOptout(admin, job.company_id, numero) : false,
-            hora: horaEmSaoPaulo(),
-            janela: await janelaDaEmpresa(admin, job.company_id),
-          });
-          if (!decisao.enviar) {
-            // Registrado: é a tela que o cliente audita, e "por que não foi?"
-            // precisa ter resposta lá.
-            await admin.from('whatsapp_messages').insert({
-              company_id: job.company_id,
-              lead_id: job.lead_id,
-              direction: 'outbound',
-              to_phone: numero ?? destino,
-              body: '',
-              status: 'skipped',
-              skipped_reason: decisao.texto,
-              kind: 'automacao',
-            });
-            return { acao: tipo, status: 'pulada', detalhe: decisao.texto };
-          }
-        }
-
-        const r = await canal.provider.sendText(canal.canal, destino, texto);
-        if (!r.ok) return { acao: tipo, status: 'falhou', detalhe: r.error };
-
-        // Registrado em whatsapp_messages, que é a tela que o cliente audita.
-        await admin.from('whatsapp_messages').insert({
-          company_id: job.company_id,
-          lead_id: job.lead_id,
-          direction: 'outbound',
-          to_phone: destino,
-          body: texto,
-          status: 'sent',
-          provider_message_id: r.data?.messageId ?? null,
-          kind: 'automacao',
-        });
-
-        return { acao: tipo, status: 'ok', detalhe: destino };
-      }
+      case 'atribuir_conversa':
+        return acaoAtribuirConversa(admin, job, cfg);
 
       case 'webhook': {
         const url = String(cfg.url ?? '').trim();

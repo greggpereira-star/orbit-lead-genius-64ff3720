@@ -82,6 +82,17 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               .order('created_at', { ascending: true })
               .limit(1).maybeSingle();
 
+            // A WABA da empresa (API oficial). Com ela a conversa tem dono mesmo
+            // sem página do Facebook conectada — o caso comum de quem usa só o
+            // WhatsApp e nunca ligou o Lead Ads.
+            const { data: contaWa } = await admin
+              .from('wa_accounts')
+              .select('waba_id')
+              .eq('company_id', d.company_id)
+              .eq('status', 'active')
+              .order('created_at', { ascending: true })
+              .limit(1).maybeSingle();
+
             // O clique de anúncio mais recente desse lead. É ele que carrega o
             // `ctwa_clid` e transforma a correspondência de probabilística em
             // determinística.
@@ -127,8 +138,12 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
                 // Mensageria só quando há as DUAS coisas. Com clid mas sem
                 // página, a Meta recusa; melhor cair no caminho de site, que
                 // ainda casa por telefone, do que perder o evento inteiro.
-                messaging: clique?.ctwa_clid && pagina?.page_id
-                  ? { ctwaClid: clique.ctwa_clid, pageId: pagina.page_id }
+                messaging: clique?.ctwa_clid && (pagina?.page_id || contaWa?.waba_id)
+                  ? {
+                      ctwaClid: clique.ctwa_clid,
+                      pageId: pagina?.page_id ?? null,
+                      whatsappBusinessAccountId: contaWa?.waba_id ?? null,
+                    }
                   : null,
                 customData: mapa.send_deal_value && lead?.deal_value
                   ? { value: Number(lead.deal_value), currency: lead.deal_currency || 'BRL' }

@@ -29,10 +29,11 @@ export function criarDb(config: {
       "update",
       "upsert",
       "delete",
+      "insert",
     ]) {
       b[op] = (...args: unknown[]) => {
         ops.push({ tabela, op, args });
-        if (["update", "upsert", "delete"].includes(op)) ultimaOp = op;
+        if (["update", "upsert", "delete", "insert"].includes(op)) ultimaOp = op;
         return b;
       };
     }
