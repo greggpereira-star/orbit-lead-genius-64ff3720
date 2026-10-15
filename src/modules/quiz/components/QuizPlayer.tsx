@@ -14,6 +14,7 @@ import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progresso
 import { origemDaVisita } from "../lib/origemDaVisita";
 import { escolherNome } from "../lib/nomeDoLead";
 import { avisoVisivelDoEmail, sugerirCorrecao, validarEmail } from "../lib/email";
+import { agendamentoPodeAvancar } from "../lib/agendamento";
 import { formularioPodeAvancar, placeholderDoTelefone } from "../lib/formulario";
 import {
   avisoVisivelDoTelefone,
@@ -1881,9 +1882,10 @@ function BlockView({
     }
     if (block.type === 'reveal') return revealed;
     if (block.type === 'scheduling') {
-      const a = value as ValorAgendamento | undefined;
-      if (!block.required) return true;
-      return !!a?.data && (!block.schedulingAllowTime || !!a.hora);
+      return agendamentoPodeAvancar(value as ValorAgendamento | undefined, {
+        required: block.required,
+        allowTime: block.schedulingAllowTime,
+      });
     }
     return true;
   }, [block, value, multi, formValue, revealed]);
@@ -3075,7 +3077,6 @@ function BlockView({
       const agenda = (value as ValorAgendamento | undefined) ?? {};
       /* Só vale como respondido quando há dia — e, se o horário foi pedido,
          também o horário. Sem isso o visitante avançaria com meia marcação. */
-      const completo = !!agenda.data && (!block.schedulingAllowTime || !!agenda.hora);
       return (
         <div>
           {heading}
@@ -3091,7 +3092,7 @@ function BlockView({
             design={design}
             textStyle={btnText}
             hidden={!terminal}
-            disabled={!completo || saving}
+            disabled={!canSubmit || !stepValid || saving}
             onClick={() => onSubmit(agenda)}
           >
             {block.ctaLabel || 'Confirmar'}
