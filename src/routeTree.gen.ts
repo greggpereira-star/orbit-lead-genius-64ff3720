@@ -57,6 +57,7 @@ import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/me
 import { Route as ApiPublicPixelEventRouteImport } from './routes/api/public/pixel-event'
 import { Route as ApiPublicQuizCompletedRouteImport } from './routes/api/public/quiz-completed'
 import { Route as ApiPublicQuizVideoAnswerRouteImport } from './routes/api/public/quiz-video-answer'
+import { Route as ApiPublicWaWebhookRouteImport } from './routes/api/public/wa-webhook'
 import { Route as ApiPublicWhatsappCapiRetryRouteImport } from './routes/api/public/whatsapp-capi-retry'
 import { Route as ApiPublicWhatsappClickRouteImport } from './routes/api/public/whatsapp-click'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp-webhook'
@@ -75,6 +76,7 @@ import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/ap
 import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
 import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/api/public/cron/meta-reprocess-failed'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
+import { Route as ApiPublicCronWaWebhookSweepRouteImport } from './routes/api/public/cron/wa-webhook-sweep'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -316,6 +318,11 @@ const ApiPublicQuizVideoAnswerRoute =
     path: '/api/public/quiz-video-answer',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWaWebhookRoute = ApiPublicWaWebhookRouteImport.update({
+  id: '/api/public/wa-webhook',
+  path: '/api/public/wa-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWhatsappCapiRetryRoute =
   ApiPublicWhatsappCapiRetryRouteImport.update({
     id: '/api/public/whatsapp-capi-retry',
@@ -413,6 +420,12 @@ const ApiPublicCronMetaRetryRoute = ApiPublicCronMetaRetryRouteImport.update({
   path: '/api/public/cron/meta-retry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronWaWebhookSweepRoute =
+  ApiPublicCronWaWebhookSweepRouteImport.update({
+    id: '/api/public/cron/wa-webhook-sweep',
+    path: '/api/public/cron/wa-webhook-sweep',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -460,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
   '/api/public/quiz-completed': typeof ApiPublicQuizCompletedRoute
   '/api/public/quiz-video-answer': typeof ApiPublicQuizVideoAnswerRoute
+  '/api/public/wa-webhook': typeof ApiPublicWaWebhookRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -479,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
+  '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -525,6 +540,7 @@ export interface FileRoutesByTo {
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
   '/api/public/quiz-completed': typeof ApiPublicQuizCompletedRoute
   '/api/public/quiz-video-answer': typeof ApiPublicQuizVideoAnswerRoute
+  '/api/public/wa-webhook': typeof ApiPublicWaWebhookRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -544,6 +560,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
+  '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -594,6 +611,7 @@ export interface FileRoutesById {
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
   '/api/public/quiz-completed': typeof ApiPublicQuizCompletedRoute
   '/api/public/quiz-video-answer': typeof ApiPublicQuizVideoAnswerRoute
+  '/api/public/wa-webhook': typeof ApiPublicWaWebhookRoute
   '/api/public/whatsapp-capi-retry': typeof ApiPublicWhatsappCapiRetryRoute
   '/api/public/whatsapp-click': typeof ApiPublicWhatsappClickRoute
   '/api/public/whatsapp-webhook': typeof ApiPublicWhatsappWebhookRoute
@@ -613,6 +631,7 @@ export interface FileRoutesById {
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
+  '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -662,6 +681,7 @@ export interface FileRouteTypes {
     | '/api/public/pixel-event'
     | '/api/public/quiz-completed'
     | '/api/public/quiz-video-answer'
+    | '/api/public/wa-webhook'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/api/public/whatsapp-webhook'
@@ -681,6 +701,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
+    | '/api/public/cron/wa-webhook-sweep'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -727,6 +748,7 @@ export interface FileRouteTypes {
     | '/api/public/pixel-event'
     | '/api/public/quiz-completed'
     | '/api/public/quiz-video-answer'
+    | '/api/public/wa-webhook'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/api/public/whatsapp-webhook'
@@ -746,6 +768,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
+    | '/api/public/cron/wa-webhook-sweep'
   id:
     | '__root__'
     | '/'
@@ -795,6 +818,7 @@ export interface FileRouteTypes {
     | '/api/public/pixel-event'
     | '/api/public/quiz-completed'
     | '/api/public/quiz-video-answer'
+    | '/api/public/wa-webhook'
     | '/api/public/whatsapp-capi-retry'
     | '/api/public/whatsapp-click'
     | '/api/public/whatsapp-webhook'
@@ -814,6 +838,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
+    | '/api/public/cron/wa-webhook-sweep'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -833,6 +858,7 @@ export interface RootRouteChildren {
   ApiPublicPixelEventRoute: typeof ApiPublicPixelEventRoute
   ApiPublicQuizCompletedRoute: typeof ApiPublicQuizCompletedRoute
   ApiPublicQuizVideoAnswerRoute: typeof ApiPublicQuizVideoAnswerRoute
+  ApiPublicWaWebhookRoute: typeof ApiPublicWaWebhookRoute
   ApiPublicWhatsappCapiRetryRoute: typeof ApiPublicWhatsappCapiRetryRoute
   ApiPublicWhatsappClickRoute: typeof ApiPublicWhatsappClickRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
@@ -842,6 +868,7 @@ export interface RootRouteChildren {
   ApiPublicCronConversionDispatchRoute: typeof ApiPublicCronConversionDispatchRoute
   ApiPublicCronMetaReprocessFailedRoute: typeof ApiPublicCronMetaReprocessFailedRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
+  ApiPublicCronWaWebhookSweepRoute: typeof ApiPublicCronWaWebhookSweepRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1182,6 +1209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicQuizVideoAnswerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/wa-webhook': {
+      id: '/api/public/wa-webhook'
+      path: '/api/public/wa-webhook'
+      fullPath: '/api/public/wa-webhook'
+      preLoaderRoute: typeof ApiPublicWaWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/whatsapp-capi-retry': {
       id: '/api/public/whatsapp-capi-retry'
       path: '/api/public/whatsapp-capi-retry'
@@ -1306,6 +1340,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/meta-retry'
       fullPath: '/api/public/cron/meta-retry'
       preLoaderRoute: typeof ApiPublicCronMetaRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/wa-webhook-sweep': {
+      id: '/api/public/cron/wa-webhook-sweep'
+      path: '/api/public/cron/wa-webhook-sweep'
+      fullPath: '/api/public/cron/wa-webhook-sweep'
+      preLoaderRoute: typeof ApiPublicCronWaWebhookSweepRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1456,6 +1497,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPixelEventRoute: ApiPublicPixelEventRoute,
   ApiPublicQuizCompletedRoute: ApiPublicQuizCompletedRoute,
   ApiPublicQuizVideoAnswerRoute: ApiPublicQuizVideoAnswerRoute,
+  ApiPublicWaWebhookRoute: ApiPublicWaWebhookRoute,
   ApiPublicWhatsappCapiRetryRoute: ApiPublicWhatsappCapiRetryRoute,
   ApiPublicWhatsappClickRoute: ApiPublicWhatsappClickRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
@@ -1465,6 +1507,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronConversionDispatchRoute: ApiPublicCronConversionDispatchRoute,
   ApiPublicCronMetaReprocessFailedRoute: ApiPublicCronMetaReprocessFailedRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
+  ApiPublicCronWaWebhookSweepRoute: ApiPublicCronWaWebhookSweepRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

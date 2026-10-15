@@ -751,6 +751,53 @@ paralelo, iniciar as aprovações na Meta (§9, Fase 0, "não-código").
 
 ---
 
+## 12b. Fase 1 — o que foi entregue
+
+| Entrega | Onde | Verificação |
+|---|---|---|
+| Tabelas `wa_*`, RLS, realtime | `supabase/migrations/20261015180000_wa_fundacao.sql` | **11 testes SQL num Postgres 16 real** (descartável); mutação (status rebaixando) derruba T7 |
+| Ingestão atômica e idempotente | funções `wa_registrar_mensagem`, `wa_registrar_saida`, `wa_aplicar_status` | reentrega não duplica nem soma "não lidas"; status fora de ordem nunca regride; eco do app não abre a janela; `referral` do 1º contato não é sobrescrito |
+| Parser de payload | `src/lib/whatsapp/cloud/payload.ts` | texto, mídia, botão/lista, reação, status (com preço e erro), eco, histórico, campo desconhecido, lixo |
+| Assinatura HMAC | `cloud/assinatura.ts` | tempo constante; sem segredo nunca confere |
+| Cifra do token | `cloud/cifra.ts` (AES-256-GCM, `WA_TOKEN_KEY`) | falha fechado; adulteração e chave errada falham |
+| `CloudApiProvider` | `cloud/cloud-provider.ts` | token decifrado só em memória; erro Meta → classe + `fbtrace_id`, sem token em log |
+| Processador | `cloud/processador.ts` | reentrega sem efeito colateral; número desconhecido = `ignored`; erro real = `failed` com contador |
+| Envio na conversa | `cloud/envio.ts` | opt-out → janela → provedor → registro; janela fechada **não chama a Meta** |
+| Webhook | `routes/api/public/wa-webhook.ts` | assinatura antes do `JSON.parse`; 200 mesmo com falha de processamento |
+| Varredor | `routes/api/public/cron/wa-webhook-sweep.ts` | **falha fechado** (sem `CRON_SECRET`, recusa) |
+| Escolha de provedor | `canal.ts` | número oficial tem prioridade; sem a migração aplicada, cai na Evolution (comportamento de antes) |
+
+### Achado novo (medido em 15/10/2026): segredo padrão nas rotas de cron
+
+`automation-dispatch`, `conversion-dispatch`, `meta-retry` e `meta-reprocess-failed`
+usam `process.env.CRON_SECRET || 'altflow_retry_sync_secret'`, e os `cron.job`
+do `pg_cron` enviam esse mesmo texto. **`CRON_SECRET` não está definido** no
+serviço (`Environment` só tem `NODE_ENV`/`PORT`; o `.env` não tem a chave —
+verificado por nome, sem ler valor). Resultado: qualquer pessoa que leia o
+repositório pode disparar esses quatro endpoints. Impacto: disparo antecipado de
+filas (despacho de conversão, automações, reprocesso Meta), não leitura de dados.
+Correção exige **coordenar** `CRON_SECRET` no `.env` com a troca do cabeçalho nos
+`cron.job` — por isso não foi alterada aqui. Rotas novas já nascem fail-closed.
+
+### Variáveis de ambiente novas (servidor)
+
+| Variável | Para quê |
+|---|---|
+| `WA_TOKEN_KEY` | 32 bytes em base64 (`openssl rand -base64 32`); cifra do token do WhatsApp |
+| `WA_WEBHOOK_VERIFY_TOKEN` | segredo da verificação `hub.verify_token` |
+| `CRON_SECRET` | já era lida; **passa a ser obrigatória** para o varredor |
+| `META_APP_SECRET` | já existe; a assinatura do webhook do WhatsApp usa o mesmo app |
+
+Callback no app da Meta (produto WhatsApp): `https://<domínio>/api/public/wa-webhook`,
+campos `messages`, `smb_message_echoes`, `history`, `smb_app_state_sync`.
+
+### Ainda NÃO existe (Fase 2)
+
+Onboarding (Embedded Signup) que **cria** `wa_accounts`/`wa_phone_numbers`/
+`wa_credentials`; templates; tela. Hoje a conta é inserida à mão para homologar.
+
+---
+
 ## 13. Perguntas originais (respondidas em §11)
 
 1. **Coexistência ou número dedicado** como padrão? (§4.3)

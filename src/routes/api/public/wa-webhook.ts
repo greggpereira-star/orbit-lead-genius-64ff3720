@@ -1,0 +1,83 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+/**
+ * Webhook da WhatsApp Cloud API.
+ *
+ *   GET  → verificação (`hub.challenge`), com `WA_WEBHOOK_VERIFY_TOKEN`.
+ *   POST → eventos, com assinatura HMAC (`X-Hub-Signature-256`).
+ *
+ * Responde 200 depressa e grava o evento; o processamento é idempotente e pode
+ * acontecer agora ou no varredor. Erro de processamento NUNCA vira HTTP de erro:
+ * a Meta reentregaria em loop e, depois de muitas falhas, desativa o webhook.
+ *
+ * A empresa é resolvida pelo `phone_number_id` — nunca por campo do corpo.
+ */
+export const Route = createFileRoute("/api/public/wa-webhook")({
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        const esperado = process.env.WA_WEBHOOK_VERIFY_TOKEN;
+        if (!esperado) return new Response("Not configured", { status: 503 });
+        const url = new URL(request.url);
+        const { segredoConfere } = await import("@/lib/segredo.server");
+        if (
+          url.searchParams.get("hub.mode") === "subscribe" &&
+          segredoConfere(url.searchParams.get("hub.verify_token"), esperado) &&
+          url.searchParams.get("hub.challenge")
+        ) {
+          return new Response(url.searchParams.get("hub.challenge"), {
+            status: 200,
+            headers: { "Content-Type": "text/plain" },
+          });
+        }
+        return new Response("Forbidden", { status: 403 });
+      },
+
+      POST: async ({ request }) => {
+        const segredo = process.env.META_APP_SECRET;
+        if (!segredo) return new Response("Not configured", { status: 503 });
+
+        const corpoCru = await request.text();
+        const { verificarAssinaturaMeta } = await import("@/lib/whatsapp/cloud/assinatura");
+        if (
+          !verificarAssinaturaMeta(corpoCru, request.headers.get("x-hub-signature-256"), segredo)
+        ) {
+          return new Response("Invalid signature", { status: 401 });
+        }
+
+        let corpo: unknown;
+        try {
+          corpo = JSON.parse(corpoCru);
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
+
+        const { extrairEventos } = await import("@/lib/whatsapp/cloud/payload");
+        const { guardarEventos, processarPendentes } =
+          await import("@/lib/whatsapp/cloud/processador");
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const db = supabaseAdmin as never;
+
+        const eventos = extrairEventos(corpo);
+        try {
+          await guardarEventos(db, eventos);
+        } catch (e) {
+          // Não gravou: pede reentrega (é o único caso em que o erro é nosso).
+          console.error(
+            JSON.stringify({ scope: "wa-webhook", msg: "guardar_falhou", erro: String(e) }),
+          );
+          return new Response("Retry", { status: 500 });
+        }
+
+        // Processa já, sem segurar a resposta. O varredor cobre o que sobrar.
+        void processarPendentes(db, { limite: 50 }).catch((e) =>
+          console.error(
+            JSON.stringify({ scope: "wa-webhook", msg: "processar_falhou", erro: String(e) }),
+          ),
+        );
+
+        return new Response("ok", { status: 200 });
+      },
+    },
+  },
+});

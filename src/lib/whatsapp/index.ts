@@ -18,3 +18,4 @@ export type {
   Etiqueta,
 } from "./provider";
 export { resolverCanal, type CanalResolvido } from "./canal";
+export { criarCloudProvider } from "./cloud/cloud-provider";

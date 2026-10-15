@@ -6,6 +6,7 @@
  * instância sem consultar nada). Aqui é uma só.
  */
 
+import { criarCloudProvider } from "./cloud/cloud-provider";
 import { evolutionProvider } from "./evolution-provider";
 import type { AdminDb, CanalWhatsApp, ConsultaDb, WhatsAppProvider } from "./provider";
 
@@ -14,8 +15,34 @@ export type CanalResolvido =
   | { ok: false; motivo: "nao_configurado" | "sem_canal" | "desconectado"; texto: string };
 
 export async function resolverCanal(admin: AdminDb, companyId: string): Promise<CanalResolvido> {
-  // Hoje só há o provedor Evolution. Quando a Cloud API entrar, a escolha vem
-  // de uma coluna por empresa (`wa_phone_numbers.provider`).
+  /* A Cloud API tem PRIORIDADE: empresa com número oficial conectado usa ele,
+     e a instância da Evolution deixa de ser consultada (corte seco por cliente,
+     decisão de 15/10/2026). Erro na consulta — por exemplo, a migração `wa_*`
+     ainda não aplicada — cai na Evolution, que é o comportamento de antes. */
+  const { data: numeros, error: erroNumero } = await (admin.from("wa_phone_numbers") as ConsultaDb)
+    .select("phone_number_id")
+    .eq("company_id", companyId)
+    .limit(1);
+  const oficial =
+    !erroNumero && Array.isArray(numeros)
+      ? (numeros[0] as { phone_number_id?: string } | undefined)
+      : undefined;
+  if (oficial?.phone_number_id) {
+    const cloud = criarCloudProvider(admin);
+    if (!cloud.estaConfigurado()) {
+      return {
+        ok: false,
+        motivo: "nao_configurado",
+        texto: "Chave de cifra do WhatsApp (WA_TOKEN_KEY) não configurada",
+      };
+    }
+    return {
+      ok: true,
+      provider: cloud,
+      canal: { provider: "cloud", referencia: oficial.phone_number_id },
+    };
+  }
+
   const provider = evolutionProvider;
 
   if (!provider.estaConfigurado()) {
