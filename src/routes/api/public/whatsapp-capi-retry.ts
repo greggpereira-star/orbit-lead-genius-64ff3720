@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { segredoConfere } from '@/lib/segredo.server';
 
 const MAX_ATTEMPTS = 5;
 const BATCH = 25;
@@ -20,7 +21,7 @@ export const Route = createFileRoute('/api/public/whatsapp-capi-retry')({
 
         // Accept either the env-configured secret or the DB-stored bearer used by pg_cron.
         const envSecret = process.env.WA_CAPI_RETRY_SECRET;
-        let authorized = !!envSecret && bearer === envSecret;
+        let authorized = segredoConfere(bearer, envSecret);
         if (!authorized) {
           const { data: cfg } = await supabaseAdmin
             .from('app_internal_config' as never)
@@ -28,7 +29,7 @@ export const Route = createFileRoute('/api/public/whatsapp-capi-retry')({
             .eq('key', 'wa_capi_retry_bearer')
             .maybeSingle();
           const dbSecret = (cfg as { value?: string } | null)?.value;
-          authorized = !!dbSecret && bearer === dbSecret;
+          authorized = segredoConfere(bearer, dbSecret);
         }
         if (!authorized) {
           log('warn', traceId, 'unauthorized');
@@ -40,7 +41,7 @@ export const Route = createFileRoute('/api/public/whatsapp-capi-retry')({
 
         const { data: rows, error } = await supabaseAdmin
           .from('whatsapp_click_events')
-          .select('id, company_id, event_id, trace_id, page_url, user_agent, tracking, capi_attempts, created_at')
+          .select('id, company_id, lead_id, event_id, trace_id, page_url, user_agent, tracking, capi_attempts, created_at')
           .in('capi_status', ['pending', 'retry'])
           .lt('capi_attempts', MAX_ATTEMPTS)
           .order('created_at', { ascending: true })
@@ -51,6 +52,18 @@ export const Route = createFileRoute('/api/public/whatsapp-capi-retry')({
           return Response.json({ ok: false, error: error.message }, { status: 500 });
         }
 
+        /* O envio original manda o e-mail do lead; o reenvio saía sem ele, e a
+           tabela de cliques não o guarda. Sem e-mail o Meta casa menos eventos
+           com pessoas, justo nos que já falharam uma vez. Buscado de uma vez. */
+        const idsDeLead = [...new Set((rows ?? []).map((r) => r.lead_id).filter((v): v is string => !!v))];
+        const emailPorLead = new Map<string, string>();
+        if (idsDeLead.length > 0) {
+          const { data: leads } = await supabaseAdmin.from('leads').select('id, email').in('id', idsDeLead);
+          for (const l of (leads ?? []) as { id: string; email: string | null }[]) {
+            if (l.email) emailPorLead.set(l.id, l.email);
+          }
+        }
+
         const results: Array<{ id: string; status: string }> = [];
         for (const row of rows ?? []) {
           const attempts = (row.capi_attempts ?? 0) + 1;
@@ -58,6 +71,7 @@ export const Route = createFileRoute('/api/public/whatsapp-capi-retry')({
             companyId: row.company_id,
             eventId: row.event_id as string,
             traceId: (row.trace_id as string) ?? traceId,
+            email: row.lead_id ? (emailPorLead.get(row.lead_id) ?? null) : null,
             pageUrl: row.page_url,
             userAgent: row.user_agent,
             tracking: row.tracking as never,

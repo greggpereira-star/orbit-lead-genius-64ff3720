@@ -13,6 +13,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio, casarCodigoDoRedirect } from "@/lib/ctwa.server";
 import { moverLeadPelaEtiqueta } from "@/lib/etiqueta-para-etapa.server";
+import { segredoConfere } from "@/lib/segredo.server";
 
 function log(level: "info" | "warn" | "error", traceId: string, msg: string, extra?: Record<string, unknown>) {
   console.log(
@@ -80,7 +81,7 @@ export const Route = createFileRoute("/api/public/whatsapp-webhook")({
         }
 
         const url = new URL(request.url);
-        if (url.searchParams.get("token") !== secret) {
+        if (!segredoConfere(url.searchParams.get("token"), secret)) {
           log("warn", traceId, "unauthorized");
           return new Response("unauthorized", { status: 401 });
         }
