@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cifrarToken } from "./cifra";
-import { enviarTextoNaConversa } from "./envio";
+import { enviarTemplateNaConversa, enviarTextoNaConversa } from "./envio";
 import type { EventoWa } from "./payload";
 import {
   guardarEventos,
@@ -516,5 +516,145 @@ describe("processarEvento — Fase 2", () => {
       fn: "wa_atualizar_historico",
       args: { p_phone_number_id: "PNID", p_progress: 100 },
     });
+  });
+});
+
+describe("enviarTemplateNaConversa", () => {
+  const chave = randomBytes(32).toString("base64");
+  const corpoDoTemplate = "Olá {{1}}, seu pedido {{2}} saiu.";
+  const tabelas = (
+    over: { status?: string; components?: unknown[]; opted?: string | null } = {},
+  ) => ({
+    wa_conversations: { id: "c1", company_id: "emp", phone_number_id: "np1", contact_id: "k1" },
+    wa_contacts: { wa_id: "5527996318075", opted_out_at: over.opted ?? null },
+    wa_phone_numbers: { phone_number_id: "PNID", account_id: "acc1" },
+    wa_credentials: { access_token_enc: cifrarToken("TOKEN-REAL", chave) },
+    whatsapp_optouts: [],
+    wa_templates: {
+      status: over.status ?? "APPROVED",
+      components: over.components ?? [{ type: "BODY", text: corpoDoTemplate }],
+    },
+  });
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    vi.stubEnv("WA_TOKEN_KEY", chave);
+    fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ messages: [{ id: "wamid.T1" }] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  const entrada = {
+    conversaId: "c1",
+    nome: "pedido_saiu",
+    idioma: "pt_BR",
+    valores: { 1: "Ana", 2: "#123" },
+    enviadoPor: "u1",
+    origem: "agent" as const,
+  };
+
+  it("envia fora da janela (é o caminho para retomar) e registra o texto renderizado", async () => {
+    const { db, rpcs } = criarDb({
+      tabelas: tabelas(),
+      rpc: { wa_registrar_saida: { data: "m-1" } },
+    });
+    const r = await enviarTemplateNaConversa(db, entrada);
+    expect(r).toMatchObject({
+      ok: true,
+      texto: "Olá Ana, seu pedido #123 saiu.",
+      providerMessageId: "wamid.T1",
+    });
+
+    const corpo = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(corpo).toMatchObject({
+      type: "template",
+      template: { name: "pedido_saiu", language: { code: "pt_BR" } },
+    });
+    expect(corpo.template.components).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: "Ana" },
+          { type: "text", text: "#123" },
+        ],
+      },
+    ]);
+    expect(rpcs[0].args).toMatchObject({
+      p_type: "template",
+      p_template_name: "pedido_saiu",
+      p_body: "Olá Ana, seu pedido #123 saiu.",
+    });
+  });
+
+  it("template não aprovado não vai", async () => {
+    const { db } = criarDb({ tabelas: tabelas({ status: "PENDING" }) });
+    expect(await enviarTemplateNaConversa(db, entrada)).toMatchObject({
+      ok: false,
+      motivo: "template_nao_aprovado",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("template inexistente", async () => {
+    const t = tabelas();
+    (t as Record<string, unknown>).wa_templates = null;
+    const { db } = criarDb({ tabelas: t });
+    expect(await enviarTemplateNaConversa(db, entrada)).toMatchObject({
+      ok: false,
+      motivo: "template_inexistente",
+    });
+  });
+
+  it("variável faltando diz quais", async () => {
+    const { db } = criarDb({ tabelas: tabelas() });
+    const r = await enviarTemplateNaConversa(db, { ...entrada, valores: { 1: "Ana" } });
+    expect(r).toMatchObject({ ok: false, motivo: "variavel_faltando" });
+    expect((r as { texto: string }).texto).toContain("{{2}}");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("variável no cabeçalho ou em botão é recusada ANTES de falar com a Meta", async () => {
+    for (const components of [
+      [
+        { type: "HEADER", format: "TEXT", text: "Pedido {{1}}" },
+        { type: "BODY", text: "Oi" },
+      ],
+      [
+        { type: "BODY", text: "Oi" },
+        { type: "BUTTONS", buttons: [{ type: "URL", text: "Ver", url: "https://x.com/{{1}}" }] },
+      ],
+    ]) {
+      const { db } = criarDb({ tabelas: tabelas({ components }) });
+      expect(await enviarTemplateNaConversa(db, { ...entrada, valores: {} })).toMatchObject({
+        ok: false,
+        motivo: "variavel_nao_suportada",
+      });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("opt-out bloqueia template também", async () => {
+    const { db } = criarDb({ tabelas: tabelas({ opted: "2026-10-14T00:00:00Z" }) });
+    expect(await enviarTemplateNaConversa(db, entrada)).toMatchObject({
+      ok: false,
+      motivo: "contato_pediu_para_parar",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("template sem variável envia sem parâmetros", async () => {
+    const { db } = criarDb({
+      tabelas: tabelas({ components: [{ type: "BODY", text: "Obrigado pelo contato!" }] }),
+      rpc: { wa_registrar_saida: { data: "m" } },
+    });
+    const r = await enviarTemplateNaConversa(db, { ...entrada, valores: {} });
+    expect(r.ok).toBe(true);
+    const corpo = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(corpo.template.components).toEqual([]);
   });
 });

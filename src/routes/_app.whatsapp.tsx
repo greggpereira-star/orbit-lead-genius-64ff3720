@@ -7,6 +7,8 @@
  * o que de fato funciona: parear o número, configurar as duas mensagens
  * automáticas e auditar os envios.
  */
+import { Atendimento } from "@/modules/atendimento/components/Atendimento";
+import { obterEstadoDoWhatsAppOficial } from "@/lib/whatsapp-cloud.functions";
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { RedirectLinksCard } from "@/modules/crm/components/RedirectLinksCard";
@@ -101,7 +103,7 @@ function hourLabel(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
-function WhatsAppPage() {
+function WhatsAppLegado() {
   // Mesma origem que o resto do app usa para saber de qual empresa se trata.
   const { company } = useAuth();
   const companyId = company?.id ?? '';
@@ -661,6 +663,23 @@ function WhatsAppPage() {
       </Dialog>
     </div>
   );
+}
+
+/**
+ * `/whatsapp` mostra o ATENDIMENTO quando a empresa tem um número da API
+ * oficial conectado; sem ele, segue a configuração da Evolution (QR code) até o
+ * corte. Assim a página muda de propósito sem deixar ninguém sem tela.
+ */
+function WhatsAppPage() {
+  const { company, user } = useAuth();
+  const buscar = useServerFn(obterEstadoDoWhatsAppOficial);
+  const estado = useQuery({ queryKey: ["wa-oficial"], queryFn: () => buscar(), enabled: Boolean(company?.id) });
+
+  if (estado.isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
+
+  const temOficial = (estado.data?.numeros ?? []).length > 0;
+  if (temOficial && company?.id) return <Atendimento companyId={company.id} userId={user?.id ?? null} />;
+  return <WhatsAppLegado />;
 }
 
 export const Route = createFileRoute("/_app/whatsapp")({

@@ -842,6 +842,45 @@ documentação de referência e estão marcados **[VERIFICAR]** no código:
 
 ---
 
+## 12d. Fase 3 — atendimento (WhatsApp Web)
+
+`/whatsapp` passa a ser o **atendimento** quando a empresa tem número oficial
+conectado; sem ele, segue a tela da Evolution (QR) até o corte. Configuração e
+templates ficam em `/settings/whatsapp`.
+
+| Entrega | Onde | Verificação |
+|---|---|---|
+| Lista de conversas (Minhas / Fila / Todas / Resolvidas), busca, não lidas, "aguardando resposta" | `modules/atendimento/` | filtros puros: 26 testes; renderização da lista conferida |
+| Conversa em tempo real, marcas ✓ ✓✓ (azul = lida), agrupamento por dia (fuso SP), ordem pela hora do **provedor** | `Conversa.tsx`, `lib/mensagens.ts` | testes de agrupamento e de ordem |
+| Banner da janela de 24h com contagem regressiva | `cloud/janela.ts` | borda exata de 24h testada |
+| Compositor: texto livre (janela aberta) · seletor de template (janela fechada) · bloqueado (opt-out) · resolvida | `lib/compositor.ts` | opt-out vence janela aberta (mutação detectada) |
+| Envio de **template** na conversa | `cloud/envio.ts` | exige APPROVED; variável faltando/fora do corpo é recusada **antes** de falar com a Meta |
+| Atribuir / resolver / reabrir | `whatsapp-atendimento.functions.ts` | conversa conferida contra a empresa da **sessão**; destino precisa ser membro (mutação detectada) |
+| Respostas rápidas (`/`) | reaproveita `chat_quick_replies` | — |
+| Painel do lead + origem de anúncio | `PainelDoLead.tsx` | — |
+| Tempo real | `useAtendimento.ts` | `wa_conversations` e `wa_messages` na publicação (migração da fundação) |
+
+### Decisões de comportamento
+
+- Quem **responde** uma conversa sem responsável **assume** a conversa.
+- "Lida" só é marcada com a aba **visível**.
+- O texto digitado **não é descartado** quando o envio é recusado.
+- Rascunho **não atravessa** conversas.
+- Opt-out bloqueia texto **e** template.
+
+### O que ainda não existe
+
+- **Mídia** (envio e recebimento de imagem/áudio/documento): hoje a conversa
+  mostra `[Imagem]`/`[Áudio]` sem o arquivo. É a Fase 5.
+- **Notas internas**, **busca dentro da conversa**, **reações**, resposta citada.
+- **Visibilidade por papel** ("só as minhas"): todo membro vê todas as
+  conversas da empresa; o filtro "Minhas" é de conveniência, não de segurança.
+- Template com variável em **cabeçalho ou botão** no atendimento.
+- A tela **não foi aberta num navegador** (exige sessão, banco e uma conta Meta
+  real): só build, tipos, renderização estática e testes de lógica.
+
+---
+
 ## 13. Perguntas originais (respondidas em §11)
 
 1. **Coexistência ou número dedicado** como padrão? (§4.3)
