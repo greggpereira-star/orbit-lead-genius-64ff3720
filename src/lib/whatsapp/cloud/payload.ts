@@ -72,6 +72,32 @@ export type EventoWa =
       ts: string;
     }
   | {
+      kind: "template_status";
+      dedupKey: string;
+      wabaId: string;
+      name: string;
+      language: string;
+      status: string;
+      reason: string | null;
+      providerTemplateId: string | null;
+    }
+  | {
+      kind: "conta";
+      dedupKey: string;
+      wabaId: string;
+      /** PARTNER_REMOVED | ACCOUNT_OFFBOARDED | ACCOUNT_RECONNECTED | outro. */
+      evento: string;
+      displayPhone: string | null;
+      motivo: string | null;
+    }
+  | {
+      kind: "historico_progresso";
+      dedupKey: string;
+      phoneNumberId: string;
+      progress: number;
+      phase: number | null;
+    }
+  | {
       kind: "ignorado";
       dedupKey: string;
       phoneNumberId: string | null;
@@ -209,9 +235,58 @@ export function extrairEventos(corpo: unknown): EventoWa[] {
         continue;
       }
 
+      if (campo === "message_template_status_update") {
+        const nome = txt(valor.message_template_name);
+        const idioma = txt(valor.message_template_language);
+        const estado = txt(valor.event);
+        const waba = txt(obj(entrada).id);
+        if (nome && idioma && estado && waba) {
+          eventos.push({
+            kind: "template_status",
+            dedupKey: `tpl:${waba}:${nome}:${idioma}:${estado}:${String(obj(entrada).time ?? "")}`,
+            wabaId: waba,
+            name: nome,
+            language: idioma,
+            status: estado.toUpperCase(),
+            reason: txt(valor.reason),
+            providerTemplateId:
+              valor.message_template_id === undefined || valor.message_template_id === null
+                ? null
+                : String(valor.message_template_id),
+          });
+        }
+        continue;
+      }
+
+      if (campo === "account_update") {
+        const waba = txt(obj(entrada).id);
+        const evento = txt(valor.event);
+        if (waba && evento) {
+          eventos.push({
+            kind: "conta",
+            dedupKey: `conta:${waba}:${evento}:${String(obj(entrada).time ?? "")}`,
+            wabaId: waba,
+            evento: evento.toUpperCase(),
+            displayPhone: txt(valor.phone_number),
+            motivo: txt(obj(valor.disconnection_info).reason),
+          });
+        }
+        continue;
+      }
+
       if (campo === "history") {
         const negocio = txt(obj(valor.metadata).display_phone_number)?.replace(/\D/g, "") ?? "";
         for (const bloco of lista(valor.history)) {
+          const mb = obj(obj(bloco).metadata);
+          if (typeof mb.progress === "number" && phoneNumberId) {
+            eventos.push({
+              kind: "historico_progresso",
+              dedupKey: `histp:${phoneNumberId}:${String(mb.phase ?? "")}:${String(mb.chunk_order ?? "")}:${mb.progress}`,
+              phoneNumberId,
+              progress: mb.progress,
+              phase: typeof mb.phase === "number" ? mb.phase : null,
+            });
+          }
           for (const fio of lista(obj(bloco).threads)) {
             const cliente = txt(obj(fio).id);
             for (const mm of lista(obj(fio).messages)) {

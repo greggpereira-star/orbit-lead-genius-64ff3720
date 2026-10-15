@@ -116,3 +116,71 @@ BEGIN
   RAISE NOTICE 'wa_fundacao: 11 testes passaram';
 END
 $t$;
+
+-- ===========================================================================
+-- Fase 2: templates e estado do número
+-- ===========================================================================
+DO $t$
+DECLARE
+  v_emp uuid; v_conta uuid; v_n int; v_status text; v_motivo text; v_prog int; v_sync timestamptz;
+BEGIN
+  IF to_regclass('public.wa_templates') IS NULL THEN
+    RAISE NOTICE 'wa_templates ausente: migração da Fase 2 não incluída neste ensaio';
+    RETURN;
+  END IF;
+  SELECT id INTO v_emp FROM public.companies LIMIT 1;
+  SELECT id INTO v_conta FROM public.wa_accounts WHERE waba_id = 'WABA_ENSAIO';
+
+  INSERT INTO public.wa_templates (account_id, company_id, name, language, category, status)
+    VALUES (v_conta, v_emp, 'boas_vindas', 'pt_BR', 'UTILITY', 'PENDING');
+
+  -- T20: aprovado
+  IF NOT public.wa_aplicar_status_de_template('WABA_ENSAIO','boas_vindas','pt_BR','APPROVED') THEN
+    RAISE EXCEPTION 'T20 não aplicou APPROVED'; END IF;
+
+  -- T21: evento ATRASADO (PENDING depois de APPROVED) não rebaixa
+  IF public.wa_aplicar_status_de_template('WABA_ENSAIO','boas_vindas','pt_BR','PENDING') THEN
+    RAISE EXCEPTION 'T21 rebaixou para PENDING'; END IF;
+  SELECT status INTO v_status FROM public.wa_templates WHERE name = 'boas_vindas';
+  IF v_status <> 'APPROVED' THEN RAISE EXCEPTION 'T21 status %', v_status; END IF;
+
+  -- T22: rejeitado grava o motivo; aprovar de novo limpa
+  PERFORM public.wa_aplicar_status_de_template('WABA_ENSAIO','boas_vindas','pt_BR','REJECTED','INVALID_FORMAT');
+  SELECT rejection_reason INTO v_motivo FROM public.wa_templates WHERE name = 'boas_vindas';
+  IF v_motivo <> 'INVALID_FORMAT' THEN RAISE EXCEPTION 'T22 motivo %', v_motivo; END IF;
+
+  -- T23: template desconhecido não é erro (aparece na próxima sincronização)
+  IF public.wa_aplicar_status_de_template('WABA_ENSAIO','nao_existe','pt_BR','APPROVED') THEN
+    RAISE EXCEPTION 'T23 aplicou em template inexistente'; END IF;
+
+  -- T24: WABA desconhecida é identificável
+  BEGIN
+    PERFORM public.wa_aplicar_status_de_template('NAO_EXISTE','x','pt_BR','APPROVED');
+    RAISE EXCEPTION 'T24 aceitou WABA desconhecida';
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN NULL; END;
+
+  -- T25: PARTNER_REMOVED desconecta o número pelo display_phone; ACCOUNT_RECONNECTED volta
+  SELECT public.wa_atualizar_estado_do_numero('WABA_ENSAIO','+55 27 99999-0000','disconnected','PARTNER_REMOVED') INTO v_n;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T25 afetou % números', v_n; END IF;
+  IF (SELECT status FROM public.wa_phone_numbers WHERE phone_number_id='PNID_ENSAIO') <> 'disconnected' THEN
+    RAISE EXCEPTION 'T25 não desconectou'; END IF;
+  PERFORM public.wa_atualizar_estado_do_numero('WABA_ENSAIO',NULL,'active',NULL);
+  IF (SELECT status FROM public.wa_phone_numbers WHERE phone_number_id='PNID_ENSAIO') <> 'active' THEN
+    RAISE EXCEPTION 'T25 não reconectou'; END IF;
+
+  -- T26: número de outro telefone não é afetado
+  SELECT public.wa_atualizar_estado_do_numero('WABA_ENSAIO','5511000000000','disconnected','x') INTO v_n;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'T26 afetou número errado'; END IF;
+
+  -- T27: progresso do histórico só avança; 100 marca a sincronização
+  PERFORM public.wa_atualizar_historico('PNID_ENSAIO', 55);
+  PERFORM public.wa_atualizar_historico('PNID_ENSAIO', 20);
+  SELECT history_progress INTO v_prog FROM public.wa_phone_numbers WHERE phone_number_id='PNID_ENSAIO';
+  IF v_prog <> 55 THEN RAISE EXCEPTION 'T27 retrocedeu para %', v_prog; END IF;
+  PERFORM public.wa_atualizar_historico('PNID_ENSAIO', 100);
+  SELECT coexistence_synced_at INTO v_sync FROM public.wa_phone_numbers WHERE phone_number_id='PNID_ENSAIO';
+  IF v_sync IS NULL THEN RAISE EXCEPTION 'T27 não marcou sincronização concluída'; END IF;
+
+  RAISE NOTICE 'wa_fase2: 8 testes passaram';
+END
+$t$;

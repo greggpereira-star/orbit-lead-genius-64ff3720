@@ -14,6 +14,7 @@ const settingsNav = [
   { title: 'Widgets do site', icon: Code2, to: '/settings/widgets' },
   { title: 'Chat: setores e atendentes', icon: MessageCircle, to: '/settings/chat' },
   { title: 'Respostas rápidas', icon: Sparkles, to: '/settings/quick-replies' },
+  { title: 'WhatsApp oficial', icon: MessageCircle, to: '/settings/whatsapp' },
   { title: 'Automations', icon: Zap, to: '/settings/automations' },
   { title: 'Distribuição de Leads', icon: Users, to: '/settings/routing' },
    { title: 'Security', icon: Shield, to: '/settings/security' },

@@ -200,6 +200,47 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
       return "processed";
     }
 
+    case "template_status": {
+      const { error } = await db.rpc("wa_aplicar_status_de_template", {
+        p_waba_id: e.wabaId,
+        p_name: e.name,
+        p_language: e.language,
+        p_status: e.status,
+        p_reason: e.reason,
+        p_provider_template_id: e.providerTemplateId,
+      });
+      if (error) throw Object.assign(new Error(error.message), { code: error.code });
+      return "processed";
+    }
+
+    case "conta": {
+      // Só os eventos que mudam o estado do número; o resto é ruído conhecido.
+      const novo =
+        e.evento === "PARTNER_REMOVED" || e.evento === "ACCOUNT_OFFBOARDED"
+          ? "disconnected"
+          : e.evento === "ACCOUNT_RECONNECTED"
+            ? "active"
+            : null;
+      if (!novo) return "ignored";
+      const { error } = await db.rpc("wa_atualizar_estado_do_numero", {
+        p_waba_id: e.wabaId,
+        p_display_phone: e.displayPhone,
+        p_status: novo,
+        p_reason: e.motivo ?? e.evento,
+      });
+      if (error) throw Object.assign(new Error(error.message), { code: error.code });
+      return "processed";
+    }
+
+    case "historico_progresso": {
+      const { error } = await db.rpc("wa_atualizar_historico", {
+        p_phone_number_id: e.phoneNumberId,
+        p_progress: e.progress,
+      });
+      if (error) throw Object.assign(new Error(error.message), { code: error.code });
+      return "processed";
+    }
+
     default:
       return "ignored";
   }

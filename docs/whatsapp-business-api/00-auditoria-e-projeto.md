@@ -798,6 +798,50 @@ Onboarding (Embedded Signup) que **cria** `wa_accounts`/`wa_phone_numbers`/
 
 ---
 
+## 12c. Fase 2 — o que foi entregue
+
+| Entrega | Onde | Verificação |
+|---|---|---|
+| Estado do número e templates (banco) | `20261015190000_wa_templates_e_estado.sql` | **8 testes SQL num Postgres 16 real**: status de template nunca rebaixa, `PARTNER_REMOVED` desconecta pelo telefone, progresso do histórico só avança |
+| Eventos novos | `cloud/payload.ts`, `cloud/processador.ts` | `message_template_status_update`, `account_update`, progresso do `history` |
+| Cliente da Graph API | `cloud/graph.ts` | troca de código, inscrição na WABA, leitura do número (com *fallback* de campos), templates paginados com teto, `smb_app_data` |
+| Validador de templates | `cloud/templates.ts` | 20 casos: nome, idioma, variáveis em sequência, exemplos obrigatórios, emoji no cabeçalho, URL só `https://`, limites |
+| Onboarding | `cloud/onboarding.ts` | número de **outra empresa** recusado; token **cifrado** em repouso; nada gravado se a inscrição falhar |
+| Server functions | `src/lib/whatsapp-cloud.functions.ts` | empresa só da sessão; sem coluna de token no retorno; exige `WA_TOKEN_KEY` antes de falar com a Meta |
+| Tela | `/settings/whatsapp` | conexão (coexistência ou só API), saúde do número, templates com validação em tempo real |
+
+Quatro mutações nas regras de segurança do onboarding foram todas detectadas
+(posse do número, token em claro, validação de template, gravação sem inscrição).
+
+### O que **não** foi exercitado contra a Meta
+
+Não há credencial de homologação neste ambiente. Foram escritos a partir da
+documentação de referência e estão marcados **[VERIFICAR]** no código:
+
+1. `redirect_uri` na troca do código do Embedded Signup.
+2. Nomes dos campos de `GET /{phone_number_id}` (`messaging_limit_tier`,
+   `is_on_biz_app`…): a função tenta o conjunto completo e cai para o mínimo.
+3. Limites de tamanho de template (corpo 1024, cabeçalho 60…): são **avisos ao
+   autor**, e o servidor da Meta continua sendo a palavra final.
+4. Versão do SDK (`v25.0`) e `featureType` de coexistência.
+5. A tela **não foi aberta num navegador** (exige sessão e banco): só build,
+   tipos e testes de lógica.
+
+### Variável nova
+
+| Variável | Para quê |
+|---|---|
+| `WA_ES_CONFIG_ID` | `config_id` da configuração de Embedded Signup criada no app da Meta |
+
+### Pendências conhecidas da Fase 2
+
+- **Desconectar** o número pela tela (revogar e inscrever) — hoje só por SQL.
+- Templates de **mídia** no cabeçalho (exigem upload prévio) e de **autenticação**.
+- Renovação/expiração do token (o de Embedded Signup é de longa duração; a
+  expiração aparece no erro `190` → classe `autenticacao`).
+
+---
+
 ## 13. Perguntas originais (respondidas em §11)
 
 1. **Coexistência ou número dedicado** como padrão? (§4.3)

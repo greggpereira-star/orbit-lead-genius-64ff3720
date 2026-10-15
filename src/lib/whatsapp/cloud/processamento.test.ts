@@ -450,3 +450,71 @@ describe("enviarTextoNaConversa", () => {
     expect(r.ok).toBe(true);
   });
 });
+
+describe("processarEvento — Fase 2", () => {
+  it("template: chama a função que nunca rebaixa", async () => {
+    const { db, rpcs } = criarDb({ rpc: { wa_aplicar_status_de_template: { data: true } } });
+    await processarEvento(db, {
+      kind: "template_status",
+      dedupKey: "t",
+      wabaId: "W",
+      name: "boas_vindas",
+      language: "pt_BR",
+      status: "APPROVED",
+      reason: null,
+      providerTemplateId: "9",
+    });
+    expect(rpcs[0]).toMatchObject({
+      fn: "wa_aplicar_status_de_template",
+      args: { p_waba_id: "W", p_name: "boas_vindas", p_status: "APPROVED" },
+    });
+  });
+
+  it("PARTNER_REMOVED e ACCOUNT_OFFBOARDED desconectam; RECONNECTED reconecta", async () => {
+    for (const [evento, esperado] of [
+      ["PARTNER_REMOVED", "disconnected"],
+      ["ACCOUNT_OFFBOARDED", "disconnected"],
+      ["ACCOUNT_RECONNECTED", "active"],
+    ] as const) {
+      const { db, rpcs } = criarDb({});
+      await processarEvento(db, {
+        kind: "conta",
+        dedupKey: "c",
+        wabaId: "W",
+        evento,
+        displayPhone: null,
+        motivo: null,
+      });
+      expect(rpcs[0].args).toMatchObject({ p_status: esperado });
+    }
+  });
+
+  it("evento de conta desconhecido é ignorado sem tocar no banco", async () => {
+    const { db, rpcs } = criarDb({});
+    const r = await processarEvento(db, {
+      kind: "conta",
+      dedupKey: "c",
+      wabaId: "W",
+      evento: "ALGO_NOVO",
+      displayPhone: null,
+      motivo: null,
+    });
+    expect(r).toBe("ignored");
+    expect(rpcs).toEqual([]);
+  });
+
+  it("progresso do histórico", async () => {
+    const { db, rpcs } = criarDb({});
+    await processarEvento(db, {
+      kind: "historico_progresso",
+      dedupKey: "h",
+      phoneNumberId: "PNID",
+      progress: 100,
+      phase: 2,
+    });
+    expect(rpcs[0]).toMatchObject({
+      fn: "wa_atualizar_historico",
+      args: { p_phone_number_id: "PNID", p_progress: 100 },
+    });
+  });
+});

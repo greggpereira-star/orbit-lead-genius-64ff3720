@@ -52,6 +52,7 @@ import { Route as AppSettingsNotificationsRouteImport } from './routes/_app.sett
 import { Route as AppSettingsQuickRepliesRouteImport } from './routes/_app.settings.quick-replies'
 import { Route as AppSettingsRoutingRouteImport } from './routes/_app.settings.routing'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app.settings.security'
+import { Route as AppSettingsWhatsappRouteImport } from './routes/_app.settings.whatsapp'
 import { Route as AppSettingsWidgetsRouteImport } from './routes/_app.settings.widgets'
 import { Route as ApiPublicMetaWebhookRouteImport } from './routes/api/public/meta-webhook'
 import { Route as ApiPublicPixelEventRouteImport } from './routes/api/public/pixel-event'
@@ -292,6 +293,11 @@ const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
   path: '/security',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsWhatsappRoute = AppSettingsWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsWidgetsRoute = AppSettingsWidgetsRouteImport.update({
   id: '/widgets',
   path: '/widgets',
@@ -468,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/whatsapp': typeof AppSettingsWhatsappRoute
   '/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
@@ -535,6 +542,7 @@ export interface FileRoutesByTo {
   '/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
   '/settings/routing': typeof AppSettingsRoutingRoute
   '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/whatsapp': typeof AppSettingsWhatsappRoute
   '/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
@@ -606,6 +614,7 @@ export interface FileRoutesById {
   '/_app/settings/quick-replies': typeof AppSettingsQuickRepliesRoute
   '/_app/settings/routing': typeof AppSettingsRoutingRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
+  '/_app/settings/whatsapp': typeof AppSettingsWhatsappRoute
   '/_app/settings/widgets': typeof AppSettingsWidgetsRoute
   '/api/public/meta-webhook': typeof ApiPublicMetaWebhookRoute
   '/api/public/pixel-event': typeof ApiPublicPixelEventRoute
@@ -676,6 +685,7 @@ export interface FileRouteTypes {
     | '/settings/quick-replies'
     | '/settings/routing'
     | '/settings/security'
+    | '/settings/whatsapp'
     | '/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/pixel-event'
@@ -743,6 +753,7 @@ export interface FileRouteTypes {
     | '/settings/quick-replies'
     | '/settings/routing'
     | '/settings/security'
+    | '/settings/whatsapp'
     | '/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/pixel-event'
@@ -813,6 +824,7 @@ export interface FileRouteTypes {
     | '/_app/settings/quick-replies'
     | '/_app/settings/routing'
     | '/_app/settings/security'
+    | '/_app/settings/whatsapp'
     | '/_app/settings/widgets'
     | '/api/public/meta-webhook'
     | '/api/public/pixel-event'
@@ -1174,6 +1186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsSecurityRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/whatsapp': {
+      id: '/_app/settings/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/settings/whatsapp'
+      preLoaderRoute: typeof AppSettingsWhatsappRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/widgets': {
       id: '/_app/settings/widgets'
       path: '/widgets'
@@ -1386,6 +1405,7 @@ interface AppSettingsRouteChildren {
   AppSettingsQuickRepliesRoute: typeof AppSettingsQuickRepliesRoute
   AppSettingsRoutingRoute: typeof AppSettingsRoutingRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
+  AppSettingsWhatsappRoute: typeof AppSettingsWhatsappRoute
   AppSettingsWidgetsRoute: typeof AppSettingsWidgetsRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
@@ -1400,6 +1420,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsQuickRepliesRoute: AppSettingsQuickRepliesRoute,
   AppSettingsRoutingRoute: AppSettingsRoutingRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
+  AppSettingsWhatsappRoute: AppSettingsWhatsappRoute,
   AppSettingsWidgetsRoute: AppSettingsWidgetsRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }

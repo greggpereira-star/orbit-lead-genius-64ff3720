@@ -1,0 +1,26 @@
+/** Formas serializáveis que o servidor entrega à tela. Sem tokens, por construção. */
+export interface NumeroOficial {
+  phone_number_id: string;
+  display_phone: string;
+  mode: "coexistence" | "cloud_only";
+  quality: string | null;
+  messaging_tier: string | null;
+  is_on_biz_app: boolean | null;
+  status: "active" | "disconnected";
+  disconnected_at: string | null;
+  disconnection_reason: string | null;
+  webhook_subscribed_at: string | null;
+  history_progress: number | null;
+  coexistence_synced_at: string | null;
+}
+
+export interface TemplateOficial {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  status: string;
+  rejection_reason: string | null;
+  quality: string | null;
+  updated_at: string;
+}

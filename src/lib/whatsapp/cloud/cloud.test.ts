@@ -271,14 +271,17 @@ describe("extrairEventos", () => {
         ],
       }),
     );
-    expect(ev).toHaveLength(2);
-    expect(ev[0]).toMatchObject({ kind: "history_message", doNegocio: false });
-    expect(ev[1]).toMatchObject({ kind: "history_message", doNegocio: true });
+    const msgs = ev.filter((e) => e.kind === "history_message");
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0]).toMatchObject({ doNegocio: false });
+    expect(msgs[1]).toMatchObject({ doNegocio: true });
+    // e o bloco também informa o progresso da sincronização
+    expect(ev.filter((e) => e.kind === "historico_progresso")).toHaveLength(1);
   });
 
   it("campo desconhecido vira 'ignorado'; lixo não lança", () => {
     expect(
-      extrairEventos(envelope("message_template_status_update", { event: "APPROVED" }))[0].kind,
+      extrairEventos(envelope("phone_number_quality_update", { event: "FLAGGED" }))[0].kind,
     ).toBe("ignorado");
     expect(extrairEventos(null)).toEqual([]);
     expect(extrairEventos({ object: "page" })).toEqual([]);
@@ -311,3 +314,105 @@ describe("pedeParaParar", () => {
 // Evita que o ambiente de teste vaze chave real
 beforeEach(() => vi.unstubAllEnvs());
 afterEach(() => vi.unstubAllEnvs());
+
+describe("eventos da Fase 2", () => {
+  it("template aprovado/rejeitado", () => {
+    const ev = extrairEventos({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "WABA",
+          time: 1700000000,
+          changes: [
+            {
+              field: "message_template_status_update",
+              value: {
+                event: "REJECTED",
+                message_template_id: 123,
+                message_template_name: "boas_vindas",
+                message_template_language: "pt_BR",
+                reason: "INVALID_FORMAT",
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(ev).toHaveLength(1);
+    expect(ev[0]).toMatchObject({
+      kind: "template_status",
+      wabaId: "WABA",
+      name: "boas_vindas",
+      language: "pt_BR",
+      status: "REJECTED",
+      reason: "INVALID_FORMAT",
+      providerTemplateId: "123",
+    });
+  });
+
+  it("account_update: desconexão e reconexão", () => {
+    const ev = extrairEventos({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "WABA",
+          time: 1,
+          changes: [
+            {
+              field: "account_update",
+              value: {
+                phone_number: "5527999990000",
+                event: "PARTNER_REMOVED",
+                disconnection_info: { reason: "app_uninstalled", initiated_by: "business" },
+              },
+            },
+          ],
+        },
+        {
+          id: "WABA",
+          time: 2,
+          changes: [{ field: "account_update", value: { event: "ACCOUNT_RECONNECTED" } }],
+        },
+      ],
+    });
+    expect(ev[0]).toMatchObject({
+      kind: "conta",
+      evento: "PARTNER_REMOVED",
+      displayPhone: "5527999990000",
+      motivo: "app_uninstalled",
+    });
+    expect(ev[1]).toMatchObject({
+      kind: "conta",
+      evento: "ACCOUNT_RECONNECTED",
+      displayPhone: null,
+    });
+  });
+
+  it("progresso do histórico vira evento próprio", () => {
+    const ev = extrairEventos({
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "W",
+          changes: [
+            {
+              field: "history",
+              value: {
+                metadata: { display_phone_number: "5527999990000", phone_number_id: "PNID" },
+                history: [{ metadata: { phase: 1, chunk_order: 3, progress: 80 }, threads: [] }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(ev).toEqual([
+      expect.objectContaining({
+        kind: "historico_progresso",
+        phoneNumberId: "PNID",
+        progress: 80,
+        phase: 1,
+      }),
+    ]);
+  });
+});
