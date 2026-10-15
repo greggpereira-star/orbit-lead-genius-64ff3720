@@ -15,6 +15,7 @@ import { origemDaVisita } from "../lib/origemDaVisita";
 import { escolherNome } from "../lib/nomeDoLead";
 import { avisoVisivelDoEmail, sugerirCorrecao, validarEmail } from "../lib/email";
 import { agendamentoPodeAvancar } from "../lib/agendamento";
+import { paraExibicao, paraMetrico, passoExibido } from "../lib/regua";
 import { formularioPodeAvancar, placeholderDoTelefone } from "../lib/formulario";
 import {
   avisoVisivelDoTelefone,
@@ -2821,18 +2822,15 @@ function BlockView({
       const isWeight = block.type === 'weight';
       const metricMin = block.sliderMin ?? (isWeight ? 30 : 100);
       const metricMax = block.sliderMax ?? (isWeight ? 200 : 250);
-      const metricStep = block.sliderStep ?? 1;
       const metricValue = typeof value === 'number' ? value : (isWeight ? 70 : 170);
       const allowUnitToggle = block.allowUnitToggle !== false;
 
-      const KG_TO_LB = 2.20462;
-      const CM_TO_IN = 0.393701;
-      const toDisplay = (m: number) => (sliderUnit === 'imperial' ? m * (isWeight ? KG_TO_LB : CM_TO_IN) : m);
-      const toMetric = (d: number) => (sliderUnit === 'imperial' ? d / (isWeight ? KG_TO_LB : CM_TO_IN) : d);
-
-      const displayMin = Math.round(toDisplay(metricMin));
-      const displayMax = Math.round(toDisplay(metricMax));
-      const displayValue = Math.round(toDisplay(metricValue));
+      /* Conversão em `regua.ts`: guardar kg inteiro fazia 55% dos valores em
+         libras "voltarem" para outro número ao arrastar. */
+      const tipoDaRegua = isWeight ? 'weight' : 'height';
+      const displayMin = paraExibicao(metricMin, tipoDaRegua, sliderUnit);
+      const displayMax = paraExibicao(metricMax, tipoDaRegua, sliderUnit);
+      const displayValue = paraExibicao(metricValue, tipoDaRegua, sliderUnit);
       const unitLabel = isWeight ? (sliderUnit === 'imperial' ? 'lb' : 'kg') : (sliderUnit === 'imperial' ? 'pol' : 'cm');
 
       return (
@@ -2869,10 +2867,12 @@ function BlockView({
               value={displayValue}
               min={displayMin}
               max={displayMax}
-              step={1}
+              step={passoExibido(block.sliderStep, sliderUnit)}
               design={design}
               ariaLabel={block.title || (isWeight ? 'Peso' : 'Altura')}
-              onChange={(next) => setValue(Math.round(toMetric(next)))}
+              onChange={(next) =>
+                setValue(paraMetrico(next, tipoDaRegua, sliderUnit, { min: metricMin, max: metricMax }))
+              }
             />
           </div>
           <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(metricValue)} disabled={!canSubmit || !stepValid || saving}>
