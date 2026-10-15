@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { sendMetaCapiEvent, type CapiEventName } from '@/lib/meta-capi.server';
+import { sanitizarCustomData } from '@/lib/customDataPublico';
 
 /**
  * Espelho server-side dos eventos do Pixel.
@@ -107,7 +108,7 @@ export const Route = createFileRoute('/api/public/pixel-event')({
           userAgent: request.headers.get('user-agent'),
           pageUrl: body.pageUrl ?? null,
           tracking: { ...(body.tracking ?? {}), fbp: body.fbp, fbc: body.fbc },
-          customData: body.customData ?? null,
+          customData: sanitizarCustomData(body.customData),
         });
 
         // Conversão de LEAD no Google Ads, no mesmo instante do `Lead` do Meta.

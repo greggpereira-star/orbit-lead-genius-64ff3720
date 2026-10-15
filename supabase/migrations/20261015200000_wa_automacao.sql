@@ -123,6 +123,30 @@ BEGIN
       SELECT * INTO v_lead FROM public.leads WHERE id = v_lead_id;
     END IF;
 
+    -- Pedido de parada ("SAIR", "PARAR"…) NÃO dispara automação: o opt-out é
+    -- gravado logo depois desta linha e o despachante podia rodar no meio,
+    -- respondendo a quem acabou de pedir para parar.
+    IF btrim(coalesce(NEW.body, '')) ~* '^(sair|parar|pare|stop|cancelar|descadastrar|remover)([[:space:]]+(por favor|pf))?[[:space:].!]*$' THEN
+      RETURN NEW;
+    END IF;
+
+    -- Tetos. Sem eles, o cliente (ou quem escreve ao número) manda 500 "oi" e a
+    -- empresa enfileira — e paga — 500 respostas, atrasando as automações dos
+    -- leads legítimos (a fila anda por `created_at`).
+    --   * por conversa: no máximo 5 jobs por regra... somados, em 10 minutos;
+    --   * por empresa: no máximo 500 pendentes.
+    IF (SELECT count(*) FROM public.automation_jobs j
+         WHERE j.company_id = NEW.company_id
+           AND j.trigger_event = 'whatsapp_message_received'
+           AND j.created_at > now() - interval '10 minutes'
+           AND j.payload ->> 'conversation_id' = NEW.conversation_id::text) >= 5 THEN
+      RETURN NEW;
+    END IF;
+    IF (SELECT count(*) FROM public.automation_jobs j
+         WHERE j.company_id = NEW.company_id AND j.status = 'pending') >= 500 THEN
+      RETURN NEW;
+    END IF;
+
     SELECT count(*) = 1 INTO v_primeira
       FROM public.wa_messages
      WHERE conversation_id = NEW.conversation_id

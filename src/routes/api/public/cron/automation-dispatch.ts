@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 import { executarAcoes, type ResultadoDeAcao } from '@/lib/automacao/executarAcoes';
 import { acaoAtribuirConversa, acaoEnviarWhatsApp, preencher } from '@/lib/automacao/acoesDeWhatsApp';
 
@@ -51,48 +52,44 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const segredo = process.env.CRON_SECRET || 'altflow_retry_sync_secret';
-        if (request.headers.get('authorization') !== `Bearer ${segredo}`) {
-          return new Response('Unauthorized', { status: 401 });
-        }
+        const autorizacao = autorizarCron(request);
+        if (!autorizacao.ok) return respostaDeRecusa(autorizacao);
 
         const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
         const admin = supabaseAdmin as any;
 
-        const { data: pendentes, error } = await admin
-          .from('automation_jobs')
-          .select('id, company_id, rule_id, trigger_event, lead_id, payload, attempts, resultado')
-          .eq('status', 'pending')
-          // Teto de tentativas: sem ele, uma ação que nunca vai passar — webhook
-          // de um domínio que saiu do ar, WhatsApp desconectado — ficaria sendo
-          // reenviada para sempre.
-          .lt('attempts', MAX_TENTATIVAS)
-          .order('created_at', { ascending: true })
-          .limit(LOTE);
+        // Job que caiu no meio de uma execução ficava `running` para sempre (a
+        // consulta só lia `pending`) e a mensagem sumia sem aviso.
+        await admin.rpc('liberar_jobs_de_automacao_presos', { p_minutos: 10 });
 
-        if (error) return json({ error: error.message }, 500);
-        if (!pendentes?.length) return json({ processados: 0 });
+        const { pendentes, erro } = await reservarJobs(admin);
+        if (erro) return json({ error: erro }, 500);
+        if (!pendentes.length) return json({ processados: 0 });
 
         let feitos = 0;
         let falhas = 0;
 
-        for (const job of pendentes as Job[]) {
-          await admin
-            .from('automation_jobs')
-            .update({ status: 'running', attempts: job.attempts + 1, started_at: new Date().toISOString() })
-            .eq('id', job.id);
-
+        for (const job of pendentes) {
           let resultados: ResultadoDeAcao[] = [];
 
           try {
+            // Filtra pela empresa do JOB: a ação de uma regra de outra empresa
+            // (inserida com `rule_id` alheio) nunca roda com o número desta.
             const { data: acoes } = await admin
               .from('automation_actions')
               .select('id, action_type, config, sort_order')
               .eq('rule_id', job.rule_id)
+              .eq('company_id', job.company_id)
               .order('sort_order', { ascending: true });
 
-            const saida = await executarAcoes((acoes ?? []) as Acao[], job.resultado, (acao) =>
-              executar(admin, job, acao as Acao),
+            const saida = await executarAcoes(
+              (acoes ?? []) as Acao[],
+              job.resultado,
+              (acao) => executar(admin, job, acao as Acao),
+              // Grava cada resultado no ato (melhor esforço).
+              async (parciais) => {
+                await admin.from('automation_jobs').update({ resultado: parciais }).eq('id', job.id);
+              },
             );
             resultados = saida.resultados;
 
@@ -104,7 +101,7 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
             // Deixá-lo em 'pending' faria a tela dizer "na fila" para sempre,
             // porque a consulta do lote filtra por `attempts < MAX_TENTATIVAS`
             // e ele nunca mais seria escolhido.
-            const esgotou = job.attempts + 1 >= MAX_TENTATIVAS;
+            const esgotou = job.attempts >= MAX_TENTATIVAS;
             const status = !algumaFalhou ? 'done' : esgotou ? 'failed' : 'pending';
 
             await admin
@@ -126,7 +123,7 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
             await admin
               .from('automation_jobs')
               .update({
-                status: job.attempts + 1 >= MAX_TENTATIVAS ? 'failed' : 'pending',
+                status: job.attempts >= MAX_TENTATIVAS ? 'failed' : 'pending',
                 last_error: err instanceof Error ? err.message : String(err),
                 resultado: resultados,
               })
@@ -139,6 +136,44 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
     },
   },
 });
+
+/**
+ * Reserva os jobs de forma ATÔMICA no banco (`FOR UPDATE SKIP LOCKED`).
+ *
+ * O despachante lia os pendentes e só depois marcava `running`, sem conferir que
+ * ainda estavam pendentes: duas execuções simultâneas pegavam os mesmos jobs e o
+ * lead recebia a mensagem em dobro.
+ *
+ * Se a função ainda não existe (código implantado antes da migração), cai no
+ * caminho antigo em vez de parar a automação — e avisa no log.
+ */
+async function reservarJobs(admin: any): Promise<{ pendentes: Job[]; erro?: string }> {
+  const r = await admin.rpc('reservar_jobs_de_automacao', { p_limite: LOTE });
+  if (!r.error) return { pendentes: (r.data ?? []) as Job[] };
+
+  const ausente = r.error.code === 'PGRST202' || r.error.code === '42883' || /does not exist|Could not find/i.test(r.error.message ?? '');
+  if (!ausente) return { pendentes: [], erro: r.error.message };
+
+  console.warn(JSON.stringify({ scope: 'automation-dispatch', msg: 'reserva_atomica_ausente', aviso: 'aplicar a migração endurecer_acessos' }));
+  const { data, error } = await admin
+    .from('automation_jobs')
+    .select('id, company_id, rule_id, trigger_event, lead_id, payload, attempts, resultado')
+    .eq('status', 'pending')
+    .lt('attempts', MAX_TENTATIVAS)
+    .order('created_at', { ascending: true })
+    .limit(LOTE);
+  if (error) return { pendentes: [], erro: error.message };
+  const jobs = (data ?? []) as Job[];
+  for (const j of jobs) {
+    await admin
+      .from('automation_jobs')
+      .update({ status: 'running', attempts: j.attempts + 1, started_at: new Date().toISOString() })
+      .eq('id', j.id)
+      .eq('status', 'pending');
+    j.attempts += 1;
+  }
+  return { pendentes: jobs };
+}
 
 async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
   const cfg = acao.config ?? {};
@@ -153,8 +188,11 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
         if (!job.lead_id || !etiquetas.length) {
           return { acao: tipo, status: 'pulada', detalhe: 'sem lead ou sem etiqueta' };
         }
-        const { error } = await admin.from('lead_tags').insert(
+        /* ignoreDuplicates: a etiqueta repetida (re-execução, ou o lead já a
+           tinha) não pode derrubar a ação nem as etiquetas novas junto. */
+        const { error } = await admin.from('lead_tags').upsert(
           etiquetas.map((t) => ({ lead_id: job.lead_id, company_id: job.company_id, tag_name: t })),
+          { onConflict: 'lead_id,tag_name', ignoreDuplicates: true },
         );
         if (error) return { acao: tipo, status: 'falhou', detalhe: error.message };
         return { acao: tipo, status: 'ok', detalhe: etiquetas.join(', ') };
@@ -223,22 +261,28 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
         return acaoAtribuirConversa(admin, job, cfg);
 
       case 'webhook': {
-        const url = String(cfg.url ?? '').trim();
-        if (!/^https:\/\//i.test(url)) {
-          return { acao: tipo, status: 'falhou', detalhe: 'url deve ser https' };
+        // O destino é entrada não confiável (configurado por membro) e o
+        // SERVIDOR faz a chamada: https, sem usuário/senha, sem endereço interno
+        // (inclusive o que o nome resolve) e sem seguir redirecionamento.
+        const { validarDestinoDeWebhook, cabecalhoPermitido } = await import('@/lib/redeSegura.server');
+        const destino = await validarDestinoDeWebhook(String(cfg.url ?? '').trim());
+        if (!destino.ok) {
+          return { acao: tipo, status: 'falhou', detalhe: destino.motivo };
         }
+
+        const nome = String(cfg.header_nome ?? '').trim();
+        const extra: Record<string, string> =
+          nome && cfg.header_valor && cabecalhoPermitido(nome)
+            ? { [nome]: String(cfg.header_valor).replace(/[\r\n]/g, ' ') }
+            : {};
 
         const controlador = new AbortController();
         const prazo = setTimeout(() => controlador.abort(), 10_000);
         try {
-          const res = await fetch(url, {
+          const res = await fetch(destino.url, {
             method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              ...(cfg.header_nome && cfg.header_valor
-                ? { [String(cfg.header_nome)]: String(cfg.header_valor) }
-                : {}),
-            },
+            redirect: 'manual',
+            headers: { ...extra, 'content-type': 'application/json' },
             body: JSON.stringify({
               evento: job.trigger_event,
               lead_id: job.lead_id,
@@ -246,6 +290,10 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
             }),
             signal: controlador.signal,
           });
+          if (res.status >= 300 && res.status < 400) {
+            // O redirecionamento poderia levar para dentro da rede: não se segue.
+            return { acao: tipo, status: 'falhou', detalhe: 'o destino respondeu com redirecionamento' };
+          }
           if (!res.ok) {
             return { acao: tipo, status: 'falhou', detalhe: `HTTP ${res.status}` };
           }

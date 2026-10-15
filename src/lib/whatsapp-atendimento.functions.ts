@@ -12,46 +12,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { instanceNameFor, nomeDaInstanciaConfere } from "@/lib/whatsapp/evolution-nome";
+import {
+  empresaDoUsuario,
+  empresaParaAdministrar,
+  empresaParaAtender,
+} from "@/lib/whatsapp/papeis";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-async function papelNaEmpresa(
-  admin: any,
-  userId: string,
-): Promise<{ companyId: string; role: string }> {
-  const { data } = await admin
-    .from("memberships")
-    .select("company_id, role")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-  if (!data?.company_id) throw new Error("Usuário sem empresa.");
-  return { companyId: data.company_id as string, role: String(data.role ?? "member") };
-}
-
-async function empresaDoUsuario(admin: any, userId: string): Promise<string> {
-  return (await papelNaEmpresa(admin, userId)).companyId;
-}
-
-/**
- * Quem pode ATENDER: dono, administrador e membro. `viewer` só lê — antes, as
- * ações de atendimento conferiam apenas "é da empresa", e um visualizador
- * conseguia enviar mensagem em nome dela.
- */
-async function empresaParaAtender(admin: any, userId: string): Promise<string> {
-  const { companyId, role } = await papelNaEmpresa(admin, userId);
-  if (role === "viewer")
-    throw new Error("Seu acesso é somente leitura: não é possível atender conversas.");
-  return companyId;
-}
-
-/** Ações de gestão do canal (corte da Evolução): só dono e administrador. */
-async function empresaParaAdministrar(admin: any, userId: string): Promise<string> {
-  const { companyId, role } = await papelNaEmpresa(admin, userId);
-  if (role !== "owner" && role !== "admin")
-    throw new Error("Apenas dono ou administrador pode fazer isso.");
-  return companyId;
-}
-
 /** Lança se a conversa não for da empresa do usuário. */
 async function conferirConversa(admin: any, companyId: string, conversaId: string) {
   const { data } = await admin
@@ -425,10 +393,13 @@ async function coletarFatosDoCorte(admin: any, companyId: string) {
       templatesAprovados: aprovados,
       legadoLigado: Boolean(cfg?.greeting_enabled || cfg?.broker_alert_enabled),
       regrasComTextoLivre: textoLivre,
-      temInstanciaEvolution: Boolean(instancia.data?.instance_name),
+      temInstanciaEvolution: nomeDaInstanciaConfere(companyId, instancia.data?.instance_name),
       ambienteCompleto: lerEnv("WA_TOKEN_KEY") && lerEnv("WA_WEBHOOK_VERIFY_TOKEN"),
     },
-    instanceName: (instancia.data?.instance_name as string | undefined) ?? null,
+    // Recomputado: a Evolution tem uma chave só para todas as empresas.
+    instanceName: nomeDaInstanciaConfere(companyId, instancia.data?.instance_name)
+      ? instanceNameFor(companyId)
+      : null,
   };
 }
 
@@ -467,7 +438,13 @@ export const executarCorteEvolutionWhatsApp = createServerFn({ method: "POST" })
     }
 
     // Primeiro desliga o que dispara; só então remove a sessão. Se a remoção
-    // falhar, nada fica enviando pela Evolution por engano.
+    // falhar, o desligamento é DESFEITO: antes a empresa ficava sem saudação nem
+    // alerta e com a instância ainda viva — um estado que ninguém escolheu.
+    const { data: antes } = await admin
+      .from("whatsapp_automation_settings")
+      .select("greeting_enabled, broker_alert_enabled")
+      .eq("company_id", companyId)
+      .maybeSingle();
     await admin
       .from("whatsapp_automation_settings")
       .update({ greeting_enabled: false, broker_alert_enabled: false })
@@ -475,10 +452,18 @@ export const executarCorteEvolutionWhatsApp = createServerFn({ method: "POST" })
 
     const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
     const r = await evolutionAdmin.deleteInstance(instanceName);
-    if (!r.ok)
-      throw new Error(
-        `Não consegui remover a instância da Evolution: ${r.error ?? "erro desconhecido"}`,
-      );
+    if (!r.ok) {
+      if (antes) {
+        await admin
+          .from("whatsapp_automation_settings")
+          .update({
+            greeting_enabled: Boolean(antes.greeting_enabled),
+            broker_alert_enabled: Boolean(antes.broker_alert_enabled),
+          })
+          .eq("company_id", companyId);
+      }
+      throw new Error(`Não consegui remover a instância da Evolution: ${r.error ?? "erro desconhecido"}`);
+    }
 
     await admin
       .from("whatsapp_instances")
@@ -488,5 +473,30 @@ export const executarCorteEvolutionWhatsApp = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString(),
       })
       .eq("company_id", companyId);
+    return { ok: true as const };
+  });
+
+// ---------------------------------------------------------------------------
+// Lida
+// ---------------------------------------------------------------------------
+/**
+ * Zera as não lidas. Antes o navegador escrevia direto na tabela — o que dava a
+ * qualquer membro (viewer incluído) UPDATE nas conversas pelo PostgREST. Agora a
+ * escrita passa por aqui, onde o papel e a empresa são conferidos.
+ */
+export const marcarConversaComoLidaWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ conversaId: idConversa }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+    const { error } = await admin
+      .from("wa_conversations")
+      .update({ unread_agent: 0 })
+      .eq("id", data.conversaId)
+      .eq("company_id", companyId);
+    if (error) throw new Error(error.message);
     return { ok: true as const };
   });

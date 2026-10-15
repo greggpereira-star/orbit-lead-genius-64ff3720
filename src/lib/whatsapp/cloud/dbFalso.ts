@@ -24,6 +24,8 @@ export function criarDb(config: {
       "in",
       "lt",
       "ilike",
+      "gte",
+      "or",
       "order",
       "limit",
       "update",

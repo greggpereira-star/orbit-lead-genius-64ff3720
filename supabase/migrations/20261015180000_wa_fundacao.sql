@@ -165,6 +165,9 @@ CREATE TABLE IF NOT EXISTS public.wa_webhook_events (
     CHECK (status IN ('pending', 'processed', 'failed', 'ignored')),
   attempts integer NOT NULL DEFAULT 0,
   last_error text,
+  -- Backoff: sem isto as 5 tentativas se esgotavam em segundos, durante uma
+  -- instabilidade passageira, e o evento ficava órfão.
+  next_attempt_at timestamptz,
   received_at timestamptz NOT NULL DEFAULT now(),
   processed_at timestamptz
 );
@@ -175,6 +178,11 @@ CREATE INDEX IF NOT EXISTS wa_webhook_events_fila_idx
 -- ---------------------------------------------------------------------------
 -- 4. RLS e grants
 -- ---------------------------------------------------------------------------
+-- Uma WABA pertence a UMA empresa. `UNIQUE (company_id, waba_id)` deixava duas
+-- empresas apontarem para a mesma WABA, e as funções que resolvem por `waba_id`
+-- (status de template, desconexão) passariam a agir sobre as duas.
+CREATE UNIQUE INDEX IF NOT EXISTS wa_accounts_waba_uniq ON public.wa_accounts (waba_id);
+
 ALTER TABLE public.wa_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wa_phone_numbers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wa_credentials ENABLE ROW LEVEL SECURITY;
@@ -200,13 +208,12 @@ BEGIN
   END LOOP;
 END $$;
 
--- O atendente atribui, move de setor e resolve a conversa — e só isso.
-DROP POLICY IF EXISTS wa_conversations_atendimento ON public.wa_conversations;
-CREATE POLICY wa_conversations_atendimento ON public.wa_conversations
-  FOR UPDATE TO authenticated
-  USING (public.check_membership(company_id))
-  WITH CHECK (public.check_membership(company_id));
-GRANT UPDATE (status, assigned_to, department_id, unread_agent) ON public.wa_conversations TO authenticated;
+-- NENHUMA escrita direta do navegador. Atribuir, resolver, marcar como lida e
+-- mover de setor passam pelas server functions, que conferem o PAPEL (viewer só
+-- lê) e que o destino pertence à empresa. Uma versão anterior deste arquivo dava
+-- UPDATE de coluna ao `authenticated` com a policy `check_membership`: como essa
+-- função não olha o papel, um `viewer` resolvia e reatribuía conversa pelo
+-- PostgREST, e `assigned_to`/`department_id` aceitavam id de OUTRA empresa.
 
 -- `wa_credentials` e `wa_webhook_events`: nada para `authenticated`.
 REVOKE ALL ON public.wa_credentials FROM anon, authenticated;
@@ -475,3 +482,25 @@ REVOKE ALL ON FUNCTION public.wa_aplicar_status(text,text,text,timestamptz,jsonb
 GRANT EXECUTE ON FUNCTION public.wa_registrar_mensagem(text,text,text,text,text,text,text,text,jsonb,timestamptz,jsonb,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.wa_registrar_saida(uuid,text,text,text,text,jsonb,uuid,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.wa_aplicar_status(text,text,text,timestamptz,jsonb,jsonb) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 7. Retenção do que chega bruto
+-- ---------------------------------------------------------------------------
+-- `wa_webhook_events` guarda o payload COMPLETO e crescia sem teto. Processado e
+-- ignorado vale por `p_dias`; `failed` vale mais (é o que se investiga).
+CREATE OR REPLACE FUNCTION public.wa_limpar_eventos(p_dias integer DEFAULT 30)
+RETURNS integer
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  WITH apagados AS (
+    DELETE FROM public.wa_webhook_events
+     WHERE (status IN ('processed', 'ignored') AND received_at < now() - make_interval(days => greatest(p_dias, 7)))
+        OR (status = 'failed' AND received_at < now() - make_interval(days => greatest(p_dias, 7) * 3))
+    RETURNING 1
+  )
+  SELECT count(*)::integer FROM apagados;
+$$;
+REVOKE ALL ON FUNCTION public.wa_limpar_eventos(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.wa_limpar_eventos(integer) TO service_role;

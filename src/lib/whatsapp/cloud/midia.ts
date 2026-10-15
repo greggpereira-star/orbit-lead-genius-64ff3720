@@ -171,3 +171,52 @@ export function caminhoEhDaEmpresa(caminho: string, companyId: string): boolean 
 
 /** Referral não é mídia, mas mora aqui por vir junto no mesmo payload. */
 export type { Referral };
+
+/**
+ * A URL de download vem na resposta da Meta e o download leva o TOKEN da conta.
+ * Só seguimos para https em domínio da Meta — qualquer outra coisa (IP, rede
+ * interna, domínio de terceiros) não recebe a credencial.
+ */
+const DOMINIOS_DE_MIDIA_DA_META = ["fbsbx.com", "fbcdn.net", "facebook.com", "whatsapp.net"];
+
+export function urlDeMidiaDaMetaEhSegura(valor: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(valor);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:" || u.username || u.password || u.port) return false;
+  const host = u.hostname.toLowerCase();
+  return DOMINIOS_DE_MIDIA_DA_META.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+/** Lê o corpo parando no teto: `arrayBuffer()` bufferiza tudo antes de se poder conferir. */
+export async function lerCorpoComTeto(res: Response, teto: number): Promise<ArrayBuffer | null> {
+  const declarado = Number(res.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declarado) && declarado > teto) return null;
+  if (!res.body) {
+    const b = await res.arrayBuffer();
+    return b.byteLength > teto ? null : b;
+  }
+  const leitor = res.body.getReader();
+  const partes: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > teto) {
+      await leitor.cancel();
+      return null;
+    }
+    partes.push(value);
+  }
+  const saida = new Uint8Array(total);
+  let pos = 0;
+  for (const p of partes) {
+    saida.set(p, pos);
+    pos += p.byteLength;
+  }
+  return saida.buffer as ArrayBuffer;
+}

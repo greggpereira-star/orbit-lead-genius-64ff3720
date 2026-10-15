@@ -24,8 +24,9 @@ export interface RespostaDb {
  * não importa o pacote — assim os testes passam um objeto de mentira.
  */
 export interface ConsultaDb extends PromiseLike<RespostaDb> {
-  select(colunas: string): ConsultaDb;
+  select(colunas: string, opcoes?: { count?: "exact"; head?: boolean }): ConsultaDb;
   eq(coluna: string, valor: unknown): ConsultaDb;
+  gte(coluna: string, valor: unknown): ConsultaDb;
   in(coluna: string, valores: unknown[]): ConsultaDb;
   limit(n: number): ConsultaDb;
   maybeSingle(): PromiseLike<RespostaDb>;

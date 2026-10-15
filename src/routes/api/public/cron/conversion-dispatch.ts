@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 
 /**
  * Despacha as conversões que o gatilho de etapa enfileirou.
@@ -16,24 +17,37 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const segredo = process.env.CRON_SECRET || 'altflow_retry_sync_secret';
-        if (request.headers.get('authorization') !== `Bearer ${segredo}`) {
-          return new Response('Unauthorized', { status: 401 });
-        }
+        const autorizacao = autorizarCron(request);
+        if (!autorizacao.ok) return respostaDeRecusa(autorizacao);
 
         const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
         const admin = supabaseAdmin as any;
 
-        const { data: pendentes, error } = await admin
-          .from('conversion_dispatches')
-          .select('id, company_id, lead_id, stage_id, event_id, occurred_at, attempts')
-          .eq('status', 'pending')
-          // Teto de tentativas: sem isto, uma conversão que nunca vai passar
-          // (token revogado, conversão apagada no Google) ficaria sendo
-          // reenviada para sempre, gastando cota e enchendo log.
-          .lt('attempts', 5)
-          .order('created_at', { ascending: true })
-          .limit(LOTE);
+        // Reserva por arrendamento no banco: duas execuções simultâneas não
+        // pegam a mesma conversão (a mesma venda contada duas vezes ensina
+        // errado à Meta e ao Google). Sem a função (migração pendente), cai no
+        // caminho antigo e avisa.
+        let pendentes: Array<Record<string, any>> | null = null;
+        let error: { message: string } | null = null;
+        {
+          const r = await admin.rpc('reservar_conversoes', { p_limite: LOTE });
+          if (!r.error) {
+            pendentes = r.data ?? [];
+          } else if (r.error.code === 'PGRST202' || r.error.code === '42883' || /does not exist|Could not find/i.test(r.error.message ?? '')) {
+            console.warn(JSON.stringify({ scope: 'conversion-dispatch', msg: 'reserva_atomica_ausente' }));
+            const q = await admin
+              .from('conversion_dispatches')
+              .select('id, company_id, lead_id, stage_id, event_id, occurred_at, attempts')
+              .eq('status', 'pending')
+              .lt('attempts', 5)
+              .order('created_at', { ascending: true })
+              .limit(LOTE);
+            pendentes = q.data;
+            error = q.error;
+          } else {
+            error = r.error;
+          }
+        }
 
         if (error) return json({ error: error.message }, 500);
         if (!pendentes?.length) return json({ processados: 0 });

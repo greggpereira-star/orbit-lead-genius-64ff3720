@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { quickReplyService, type ChatQuickReply } from "@/modules/chat/services/quickReplyService";
 import {
+  marcarConversaComoLidaWhatsApp,
   enviarMensagemWhatsApp,
   enviarMidiaWhatsApp,
   prepararUploadDeMidiaWhatsApp,
@@ -45,7 +46,6 @@ import {
 } from "../lib/mensagens";
 import {
   chaves,
-  marcarComoLida,
   useMensagens,
   useTemplatesAprovados,
   type TemplateAprovado,
@@ -80,6 +80,7 @@ export function Conversa(props: {
   const { conversa } = props;
   const qc = useQueryClient();
   const agora = useAgora();
+  const marcarComoLida = useServerFn(marcarConversaComoLidaWhatsApp);
   const mensagens = useMensagens(conversa.id);
   const janela = janelaDaConversa(conversa, agora);
   const optedOut = Boolean(conversa.contact?.opted_out_at);
@@ -96,7 +97,7 @@ export function Conversa(props: {
   // Lida só com a aba à vista: abrir a caixa em segundo plano não pode "ler" tudo.
   useEffect(() => {
     if (conversa.unread_agent > 0 && document.visibilityState === "visible") {
-      marcarComoLida(conversa.id)
+      marcarComoLida({ data: { conversaId: conversa.id } })
         .then(() => qc.invalidateQueries({ queryKey: chaves.conversas(props.companyId) }))
         .catch(() => {});
     }

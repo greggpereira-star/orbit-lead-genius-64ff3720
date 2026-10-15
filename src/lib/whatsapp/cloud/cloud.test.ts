@@ -306,6 +306,21 @@ describe("pedeParaParar", () => {
   it.each(["SAIR", "  parar", "Stop", "cancelar por favor", "descadastrar"])("%s", (t) => {
     expect(pedeParaParar(t)).toBe(true);
   });
+  it.each(["SAIR!", "Parar.", "stop ", "pare por favor"])(
+    "%s também (pontuação e cortesia)",
+    (t) => {
+      expect(pedeParaParar(t)).toBe(true);
+    },
+  );
+  it.each([
+    "cancelar meu pedido",
+    "sair às 18h",
+    "remover o item 3",
+    "parar de receber? não, continuo",
+    "quero cancelar o plano",
+  ])("%s é CONVERSA, não pedido de parada", (t) => {
+    expect(pedeParaParar(t)).toBe(false);
+  });
   it.each(["quero saber mais", "não quero parar", "", null])("%s não", (t) => {
     expect(pedeParaParar(t as string | null)).toBe(false);
   });

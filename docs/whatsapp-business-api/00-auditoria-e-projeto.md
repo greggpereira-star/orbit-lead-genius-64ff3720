@@ -986,3 +986,47 @@ Medido em produção: os papéis existentes são `owner`, `admin`, `member`, `vi
    caixa única?
 6. Manter **Evolution como contingência** por empresa durante a transição, ou
    corte seco por cliente?
+
+## 13. Revisão de segurança independente (15/10/2026)
+
+Três revisões independentes, somente leitura, sobre o módulo `wa` e as rotas
+que ele toca; cada achado foi conferido no código e, onde cabia, na base de
+produção (só leitura) antes de virar correção.
+
+### Corrigido
+
+| Achado | Correção |
+| --- | --- |
+| Excluir/consultar instância Evolution por nome vindo do cliente | Nome recalculado a partir da empresa e conferido (`evolution-nome.ts`); falha no corte restaura as flags |
+| Funções de nuvem (signup, templates) sem checar papel | `empresaParaAdministrar` / `empresaParaAtender` (`papeis.ts`); papel desconhecido = o menor |
+| Regras e ações de automação graváveis por qualquer membro; ação com `company_id` de outra empresa | RLS: só owner/admin escrevem; `WITH CHECK` amarra a ação à empresa da regra (migração `220000`) |
+| Fila de jobs sem reserva atômica; execução repetida | `reservar_jobs_de_automacao` (RPC) + liberação de presos; resultado por ação persistido |
+| Cron com segredo padrão no repositório | `CRON_SECRET` (comparação em tempo constante); `CRON_ESTRITO=1` recusa o legado; `scripts/rotacionar-cron` |
+| SSRF no webhook de automação | `validarDestinoDeWebhook` (https, sem IP privado/interno, DNS resolvido), `redirect: manual`, cabeçalhos em lista de permissão |
+| Amplificação de envio por automação | Teto por conversa/24h e por empresa/h (`tetoDeEnvio.ts`); gatilho do banco limita 5 jobs/conversa/10 min e 500 pendentes |
+| Opt-out por palavra solta dentro de frase | Só a mensagem inteira (`sair`, `parar`, `stop`...) |
+| Vazamento de motivo detalhado e sobrescrita de `nome`/`faixa` na rota pública do quiz | Motivo genérico; variáveis do navegador entram antes de `nome`/`faixa` |
+| Webhook Meta: corpo ilimitado | 413 acima de 2 MB, antes e depois da leitura |
+| Reprocessamento sem espera | `next_attempt_at` com 2, 4, 8… até 60 min |
+| Download de mídia com token para qualquer URL | Só https em domínio da Meta, sem redirecionamento, leitura com teto |
+| Envio de mídia: arquivo inexistente / nome livre | HEAD no link assinado; nome saneado antes de sair e de gravar |
+| `customData` do pixel público aceitava qualquer chave | Lista de permissão com tipo e tamanho (`customDataPublico.ts`) |
+| Etiqueta repetida derrubava a ação; espera configurável sem teto | `ignoreDuplicates`; teto de 300 s |
+| `waba_id` já conectado a outra empresa dava erro cru | Mensagem clara (índice `wa_accounts_waba_uniq`) |
+
+### Residual (não resolvido por código)
+
+- **DNS rebinding** na chamada do webhook de automação: a validação resolve o
+  nome antes, mas o `fetch` resolve de novo. Fecha com proxy de saída.
+- **Sem limite de taxa** em rotas públicas (`quiz_capture_lead`, `pixel-event`,
+  `whatsapp-click`): precisa de nginx/Cloudflare.
+- **Telefone de terceiro** no quiz: mitigado pelos tetos, não eliminado; exigiria
+  OTP/CAPTCHA.
+- **Visibilidade**: todo membro vê todas as conversas da empresa. Visibilidade
+  por papel ainda é decisão em aberto.
+- **Tokens do CAPI** seguem na query string da chamada à Meta (formato da API).
+
+### Mudança de comportamento
+
+Membros (`member`) deixam de editar regras de automação pela interface; só
+`owner` e `admin`.

@@ -87,8 +87,12 @@ describe("executarAcoes", () => {
 describe("o despachante usa a execução sem repetição", () => {
   const f = readFileSync("src/routes/api/public/cron/automation-dispatch.ts", "utf8");
   it("passa o resultado da tentativa anterior", () => {
-    expect(f).toContain("executarAcoes((acoes ?? []) as Acao[], job.resultado,");
+    expect(f.replace(/\s+/g, " ")).toContain(
+      "executarAcoes( (acoes ?? []) as Acao[], job.resultado,",
+    );
     expect(f).toContain("resultado?: ResultadoDeAcao[] | null;");
+    // a reserva atômica devolve a linha inteira (inclui `resultado`); o caminho
+    // antigo de contingência também seleciona a coluna
     expect(f).toMatch(
       /\.select\('id, company_id, rule_id, trigger_event, lead_id, payload, attempts, resultado'\)/,
     );

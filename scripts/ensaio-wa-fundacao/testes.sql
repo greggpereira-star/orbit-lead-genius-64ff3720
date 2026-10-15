@@ -377,3 +377,216 @@ BEGIN
   RAISE NOTICE 'wa_fase5: 8 testes passaram';
 END
 $t$;
+
+-- ===========================================================================
+-- Endurecimento (revisão de segurança) — com o papel `authenticated` DE VERDADE
+-- ===========================================================================
+-- Estrutura: cada ataque roda num sub-bloco BEGIN..EXCEPTION próprio (só ele é
+-- desfeito), e o cenário fica numa tabela temporária.
+CREATE TEMP TABLE IF NOT EXISTS _ens (chave text primary key, valor text);
+
+DO $t$
+DECLARE v_a uuid; v_b uuid;
+BEGIN
+  IF to_regprocedure('public.eh_admin_da_empresa(uuid)') IS NULL THEN RETURN; END IF;
+  SELECT id INTO v_a FROM public.companies ORDER BY id LIMIT 1;
+  INSERT INTO public.companies (name, slug) VALUES ('Empresa B (ensaio)', 'empresa-b-ensaio') RETURNING id INTO v_b;
+  INSERT INTO _ens VALUES ('a', v_a::text), ('b', v_b::text),
+    ('admin', gen_random_uuid()::text), ('viewer', gen_random_uuid()::text), ('outro', gen_random_uuid()::text);
+  INSERT INTO public.memberships (user_id, company_id, role) VALUES
+    ((SELECT valor::uuid FROM _ens WHERE chave='admin'),  v_a, 'admin'),
+    ((SELECT valor::uuid FROM _ens WHERE chave='viewer'), v_a, 'viewer'),
+    ((SELECT valor::uuid FROM _ens WHERE chave='outro'),  v_b, 'owner');
+  WITH x AS (INSERT INTO public.automation_rules (company_id, name, trigger_event)
+             VALUES (v_b, 'regra de B', 'lead_created') RETURNING id)
+  INSERT INTO _ens SELECT 'regra_b', id::text FROM x;
+  WITH x AS (INSERT INTO public.automation_rules (company_id, name, trigger_event)
+             VALUES (v_a, 'regra de A', 'lead_created') RETURNING id)
+  INSERT INTO _ens SELECT 'regra_a', id::text FROM x;
+  INSERT INTO public.whatsapp_instances (company_id, instance_name, status) VALUES (v_a, 'altflow_instancia_de_a', 'connected');
+END
+$t$;
+
+-- ---- como VIEWER da empresa A ----
+DO $t$
+DECLARE v_a uuid; v_b uuid; v_view uuid; v_n int;
+BEGIN
+  IF to_regprocedure('public.eh_admin_da_empresa(uuid)') IS NULL THEN RETURN; END IF;
+  SELECT valor::uuid INTO v_a FROM _ens WHERE chave='a';
+  SELECT valor::uuid INTO v_b FROM _ens WHERE chave='b';
+  SELECT valor::uuid INTO v_view FROM _ens WHERE chave='viewer';
+  PERFORM set_config('request.jwt.claim.sub', v_view::text, true);
+  SET LOCAL ROLE authenticated;
+
+  -- E1: viewer LÊ a regra da própria empresa
+  SELECT count(*) INTO v_n FROM public.automation_rules WHERE company_id = v_a;
+  IF v_n < 1 THEN RESET ROLE; RAISE EXCEPTION 'E1 viewer deveria ler as regras da própria empresa (%)', v_n; END IF;
+
+  -- E2: viewer NÃO cria regra
+  BEGIN
+    INSERT INTO public.automation_rules (company_id, name, trigger_event) VALUES (v_a, 'maliciosa', 'lead_created');
+    RESET ROLE; RAISE EXCEPTION 'E2 viewer criou regra';
+  EXCEPTION WHEN insufficient_privilege OR check_violation THEN NULL; END;
+
+  -- E3: viewer NÃO enxerga regra de OUTRA empresa
+  SELECT count(*) INTO v_n FROM public.automation_rules WHERE company_id = v_b;
+  IF v_n <> 0 THEN RESET ROLE; RAISE EXCEPTION 'E3 viewer enxergou regra de outra empresa'; END IF;
+
+  -- E4: viewer NÃO altera a conexão da Evolution (o achado crítico)
+  BEGIN
+    UPDATE public.whatsapp_instances SET instance_name = 'altflow_da_vitima' WHERE company_id = v_a;
+    GET DIAGNOSTICS v_n = ROW_COUNT;
+    RESET ROLE; RAISE EXCEPTION 'E4 viewer alterou whatsapp_instances (% linhas)', v_n;
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+  -- E4b: viewer NÃO liga/desliga a saudação direto no banco
+  BEGIN
+    INSERT INTO public.whatsapp_automation_settings (company_id, greeting_enabled) VALUES (v_a, true);
+    RESET ROLE; RAISE EXCEPTION 'E4b viewer escreveu configurações';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+  -- E4c: mas continua LENDO a conexão da própria empresa
+  SELECT count(*) INTO v_n FROM public.whatsapp_instances WHERE company_id = v_a;
+  IF v_n <> 1 THEN RESET ROLE; RAISE EXCEPTION 'E4c leitura da própria conexão: %', v_n; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'endurecimento/viewer: 6 testes passaram';
+END
+$t$;
+
+-- ---- como ADMIN da empresa A ----
+DO $t$
+DECLARE v_a uuid; v_adm uuid; v_regra_b uuid; v_regra_a uuid;
+BEGIN
+  IF to_regprocedure('public.eh_admin_da_empresa(uuid)') IS NULL THEN RETURN; END IF;
+  SELECT valor::uuid INTO v_a FROM _ens WHERE chave='a';
+  SELECT valor::uuid INTO v_adm FROM _ens WHERE chave='admin';
+  SELECT valor::uuid INTO v_regra_b FROM _ens WHERE chave='regra_b';
+  SELECT valor::uuid INTO v_regra_a FROM _ens WHERE chave='regra_a';
+  PERFORM set_config('request.jwt.claim.sub', v_adm::text, true);
+  SET LOCAL ROLE authenticated;
+
+  -- E5: admin cria regra da própria empresa
+  INSERT INTO public.automation_rules (company_id, name, trigger_event) VALUES (v_a, 'legítima', 'lead_created');
+
+  -- E6: admin NÃO anexa ação à regra de OUTRA empresa
+  BEGIN
+    INSERT INTO public.automation_actions (rule_id, company_id, action_type, config)
+    VALUES (v_regra_b, v_a, 'enviar_whatsapp', '{"para":"5527900000000","mensagem":"x"}'::jsonb);
+    RESET ROLE; RAISE EXCEPTION 'E6 admin anexou ação à regra de outra empresa';
+  EXCEPTION WHEN insufficient_privilege OR check_violation THEN NULL; END;
+
+  -- E7: admin anexa ação à regra da PRÓPRIA empresa
+  INSERT INTO public.automation_actions (rule_id, company_id, action_type, config)
+  VALUES (v_regra_a, v_a, 'etiquetar', '{"etiquetas":["x"]}'::jsonb);
+
+  -- E8: ninguém autenticado executa a função global de rascunhos
+  BEGIN
+    PERFORM public.marcar_rascunhos_abandonados(1);
+    RESET ROLE; RAISE EXCEPTION 'E8 authenticated executou marcar_rascunhos_abandonados';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+  -- E9: ninguém autenticado reserva a fila
+  BEGIN
+    PERFORM public.reservar_jobs_de_automacao(5);
+    RESET ROLE; RAISE EXCEPTION 'E9 authenticated reservou jobs';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+
+  RESET ROLE;
+  RAISE NOTICE 'endurecimento/admin: 5 testes passaram';
+END
+$t$;
+
+-- ---- fila: reserva atômica (como serviço) ----
+DO $t$
+DECLARE v_emp uuid; v_regra uuid; v_n int; v_a int; v_b int;
+BEGIN
+  IF to_regprocedure('public.reservar_jobs_de_automacao(integer)') IS NULL THEN RETURN; END IF;
+  SELECT id INTO v_emp FROM public.companies ORDER BY id LIMIT 1;
+  SELECT id INTO v_regra FROM public.automation_rules WHERE company_id = v_emp LIMIT 1;
+  DELETE FROM public.automation_jobs;
+  INSERT INTO public.automation_jobs (company_id, rule_id, trigger_event, payload, dedup_key)
+  SELECT v_emp, v_regra, 'lead_created', '{}'::jsonb, 'res:' || g FROM generate_series(1, 6) g;
+
+  -- E10: reservar marca running e conta a tentativa; uma segunda reserva NÃO repete
+  SELECT count(*) INTO v_a FROM public.reservar_jobs_de_automacao(4);
+  SELECT count(*) INTO v_b FROM public.reservar_jobs_de_automacao(4);
+  IF v_a <> 4 THEN RAISE EXCEPTION 'E10 primeira reserva trouxe %', v_a; END IF;
+  IF v_b <> 2 THEN RAISE EXCEPTION 'E10 segunda reserva deveria trazer só os 2 restantes, trouxe %', v_b; END IF;
+  SELECT count(*) INTO v_n FROM public.automation_jobs WHERE status = 'running' AND attempts = 1;
+  IF v_n <> 6 THEN RAISE EXCEPTION 'E10 running/attempts: %', v_n; END IF;
+
+  -- E11: o que ficou preso volta (e esgotado vira failed)
+  UPDATE public.automation_jobs SET started_at = now() - interval '30 minutes' WHERE dedup_key IN ('res:1','res:2');
+  UPDATE public.automation_jobs SET attempts = 4 WHERE dedup_key = 'res:2';
+  IF public.liberar_jobs_de_automacao_presos(10) <> 2 THEN RAISE EXCEPTION 'E11 não liberou os 2'; END IF;
+  IF (SELECT status FROM public.automation_jobs WHERE dedup_key = 'res:1') <> 'pending' THEN
+    RAISE EXCEPTION 'E11 res:1 deveria voltar a pending'; END IF;
+  IF (SELECT status FROM public.automation_jobs WHERE dedup_key = 'res:2') <> 'failed' THEN
+    RAISE EXCEPTION 'E11 res:2 esgotado deveria virar failed'; END IF;
+
+  RAISE NOTICE 'fila: 2 testes passaram';
+END
+$t$;
+
+-- ---- gatilho: pedido de parada e teto por conversa ----
+DO $t$
+DECLARE v_emp uuid; v_regra uuid; v_n int; i int; v_r record;
+BEGIN
+  IF to_regprocedure('public.wa_disparar_automacao_de_mensagem()') IS NULL THEN RETURN; END IF;
+  -- a empresa do NÚMERO (há uma segunda empresa neste ensaio; `ORDER BY id` é sorteio)
+  SELECT company_id INTO v_emp FROM public.wa_phone_numbers WHERE phone_number_id = 'PNID_ENSAIO';
+  UPDATE public.wa_phone_numbers SET status = 'active' WHERE phone_number_id = 'PNID_ENSAIO';
+  DELETE FROM public.automation_jobs;
+  DELETE FROM public.automation_rules WHERE company_id = v_emp AND trigger_event = 'whatsapp_message_received';
+  INSERT INTO public.automation_rules (company_id, name, trigger_event) VALUES (v_emp, 'resp', 'whatsapp_message_received') RETURNING id INTO v_regra;
+  INSERT INTO public.automation_actions (rule_id, company_id, action_type, config) VALUES (v_regra, v_emp, 'atribuir_conversa', '{}'::jsonb);
+
+  -- E12: "SAIR" não enfileira resposta automática (corrida com o opt-out)
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527955550005','Lia','inbound','customer','wamid.STOP1','text','SAIR','{}'::jsonb, now(), NULL);
+  SELECT count(*) INTO v_n FROM public.automation_jobs;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'E12 pedido de parada enfileirou automação'; END IF;
+
+  -- E12b: mas "cancelar meu pedido" é conversa, e enfileira
+  PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527955550005',NULL,'inbound','customer','wamid.STOP2','text','cancelar meu pedido','{}'::jsonb, now(), NULL);
+  SELECT count(*) INTO v_n FROM public.automation_jobs;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'E12b "cancelar meu pedido" não enfileirou (%)', v_n; END IF;
+
+  -- E13: 20 mensagens seguidas NÃO viram 20 jobs (teto por conversa)
+  FOR i IN 1..20 LOOP
+    PERFORM public.wa_registrar_mensagem('PNID_ENSAIO','5527955550005',NULL,'inbound','customer','wamid.FLOOD'||i,'text','oi '||i,'{}'::jsonb, now(), NULL);
+  END LOOP;
+  SELECT count(*) INTO v_n FROM public.automation_jobs;
+  IF v_n > 5 THEN RAISE EXCEPTION 'E13 inundação gerou % jobs (teto 5)', v_n; END IF;
+  IF v_n < 5 THEN RAISE EXCEPTION 'E13 teto deveria permitir 5, gerou %', v_n; END IF;
+
+  -- E14: a MENSAGEM em si segue gravada (o teto limita a automação, não a conversa)
+  SELECT count(*) INTO v_n FROM public.wa_messages WHERE provider_message_id LIKE 'wamid.FLOOD%';
+  IF v_n <> 20 THEN RAISE EXCEPTION 'E14 mensagens gravadas: % (esperava 20)', v_n; END IF;
+
+  RAISE NOTICE 'gatilho: 4 testes passaram';
+END
+$t$;
+
+-- ---- retenção do que chega bruto ----
+DO $t$
+DECLARE v_n int;
+BEGIN
+  IF to_regprocedure('public.wa_limpar_eventos(integer)') IS NULL THEN RETURN; END IF;
+  INSERT INTO public.wa_webhook_events (dedup_key, field, payload, status, received_at) VALUES
+    ('ret:velho', 'message', '{}', 'processed', now() - interval '60 days'),
+    ('ret:novo', 'message', '{}', 'processed', now() - interval '2 days'),
+    ('ret:falha-velha', 'message', '{}', 'failed', now() - interval '40 days'),
+    ('ret:falha-muito-velha', 'message', '{}', 'failed', now() - interval '120 days');
+  v_n := public.wa_limpar_eventos(30);
+  IF v_n <> 2 THEN RAISE EXCEPTION 'E15 apagou % (esperava o processado velho e a falha muito velha)', v_n; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.wa_webhook_events WHERE dedup_key = 'ret:falha-velha') THEN
+    RAISE EXCEPTION 'E15 apagou falha recente demais — falha vale 3x mais'; END IF;
+  -- piso de 7 dias: ninguém apaga o que acabou de chegar
+  INSERT INTO public.wa_webhook_events (dedup_key, field, payload, status, received_at) VALUES ('ret:hoje', 'message', '{}', 'processed', now());
+  PERFORM public.wa_limpar_eventos(0);
+  IF NOT EXISTS (SELECT 1 FROM public.wa_webhook_events WHERE dedup_key = 'ret:hoje') THEN
+    RAISE EXCEPTION 'E16 p_dias=0 apagou evento de hoje'; END IF;
+  RAISE NOTICE 'retenção: 2 testes passaram';
+END
+$t$;

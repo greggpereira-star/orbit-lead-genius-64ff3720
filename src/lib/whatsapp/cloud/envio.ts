@@ -12,11 +12,14 @@ import type { AdminDb, ConsultaDb } from "../provider";
 import { criarCloudProvider, type ResultadoCloud } from "./cloud-provider";
 import { estadoDaJanela } from "./janela";
 import { BUCKET, type DbComArmazenamento } from "./armazenamento";
+import { nomeSeguro } from "./midia";
 import { renderizarTexto } from "./render";
+import { checarTetoDeAutomacao } from "./tetoDeEnvio";
 import { parametrosDoCorpo, variaveisDe } from "./templates";
 import type { DbWa } from "./processador";
 
 export type MotivoDeRecusa =
+  | "limite_de_envio"
   | "conversa_inexistente"
   | "contato_pediu_para_parar"
   | "fora_da_janela"
@@ -77,6 +80,12 @@ export async function enviarTextoNaConversa(
       motivo: "contato_pediu_para_parar",
       texto: "O contato pediu para não receber mensagens.",
     };
+  }
+
+  // Teto de envio AUTOMÁTICO (o atendente não passa por aqui).
+  if (entrada.origem === "automation") {
+    const teto = await checarTetoDeAutomacao(admin, { companyId: c.company_id, conversaId: c.id });
+    if (!teto.ok) return { ok: false, motivo: "limite_de_envio", texto: teto.texto };
   }
 
   // 2) janela de 24h
@@ -192,6 +201,12 @@ export async function enviarTemplateNaConversa(
       motivo: "contato_pediu_para_parar",
       texto: "O contato pediu para não receber mensagens.",
     };
+  }
+
+  // Teto de envio AUTOMÁTICO (o atendente não passa por aqui).
+  if (entrada.origem === "automation") {
+    const teto = await checarTetoDeAutomacao(admin, { companyId: c.company_id, conversaId: c.id });
+    if (!teto.ok) return { ok: false, motivo: "limite_de_envio", texto: teto.texto };
   }
 
   const { data: modelo } = await (admin.from("wa_templates") as ConsultaDb)
@@ -357,6 +372,12 @@ export async function enviarMidiaNaConversa(
       texto: "O contato pediu para não receber mensagens.",
     };
   }
+
+  // Teto de envio AUTOMÁTICO (o atendente não passa por aqui).
+  if (e.origem === "automation") {
+    const teto = await checarTetoDeAutomacao(admin, { companyId: c.company_id, conversaId: c.id });
+    if (!teto.ok) return { ok: false, motivo: "limite_de_envio", texto: teto.texto };
+  }
   if (!estadoDaJanela(c.last_inbound_at, e.agora).aberta) {
     return {
       ok: false,
@@ -374,6 +395,23 @@ export async function enviarMidiaNaConversa(
     };
   }
 
+  /* O link assinado sai mesmo para objeto que não existe: confere antes de
+     entregar à Meta, senão a falha vira um erro opaco do lado dela. */
+  const existe = await fetch(link.data.signedUrl, { method: "HEAD" }).then(
+    (res) => res.ok,
+    () => false,
+  );
+  if (!existe) {
+    return {
+      ok: false,
+      motivo: "arquivo_indisponivel",
+      texto: "Não encontrei o arquivo para enviar.",
+    };
+  }
+
+  /* O nome vem do navegador e segue para a Meta e para o payload gravado. */
+  const nomeDoArquivo = nomeSeguro(e.nomeDoArquivo);
+
   const provider = criarCloudProvider(admin);
   const r = await provider.sendMedia(
     { provider: "cloud", referencia: nm.phone_number_id },
@@ -382,7 +420,7 @@ export async function enviarMidiaNaConversa(
       tipo: e.tipo,
       link: link.data.signedUrl,
       legenda: e.legenda,
-      nomeDoArquivo: e.nomeDoArquivo,
+      nomeDoArquivo,
     },
   );
   if (!r.ok || !r.data?.messageId) {
@@ -400,7 +438,7 @@ export async function enviarMidiaNaConversa(
     p_provider_message_id: r.data.messageId,
     p_type: e.tipo,
     p_body: e.legenda,
-    p_payload: { [e.tipo]: { filename: e.nomeDoArquivo, mime_type: e.mime } },
+    p_payload: { [e.tipo]: { filename: nomeDoArquivo, mime_type: e.mime } },
     p_sent_by: e.enviadoPor,
     p_template_name: null,
   });

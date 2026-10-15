@@ -36,6 +36,12 @@ export async function executarAcoes(
   acoes: AcaoDoJob[],
   anteriores: ResultadoDeAcao[] | null | undefined,
   executarUma: (acao: AcaoDoJob) => Promise<Omit<ResultadoDeAcao, "id">>,
+  /**
+   * Chamado depois de CADA ação executada, com o que já está feito. Quem grava
+   * isto no banco garante que uma queda no meio do job não perde o registro de
+   * "a mensagem já saiu" — e a retentativa não a reenvia.
+   */
+  aoTerminarAcao?: (feitasAteAqui: ResultadoDeAcao[]) => Promise<void>,
 ): Promise<SaidaDoJob> {
   const feitas = new Map<string, ResultadoDeAcao>();
   for (const r of Array.isArray(anteriores) ? anteriores : []) {
@@ -57,6 +63,7 @@ export async function executarAcoes(
     const r = await executarUma(acao);
     executadas += 1;
     resultados.push({ ...r, id: acao.id });
+    if (aoTerminarAcao) await aoTerminarAcao([...resultados]);
   }
 
   return { resultados, algumaFalhou: resultados.some((r) => r.status === "falhou"), executadas };

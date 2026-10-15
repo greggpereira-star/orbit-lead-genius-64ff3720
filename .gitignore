@@ -45,3 +45,7 @@ dist-ssr
 # Playwright
 /test-results/
 /playwright-report/
+
+# segredo do cron (gerado por scripts/rotacionar-cron)
+scripts/rotacionar-cron/rotacionar.sql
+scripts/rotacionar-cron/segredo.novo

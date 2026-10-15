@@ -24,6 +24,15 @@ describe("rota /api/public/wa-webhook", () => {
     expect(post).toContain("verificarAssinaturaMeta(corpoCru,");
   });
 
+  it("rejeita corpo grande (413) antes e depois de ler, antes da assinatura", () => {
+    expect(post).toContain("LIMITE_CORPO_BYTES");
+    expect(post).toContain('new Response("Payload too large", { status: 413 })');
+    expect(post.indexOf("Payload too large")).toBeLessThan(post.indexOf("verificarAssinaturaMeta("));
+    expect(post.indexOf('request.headers.get("content-length")')).toBeLessThan(
+      post.indexOf("await request.text()"),
+    );
+  });
+
   it("a verificação (GET) usa o token próprio e compara em tempo constante", () => {
     expect(hook).toContain("WA_WEBHOOK_VERIFY_TOKEN");
     expect(hook).toContain('segredoConfere(url.searchParams.get("hub.verify_token"), esperado)');

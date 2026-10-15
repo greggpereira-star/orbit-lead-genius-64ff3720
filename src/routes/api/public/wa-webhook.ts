@@ -12,6 +12,8 @@ import { createFileRoute } from "@tanstack/react-router";
  *
  * A empresa é resolvida pelo `phone_number_id` — nunca por campo do corpo.
  */
+const LIMITE_CORPO_BYTES = 2 * 1024 * 1024;
+
 export const Route = createFileRoute("/api/public/wa-webhook")({
   server: {
     handlers: {
@@ -37,7 +39,17 @@ export const Route = createFileRoute("/api/public/wa-webhook")({
         const segredo = process.env.META_APP_SECRET;
         if (!segredo) return new Response("Not configured", { status: 503 });
 
+        /* Teto de corpo ANTES de ler: a assinatura só pode ser conferida depois
+           de ter o corpo inteiro, então sem teto qualquer anônimo faz o
+           servidor bufferizar o que quiser. Os payloads da Meta são pequenos. */
+        const declarado = Number(request.headers.get("content-length") ?? "0");
+        if (Number.isFinite(declarado) && declarado > LIMITE_CORPO_BYTES) {
+          return new Response("Payload too large", { status: 413 });
+        }
         const corpoCru = await request.text();
+        if (corpoCru.length > LIMITE_CORPO_BYTES) {
+          return new Response("Payload too large", { status: 413 });
+        }
         const { verificarAssinaturaMeta } = await import("@/lib/whatsapp/cloud/assinatura");
         if (
           !verificarAssinaturaMeta(corpoCru, request.headers.get("x-hub-signature-256"), segredo)

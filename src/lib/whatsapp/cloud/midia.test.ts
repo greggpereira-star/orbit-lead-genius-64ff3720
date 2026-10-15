@@ -423,12 +423,17 @@ describe("enviarMidiaNaConversa", () => {
     whatsapp_optouts: [],
   });
   let fetchMock: ReturnType<typeof vi.fn>;
+  let envios: () => unknown[][];
   beforeEach(() => {
     vi.stubEnv("WA_TOKEN_KEY", chave);
-    fetchMock = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ messages: [{ id: "wamid.MED" }] }), { status: 200 }),
+    fetchMock = vi.fn(async (_url: string, init?: RequestInit) =>
+      // HEAD = conferência de que o arquivo existe no bucket; POST = Graph.
+      init?.method === "HEAD"
+        ? new Response(null, { status: 200 })
+        : new Response(JSON.stringify({ messages: [{ id: "wamid.MED" }] }), { status: 200 }),
     );
+    envios = () =>
+      fetchMock.mock.calls.filter((c) => (c[1] as RequestInit | undefined)?.method !== "HEAD");
     vi.stubGlobal("fetch", fetchMock);
   });
   afterEach(() => {
@@ -448,7 +453,7 @@ describe("enviarMidiaNaConversa", () => {
     const { db, rpcs } = com(tabelas());
     const r = await enviarMidiaNaConversa(db, base);
     expect(r).toMatchObject({ ok: true, providerMessageId: "wamid.MED" });
-    const corpo = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    const corpo = JSON.parse(String((envios()[0] as [string, RequestInit])[1].body));
     expect(corpo).toMatchObject({ type: "image", to: "5527996318075" });
     expect(corpo.image.link).toContain("https://storage.exemplo/emp/saida/u-foto.png");
     expect(corpo.image.caption).toBe("Veja a obra");
@@ -466,7 +471,7 @@ describe("enviarMidiaNaConversa", () => {
       mime: "audio/ogg",
       legenda: "ignorar",
     });
-    let corpo = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
+    let corpo = JSON.parse(String((envios()[0] as [string, RequestInit])[1].body));
     expect(corpo.audio.caption).toBeUndefined();
 
     await enviarMidiaNaConversa(db, {
@@ -475,8 +480,33 @@ describe("enviarMidiaNaConversa", () => {
       nomeDoArquivo: "orcamento.pdf",
       mime: "application/pdf",
     });
-    corpo = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
+    corpo = JSON.parse(String((envios()[1] as [string, RequestInit])[1].body));
     expect(corpo.document.filename).toBe("orcamento.pdf");
+  });
+
+  it("arquivo que não existe no bucket não chega à Meta", async () => {
+    fetchMock.mockImplementation(async () => new Response(null, { status: 404 }));
+    const { db } = com(tabelas());
+    expect(await enviarMidiaNaConversa(db, base)).toMatchObject({
+      ok: false,
+      motivo: "arquivo_indisponivel",
+    });
+    expect(envios()).toHaveLength(0);
+  });
+
+  it("o nome do arquivo é saneado antes de sair e de ser gravado", async () => {
+    const { db, rpcs } = com(tabelas());
+    await enviarMidiaNaConversa(db, {
+      ...base,
+      tipo: "document",
+      mime: "application/pdf",
+      nomeDoArquivo: "../../etc/passwd\r\nX: y.pdf",
+    });
+    const corpo = JSON.parse(String((envios()[0] as [string, RequestInit])[1].body));
+    expect(corpo.document.filename).toBe("passwd_X_y.pdf");
+    expect(
+      (rpcs.find((x) => x.fn === "wa_registrar_saida")!.args as { p_payload: unknown }).p_payload,
+    ).toEqual({ document: { filename: "passwd_X_y.pdf", mime_type: "application/pdf" } });
   });
 
   it("janela FECHADA e opt-out não chamam a Meta", async () => {
@@ -491,5 +521,30 @@ describe("enviarMidiaNaConversa", () => {
       motivo: "contato_pediu_para_parar",
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("download: a URL da Meta e o teto de leitura", () => {
+  it("só aceita https em domínio da Meta, sem credencial, porta ou parente falso", async () => {
+    const { urlDeMidiaDaMetaEhSegura: ok } = await import("./midia");
+    expect(ok("https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1")).toBe(true);
+    expect(ok("https://scontent.xx.fbcdn.net/v/abc")).toBe(true);
+    expect(ok("http://lookaside.fbsbx.com/x")).toBe(false);
+    expect(ok("https://fbsbx.com.evil.com/x")).toBe(false);
+    expect(ok("https://evilfbsbx.com/x")).toBe(false);
+    expect(ok("https://user:pw@lookaside.fbsbx.com/x")).toBe(false);
+    expect(ok("https://lookaside.fbsbx.com:8443/x")).toBe(false);
+    expect(ok("https://169.254.169.254/latest")).toBe(false);
+    expect(ok("not a url")).toBe(false);
+  });
+
+  it("lerCorpoComTeto para no teto, mesmo sem content-length", async () => {
+    const { lerCorpoComTeto } = await import("./midia");
+    const grande = new Response(new Uint8Array(1000));
+    expect(await lerCorpoComTeto(grande, 100)).toBeNull();
+    const pequeno = new Response(new Uint8Array(50));
+    expect((await lerCorpoComTeto(pequeno, 100))?.byteLength).toBe(50);
+    const declarado = new Response("x", { headers: { "content-length": "5000" } });
+    expect(await lerCorpoComTeto(declarado, 100)).toBeNull();
   });
 });

@@ -12,7 +12,12 @@
 
 import { contaDaEmpresa } from "./onboarding";
 import { lerMetadadosDaMidia } from "./graph";
-import { caminhoDeEntrada, LIMITE_DE_DOWNLOAD } from "./midia";
+import {
+  caminhoDeEntrada,
+  LIMITE_DE_DOWNLOAD,
+  lerCorpoComTeto,
+  urlDeMidiaDaMetaEhSegura,
+} from "./midia";
 import type { DbWa } from "./processador";
 
 export const BUCKET = "wa-media";
@@ -87,13 +92,22 @@ export async function baixarEGuardarMidia(
     return falhou(`Arquivo grande demais (${Math.round(meta.data.file_size / 1048576)} MB).`);
   }
 
-  // 2) bytes (a URL exige o mesmo token)
+  // 2) bytes (a URL exige o mesmo token, por isso só vai a domínio da Meta)
+  if (!urlDeMidiaDaMetaEhSegura(meta.data.url))
+    return falhou("A URL de download não é de um domínio da Meta.");
   let bytes: ArrayBuffer;
   try {
-    const res = await fetch(meta.data.url, { headers: { Authorization: `Bearer ${conta.token}` } });
+    const res = await fetch(meta.data.url, {
+      headers: { Authorization: `Bearer ${conta.token}` },
+      redirect: "manual",
+    });
+    if (res.status >= 300 && res.status < 400)
+      return falhou("Redirecionamento no download recusado.");
     if (!res.ok)
       return falhou(`Download recusado (${res.status}).`, res.status === 404 || res.status === 410);
-    bytes = await res.arrayBuffer();
+    const lido = await lerCorpoComTeto(res, LIMITE_DE_DOWNLOAD);
+    if (!lido) return falhou("Arquivo grande demais.");
+    bytes = lido;
   } catch (e) {
     return falhou(e instanceof Error ? e.message : "Falha no download.");
   }

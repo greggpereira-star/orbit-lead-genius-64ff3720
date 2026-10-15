@@ -13,6 +13,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio, casarCodigoDoRedirect } from "@/lib/ctwa.server";
 import { moverLeadPelaEtiqueta } from "@/lib/etiqueta-para-etapa.server";
+import { pedeParaParar } from "@/lib/whatsapp/cloud/optout";
 import { segredoConfere } from "@/lib/segredo.server";
 
 function log(level: "info" | "warn" | "error", traceId: string, msg: string, extra?: Record<string, unknown>) {
@@ -29,7 +30,8 @@ function log(level: "info" | "warn" | "error", traceId: string, msg: string, ext
 }
 
 /** "SAIR", "parar", "Cancelar inscrição" — variações que significam "pare". */
-const OPTOUT_PATTERN = /^\s*(sair|parar|pare|stop|cancelar|descadastrar|remover)\b/i;
+// A regra é a mesma do canal oficial (mensagem inteira, não só o começo).
+const OPTOUT_PATTERN = { test: (t: string) => pedeParaParar(t) };
 
 /**
  * Do JID da Evolution ("5527996318075@s.whatsapp.net") para dígitos puros.

@@ -79,6 +79,7 @@ describe("confirmação do corte", () => {
 
 describe("server functions — papéis e posse", () => {
   const f = readFileSync("src/lib/whatsapp-atendimento.functions.ts", "utf8");
+  const papeis = readFileSync("src/lib/whatsapp/papeis.ts", "utf8");
   const corpo = (nome: string) => {
     const i = f.indexOf(`export const ${nome}`);
     const j = f.indexOf("export const ", i + 10);
@@ -98,13 +99,20 @@ describe("server functions — papéis e posse", () => {
       expect(corpo(n), n).toContain("empresaParaAtender(admin, context.userId)");
       expect(corpo(n), n).not.toContain("empresaDoUsuario(admin, context.userId)");
     }
-    expect(f).toMatch(/if \(role === "viewer"\)\s*throw new Error\(/);
+    // a regra mora no helper compartilhado (papel desconhecido vale como o menor)
+    expect(papeis).toMatch(/if \(!podeAtender\(role\)\)\s*throw new Error\(/);
+    expect(papeis).toContain(
+      'const ATENDEM: ReadonlySet<string> = new Set(["owner", "admin", "member"])',
+    );
   });
 
   it("o corte só para dono/administrador, e reavalia no servidor", () => {
     const c = corpo("executarCorteEvolutionWhatsApp");
     expect(c).toContain("empresaParaAdministrar(admin, context.userId)");
-    expect(f).toContain('role !== "owner" && role !== "admin"');
+    expect(papeis).toContain(
+      'const ADMINISTRAM: ReadonlySet<string> = new Set(["owner", "admin"])',
+    );
+    expect(papeis).toMatch(/if \(!podeAdministrar\(role\)\)\s*throw new Error\(/);
     expect(c.indexOf("confirmacaoConfere(")).toBeLessThan(c.indexOf("coletarFatosDoCorte("));
     expect(c.indexOf("avaliarProntidaoDoCorte(fatos)")).toBeLessThan(c.indexOf("deleteInstance("));
   });

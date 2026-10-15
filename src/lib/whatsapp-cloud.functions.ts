@@ -9,19 +9,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { NumeroOficial, TemplateOficial } from "@/lib/whatsapp/cloud/tipos";
+import {
+  empresaDoUsuario,
+  empresaParaAdministrar,
+  empresaParaAtender,
+} from "@/lib/whatsapp/papeis";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-async function empresaDoUsuario(admin: any, userId: string): Promise<string> {
-  const { data } = await admin
-    .from("memberships")
-    .select("company_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-  if (!data?.company_id) throw new Error("Usuário sem empresa.");
-  return data.company_id as string;
-}
-
 const lerEnv = (nome: string): string | undefined =>
   process.env[nome]?.trim().replace(/^['"]|['"]$/g, "") || undefined;
 
@@ -88,7 +82,7 @@ export const concluirSignupWhatsApp = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const companyId = await empresaDoUsuario(admin, context.userId);
+    const companyId = await empresaParaAdministrar(admin, context.userId);
 
     const { concluirOnboarding, sincronizarTemplates } =
       await import("@/lib/whatsapp/cloud/onboarding");
@@ -119,7 +113,7 @@ export const sincronizarTemplatesWhatsApp = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const companyId = await empresaDoUsuario(admin, context.userId);
+    const companyId = await empresaParaAtender(admin, context.userId);
     const { sincronizarTemplates } = await import("@/lib/whatsapp/cloud/onboarding");
     const r = await sincronizarTemplates(admin, companyId);
     if (!r.ok) throw new Error(r.texto);
@@ -152,7 +146,7 @@ export const criarTemplateWhatsApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const companyId = await empresaDoUsuario(admin, context.userId);
+    const companyId = await empresaParaAdministrar(admin, context.userId);
     const { criarTemplate } = await import("@/lib/whatsapp/cloud/onboarding");
     // Devolve o resultado (com `problemas`) em vez de lançar: a tela destaca cada campo.
     return criarTemplate(admin, { companyId, userId: context.userId, definicao: data });
@@ -166,7 +160,7 @@ export const apagarTemplateWhatsApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
-    const companyId = await empresaDoUsuario(admin, context.userId);
+    const companyId = await empresaParaAdministrar(admin, context.userId);
     const { apagarTemplate } = await import("@/lib/whatsapp/cloud/onboarding");
     const r = await apagarTemplate(admin, { companyId, nome: data.nome });
     if (!r.ok) throw new Error(r.texto);

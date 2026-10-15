@@ -5,33 +5,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function resolveCompanyId(admin: unknown, userId: string): Promise<string> {
-  const client = admin as {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (a: string, b: unknown) => {
-          limit: (n: number) => {
-            maybeSingle: () => Promise<{ data: { company_id: string } | null }>;
-          };
-        };
-      };
-    };
-  };
-  const { data } = await client
-    .from("memberships")
-    .select("company_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-  if (!data?.company_id) throw new Error("Usuário sem empresa vinculada.");
-  return data.company_id;
-}
-
-/** Nome estável e único por empresa — a Evolution exige unicidade global. */
-function instanceNameFor(companyId: string): string {
-  return `altflow_${companyId.replace(/-/g, "").slice(0, 20)}`;
-}
+import {
+  empresaDoUsuario,
+  empresaParaAdministrar,
+  empresaParaAtender,
+} from "@/lib/whatsapp/papeis";
+import { instanceNameFor, nomeDaInstanciaConfere } from "@/lib/whatsapp/evolution-nome";
 
 const DEFAULT_SETTINGS = {
   greeting_enabled: false,
@@ -55,8 +34,12 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
-    const { getInstanceState, isConfigured: isEvolutionConfigured, ping: pingEvolution } = evolutionAdmin;
-    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    const {
+      getInstanceState,
+      isConfigured: isEvolutionConfigured,
+      ping: pingEvolution,
+    } = evolutionAdmin;
+    const companyId = await empresaDoUsuario(supabaseAdmin, context.userId);
 
     // Testa alcance de verdade, não só presença das variáveis.
     const health = await pingEvolution();
@@ -83,8 +66,12 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
     // Estado real vem da Evolution; o banco é só cache. Se divergir, corrige —
     // a sessão pode cair sozinha (celular desligado, WhatsApp Web desconectado).
     let liveState: string | null = null;
-    if (instance?.instance_name && isEvolutionConfigured() && health.reachable) {
-      const state = await getInstanceState(instance.instance_name);
+    if (
+      nomeDaInstanciaConfere(companyId, instance?.instance_name) &&
+      isEvolutionConfigured() &&
+      health.reachable
+    ) {
+      const state = await getInstanceState(instanceNameFor(companyId));
       if (state.ok && state.data) {
         liveState = state.data.state;
         const status = state.data.connected ? "connected" : "disconnected";
@@ -123,12 +110,17 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
-    const { createInstance, getQrCode, deleteInstance, isConfigured: isEvolutionConfigured } = evolutionAdmin;
+    const {
+      createInstance,
+      getQrCode,
+      deleteInstance,
+      isConfigured: isEvolutionConfigured,
+    } = evolutionAdmin;
     if (!isEvolutionConfigured()) {
       throw new Error("Evolution API não configurada no servidor.");
     }
 
-    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
     const instanceName = instanceNameFor(companyId);
 
     // Recriar do zero evita herdar uma sessão meio-conectada de uma tentativa
@@ -198,16 +190,18 @@ export const refreshWhatsAppQr = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
     const { getQrCode } = evolutionAdmin;
-    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
 
     const { data: instance } = await (supabaseAdmin as any)
       .from("whatsapp_instances")
       .select("instance_name")
       .eq("company_id", companyId)
       .maybeSingle();
-    if (!instance?.instance_name) throw new Error("Nenhuma conexão iniciada.");
+    if (!nomeDaInstanciaConfere(companyId, instance?.instance_name)) {
+      throw new Error("Nenhuma conexão iniciada.");
+    }
 
-    const res = await getQrCode(instance.instance_name);
+    const res = await getQrCode(instanceNameFor(companyId));
     if (!res.ok) throw new Error(res.error ?? "Falha ao gerar QR code.");
     return { qrCodeBase64: res.data?.qrCodeBase64 ?? null };
   });
@@ -221,7 +215,7 @@ export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deleteInstance } = (await import("@/lib/whatsapp/evolution-provider")).evolutionAdmin;
-    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
 
     const { data: instance } = await (supabaseAdmin as any)
       .from("whatsapp_instances")
@@ -229,7 +223,11 @@ export const disconnectWhatsApp = createServerFn({ method: "POST" })
       .eq("company_id", companyId)
       .maybeSingle();
 
-    if (instance?.instance_name) await deleteInstance(instance.instance_name);
+    // O nome é RECOMPUTADO: a Evolution tem uma chave só para todas as
+    // empresas, e o nome vindo do banco nunca é confiável sozinho.
+    if (nomeDaInstanciaConfere(companyId, instance?.instance_name)) {
+      await deleteInstance(instanceNameFor(companyId));
+    }
 
     await (supabaseAdmin as any).from("whatsapp_instances").delete().eq("company_id", companyId);
     return { ok: true };
@@ -258,7 +256,7 @@ export const saveWhatsAppSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { toWhatsAppNumber } = await import("@/lib/whatsapp/numero");
-    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
 
     // Falha cedo e com mensagem clara: um alerta ligado sem telefone válido
     // seria uma configuração que nunca dispara e ninguém entenderia por quê.
@@ -288,7 +286,9 @@ export const sendWhatsAppTest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { evolutionProvider } = await import("@/lib/whatsapp/evolution-provider");
-    const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
+    // Administrador: o teste envia a QUALQUER número informado, com o número da
+    // empresa — não é ação de quem só atende.
+    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
 
     const { data: instance } = await (supabaseAdmin as any)
       .from("whatsapp_instances")
@@ -296,13 +296,25 @@ export const sendWhatsAppTest = createServerFn({ method: "POST" })
       .eq("company_id", companyId)
       .maybeSingle();
 
-    if (!instance?.instance_name || instance.status !== "connected") {
+    if (
+      !nomeDaInstanciaConfere(companyId, instance?.instance_name) ||
+      instance.status !== "connected"
+    ) {
       throw new Error("Conecte um número antes de enviar o teste.");
+    }
+
+    // Quem pediu para parar não recebe nem o teste.
+    const { toWhatsAppNumber } = await import("@/lib/whatsapp/numero");
+    const { numeroEmOptout } = await import("@/lib/whatsapp/politica");
+    const numero = toWhatsAppNumber(data.phone);
+    if (!numero) throw new Error("Telefone inválido.");
+    if (await numeroEmOptout(supabaseAdmin as never, companyId, numero)) {
+      throw new Error("Este contato pediu para não receber mensagens.");
     }
 
     const body = "✅ Teste do Alt Flow Lead: sua automação de WhatsApp está funcionando.";
     const sent = await evolutionProvider.sendText(
-      { provider: "evolution", referencia: instance.instance_name },
+      { provider: "evolution", referencia: instanceNameFor(companyId) },
       data.phone,
       body,
     );

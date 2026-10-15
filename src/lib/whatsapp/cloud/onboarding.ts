@@ -147,10 +147,15 @@ export async function concluirOnboarding(
     );
     if (erroCred) throw new Error(erroCred.message);
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    // wa_accounts_waba_uniq: essa conta do WhatsApp já pertence a outra empresa.
+    const jaEmUso = /wa_accounts_waba_uniq|duplicate key/i.test(msg);
     return {
       ok: false,
       etapa: "gravacao",
-      texto: err instanceof Error ? err.message : "Falha ao salvar a conexão.",
+      texto: jaEmUso
+        ? "Esta conta do WhatsApp Business já está conectada a outra empresa. Desconecte-a lá antes de usar aqui."
+        : msg || "Falha ao salvar a conexão.",
     };
   }
 

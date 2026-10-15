@@ -280,6 +280,12 @@ function ehNumeroDesconhecido(e: unknown): boolean {
   return x?.code === "P0002" || /^numero_desconhecido/.test(x?.message ?? "");
 }
 
+/** 2, 4, 8... minutos, no máximo 60. */
+export function proximaTentativa(tentativas: number, agora = Date.now()): string {
+  const minutos = Math.min(60, 2 ** Math.max(1, tentativas));
+  return new Date(agora + minutos * 60_000).toISOString();
+}
+
 export async function processarPendentes(
   db: DbWa,
   opcoes: { limite?: number } = {},
@@ -288,6 +294,9 @@ export async function processarPendentes(
     .select("id, payload, attempts")
     .in("status", ["pending", "failed"])
     .lt("attempts", MAX_TENTATIVAS)
+    /* Espera crescente entre tentativas: sem isto um evento com defeito era
+       reprocessado a cada rodada do varredor, até esgotar em segundos. */
+    .or(`next_attempt_at.is.null,next_attempt_at.lte.${new Date().toISOString()}`)
     .order("received_at", { ascending: true })
     .limit(opcoes.limite ?? 50);
 
@@ -311,6 +320,7 @@ export async function processarPendentes(
         .update({
           status: desconhecido ? "ignored" : "failed",
           attempts: linha.attempts + 1,
+          next_attempt_at: proximaTentativa(linha.attempts + 1),
           last_error: (e instanceof Error ? e.message : String(e)).slice(0, 500),
         })
         .eq("id", linha.id);

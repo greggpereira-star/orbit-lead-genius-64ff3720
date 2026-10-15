@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 
 /**
  * Reprocessa eventos de Lead Ads que falharam na gravação.
@@ -40,10 +41,8 @@ export const Route = createFileRoute('/api/public/cron/meta-reprocess-failed')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const segredo = process.env.CRON_SECRET || 'altflow_retry_sync_secret';
-        if (request.headers.get('authorization') !== `Bearer ${segredo}`) {
-          return new Response('Unauthorized', { status: 401 });
-        }
+        const autorizacao = autorizarCron(request);
+        if (!autorizacao.ok) return respostaDeRecusa(autorizacao);
 
         const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
         const { processMetaLeadEvent } = await import('@/lib/meta-lead-processor.server');

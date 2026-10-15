@@ -181,12 +181,3 @@ export async function usoPorCategoria(
     total: Number(l.total),
   }));
 }
-
-/** Zera as não lidas. Escrita simples, permitida pelo GRANT de coluna. */
-export async function marcarComoLida(conversaId: string): Promise<void> {
-  const { error } = await wa()
-    .from("wa_conversations")
-    .update({ unread_agent: 0 })
-    .eq("id", conversaId);
-  if (error) throw new Error(error.message);
-}

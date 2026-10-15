@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cifrarToken } from "./cifra";
@@ -7,6 +8,7 @@ import {
   guardarEventos,
   processarEvento,
   processarPendentes,
+  proximaTentativa,
   referralParaClique,
   type DbWa,
 } from "./processador";
@@ -22,7 +24,7 @@ function criarDb(config: {
   const builder = (tabela: string) => {
     const b: Record<string, unknown> = {};
     const resposta = () => ({ data: config.tabelas?.[tabela] ?? null, error: null });
-    for (const op of ["select", "eq", "in", "lt", "ilike", "order", "limit", "update", "upsert"]) {
+    for (const op of ["select", "eq", "in", "lt", "or", "ilike", "order", "limit", "update", "upsert"]) {
       b[op] = (...args: unknown[]) => {
         ops.push({ tabela, op, args });
         return b;
@@ -656,5 +658,19 @@ describe("enviarTemplateNaConversa", () => {
     expect(r.ok).toBe(true);
     const corpo = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
     expect(corpo.template.components).toEqual([]);
+  });
+});
+
+describe("espera entre tentativas do evento", () => {
+  it("cresce 2, 4, 8... e para em 60 minutos", () => {
+    const t0 = Date.UTC(2026, 9, 15, 12, 0, 0);
+    const min = (n: number) => (Date.parse(proximaTentativa(n, t0)) - t0) / 60_000;
+    expect([min(1), min(2), min(3), min(4), min(9)]).toEqual([2, 4, 8, 16, 60]);
+  });
+
+  it("o varredor só pega o que já venceu e a falha agenda a próxima", () => {
+    const fonte = readFileSync("src/lib/whatsapp/cloud/processador.ts", "utf8");
+    expect(fonte).toContain("next_attempt_at.is.null,next_attempt_at.lte.");
+    expect(fonte).toContain("next_attempt_at: proximaTentativa(linha.attempts + 1)");
   });
 });

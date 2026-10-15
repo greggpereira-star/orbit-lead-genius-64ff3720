@@ -8,6 +8,7 @@
 
 import { criarCloudProvider } from "./cloud/cloud-provider";
 import { evolutionProvider } from "./evolution-provider";
+import { nomeDaInstanciaConfere } from "./evolution-nome";
 import type { AdminDb, CanalWhatsApp, ConsultaDb, WhatsAppProvider } from "./provider";
 
 export type CanalResolvido =
@@ -68,6 +69,15 @@ export async function resolverCanal(admin: AdminDb, companyId: string): Promise<
     .eq("company_id", companyId)
     .maybeSingle();
   const instancia = data as { instance_name?: string | null; status?: string | null } | null;
+
+  // O nome precisa ser o DESTA empresa. Um nome de outra empresa, gravado por
+  // alguém com acesso ao banco, faria o envio sair pela sessão dela.
+  if (
+    instancia?.instance_name &&
+    !nomeDaInstanciaConfere(companyId, String(instancia.instance_name))
+  ) {
+    return { ok: false, motivo: "sem_canal", texto: "Conexão do WhatsApp inconsistente" };
+  }
 
   if (!instancia?.instance_name) {
     return { ok: false, motivo: "sem_canal", texto: "WhatsApp não conectado" };

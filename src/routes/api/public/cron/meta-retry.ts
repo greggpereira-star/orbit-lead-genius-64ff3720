@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 import { importMetaFormLeads } from '@/lib/meta-forms.functions';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
 
@@ -6,14 +7,8 @@ export const Route = createFileRoute('/api/public/cron/meta-retry')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const authHeader = request.headers.get('Authorization');
-        
-        // Simples proteção por Bearer token (deve ser configurado no pg_cron)
-        const CRON_SECRET = process.env.CRON_SECRET || 'altflow_retry_sync_secret';
-        
-        if (authHeader !== `Bearer ${CRON_SECRET}`) {
-          return new Response('Unauthorized', { status: 401 });
-        }
+        const autorizacao = autorizarCron(request);
+        if (!autorizacao.ok) return respostaDeRecusa(autorizacao);
 
         try {
           // Tabela correta é meta_lead_import_jobs (meta_import_jobs nunca existiu —

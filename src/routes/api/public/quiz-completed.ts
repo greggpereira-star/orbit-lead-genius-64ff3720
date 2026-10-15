@@ -251,10 +251,12 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
           }
         }
 
+        /* `nome` e `faixa` por ÚLTIMO: as variáveis vêm do navegador, e vinham
+           depois — quem as enviava sobrescrevia o nome e a faixa da mensagem. */
         const texto = interpolar(faixa.whatsappTemplate ?? '', {
+          ...(body.variaveis ?? {}),
           nome: body.nome ?? '',
           faixa: faixa.label,
-          ...(body.variaveis ?? {}),
         });
 
         /* Falha de envio devolve a reserva: sem isto, uma queda de rede
@@ -292,7 +294,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
             nome: body.nome ?? null,
             texto,
             template: faixa.waTemplate ?? null,
-            dados: { nome: body.nome ?? '', faixa: faixa.label, ...(body.variaveis ?? {}) },
+            dados: { ...(body.variaveis ?? {}), nome: body.nome ?? '', faixa: faixa.label },
           });
           if (!r.enviou) {
             await liberar().catch(() => {});
@@ -301,9 +303,11 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
               company_id: q.company_id, faixa: faixa.label, erro: r.motivo,
             }));
           }
+          /* O motivo detalhado (erro do Postgres, da Meta, do canal) vai para o
+             LOG; quem chama esta rota é anônimo e não precisa dele. */
           return json({
             status: 'classificado', faixa: faixa.label, enviou: r.enviou,
-            ...(r.enviou ? {} : { motivo: r.motivo ?? null }),
+            ...(r.enviou ? {} : { motivo: 'nao_enviada' }),
           });
         } catch (err) {
           await liberar().catch(() => {});

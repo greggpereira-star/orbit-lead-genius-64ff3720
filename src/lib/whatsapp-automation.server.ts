@@ -210,7 +210,8 @@ export async function dispatchLeadWhatsApp(
       } else {
         // Espaça os dois envios pra não disparar duas mensagens no mesmo
         // instante pelo mesmo número — padrão que costuma acionar bloqueio.
-        const waitMs = Math.max(0, cfg.min_interval_seconds * 1000);
+        // Teto de 5 min: o valor vem de configuração e esta espera segura a requisição.
+        const waitMs = Math.min(300, Math.max(0, cfg.min_interval_seconds)) * 1000;
         if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
 
         const leadNumber = toWhatsAppNumber(input.phone);
