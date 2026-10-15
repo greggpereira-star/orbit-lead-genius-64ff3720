@@ -1956,6 +1956,17 @@ function BlockView({
     </div>
   );
 
+  /* Enter avança, como o botão — sem isto, a tecla "ir" do teclado do celular
+     não fazia nada e o visitante tinha de esconder o teclado para achar o
+     botão. Vale o mesmo critério do botão: bloco válido, etapa válida e nada
+     sendo gravado. `isComposing` poupa quem confirma uma palavra no IME. */
+  const avancarComEnter = (valor: unknown) => (e: React.KeyboardEvent) => {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    if (!terminal || !canSubmit || !stepValid || saving) return;
+    e.preventDefault();
+    onSubmit(valor);
+  };
+
   switch (block.type) {
     case 'intro':
       return (
@@ -2145,7 +2156,11 @@ function BlockView({
               setTelefoneTocado(true);
               setEmailTocado(true);
             }}
-            autoComplete={block.type === "email" ? "email" : undefined}
+            onKeyDown={avancarComEnter(value)}
+            enterKeyHint={terminal ? "go" : "next"}
+            autoComplete={
+              block.type === "email" ? "email" : block.type === "phone" ? "tel" : undefined
+            }
             autoCapitalize={block.type === "email" ? "none" : undefined}
             spellCheck={block.type === "email" ? false : undefined}
             aria-invalid={avisoDoCampo ? true : undefined}
@@ -2699,6 +2714,8 @@ function BlockView({
                 <input
                   id={`field-${block.id}-name`}
                   placeholder="Nome"
+                  autoComplete="name"
+                  onKeyDown={avancarComEnter(formValue)}
                   value={formValue.name}
                   onChange={(e) => setFormValue((f) => ({ ...f, name: e.target.value }))}
                   className="w-full px-4 py-3.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 text-base"
@@ -2716,6 +2733,7 @@ function BlockView({
                   autoComplete="email"
                   autoCapitalize="none"
                   spellCheck={false}
+                  onKeyDown={avancarComEnter(formValue)}
                   placeholder="E-mail"
                   value={formValue.email}
                   onChange={(e) => setFormValue((f) => ({ ...f, email: e.target.value }))}
@@ -2763,6 +2781,7 @@ function BlockView({
                   placeholder={placeholderDoTelefone(block.formFields)}
                   inputMode="tel"
                   autoComplete="tel"
+                  onKeyDown={avancarComEnter(formValue)}
                   value={formValue.phone}
                   onChange={(e) =>
                     setFormValue((f) => ({ ...f, phone: formatarEnquantoDigita(e.target.value) }))
