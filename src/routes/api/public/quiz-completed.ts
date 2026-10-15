@@ -6,8 +6,11 @@ import { createFileRoute } from '@tanstack/react-router';
  * Roda no servidor por dois motivos que o navegador não resolve. A chave da
  * Evolution não pode chegar ao visitante, e a faixa não pode ser decidida por
  * ele — quem manda a pontuação é a página, e aceitar a faixa junto seria deixar
- * qualquer pessoa se declarar Lead A. Aqui a pontuação é recalculada contra o
- * schema publicado antes de qualquer coisa.
+ * qualquer pessoa se declarar Lead A. O TETO e o PISO saem do schema publicado;
+ * a pontuação em si vem da página — um visitante pode, no máximo, escolher a
+ * faixa da MENSAGEM QUE ELE MESMO recebe, e não a de outra pessoa: o número de
+ * destino é o do lead da sessão, nunca o do corpo da requisição, e há uma
+ * mensagem por lead a cada 24h.
  */
 
 interface Payload {
@@ -107,19 +110,19 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
            porque os três `return` de faixa que vêm a seguir são saídas
            legítimas — um quiz sem faixas configuradas não deve custar o
            responsável do lead. */
-        let leadDoQuiz: { id: string; metadata: Record<string, unknown> | null } | null = null;
+        let leadDoQuiz: { id: string; metadata: Record<string, unknown> | null; phone: string | null } | null = null;
         if (body.sessionId) {
           const { data: lead } = await supabaseAdmin
             .from('leads')
             // `quiz_id` e o filtro por metadata não estão no `types.ts` gerado
             // com essa forma; o cast é só de tipagem, a consulta é válida.
-            .select('id, metadata, temperature, assigned_to')
+            .select('id, metadata, temperature, assigned_to, phone')
             .eq('quiz_id' as never, body.quizId)
             .eq('metadata->>session_id' as never, body.sessionId)
             .maybeSingle();
           if (lead) {
-            const l = lead as { id: string; metadata: Record<string, unknown> | null; temperature: string | null; assigned_to: string | null };
-            leadDoQuiz = { id: l.id, metadata: l.metadata };
+            const l = lead as { id: string; metadata: Record<string, unknown> | null; temperature: string | null; assigned_to: string | null; phone: string | null };
+            leadDoQuiz = { id: l.id, metadata: l.metadata, phone: l.phone };
             // `assigned_to` já preenchido: a captura antecipada e a conclusão
             // chamam esta rota na mesma sessão, e trocar o dono no meio do
             // atendimento é pior do que não rodear de novo.
@@ -212,8 +215,42 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
             .eq('id', leadDoQuiz.id);
         }
 
-        if (!faixa.whatsappTemplate?.trim() || !body.telefone) {
+        /* O número é o do LEAD, nunca o do corpo da requisição.
+           Esta rota é pública: aceitar `telefone` do corpo fazia dela um
+           disparador de WhatsApp, com o número da empresa, para qualquer
+           telefone e qualquer texto que alguém postasse — e sem limite. O lead
+           é achado pela sessão e é quem de fato respondeu o quiz. Sem lead, não
+           há para quem enviar. */
+        const destino = leadDoQuiz?.phone?.trim() || '';
+        if (!faixa.whatsappTemplate?.trim() || !destino) {
           return json({ status: 'classificado', faixa: faixa.label, enviou: false });
+        }
+
+        /* Uma mensagem por lead a cada 24h. O reclame é atômico (só um dos
+           pedidos concorrentes vence): sem isso, 50 chamadas simultâneas liam
+           "não enviado" e mandavam 50 mensagens ao mesmo número. */
+        const agora = new Date().toISOString();
+        const anterior = leadDoQuiz?.metadata?.quiz_tier_sent_at;
+        const recente =
+          typeof anterior === 'string' &&
+          Date.now() - Date.parse(anterior) < 24 * 60 * 60 * 1000;
+        if (recente) {
+          return json({ status: 'classificado', faixa: faixa.label, enviou: false, motivo: 'ja_enviado' });
+        }
+        if (leadDoQuiz) {
+          const reclamar = supabaseAdmin
+            .from('leads')
+            .update({
+              metadata: { ...(leadDoQuiz.metadata ?? {}), quiz_tier: faixa.label, quiz_tier_sent_at: agora },
+            } as never)
+            .eq('id', leadDoQuiz.id);
+          const { data: venceu } = await (typeof anterior === 'string'
+            ? reclamar.eq('metadata->>quiz_tier_sent_at' as never, anterior)
+            : reclamar.is('metadata->>quiz_tier_sent_at' as never, null)
+          ).select('id');
+          if (!venceu || venceu.length === 0) {
+            return json({ status: 'classificado', faixa: faixa.label, enviou: false, motivo: 'ja_enviado' });
+          }
         }
 
         const texto = interpolar(faixa.whatsappTemplate, {
@@ -222,10 +259,26 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
           ...(body.variaveis ?? {}),
         });
 
+        /* Falha de envio devolve a reserva: sem isto, uma queda de rede
+           bloquearia a mensagem do lead por 24h sem ele ter recebido nada. */
+        const liberar = async () => {
+          if (!leadDoQuiz) return;
+          const { quiz_tier_sent_at: _descartado, ...resto } = {
+            ...(leadDoQuiz.metadata ?? {}),
+            quiz_tier_sent_at: agora,
+          } as Record<string, unknown>;
+          await supabaseAdmin
+            .from('leads')
+            .update({ metadata: resto } as never)
+            .eq('id', leadDoQuiz.id)
+            .eq('metadata->>quiz_tier_sent_at' as never, agora);
+        };
+
         try {
           const { sendText } = await import('@/lib/evolution.server');
-          const r = await sendText(instanceNameFor(q.company_id), body.telefone, texto);
+          const r = await sendText(instanceNameFor(q.company_id), destino, texto);
           if (!r.ok) {
+            await liberar().catch(() => {});
             console.error(JSON.stringify({
               scope: 'quiz-completed', msg: 'whatsapp_falhou',
               company_id: q.company_id, faixa: faixa.label, erro: r.error,
@@ -233,6 +286,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
           }
           return json({ status: 'classificado', faixa: faixa.label, enviou: r.ok });
         } catch (err) {
+          await liberar().catch(() => {});
           console.error(JSON.stringify({
             scope: 'quiz-completed', msg: 'whatsapp_excecao',
             erro: err instanceof Error ? err.message : String(err),
