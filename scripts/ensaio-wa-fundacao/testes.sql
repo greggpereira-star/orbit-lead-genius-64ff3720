@@ -389,10 +389,17 @@ DO $t$
 DECLARE v_a uuid; v_b uuid;
 BEGIN
   IF to_regprocedure('public.eh_admin_da_empresa(uuid)') IS NULL THEN RETURN; END IF;
-  SELECT id INTO v_a FROM public.companies ORDER BY id LIMIT 1;
+  -- empresa própria do ensaio: não toca (nem depende de) dados reais, como a instância existente.
+  INSERT INTO public.companies (name, slug) VALUES ('Empresa A (ensaio)', 'empresa-a-ensaio') RETURNING id INTO v_a;
   INSERT INTO public.companies (name, slug) VALUES ('Empresa B (ensaio)', 'empresa-b-ensaio') RETURNING id INTO v_b;
   INSERT INTO _ens VALUES ('a', v_a::text), ('b', v_b::text),
     ('admin', gen_random_uuid()::text), ('viewer', gen_random_uuid()::text), ('outro', gen_random_uuid()::text);
+  -- memberships.user_id referencia auth.users: cria os três usuários (só dentro da transação).
+  -- (o gatilho de perfil exige e-mail)
+  INSERT INTO auth.users (id, email)
+    SELECT valor::uuid, 'ensaio-' || chave || '@ensaio.invalid' FROM _ens
+    WHERE chave IN ('admin','viewer','outro')
+    ON CONFLICT DO NOTHING;
   INSERT INTO public.memberships (user_id, company_id, role) VALUES
     ((SELECT valor::uuid FROM _ens WHERE chave='admin'),  v_a, 'admin'),
     ((SELECT valor::uuid FROM _ens WHERE chave='viewer'), v_a, 'viewer'),
