@@ -57,6 +57,16 @@ export function VideoAnswerRecorder({
   const pedacosRef = useRef<Blob[]>([]);
   const blobRef = useRef<Blob | null>(null);
   const duracaoRef = useRef(0);
+  /* Se o visitante avançar (bloco opcional) com o envio em andamento, o
+     retorno chega a um bloco já desmontado — e `onEnviado` chamaria
+     `onSubmit` na etapa SEGUINTE, pulando-a. Depois de desmontar, não avisa. */
+  const montadoRef = useRef(true);
+  useEffect(() => {
+    montadoRef.current = true;
+    return () => {
+      montadoRef.current = false;
+    };
+  }, []);
   /* `onstop` é registrado uma vez e precisa chamar o `enviar` ATUAL. */
   const enviarRef = useRef<() => Promise<void>>(async () => {});
 
@@ -154,7 +164,7 @@ export function VideoAnswerRecorder({
     if (preview) {
       const local = URL.createObjectURL(blob);
       setFase("pronto");
-      onEnviado(local);
+      if (montadoRef.current) onEnviado(local);
       return;
     }
     try {
@@ -164,15 +174,18 @@ export function VideoAnswerRecorder({
       form.append("blockId", blockId);
       form.append("sessionId", sessionId);
       form.append("segundos", String(duracaoRef.current));
+      const ext = blob.type.split(";")[0].trim().toLowerCase() === "video/mp4" ? "mp4" : "webm";
+      form.set("video", new File([blob], `resposta.${ext}`, { type: blob.type }));
       const r = await fetch("/api/public/quiz-video-answer", { method: "POST", body: form });
       const j = (await r.json()) as { url?: string; erro?: string };
+      if (!montadoRef.current) return;
       if (!r.ok || !j.url) {
         setErro(j.erro || "Não foi possível enviar.");
         setFase("erro");
         return;
       }
       setFase("pronto");
-      onEnviado(j.url);
+      if (montadoRef.current) onEnviado(j.url);
     } catch {
       setErro("Falha de conexão ao enviar.");
       setFase("erro");

@@ -49,7 +49,22 @@ export function validarEnvioDeVideo(params: {
   return null;
 }
 
+/**
+ * Contêiner real do arquivo. O Safari do iPhone grava `video/mp4`; guardar isso
+ * como `.webm` com `Content-Type: video/webm` deixa o vendedor sem conseguir
+ * assistir no Safari, que não adivinha o formato como o Chrome faz.
+ */
+export function extensaoDoVideo(mimeType: string): "mp4" | "webm" {
+  const base = (mimeType || "").split(";")[0].trim().toLowerCase();
+  return base === "video/mp4" ? "mp4" : "webm";
+}
+
 /** Caminho do arquivo no bucket. Sem nada que venha do visitante. */
-export function caminhoDoVideo(companyId: string, quizId: string, id: string): string {
-  return `${companyId}/${quizId}/respostas/${id}.webm`;
+export function caminhoDoVideo(
+  companyId: string,
+  quizId: string,
+  id: string,
+  mimeType = "video/webm",
+): string {
+  return `${companyId}/${quizId}/respostas/${id}.${extensaoDoVideo(mimeType)}`;
 }

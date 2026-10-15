@@ -2306,7 +2306,7 @@ function BlockView({
             design={design}
             textStyle={btnText}
             hidden={!terminal}
-            disabled={!value}
+            disabled={!canSubmit || !stepValid || saving}
             onClick={() => onSubmit(value)}
           >
             {block.ctaLabel || 'Continuar'}

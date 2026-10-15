@@ -16,7 +16,11 @@
  * em hospedagem grátis.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { validarEnvioDeVideo, caminhoDoVideo } from "@/modules/quiz/lib/videoResposta";
+import {
+  validarEnvioDeVideo,
+  caminhoDoVideo,
+  extensaoDoVideo,
+} from "@/modules/quiz/lib/videoResposta";
 
 const BUCKET = "quiz-media";
 const TTL_URL_ASSINADA = 60 * 60 * 24 * 365; // 1 ano, o teto do Supabase
@@ -88,11 +92,14 @@ export const Route = createFileRoute("/api/public/quiz-video-answer")({
         }
 
         const id = crypto.randomUUID();
-        const caminho = caminhoDoVideo(q.company_id, q.id, id);
+        const caminho = caminhoDoVideo(q.company_id, q.id, id, arquivo.type);
 
         const { error: erroUpload } = await supabaseAdmin.storage
           .from(BUCKET)
-          .upload(caminho, arquivo, { contentType: "video/webm", upsert: false });
+          .upload(caminho, arquivo, {
+            contentType: `video/${extensaoDoVideo(arquivo.type)}`,
+            upsert: false,
+          });
         if (erroUpload) return recusa("Não foi possível salvar o vídeo.", 500);
 
         const { data: assinada } = await supabaseAdmin.storage
