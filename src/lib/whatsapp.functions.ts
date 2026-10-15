@@ -54,9 +54,8 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getInstanceState, isEvolutionConfigured, pingEvolution } = await import(
-      "@/lib/evolution.server"
-    );
+    const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
+    const { getInstanceState, isConfigured: isEvolutionConfigured, ping: pingEvolution } = evolutionAdmin;
     const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
 
     // Testa alcance de verdade, não só presença das variáveis.
@@ -123,9 +122,8 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { createInstance, getQrCode, deleteInstance, isEvolutionConfigured } = await import(
-      "@/lib/evolution.server"
-    );
+    const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
+    const { createInstance, getQrCode, deleteInstance, isConfigured: isEvolutionConfigured } = evolutionAdmin;
     if (!isEvolutionConfigured()) {
       throw new Error("Evolution API não configurada no servidor.");
     }
@@ -198,7 +196,8 @@ export const refreshWhatsAppQr = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getQrCode } = await import("@/lib/evolution.server");
+    const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
+    const { getQrCode } = evolutionAdmin;
     const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
 
     const { data: instance } = await (supabaseAdmin as any)
@@ -221,7 +220,7 @@ export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { deleteInstance } = await import("@/lib/evolution.server");
+    const { deleteInstance } = (await import("@/lib/whatsapp/evolution-provider")).evolutionAdmin;
     const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
 
     const { data: instance } = await (supabaseAdmin as any)
@@ -258,7 +257,7 @@ export const saveWhatsAppSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { toWhatsAppNumber } = await import("@/lib/evolution.server");
+    const { toWhatsAppNumber } = await import("@/lib/whatsapp/numero");
     const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
 
     // Falha cedo e com mensagem clara: um alerta ligado sem telefone válido
@@ -288,7 +287,7 @@ export const sendWhatsAppTest = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => z.object({ phone: z.string().min(8) }).parse(raw))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sendText } = await import("@/lib/evolution.server");
+    const { evolutionProvider } = await import("@/lib/whatsapp/evolution-provider");
     const companyId = await resolveCompanyId(supabaseAdmin, context.userId);
 
     const { data: instance } = await (supabaseAdmin as any)
@@ -302,7 +301,11 @@ export const sendWhatsAppTest = createServerFn({ method: "POST" })
     }
 
     const body = "✅ Teste do Alt Flow Lead: sua automação de WhatsApp está funcionando.";
-    const sent = await sendText(instance.instance_name, data.phone, body);
+    const sent = await evolutionProvider.sendText(
+      { provider: "evolution", referencia: instance.instance_name },
+      data.phone,
+      body,
+    );
 
     await (supabaseAdmin as any).from("whatsapp_messages").insert({
       company_id: companyId,

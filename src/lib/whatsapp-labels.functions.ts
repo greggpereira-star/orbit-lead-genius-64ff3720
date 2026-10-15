@@ -31,8 +31,11 @@ export const listarEtiquetasDaEmpresa = createServerFn({ method: 'GET' })
       return { ok: false as const, motivo: 'WhatsApp não conectado', etiquetas: [] };
     }
 
-    const { listarEtiquetas } = await import('@/lib/evolution.server');
-    const r = await listarEtiquetas(inst.instance_name);
+    const { evolutionProvider } = await import('@/lib/whatsapp/evolution-provider');
+    const r = await evolutionProvider.listarEtiquetas!({
+      provider: 'evolution',
+      referencia: inst.instance_name,
+    });
     if (!r.ok) return { ok: false as const, motivo: r.error ?? 'falha ao consultar', etiquetas: [] };
 
     return {

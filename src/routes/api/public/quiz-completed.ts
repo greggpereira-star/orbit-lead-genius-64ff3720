@@ -32,9 +32,6 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'content-type': 'application/json' } });
 
-/** `altflow_` + uuid sem hífen — mesmo formato que `whatsapp.functions.ts` usa. */
-const instanceNameFor = (companyId: string) => `altflow_${companyId.replace(/-/g, '').slice(0, 20)}`;
-
 /** Troca `{{nome}}` pelo valor. Chave sem valor vira string vazia, nunca `{{nome}}` cru na mensagem. */
 function interpolar(texto: string, vars: Record<string, string>): string {
   return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => vars[k] ?? '');
@@ -275,8 +272,23 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         };
 
         try {
-          const { sendText } = await import('@/lib/evolution.server');
-          const r = await sendText(instanceNameFor(q.company_id), destino, texto);
+          /* Pelo canal da empresa e pela política de envio: quem pediu para
+             parar não recebe a mensagem da faixa. Horário NÃO se aplica aqui —
+             a pessoa acabou de concluir o quiz e espera a resposta agora. */
+          const { resolverCanal } = await import('@/lib/whatsapp/canal');
+          const { toWhatsAppNumber } = await import('@/lib/whatsapp/numero');
+          const { numeroEmOptout } = await import('@/lib/whatsapp/politica');
+          const numero = toWhatsAppNumber(destino);
+          if (!numero || (await numeroEmOptout(supabaseAdmin as never, q.company_id, numero))) {
+            await liberar().catch(() => {});
+            return json({ status: 'classificado', faixa: faixa.label, enviou: false, motivo: 'opt_out_ou_numero_invalido' });
+          }
+          const canal = await resolverCanal(supabaseAdmin as never, q.company_id);
+          if (!canal.ok) {
+            await liberar().catch(() => {});
+            return json({ status: 'classificado', faixa: faixa.label, enviou: false, motivo: canal.texto });
+          }
+          const r = await canal.provider.sendText(canal.canal, numero, texto);
           if (!r.ok) {
             await liberar().catch(() => {});
             console.error(JSON.stringify({

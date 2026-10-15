@@ -219,18 +219,14 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
       }
 
       case 'enviar_whatsapp': {
-        const { isEvolutionConfigured, sendText } = await import('@/lib/evolution.server');
-        if (!isEvolutionConfigured()) {
-          return { acao: tipo, status: 'pulada', detalhe: 'Evolution não configurada' };
-        }
-
-        const { data: instancia } = await admin
-          .from('whatsapp_instances')
-          .select('instance_name, status')
-          .eq('company_id', job.company_id)
-          .maybeSingle();
-        if (!instancia?.instance_name || instancia.status !== 'connected') {
-          return { acao: tipo, status: 'pulada', detalhe: 'WhatsApp não conectado' };
+        const { resolverCanal } = await import('@/lib/whatsapp/canal');
+        const canal = await resolverCanal(admin, job.company_id);
+        if (!canal.ok) {
+          return {
+            acao: tipo,
+            status: 'pulada',
+            detalhe: canal.motivo === 'nao_configurado' ? 'Evolution não configurada' : 'WhatsApp não conectado',
+          };
         }
 
         // Destino: número fixo da configuração (alerta ao corretor) ou o
@@ -241,7 +237,42 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
           return { acao: tipo, status: 'pulada', detalhe: 'sem destino ou sem mensagem' };
         }
 
-        const r = await sendText(instancia.instance_name, destino, texto);
+        /* A POLÍTICA DE ENVIO vale quando a mensagem vai para o LEAD.
+           Esta ação enviava para quem tinha pedido para parar e fora do
+           horário — só o caminho legado (`dispatchLeadWhatsApp`) respeitava as
+           duas regras. Alerta a um número fixo da empresa (`cfg.para`) é
+           interno e não passa por opt-out de lead, como já era no legado. */
+        const paraLead = !String(cfg.para ?? '').trim();
+        if (paraLead) {
+          const { toWhatsAppNumber } = await import('@/lib/whatsapp/numero');
+          const { decidirEnvio, horaEmSaoPaulo, janelaDaEmpresa, numeroEmOptout } = await import(
+            '@/lib/whatsapp/politica'
+          );
+          const numero = toWhatsAppNumber(destino);
+          const decisao = decidirEnvio({
+            numero,
+            optedOut: numero ? await numeroEmOptout(admin, job.company_id, numero) : false,
+            hora: horaEmSaoPaulo(),
+            janela: await janelaDaEmpresa(admin, job.company_id),
+          });
+          if (!decisao.enviar) {
+            // Registrado: é a tela que o cliente audita, e "por que não foi?"
+            // precisa ter resposta lá.
+            await admin.from('whatsapp_messages').insert({
+              company_id: job.company_id,
+              lead_id: job.lead_id,
+              direction: 'outbound',
+              to_phone: numero ?? destino,
+              body: '',
+              status: 'skipped',
+              skipped_reason: decisao.texto,
+              kind: 'automacao',
+            });
+            return { acao: tipo, status: 'pulada', detalhe: decisao.texto };
+          }
+        }
+
+        const r = await canal.provider.sendText(canal.canal, destino, texto);
         if (!r.ok) return { acao: tipo, status: 'falhou', detalhe: r.error };
 
         // Registrado em whatsapp_messages, que é a tela que o cliente audita.

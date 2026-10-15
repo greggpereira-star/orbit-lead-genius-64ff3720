@@ -48,8 +48,11 @@ export async function moverLeadPelaEtiqueta(
 
   // O webhook manda o ID da etiqueta, não o nome — e nome é o que o usuário
   // configurou. A tradução depende de consultar a Evolution.
-  const { listarEtiquetas } = await import("@/lib/evolution.server");
-  const etiquetas = await listarEtiquetas(entrada.instanceName);
+  const { evolutionProvider } = await import("@/lib/whatsapp/evolution-provider");
+  const etiquetas = await evolutionProvider.listarEtiquetas!({
+    provider: "evolution",
+    referencia: entrada.instanceName,
+  });
   if (!etiquetas.ok) return { movido: false, motivo: `não consegui ler as etiquetas: ${etiquetas.error}` };
 
   const nome = (etiquetas.data ?? []).find((e) => e.id === entrada.labelId)?.name?.trim();

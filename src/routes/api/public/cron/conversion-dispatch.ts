@@ -198,11 +198,12 @@ export const Route = createFileRoute('/api/public/cron/conversion-dispatch')({
               if (!instancia?.instance_name) {
                 etiquetaResultado = { status: 'pulado', motivo: 'empresa sem instância de WhatsApp' };
               } else {
-                const { aplicarEtiquetaPorNome } = await import('@/lib/evolution.server');
-                const r = await aplicarEtiquetaPorNome(
-                  instancia.instance_name,
+                const { evolutionProvider } = await import('@/lib/whatsapp/evolution-provider');
+                const r = await evolutionProvider.aplicarEtiqueta!(
+                  { provider: 'evolution', referencia: instancia.instance_name },
                   lead.phone,
                   mapa.whatsapp_label,
+                  'add',
                 );
                 etiquetaResultado = r.ok
                   ? { status: 'aplicada', etiqueta: mapa.whatsapp_label }

@@ -11,7 +11,9 @@
  * intervalo mínimo entre envios e uma saudação por lead (índice único no banco).
  */
 
-import { sendText, isEvolutionConfigured, toWhatsAppNumber } from "./evolution.server";
+import { evolutionProvider } from "./whatsapp/evolution-provider";
+import { toWhatsAppNumber } from "./whatsapp/numero";
+import { decidirEnvio, horaEmSaoPaulo, numeroEmOptout } from "./whatsapp/politica";
 
 type Admin = any;
 
@@ -47,29 +49,6 @@ function renderTemplate(template: string, vars: Record<string, string>): string 
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, key: string) => vars[key] ?? "");
 }
 
-/**
- * Hora atual no fuso de São Paulo — o horário comercial que importa é o do
- * lead, não o UTC do servidor.
- */
-function currentHourSaoPaulo(): number {
-  const formatted = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    hour: "2-digit",
-    hour12: false,
-  }).format(new Date());
-  return Number.parseInt(formatted, 10);
-}
-
-function withinQuietHours(settings: Settings): boolean {
-  const hour = currentHourSaoPaulo();
-  if (Number.isNaN(hour)) return true;
-  const { quiet_hours_start: start, quiet_hours_end: end } = settings;
-  if (start === end) return true;
-  if (start < end) return hour >= start && hour < end;
-  // Janela que cruza a meia-noite (ex: 20h às 6h)
-  return hour >= start || hour < end;
-}
-
 async function logMessage(
   admin: Admin,
   row: {
@@ -103,7 +82,7 @@ export async function dispatchLeadWhatsApp(
   const result = { greeting: "skipped", brokerAlert: "skipped" };
 
   try {
-    if (!isEvolutionConfigured()) return result;
+    if (!evolutionProvider.estaConfigurado()) return result;
 
     const [{ data: settings }, { data: instance }] = await Promise.all([
       admin
@@ -138,8 +117,7 @@ export async function dispatchLeadWhatsApp(
       return result;
     }
 
-    const instanceName = instance.instance_name as string;
-    const inWindow = withinQuietHours(cfg);
+    const canal = { provider: "evolution" as const, referencia: instance.instance_name as string };
     const vars = {
       nome: firstName(input.name),
       nome_completo: input.name ?? "",
@@ -152,63 +130,39 @@ export async function dispatchLeadWhatsApp(
     if (cfg.greeting_enabled) {
       const leadNumber = toWhatsAppNumber(input.phone);
 
-      // Quem pediu pra parar não recebe, mesmo voltando como lead novo.
-      // Ignorar isso é o caminho mais rápido pra denúncia — e denúncia é o
-      // que derruba o número.
-      let optedOut = false;
-      if (leadNumber) {
-        const { data: optout } = await admin
-          .from("whatsapp_optouts")
-          .select("phone")
-          .eq("company_id", input.companyId)
-          .eq("phone", leadNumber)
-          .maybeSingle();
-        optedOut = Boolean(optout);
-      }
+      /* A decisão sai de `decidirEnvio` (opt-out, número, horário), a MESMA que
+         a ação `enviar_whatsapp` do motor de automação passou a usar. Quem pediu
+         para parar não recebe, mesmo voltando como lead novo: ignorar isso é o
+         caminho mais rápido para a denúncia — e denúncia é o que derruba o
+         número. */
+      const decisao = decidirEnvio({
+        numero: leadNumber,
+        optedOut: leadNumber ? await numeroEmOptout(admin, input.companyId, leadNumber) : false,
+        hora: horaEmSaoPaulo(),
+        janela: { inicio: cfg.quiet_hours_start, fim: cfg.quiet_hours_end },
+      });
 
-      if (optedOut) {
+      if (!decisao.enviar) {
         await logMessage(admin, {
           company_id: input.companyId,
           lead_id: input.leadId,
           direction: "outbound",
           kind: "greeting",
-          to_phone: leadNumber ?? "",
+          to_phone: leadNumber ?? input.phone ?? "",
           body: "",
           status: "skipped",
-          skipped_reason: "Contato pediu para não receber mensagens",
-        });
-      } else if (!leadNumber) {
-        await logMessage(admin, {
-          company_id: input.companyId,
-          lead_id: input.leadId,
-          direction: "outbound",
-          kind: "greeting",
-          to_phone: input.phone ?? "",
-          body: "",
-          status: "skipped",
-          skipped_reason: "Telefone ausente ou inválido",
-        });
-      } else if (!inWindow) {
-        await logMessage(admin, {
-          company_id: input.companyId,
-          lead_id: input.leadId,
-          direction: "outbound",
-          kind: "greeting",
-          to_phone: leadNumber,
-          body: "",
-          status: "skipped",
-          skipped_reason: `Fora da janela (${cfg.quiet_hours_start}h–${cfg.quiet_hours_end}h)`,
+          skipped_reason: decisao.texto,
         });
       } else {
         const body = renderTemplate(cfg.greeting_template, vars);
-        const sent = await sendText(instanceName, leadNumber, body);
+        const sent = await evolutionProvider.sendText(canal, leadNumber as string, body);
         result.greeting = sent.ok ? "sent" : "failed";
         await logMessage(admin, {
           company_id: input.companyId,
           lead_id: input.leadId,
           direction: "outbound",
           kind: "greeting",
-          to_phone: leadNumber,
+          to_phone: leadNumber as string,
           body,
           status: sent.ok ? "sent" : "failed",
           provider_message_id: sent.data?.messageId ?? null,
@@ -242,7 +196,7 @@ export async function dispatchLeadWhatsApp(
           ...vars,
           link: leadNumber ? `https://wa.me/${leadNumber}` : "(sem telefone)",
         });
-        const sent = await sendText(instanceName, brokerNumber, body);
+        const sent = await evolutionProvider.sendText(canal, brokerNumber, body);
         result.brokerAlert = sent.ok ? "sent" : "failed";
         await logMessage(admin, {
           company_id: input.companyId,

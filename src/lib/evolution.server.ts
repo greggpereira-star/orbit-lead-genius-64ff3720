@@ -148,38 +148,10 @@ async function call<T>(
   }
 }
 
-/**
- * Converte telefone brasileiro em JID do WhatsApp.
- *
- * Números do Meta Lead Ads chegam em formatos variados (+55 27 99631-8075,
- * 27996318075, 5527996318075). O WhatsApp espera só dígitos com DDI.
- * Retorna null quando o número não tem cara de telefone válido — melhor não
- * enviar do que enviar pra alguém errado.
- */
-export function toWhatsAppNumber(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  let digits = String(raw).replace(/\D+/g, "");
-  if (!digits) return null;
+import { toWhatsAppNumber } from "./whatsapp/numero";
 
-  // Remove zeros de discagem nacional no começo (ex: 027...)
-  digits = digits.replace(/^0+/, "");
-
-  // Sem DDI: assume Brasil quando o tamanho bate com DDD + número.
-  if (digits.length === 10 || digits.length === 11) {
-    digits = `55${digits}`;
-  }
-
-  // Com DDI brasileiro, aceitamos 12 (fixo) ou 13 (celular com o 9).
-  if (digits.startsWith("55")) {
-    const rest = digits.slice(2);
-    if (rest.length < 10 || rest.length > 11) return null;
-    return digits;
-  }
-
-  // Outros países: exige um tamanho plausível de E.164.
-  if (digits.length < 8 || digits.length > 15) return null;
-  return digits;
-}
+/** Reexportada por compatibilidade: a regra vive em `./whatsapp/numero`. */
+export { toWhatsAppNumber };
 
 export interface CreateInstanceResult {
   instanceName: string;

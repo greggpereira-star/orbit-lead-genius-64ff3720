@@ -718,7 +718,40 @@ opt-outs, horário de atendimento.
 
 ---
 
-## 11. Perguntas que precisam de decisão
+## 11. Decisões tomadas (15/10/2026)
+
+| # | Pergunta | Decisão | Consequência no projeto |
+|---|---|---|---|
+| 1 | Coexistência × número dedicado | **Coexistência** | Embedded Signup com `featureType: whatsapp_business_app_onboarding`; ingestão de `smb_message_echoes`, `history` e `smb_app_state_sync`; alerta de "abrir o app a cada ~13 dias"; limite de 20 msg/s por número |
+| 2 | Números atuais | **WhatsApp Business (app)** | Elegíveis à coexistência (exige ≥ 7 dias de uso e app ≥ v2.24.17 — conferir por cliente) |
+| 3 | App Meta | **Reaproveitar** o do Lead Ads | Adicionar os produtos WhatsApp ao app existente; `META_APP_SECRET` já é o do webhook; pedir `whatsapp_business_management` e `whatsapp_business_messaging` |
+| 4 | Cobrança | **Cliente, WABA própria** | Cada empresa tem WABA e meio de pagamento na Meta; sem revenda; custo por categoria exibido na tela só como informação |
+| 5 | Atendimento | **Multiusuário** | Filas, atribuição e visibilidade "só as minhas" já no P0 (Fase 3) — reaproveita `chat_operators`/`chat_departments` |
+| 6 | Evolution | **Corte seco por cliente** | Sem contingência: a empresa liga a Cloud API e a instância Evolution é removida. Exige checklist de corte (§9, Fase 5) e janela combinada com o cliente |
+
+## 12. Fase 0 — o que foi entregue
+
+Branch de trabalho: `main`. Sem mudança de comportamento para o usuário, exceto os
+dois consertos de segurança.
+
+| Entrega | Onde | Verificação |
+|---|---|---|
+| Interface `WhatsAppProvider` + `EvolutionProvider` | `src/lib/whatsapp/` | 7 arquivos migrados; teste de isolamento garante que só `evolution-provider.ts` importa a Evolution |
+| Política de envio única (opt-out → horário) | `src/lib/whatsapp/politica.ts` | 21 testes, incluindo erro de consulta que **bloqueia** |
+| **A2** — `enviar_whatsapp` respeita opt-out e horário | `automation-dispatch.ts` | teste de ordem (política antes do envio) + mutação |
+| Opt-out com variações do 9º dígito | `variantesDoNumero` | fixo de 8 dígitos (2–5) não vira celular — falha encontrada pelo teste |
+| `quiz-completed` pelo canal da empresa + opt-out | `quiz-completed.ts` | horário **não** se aplica: a pessoa acabou de concluir o quiz |
+| **A6** — token da Meta fora do alcance do navegador | migration `20261015170000_token_meta_somente_servidor.sql` | **escrita, NÃO aplicada** |
+
+**Decisão de comportamento** — alerta a número fixo (`cfg.para`) não passa por
+opt-out de lead, como já era no caminho legado; só mensagens ao lead passam.
+
+**Pendente do usuário** — aplicar a migration do token (`REVOKE`/`GRANT`) e, em
+paralelo, iniciar as aprovações na Meta (§9, Fase 0, "não-código").
+
+---
+
+## 13. Perguntas originais (respondidas em §11)
 
 1. **Coexistência ou número dedicado** como padrão? (§4.3)
 2. Os clientes já têm **WhatsApp Business (app)** nos números atuais, ou usam o
