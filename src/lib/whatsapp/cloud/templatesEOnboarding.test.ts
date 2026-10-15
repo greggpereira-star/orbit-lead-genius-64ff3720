@@ -224,7 +224,10 @@ describe("concluirOnboarding", () => {
     phoneNumberId: "PNID",
   };
 
-  beforeEach(() => vi.stubEnv("WA_TOKEN_KEY", chave));
+  beforeEach(() => {
+    vi.stubEnv("WA_TOKEN_KEY", chave);
+    vi.stubEnv("WA_WEBHOOK_VERIFY_TOKEN", "VERIFY-TESTE");
+  });
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
@@ -272,6 +275,28 @@ describe("concluirOnboarding", () => {
       quality: "GREEN",
     });
     expect((num.args[0] as { webhook_subscribed_at: string }).webhook_subscribed_at).toBeTruthy();
+  });
+
+  it("inscreve a WABA com callback PRÓPRIO, sem mexer no callback do app", async () => {
+    const { f, chamadas } = rotearFetch(feliz(true));
+    vi.stubGlobal("fetch", f);
+    const { db } = criarDb({ tabelas: { wa_accounts: { id: "acc1" } } });
+    await concluirOnboarding(db, base);
+    const insc = chamadas.find((c) => c.url.includes("/WABA/subscribed_apps"))!;
+    expect(JSON.parse(String(insc.init.body))).toEqual({
+      override_callback_uri: "https://altleadflow.com.br/api/public/wa-webhook",
+      verify_token: "VERIFY-TESTE",
+    });
+  });
+
+  it("sem WA_WEBHOOK_VERIFY_TOKEN não inscreve (cairia no callback de outro sistema)", async () => {
+    vi.stubEnv("WA_WEBHOOK_VERIFY_TOKEN", "");
+    const { f, chamadas } = rotearFetch(feliz(true));
+    vi.stubGlobal("fetch", f);
+    const { db, ops } = criarDb({});
+    expect(await concluirOnboarding(db, base)).toMatchObject({ ok: false, etapa: "inscricao" });
+    expect(chamadas.some((c) => c.url.includes("subscribed_apps"))).toBe(false);
+    expect(ops.filter((o) => o.op === "upsert")).toEqual([]);
   });
 
   it("número só da API: não pede sincronização", async () => {

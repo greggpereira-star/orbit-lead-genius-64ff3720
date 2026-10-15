@@ -90,7 +90,18 @@ export async function concluirOnboarding(
   }
 
   // 4) inscrição nos webhooks — sem ela nada chega
-  const insc = await inscreverAppNaWaba(e.wabaId, token);
+  const verifyToken = process.env.WA_WEBHOOK_VERIFY_TOKEN;
+  if (!verifyToken) {
+    return {
+      ok: false,
+      etapa: "inscricao",
+      texto: "Recebimento de mensagens não configurado no servidor (WA_WEBHOOK_VERIFY_TOKEN).",
+    };
+  }
+  const insc = await inscreverAppNaWaba(e.wabaId, token, {
+    url: process.env.WA_WEBHOOK_URL || "https://altleadflow.com.br/api/public/wa-webhook",
+    verifyToken,
+  });
   if (!insc.ok) {
     return {
       ok: false,

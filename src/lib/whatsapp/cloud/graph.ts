@@ -99,11 +99,24 @@ export function trocarCodigoPorToken(p: { appId: string; appSecret: string; code
   );
 }
 
-/** Sem esta inscrição o número "conecta" e nenhum webhook chega. */
-export function inscreverAppNaWaba(wabaId: string, token: string) {
+/**
+ * Sem esta inscrição o número "conecta" e nenhum webhook chega.
+ *
+ * O app da Meta pode ter, no nível do APP, um callback de WhatsApp que serve
+ * outro sistema. Por isso a inscrição leva `override_callback_uri`: só ESTA
+ * conta (WABA) passa a entregar aqui, e o callback do app fica como está.
+ */
+export function inscreverAppNaWaba(
+  wabaId: string,
+  token: string,
+  destino?: { url: string; verifyToken: string },
+) {
   return chamar<{ success?: boolean }>(`/${encodeURIComponent(wabaId)}/subscribed_apps`, {
     method: "POST",
     token,
+    ...(destino
+      ? { body: { override_callback_uri: destino.url, verify_token: destino.verifyToken } }
+      : {}),
   });
 }
 
