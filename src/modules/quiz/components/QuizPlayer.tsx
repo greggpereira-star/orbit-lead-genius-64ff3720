@@ -1281,6 +1281,7 @@ function RulerSlider({
   design,
   ariaLabel,
   onChange,
+  onTocar,
 }: {
   value: number;
   min: number;
@@ -1289,6 +1290,8 @@ function RulerSlider({
   design: QuizSchema['design'];
   ariaLabel: string;
   onChange: (v: number) => void;
+  /** Primeiro toque/tecla: marca o valor atual como resposta, mesmo sem arrastar. */
+  onTocar?: () => void;
 }) {
   const dragRef = useRef<{ pointerId: number; startX: number; startValue: number } | null>(null);
 
@@ -1299,6 +1302,7 @@ function RulerSlider({
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     (e.target as Element).setPointerCapture(e.pointerId);
+    onTocar?.();
     dragRef.current = { pointerId: e.pointerId, startX: e.clientX, startValue: value };
   };
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -1326,6 +1330,8 @@ function RulerSlider({
       aria-valuemax={max}
       aria-valuenow={value}
       onKeyDown={(e) => {
+        /* Só as setas contam como resposta: Tab para passar pelo campo não. */
+        if (e.key.startsWith('Arrow')) onTocar?.();
         if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onChange(clampSnap(value + step)); }
         if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); onChange(clampSnap(value - step)); }
       }}
@@ -1762,8 +1768,9 @@ function BlockView({
   const [value, setValue] = useState<unknown>(() => {
     if (respostaAnterior !== undefined && !Array.isArray(respostaAnterior)) return respostaAnterior;
     if (block.type === 'single-choice') return (block.options ?? []).find((o) => o.preselected)?.id ?? '';
-    if (block.type === 'weight') return block.sliderDefaultValue ?? 70;
-    if (block.type === 'height') return block.sliderDefaultValue ?? 170;
+    /* Régua começa SEM resposta: antes já vinha com 70 kg / 170 cm e o botão
+       liberava sem ninguém tocar nela — quem só clicava em Continuar gravava
+       um peso inventado como se fosse dado do lead. */
     return '';
   });
   const [multi, setMulti] = useState<string[]>(() => {
@@ -2822,7 +2829,12 @@ function BlockView({
       const isWeight = block.type === 'weight';
       const metricMin = block.sliderMin ?? (isWeight ? 30 : 100);
       const metricMax = block.sliderMax ?? (isWeight ? 200 : 250);
-      const metricValue = typeof value === 'number' ? value : (isWeight ? 70 : 170);
+      const respondido = typeof value === 'number';
+      /* Sem resposta, o valor só dá a POSIÇÃO inicial da régua (o padrão do
+         autor, ou um ponto médio); não é gravado até a pessoa tocar nela. */
+      const metricValue = respondido
+        ? (value as number)
+        : (block.sliderDefaultValue ?? (isWeight ? 70 : 170));
       const allowUnitToggle = block.allowUnitToggle !== false;
 
       /* Conversão em `regua.ts`: guardar kg inteiro fazia 55% dos valores em
@@ -2858,16 +2870,24 @@ function BlockView({
               </div>
             )}
             <div className="text-center mb-5">
-              <span className="text-5xl font-bold tabular-nums" style={{ color: design.text, fontFamily: design.fontHeading }}>
-                {displayValue}
+              <span className="text-5xl font-bold tabular-nums" style={{ color: respondido ? design.text : design.muted, fontFamily: design.fontHeading }}>
+                {respondido ? displayValue : '—'}
               </span>
               <span className="text-lg ml-1.5 opacity-60">{unitLabel}</span>
+              {!respondido && (
+                <p className="text-sm mt-2" style={{ color: design.muted }}>
+                  Arraste a régua para informar
+                </p>
+              )}
             </div>
             <RulerSlider
               value={displayValue}
               min={displayMin}
               max={displayMax}
               step={passoExibido(block.sliderStep, sliderUnit)}
+              onTocar={() => {
+                if (!respondido) setValue(metricValue);
+              }}
               design={design}
               ariaLabel={block.title || (isWeight ? 'Peso' : 'Altura')}
               onChange={(next) =>
