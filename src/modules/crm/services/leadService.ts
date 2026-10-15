@@ -61,11 +61,28 @@ export interface LeadDetails {
 
 const EMPTY_METADATA: Record<string, Json> = {};
 
+import { validarTelefone } from "@/modules/quiz/lib/telefone";
+import { validarEmail } from "@/modules/quiz/lib/email";
 import {
   acharDuplicado,
   finalDoTelefone,
   normalizarEmail,
 } from "@/modules/crm/lib/identidadeDoLead";
+
+/** Mensagem de erro para e-mail/telefone digitados à mão, ou `null` se servem. */
+function validarContatoManual(email: string | null | undefined, phone: string | null | undefined): string | null {
+  const e = email?.trim();
+  if (e) {
+    const erro = validarEmail(e);
+    if (erro) return erro;
+  }
+  const t = phone?.trim();
+  if (t) {
+    const erro = validarTelefone(t);
+    if (erro) return erro;
+  }
+  return null;
+}
 
 function normalizeText(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -157,7 +174,19 @@ export async function listLeads(companyId: string, filters: LeadFilters = {}): P
 
   const searchTerm = filters.search ? sanitizeSearchTerm(filters.search) : '';
   if (searchTerm.length >= 2) {
-    request = request.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+    /* O telefone fica gravado só com dígitos na quase totalidade dos leads
+       (567 de 571 na base em 15/10), e quem busca digita "(27) 99999-8888".
+       Com a máscara no termo nada casava. Quando o termo é um número, procura
+       também pelos dígitos. */
+    const digitos = searchTerm.replace(/\D/g, '');
+    const pareceNumero = digitos.length >= 4 && /^[\d\s()+\-.]+$/.test(searchTerm);
+    const clausulas = [
+      `name.ilike.%${searchTerm}%`,
+      `email.ilike.%${searchTerm}%`,
+      `phone.ilike.%${searchTerm}%`,
+    ];
+    if (pareceNumero && digitos !== searchTerm) clausulas.push(`phone.ilike.%${digitos}%`);
+    request = request.or(clausulas.join(','));
   }
 
   const { data, error } = await request;
@@ -228,6 +257,11 @@ export async function createLead(input: CreateLeadInput): Promise<LeadRow> {
 
      Aqui BARRA em vez de fundir: numa criação manual quem está na tela sabe o
      que quer, e fundir sem perguntar tiraria dele a escolha. */
+  /* Mesmas regras do quiz. Sem elas, o CRM aceitava "2121121221212" como
+     telefone e "abc" como e-mail, e o lead nascia impossível de contatar. */
+  const erroDeContato = validarContatoManual(input.email, input.phone);
+  if (erroDeContato) throw new Error(erroDeContato);
+
   const duplicado = await acharLeadComMesmoContato(input.companyId, {
     email: input.email,
     phone: input.phone,
@@ -334,6 +368,11 @@ export async function updateLead(input: {
     patch[key] = trimmed === '' ? null : trimmed;
   }
   if (!Object.keys(patch).length) throw new Error('Nada para salvar.');
+  const erroDeContato = validarContatoManual(
+    typeof patch.email === 'string' ? patch.email : null,
+    typeof patch.phone === 'string' ? patch.phone : null,
+  );
+  if (erroDeContato) throw new Error(erroDeContato);
   patch.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -372,10 +411,9 @@ export async function deleteLeads(input: { leadIds: string[]; companyId: string 
     .map((f: { storage_path?: string | null }) => f.storage_path)
     .filter(Boolean) as string[];
 
-  if (paths.length) {
-    await supabase.storage.from('lead-attachments').remove(paths);
-  }
-
+  /* O banco PRIMEIRO. Antes os arquivos eram removidos antes do DELETE: se o
+     DELETE falhasse (permissão, rede), os leads ficavam de pé sem os anexos —
+     perda sem volta. Arquivo órfão no bucket é o mal menor. */
   const { error } = await supabase
     .from('leads')
     .delete()
@@ -383,6 +421,10 @@ export async function deleteLeads(input: { leadIds: string[]; companyId: string 
     .eq('company_id', input.companyId);
 
   if (error) throw new Error(error.message);
+
+  if (paths.length) {
+    await supabase.storage.from('lead-attachments').remove(paths).catch(() => {});
+  }
   return input.leadIds.length;
 }
 
@@ -396,12 +438,6 @@ export async function deleteLead(input: { leadId: string; companyId: string }): 
     .map((f: { storage_path?: string | null }) => f.storage_path)
     .filter(Boolean) as string[];
 
-  if (paths.length) {
-    // Falha aqui não impede a exclusão do lead: um arquivo órfão no bucket é
-    // menos grave do que deixar o lead que o usuário mandou apagar.
-    await supabase.storage.from('lead-attachments').remove(paths);
-  }
-
   const { error } = await supabase
     .from('leads')
     .delete()
@@ -409,6 +445,12 @@ export async function deleteLead(input: { leadId: string; companyId: string }): 
     .eq('company_id', input.companyId);
 
   if (error) throw new Error(error.message);
+
+  if (paths.length) {
+    // Depois do DELETE, e sem travar: arquivo órfão no bucket é menos grave do
+    // que apagar os anexos de um lead que acabou não sendo excluído.
+    await supabase.storage.from('lead-attachments').remove(paths).catch(() => {});
+  }
 }
 
 export async function archiveLead(input: ArchiveLeadInput): Promise<LeadRow> {
