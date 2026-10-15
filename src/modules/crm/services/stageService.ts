@@ -290,6 +290,16 @@ export async function updateStage(
  * violaria a restrição.
  */
 export async function setEntryStage(companyId: string, stageId: string): Promise<void> {
+  /* Guarda a etapa de entrada atual: se a segunda escrita falhar, o funil
+     ficaria SEM etapa de entrada, e lead novo não teria onde cair. */
+  const { data: atual } = await (supabase as any)
+    .from('stages')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('is_entry', true)
+    .maybeSingle();
+  const idAnterior = (atual as { id: string } | null)?.id ?? null;
+
   const clear = await (supabase as any)
     .from('stages')
     .update({ is_entry: false })
@@ -301,7 +311,12 @@ export async function setEntryStage(companyId: string, stageId: string): Promise
     .from('stages')
     .update({ is_entry: true })
     .eq('id', stageId);
-  if (set.error) throw new Error(set.error.message);
+  if (set.error) {
+    if (idAnterior) {
+      await (supabase as any).from('stages').update({ is_entry: true }).eq('id', idAnterior);
+    }
+    throw new Error(set.error.message);
+  }
 }
 
 export async function reorderStages(orderedIds: string[]): Promise<void> {
@@ -326,11 +341,28 @@ export async function deleteStage(stageId: string, moveLeadsToStageId: string): 
     throw new Error('Escolha uma etapa diferente para receber os leads.');
   }
 
+  /* Excluir a etapa de ENTRADA deixava o funil sem etapa de entrada: lead
+     novo ficava sem lugar. A de destino herda o papel antes da exclusão. */
+  const { data: alvo } = await (supabase as any)
+    .from('stages')
+    .select('is_entry')
+    .eq('id', stageId)
+    .maybeSingle();
+  const eraEntrada = (alvo as { is_entry?: boolean } | null)?.is_entry === true;
+
   const moved = await (supabase as any)
     .from('leads')
     .update({ stage_id: moveLeadsToStageId, stage_entered_at: new Date().toISOString() })
     .eq('stage_id', stageId);
   if (moved.error) throw new Error(moved.error.message);
+
+  if (eraEntrada) {
+    // Duas escritas: o índice único parcial não admite duas de entrada.
+    const limpa = await (supabase as any).from('stages').update({ is_entry: false }).eq('id', stageId);
+    if (limpa.error) throw new Error(limpa.error.message);
+    const herda = await (supabase as any).from('stages').update({ is_entry: true }).eq('id', moveLeadsToStageId);
+    if (herda.error) throw new Error(herda.error.message);
+  }
 
   const { error } = await (supabase as any).from('stages').delete().eq('id', stageId);
   if (error) throw new Error(error.message);
