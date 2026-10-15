@@ -14,6 +14,7 @@ export interface MensagemDaConversa {
   template_name: string | null;
   sent_by: string | null;
   error_title: string | null;
+  media_id: string | null;
 }
 
 export interface MarcaDeEntrega {
@@ -128,4 +129,11 @@ export function agruparPorDia(
     g.mensagens.push(m);
   }
   return grupos;
+}
+
+const TIPOS_DE_MIDIA = new Set(["image", "audio", "video", "document", "sticker"]);
+
+/** Mídia para exibir: tipo de mídia E arquivo ligado à mensagem. */
+export function temMidia(m: Pick<MensagemDaConversa, "type" | "media_id">): boolean {
+  return TIPOS_DE_MIDIA.has(m.type) && Boolean(m.media_id);
 }

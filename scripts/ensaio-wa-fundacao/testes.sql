@@ -286,3 +286,94 @@ BEGIN
   RAISE NOTICE 'wa_fase4: 8 testes passaram';
 END
 $t$;
+
+-- ===========================================================================
+-- Fase 5: mídia, notas e uso por categoria
+-- ===========================================================================
+DO $t$
+DECLARE
+  v_emp uuid; v_conv uuid; v_msg uuid; v_media uuid; v_media2 uuid; v_r record; v_n int;
+BEGIN
+  IF to_regprocedure('public.wa_registrar_midia(uuid,text,text,text,text,text,text)') IS NULL THEN
+    RAISE NOTICE 'fase 5 ausente: pulando'; RETURN;
+  END IF;
+  SELECT id INTO v_emp FROM public.companies LIMIT 1;
+  UPDATE public.wa_phone_numbers SET status = 'active' WHERE phone_number_id = 'PNID_ENSAIO';
+
+  -- T40: mensagem de imagem → mídia pendente ligada à mensagem
+  SELECT * INTO v_r FROM public.wa_registrar_mensagem('PNID_ENSAIO','5527944440004','Edu','inbound','customer',
+    'wamid.MID1','image','foto','{"image":{"id":"MEDIA1"}}'::jsonb, now(), NULL);
+  v_conv := v_r.out_conversa; v_msg := v_r.out_mensagem;
+  v_media := public.wa_registrar_midia(v_msg, 'image', 'MEDIA1', 'image/jpeg', 'abc', NULL);
+  IF v_media IS NULL THEN RAISE EXCEPTION 'T40 sem mídia'; END IF;
+  IF (SELECT status FROM public.wa_media WHERE id = v_media) <> 'pending' THEN
+    RAISE EXCEPTION 'T40 status inicial deveria ser pending'; END IF;
+  IF (SELECT media_id FROM public.wa_messages WHERE id = v_msg) <> v_media THEN
+    RAISE EXCEPTION 'T40 mensagem não ligada'; END IF;
+
+  -- T41: idempotente (reentrega) — mesma mídia, uma linha só
+  v_media2 := public.wa_registrar_midia(v_msg, 'image', 'MEDIA1', 'image/jpeg', 'abc', NULL);
+  IF v_media2 <> v_media THEN RAISE EXCEPTION 'T41 criou segunda mídia'; END IF;
+  SELECT count(*) INTO v_n FROM public.wa_media WHERE provider_media_id = 'MEDIA1';
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T41 % linhas', v_n; END IF;
+
+  -- T41b: uma mensagem que já tem mídia NÃO troca de mídia (reentrega adulterada
+  -- ou fora de ordem não pode apontar a mensagem para outro arquivo)
+  IF public.wa_registrar_midia(v_msg, 'image', 'MEDIA_OUTRA', 'image/png', 'zzz', NULL) <> v_media THEN
+    RAISE EXCEPTION 'T41b trocou a mídia da mensagem'; END IF;
+  IF (SELECT media_id FROM public.wa_messages WHERE id = v_msg) <> v_media THEN
+    RAISE EXCEPTION 'T41b a mensagem passou a apontar outra mídia'; END IF;
+
+  -- T42: o mesmo id de mídia em OUTRA mensagem reaproveita a linha (não duplica o arquivo)
+  SELECT * INTO v_r FROM public.wa_registrar_mensagem('PNID_ENSAIO','5527944440004',NULL,'inbound','customer',
+    'wamid.MID2','image','de novo','{}'::jsonb, now(), NULL);
+  v_media2 := public.wa_registrar_midia(v_r.out_mensagem, 'image', 'MEDIA1', 'image/jpeg', 'abc', NULL);
+  IF v_media2 <> v_media THEN RAISE EXCEPTION 'T42 duplicou a mídia'; END IF;
+
+  -- T43: mídia ENVIADA nasce 'stored', com o caminho no bucket
+  v_msg := public.wa_registrar_saida(v_conv, 'agent', 'wamid.OUT1', 'image', 'legenda', '{}'::jsonb, NULL);
+  v_media := public.wa_registrar_midia(v_msg, 'image', NULL, 'image/png', NULL, 'obra.png', 'emp/saida/x-obra.png');
+  IF (SELECT status FROM public.wa_media WHERE id = v_media) <> 'stored' THEN
+    RAISE EXCEPTION 'T43 mídia enviada deveria estar stored'; END IF;
+  IF (SELECT storage_path FROM public.wa_media WHERE id = v_media) <> 'emp/saida/x-obra.png' THEN
+    RAISE EXCEPTION 'T43 caminho'; END IF;
+
+  -- T44: mensagem inexistente é erro identificável
+  BEGIN
+    PERFORM public.wa_registrar_midia(gen_random_uuid(), 'image', 'X', 'image/jpeg', NULL, NULL);
+    RAISE EXCEPTION 'T44 aceitou mensagem inexistente';
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN NULL; END;
+
+  -- T45: uso por categoria conta UMA vez por mensagem, separando cobrável
+  PERFORM public.wa_aplicar_status('PNID_ENSAIO','wamid.OUT1','sent', now() - interval '2 min',
+    '{"billable":true,"category":"utility","pricing_model":"CBP"}'::jsonb, NULL);
+  PERFORM public.wa_aplicar_status('PNID_ENSAIO','wamid.OUT1','delivered', now() - interval '1 min',
+    '{"billable":true,"category":"utility","pricing_model":"CBP"}'::jsonb, NULL);
+  v_msg := public.wa_registrar_saida(v_conv, 'automation', 'wamid.OUT2', 'template', 'x', '{}'::jsonb, NULL, 't');
+  PERFORM public.wa_aplicar_status('PNID_ENSAIO','wamid.OUT2','sent', now() - interval '2 min',
+    '{"billable":true,"category":"marketing","pricing_model":"CBP"}'::jsonb, NULL);
+  v_msg := public.wa_registrar_saida(v_conv, 'agent', 'wamid.OUT3', 'text', 'y', '{}'::jsonb, NULL);
+  PERFORM public.wa_aplicar_status('PNID_ENSAIO','wamid.OUT3','sent', now() - interval '2 min',
+    '{"billable":false,"category":"service","pricing_model":"CBP"}'::jsonb, NULL);
+
+  SELECT total INTO v_n FROM public.wa_uso_por_categoria(v_emp, now() - interval '1 hour', now() + interval '1 hour')
+   WHERE categoria = 'utility' AND cobravel;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T45 utility contou % (esperava 1: sent+delivered da mesma mensagem)', v_n; END IF;
+  SELECT total INTO v_n FROM public.wa_uso_por_categoria(v_emp, now() - interval '1 hour', now() + interval '1 hour')
+   WHERE categoria = 'service' AND NOT cobravel;
+  IF v_n <> 1 THEN RAISE EXCEPTION 'T45 service gratuito contou %', v_n; END IF;
+
+  -- T46: janela de datas é respeitada
+  SELECT count(*) INTO v_n FROM public.wa_uso_por_categoria(v_emp, now() + interval '1 day', now() + interval '2 days');
+  IF v_n <> 0 THEN RAISE EXCEPTION 'T46 ignorou a janela'; END IF;
+
+  -- T47: nota interna aceita; vazia é recusada
+  INSERT INTO public.wa_notes (company_id, conversation_id, author_id, body) VALUES (v_emp, v_conv, NULL, 'cliente prefere à tarde');
+  BEGIN
+    INSERT INTO public.wa_notes (company_id, conversation_id, body) VALUES (v_emp, v_conv, '   ');
+    RAISE EXCEPTION 'T47 aceitou nota vazia';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+
+  RAISE NOTICE 'wa_fase5: 8 testes passaram';
+END
+$t$;

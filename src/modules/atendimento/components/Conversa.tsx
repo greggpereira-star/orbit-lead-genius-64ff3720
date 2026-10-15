@@ -2,26 +2,47 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { AlertTriangle, Check, CheckCheck, Clock, Loader2, Send, Timer, Zap } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCheck,
+  Clock,
+  Loader2,
+  Paperclip,
+  Send,
+  Timer,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { quickReplyService, type ChatQuickReply } from "@/modules/chat/services/quickReplyService";
 import {
   enviarMensagemWhatsApp,
+  enviarMidiaWhatsApp,
+  prepararUploadDeMidiaWhatsApp,
   enviarTemplateWhatsApp,
 } from "@/lib/whatsapp-atendimento.functions";
 import { rotuloDaJanela } from "@/lib/whatsapp/cloud/janela";
 import { variaveisDe } from "@/lib/whatsapp/cloud/templates";
 import { renderizarTexto } from "@/lib/whatsapp/cloud/render";
 import { AVISO_DO_MODO, modoDoCompositor } from "../lib/compositor";
+import { MidiaDaMensagem } from "./MidiaDaMensagem";
+import { supabase } from "@/lib/supabase";
+import { classificarArquivoParaEnvio } from "@/lib/whatsapp/cloud/midia";
 import {
   janelaDaConversa,
   nomeDaConversa,
   formatarTelefone,
   type ConversaDaLista,
 } from "../lib/conversas";
-import { agruparPorDia, autoriaDaSaida, marcaDeEntrega, textoParaExibir } from "../lib/mensagens";
+import {
+  agruparPorDia,
+  autoriaDaSaida,
+  marcaDeEntrega,
+  temMidia,
+  textoParaExibir,
+} from "../lib/mensagens";
 import {
   chaves,
   marcarComoLida,
@@ -138,7 +159,17 @@ export function Conversa(props: {
                     )}
                   >
                     {autoria && <div className="mb-0.5 text-[10px] opacity-70">{autoria}</div>}
-                    <div className="whitespace-pre-wrap break-words">{textoParaExibir(m)}</div>
+                    {temMidia(m) && (
+                      <div className="mb-1">
+                        <MidiaDaMensagem mensagem={m} />
+                      </div>
+                    )}
+                    {/* Com mídia visível, só a legenda: "[Imagem]" seria ruído. */}
+                    {(!temMidia(m) || m.body?.trim()) && (
+                      <div className="whitespace-pre-wrap break-words">
+                        {temMidia(m) ? m.body : textoParaExibir(m)}
+                      </div>
+                    )}
                     <div
                       className={cn(
                         "mt-1 flex items-center justify-end gap-1 text-[10px]",
@@ -191,6 +222,9 @@ function Compositor(props: {
   const qc = useQueryClient();
   const enviarTexto = useServerFn(enviarMensagemWhatsApp);
   const enviarTemplate = useServerFn(enviarTemplateWhatsApp);
+  const prepararUpload = useServerFn(prepararUploadDeMidiaWhatsApp);
+  const enviarMidia = useServerFn(enviarMidiaWhatsApp);
+  const arquivoRef = useRef<HTMLInputElement>(null);
 
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -236,6 +270,76 @@ function Compositor(props: {
     }
   }
 
+  /**
+   * Anexo: valida no navegador (mesma regra do servidor), pede um endereço de
+   * upload assinado, sobe o arquivo direto ao bucket e só então manda enviar.
+   * O texto digitado vira a legenda.
+   */
+  async function anexar(arquivo: File) {
+    const c = classificarArquivoParaEnvio({ mime: arquivo.type, bytes: arquivo.size });
+    // Formato fora da lista de mídia: oferece enviar como documento em vez de recusar calado.
+    let forcarDocumento = false;
+    if (!c.ok) {
+      if (!window.confirm(`${c.texto}\n\nEnviar como documento?`)) return;
+      forcarDocumento = true;
+    }
+    setEnviando(true);
+    try {
+      const prep = await prepararUpload({
+        data: {
+          conversaId: conversa.id,
+          nome: arquivo.name,
+          mime: arquivo.type || "application/octet-stream",
+          bytes: arquivo.size,
+          forcarDocumento,
+        },
+      });
+      if (!prep.ok) {
+        toast.error(prep.texto);
+        return;
+      }
+      const up = await (
+        supabase as unknown as {
+          storage: {
+            from: (b: string) => {
+              uploadToSignedUrl: (
+                p: string,
+                t: string,
+                f: File,
+              ) => Promise<{ error: { message: string } | null }>;
+            };
+          };
+        }
+      ).storage
+        .from("wa-media")
+        .uploadToSignedUrl(prep.caminho, prep.token, arquivo);
+      if (up.error) {
+        toast.error(`Não consegui subir o arquivo: ${up.error.message}`);
+        return;
+      }
+      const r = await enviarMidia({
+        data: {
+          conversaId: conversa.id,
+          caminho: prep.caminho,
+          tipo: prep.tipo,
+          mime: arquivo.type || "application/octet-stream",
+          nome: arquivo.name,
+          legenda: texto.trim() || null,
+        },
+      });
+      if (!r.ok) {
+        toast.error(r.texto);
+        return;
+      }
+      setTexto("");
+      qc.invalidateQueries({ queryKey: chaves.mensagens(conversa.id) });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar o arquivo.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   if (modo === "bloqueado" || modo === "resolvida") {
     return (
       <div className="flex items-center justify-between gap-3 border-t bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -277,6 +381,27 @@ function Compositor(props: {
         </div>
       )}
       <div className="flex items-end gap-2">
+        <input
+          ref={arquivoRef}
+          type="file"
+          className="hidden"
+          aria-label="Anexar arquivo"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = ""; // permite escolher o mesmo arquivo de novo
+            if (f) void anexar(f);
+          }}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Anexar arquivo"
+          disabled={enviando}
+          onClick={() => arquivoRef.current?.click()}
+        >
+          <Paperclip className="h-4 w-4" />
+        </Button>
         <Textarea
           ref={campo}
           rows={1}

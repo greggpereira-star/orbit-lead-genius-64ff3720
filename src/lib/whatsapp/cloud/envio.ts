@@ -11,6 +11,7 @@ import { numeroEmOptout } from "../politica";
 import type { AdminDb, ConsultaDb } from "../provider";
 import { criarCloudProvider, type ResultadoCloud } from "./cloud-provider";
 import { estadoDaJanela } from "./janela";
+import { BUCKET, type DbComArmazenamento } from "./armazenamento";
 import { renderizarTexto } from "./render";
 import { parametrosDoCorpo, variaveisDe } from "./templates";
 import type { DbWa } from "./processador";
@@ -284,3 +285,139 @@ export async function enviarTemplateNaConversa(
 }
 
 export { renderizarTexto };
+
+// ---------------------------------------------------------------------------
+// Mídia na conversa
+// ---------------------------------------------------------------------------
+
+export type ResultadoDoEnvioDeMidia =
+  | { ok: true; messageId: string; providerMessageId: string }
+  | {
+      ok: false;
+      motivo: MotivoDeRecusa | "arquivo_indisponivel";
+      texto: string;
+      retentavel?: boolean;
+    };
+
+/**
+ * Envia um arquivo já guardado no bucket. A Meta busca o arquivo por um LINK
+ * assinado de curta duração — nada de upload para a Graph API.
+ *
+ * Mesma política do texto, porque mídia também é mensagem livre: opt-out e
+ * janela de 24h. Fora da janela só template.
+ */
+export async function enviarMidiaNaConversa(
+  db: DbComArmazenamento,
+  e: {
+    conversaId: string;
+    tipo: "image" | "video" | "audio" | "document";
+    caminho: string;
+    mime: string;
+    nomeDoArquivo: string;
+    legenda: string | null;
+    enviadoPor: string | null;
+    origem: "agent" | "automation";
+    agora?: Date;
+  },
+): Promise<ResultadoDoEnvioDeMidia> {
+  const admin = db as unknown as AdminDb;
+
+  const { data: conv } = await (admin.from("wa_conversations") as ConsultaDb)
+    .select("id, company_id, phone_number_id, contact_id, last_inbound_at")
+    .eq("id", e.conversaId)
+    .maybeSingle();
+  const c = conv as {
+    id: string;
+    company_id: string;
+    phone_number_id: string;
+    contact_id: string;
+    last_inbound_at: string | null;
+  } | null;
+  if (!c) return { ok: false, motivo: "conversa_inexistente", texto: "Conversa não encontrada." };
+
+  const [{ data: contato }, { data: numero }] = await Promise.all([
+    (admin.from("wa_contacts") as ConsultaDb)
+      .select("wa_id, opted_out_at")
+      .eq("id", c.contact_id)
+      .maybeSingle(),
+    (admin.from("wa_phone_numbers") as ConsultaDb)
+      .select("phone_number_id")
+      .eq("id", c.phone_number_id)
+      .maybeSingle(),
+  ]);
+  const ct = contato as { wa_id: string; opted_out_at: string | null } | null;
+  const nm = numero as { phone_number_id: string } | null;
+  if (!ct || !nm)
+    return { ok: false, motivo: "conversa_inexistente", texto: "Conversa incompleta." };
+
+  if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
+    return {
+      ok: false,
+      motivo: "contato_pediu_para_parar",
+      texto: "O contato pediu para não receber mensagens.",
+    };
+  }
+  if (!estadoDaJanela(c.last_inbound_at, e.agora).aberta) {
+    return {
+      ok: false,
+      motivo: "fora_da_janela",
+      texto: "A janela de 24h está fechada. Envie um template aprovado para retomar a conversa.",
+    };
+  }
+
+  const link = await db.storage.from(BUCKET).createSignedUrl(e.caminho, 600);
+  if (link.error || !link.data) {
+    return {
+      ok: false,
+      motivo: "arquivo_indisponivel",
+      texto: "Não encontrei o arquivo para enviar.",
+    };
+  }
+
+  const provider = criarCloudProvider(admin);
+  const r = await provider.sendMedia(
+    { provider: "cloud", referencia: nm.phone_number_id },
+    ct.wa_id,
+    {
+      tipo: e.tipo,
+      link: link.data.signedUrl,
+      legenda: e.legenda,
+      nomeDoArquivo: e.nomeDoArquivo,
+    },
+  );
+  if (!r.ok || !r.data?.messageId) {
+    return {
+      ok: false,
+      motivo: "provedor",
+      texto: r.error ?? "Falha ao enviar.",
+      retentavel: r.erroMeta?.retentavel ?? false,
+    };
+  }
+
+  const { data: id, error } = await db.rpc("wa_registrar_saida", {
+    p_conversation_id: c.id,
+    p_origin: e.origem,
+    p_provider_message_id: r.data.messageId,
+    p_type: e.tipo,
+    p_body: e.legenda,
+    p_payload: { [e.tipo]: { filename: e.nomeDoArquivo, mime_type: e.mime } },
+    p_sent_by: e.enviadoPor,
+    p_template_name: null,
+  });
+  if (error) {
+    console.error(
+      JSON.stringify({ scope: "wa-envio", msg: "registro_midia_falhou", erro: error.message }),
+    );
+  } else if (id) {
+    await db.rpc("wa_registrar_midia", {
+      p_message_id: id,
+      p_kind: e.tipo,
+      p_provider_media_id: null,
+      p_mime: e.mime,
+      p_sha256: null,
+      p_filename: e.nomeDoArquivo,
+      p_storage_path: e.caminho,
+    });
+  }
+  return { ok: true, messageId: String(id ?? ""), providerMessageId: r.data.messageId };
+}

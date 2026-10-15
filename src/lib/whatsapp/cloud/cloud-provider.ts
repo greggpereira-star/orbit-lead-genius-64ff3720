@@ -115,6 +115,16 @@ export function criarCloudProvider(db: AdminDb): WhatsAppProvider & {
     idioma: string,
     componentes?: unknown[],
   ): Promise<ResultadoCloud>;
+  sendMedia(
+    canal: CanalWhatsApp,
+    para: string,
+    midia: {
+      tipo: "image" | "video" | "audio" | "document";
+      link: string;
+      legenda?: string | null;
+      nomeDoArquivo?: string | null;
+    },
+  ): Promise<ResultadoCloud>;
 } {
   const comToken = async (
     canal: CanalWhatsApp,
@@ -143,6 +153,19 @@ export function criarCloudProvider(db: AdminDb): WhatsAppProvider & {
           to: para,
           type: "text",
           text: { body: texto, preview_url: false },
+        }),
+      ),
+    sendMedia: (canal, para, m) =>
+      comToken(canal, (token) =>
+        postar(canal.referencia, token, {
+          to: para,
+          type: m.tipo,
+          [m.tipo]: {
+            link: m.link,
+            // Áudio não aceita legenda; documento aceita nome de arquivo.
+            ...(m.legenda && m.tipo !== "audio" ? { caption: m.legenda } : {}),
+            ...(m.tipo === "document" && m.nomeDoArquivo ? { filename: m.nomeDoArquivo } : {}),
+          },
         }),
       ),
     sendTemplate: (canal, para, nome, idioma, componentes = []) =>

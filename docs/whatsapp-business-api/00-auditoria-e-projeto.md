@@ -929,6 +929,50 @@ a `pending` em erro temporário. Reavaliar se houver disparo em massa.
 
 ---
 
+## 12f. Fase 5 — mídia, uso, notas e corte
+
+| Entrega | Onde | Verificação |
+|---|---|---|
+| Mídia **recebida**: registra, baixa cedo, guarda em bucket **privado**, confere o `sha256` | `cloud/armazenamento.ts` | download, hash divergente, 404 → `expired`, teto de tamanho, falha do bucket |
+| Mídia **enviada** (imagem, vídeo, áudio, documento) com legenda | `envio.ts`, `midia.ts` | mesma política do texto (opt-out → janela); áudio sem legenda; documento com nome |
+| Limites de envio (5/16/16 MB; documento 20 MB) e formatos | `classificarArquivoParaEnvio` | formato fora da lista **não vira documento calado**: a tela pergunta |
+| **Posse** do arquivo e da mídia | `caminhoEhDaEmpresa`, `urlDaMidia` | caminho com `..`/outra empresa recusado; mídia de outra empresa = inexistente |
+| Notas internas (nunca vão ao cliente) | tabela `wa_notes` | tabela à parte, não flag em mensagem |
+| Uso por categoria (contagem de cobráveis) | `wa_uso_por_categoria` | conta **uma vez por mensagem**; janela de datas |
+| Corte da Evolution com pré-requisitos medidos | `corte.ts` + tela | 6 bloqueantes, 2 avisos; frase de confirmação; reavalia no servidor |
+| **Papéis**: `viewer` não atende | `empresaParaAtender` | mutação detectada |
+
+SQL: **8 testes** (T40–T47 + T41b) num Postgres 16 real; mutações detectadas
+(contar cada status; trocar a mídia de uma mensagem).
+
+### Lacuna das fases anteriores, corrigida aqui
+
+As ações de atendimento (enviar, atribuir, resolver) conferiam só "é da empresa".
+Medido em produção: os papéis existentes são `owner`, `admin`, `member`, `viewer`
+— então um **visualizador conseguia enviar mensagem** em nome da empresa. Agora
+`viewer` só lê; o corte exige `owner`/`admin`.
+
+### Decisões
+
+- Mídia recebida é baixada **na hora** (melhor esforço) e de novo ao abrir se
+  falhou: o id da Meta expira, e servir de lá faz a imagem sumir.
+- O uso é **contagem**, não reais: a tabela de preços em BRL não é dado do banco.
+- O corte **desliga o legado antes** de remover a sessão; se a remoção falhar,
+  nada fica enviando pela Evolution por engano.
+
+### O que NÃO foi feito (e por quê)
+
+- **Remover QR / `whatsapp_instances` da tela legada**: depende de **todas** as
+  empresas terem migrado. Hoje a tela legada ainda atende quem não tem número
+  oficial.
+- **Valor em reais** do custo: exigiria a tabela BRL vigente da Meta — **[VERIFICAR]**.
+- **Disparo em massa** (campanha) — fila por evento apenas.
+- **Reações, resposta citada, busca dentro da conversa**.
+- A tela **não foi aberta num navegador** (nenhuma das fases): sessão, banco com
+  as migrações e uma conta Meta real são pré-requisito.
+
+---
+
 ## 13. Perguntas originais (respondidas em §11)
 
 1. **Coexistência ou número dedicado** como padrão? (§4.3)

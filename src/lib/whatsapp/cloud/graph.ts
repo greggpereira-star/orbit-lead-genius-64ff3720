@@ -209,3 +209,19 @@ export function pedirSincronizacaoDoApp(
     body: { messaging_product: "whatsapp", sync_type: tipo },
   });
 }
+
+export interface MetadadosDaMidia {
+  id?: string;
+  url?: string;
+  mime_type?: string;
+  sha256?: string;
+  file_size?: number;
+}
+
+/**
+ * Passo 1 do download de mídia recebida: devolve uma URL TEMPORÁRIA. Ela expira
+ * em minutos — por isso o arquivo é baixado e guardado logo, e não servido da Meta.
+ */
+export function lerMetadadosDaMidia(mediaId: string, token: string) {
+  return chamar<MetadadosDaMidia>(`/${encodeURIComponent(mediaId)}`, { token });
+}

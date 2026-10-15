@@ -183,13 +183,13 @@ export async function concluirOnboarding(
 // Templates
 // ---------------------------------------------------------------------------
 
-interface ContaComToken {
+export interface ContaComToken {
   accountId: string;
   wabaId: string;
   token: string;
 }
 
-async function contaDaEmpresa(db: DbWa, companyId: string): Promise<ContaComToken | null> {
+export async function contaDaEmpresa(db: DbWa, companyId: string): Promise<ContaComToken | null> {
   const { data: conta } = await tabela(db, "wa_accounts")
     .select("id, waba_id")
     .eq("company_id", companyId)

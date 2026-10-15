@@ -34,6 +34,13 @@ import {
   obterEstadoDoWhatsAppOficial,
   sincronizarTemplatesWhatsApp,
 } from "@/lib/whatsapp-cloud.functions";
+import { useAuth } from "@/core/auth/hooks/useAuth";
+import {
+  avaliarCorteWhatsApp,
+  executarCorteEvolutionWhatsApp,
+} from "@/lib/whatsapp-atendimento.functions";
+import { confirmacaoConfere, FRASE_DO_CORTE } from "@/lib/whatsapp/corte";
+import { usoPorCategoria } from "@/modules/atendimento/hooks/useAtendimento";
 import { lerMensagemDoSignup, opcoesDoLogin } from "@/lib/whatsapp/cloud/signup";
 import {
   temErro,
@@ -418,6 +425,13 @@ function WhatsAppOficial() {
         </>
       )}
 
+      {d && d.migracaoAplicada && numeros.length > 0 && (
+        <>
+          <UsoDoMes />
+          <CorteDaEvolution />
+        </>
+      )}
+
       <NovoTemplate aberto={criando} onFechar={() => setCriando(false)} onCriado={recarregar} />
     </div>
   );
@@ -688,5 +702,165 @@ function NovoTemplate({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const ROTULO_DA_CATEGORIA: Record<string, string> = {
+  marketing: "Marketing",
+  utility: "Utilidade",
+  authentication: "Autenticação",
+  service: "Atendimento (resposta dentro de 24h)",
+  referral_conversion: "Conversão de anúncio",
+  desconhecida: "Sem categoria informada",
+};
+
+/**
+ * Mensagens cobráveis do mês por categoria, como a Meta informou.
+ * É CONTAGEM: o valor em reais depende da tabela de preços vigente da Meta, que
+ * não é dado do sistema — mostrar um número em R$ aqui seria inventá-lo.
+ */
+function UsoDoMes() {
+  const { company } = useAuth();
+  const agora = new Date();
+  const inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  const fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 1);
+  const uso = useQuery({
+    queryKey: ["wa-uso", company?.id, inicio.toISOString()],
+    queryFn: () => usoPorCategoria(company!.id, inicio, fim),
+    enabled: Boolean(company?.id),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Uso do mês</CardTitle>
+        <CardDescription>
+          Mensagens por categoria, conforme o que a Meta informa. O valor depende da tabela de
+          preços da Meta.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {uso.isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
+        {uso.error && <p className="text-sm text-destructive">Não foi possível carregar o uso.</p>}
+        {uso.data && uso.data.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma mensagem com cobrança informada neste mês.
+          </p>
+        )}
+        {uso.data && uso.data.length > 0 && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground">
+                <th className="py-1 font-medium">Categoria</th>
+                <th className="py-1 font-medium">Cobrança</th>
+                <th className="py-1 text-right font-medium">Mensagens</th>
+              </tr>
+            </thead>
+            <tbody>
+              {uso.data.map((l) => (
+                <tr key={`${l.categoria}-${l.cobravel}`} className="border-t">
+                  <td className="py-1.5">{ROTULO_DA_CATEGORIA[l.categoria] ?? l.categoria}</td>
+                  <td className="py-1.5">{l.cobravel ? "Cobrada" : "Gratuita"}</td>
+                  <td className="py-1.5 text-right tabular-nums">{l.total}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Desligar a conexão antiga (Evolution) — IRREVERSÍVEL. Só libera quando cada
+ * pré-requisito é um fato medido; a frase de confirmação existe para o clique
+ * não ser acidental, e o servidor reavalia tudo antes de executar.
+ */
+function CorteDaEvolution() {
+  const qc = useQueryClient();
+  const avaliar = useServerFn(avaliarCorteWhatsApp);
+  const cortar = useServerFn(executarCorteEvolutionWhatsApp);
+  const [frase, setFrase] = useState("");
+
+  const q = useQuery({ queryKey: ["wa-corte"], queryFn: () => avaliar() });
+  const executar = useMutation({
+    mutationFn: () => cortar({ data: { confirmacao: frase } }),
+    onSuccess: () => {
+      toast.success("Conexão antiga removida. O atendimento segue pela API oficial.");
+      setFrase("");
+      qc.invalidateQueries({ queryKey: ["wa-corte"] });
+      qc.invalidateQueries({ queryKey: ["wa-oficial"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Sem instância antiga não há o que cortar: o cartão some.
+  if (!q.data || !q.data.fatos.temInstanciaEvolution) return null;
+  const { itens, pronto } = q.data;
+
+  return (
+    <Card className="border-[var(--aviso)]/50">
+      <CardHeader>
+        <CardTitle className="text-base">Desligar a conexão antiga (Evolution)</CardTitle>
+        <CardDescription>
+          Remove a sessão pareada por QR code. Não dá para desfazer: para voltar seria preciso
+          parear de novo com o celular.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ul className="space-y-2">
+          {itens.map((i) => (
+            <li key={i.id} className="flex items-start gap-2 text-sm">
+              {i.ok ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sucesso)]" />
+              ) : (
+                <AlertTriangle
+                  className={`mt-0.5 h-4 w-4 shrink-0 ${i.bloqueante ? "text-destructive" : "text-[var(--aviso)]"}`}
+                />
+              )}
+              <span>
+                {i.texto}
+                {!i.ok && i.acao && (
+                  <span className="block text-xs text-muted-foreground">{i.acao}</span>
+                )}
+                {!i.ok && !i.bloqueante && (
+                  <span className="block text-xs text-[var(--aviso)]">
+                    Aviso — não impede o corte.
+                  </span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="space-y-2">
+          <Label htmlFor="frase-corte" className="text-xs">
+            Para confirmar, digite <code>{FRASE_DO_CORTE}</code>
+          </Label>
+          <Input
+            id="frase-corte"
+            value={frase}
+            disabled={!pronto}
+            onChange={(e) => setFrase(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+
+        <Button
+          variant="destructive"
+          disabled={!pronto || !confirmacaoConfere(frase) || executar.isPending}
+          onClick={() => executar.mutate()}
+        >
+          {executar.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Desligar conexão antiga
+        </Button>
+        {!pronto && (
+          <p className="text-xs text-muted-foreground">
+            O botão libera quando todos os itens obrigatórios estiverem em ordem.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

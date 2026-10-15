@@ -17,6 +17,8 @@ import { mesmaPessoa } from "../../../modules/crm/lib/identidadeDoLead";
 import { variantesDoNumero } from "../numero";
 import type { EventoWa, Referral } from "./payload";
 import { pedeParaParar } from "./optout";
+import { baixarEGuardarMidia, type DbComArmazenamento } from "./armazenamento";
+import { extrairMidia } from "./midia";
 
 export interface DbWa {
   from(tabela: string): unknown;
@@ -117,11 +119,37 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
       if (error) throw Object.assign(new Error(error.message), { code: error.code });
 
       const linha = (Array.isArray(data) ? data[0] : data) as
-        { out_conversa: string; out_empresa: string; inserida: boolean } | undefined;
+        | { out_conversa: string; out_mensagem: string; out_empresa: string; inserida: boolean }
+        | undefined;
       // Reentrega: nada de efeito colateral (atribuição, opt-out, lead).
       if (!linha?.inserida) return "processed";
 
       const leadId = await ligarContatoAoLead(db, linha.out_empresa, linha.out_conversa, e.waId);
+
+      // Mídia: registra e já tenta baixar — a URL da Meta expira. Falha aqui NÃO
+      // derruba a mensagem (ela já foi gravada): a tela tenta de novo ao abrir.
+      const midia = extrairMidia(e.type, e.payload);
+      if (midia) {
+        try {
+          const { data: idMidia } = await db.rpc("wa_registrar_midia", {
+            p_message_id: linha.out_mensagem,
+            p_kind: midia.kind,
+            p_provider_media_id: midia.providerMediaId,
+            p_mime: midia.mime,
+            p_sha256: midia.sha256,
+            p_filename: midia.filename,
+            p_storage_path: null,
+          });
+          const comArmazenamento = db as Partial<DbComArmazenamento>;
+          if (idMidia && comArmazenamento.storage) {
+            await baixarEGuardarMidia(db as DbComArmazenamento, String(idMidia));
+          }
+        } catch (err) {
+          console.error(
+            JSON.stringify({ scope: "wa-midia", msg: "download_adiado", erro: String(err) }),
+          );
+        }
+      }
 
       if (e.referral) {
         await registrarCliqueDeAnuncio(db as never, {

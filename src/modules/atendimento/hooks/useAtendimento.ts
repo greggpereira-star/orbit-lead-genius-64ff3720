@@ -102,7 +102,7 @@ export function useMensagens(conversaId: string | null) {
       const { data, error } = await wa()
         .from("wa_messages")
         .select(
-          "id,direction,origin,type,body,status,provider_ts,created_at,template_name,sent_by,error_title",
+          "id,direction,origin,type,body,status,provider_ts,created_at,template_name,sent_by,error_title,media_id",
         )
         .eq("conversation_id", conversaId)
         .order("provider_ts", { ascending: true, nullsFirst: false })
@@ -128,6 +128,58 @@ export function useTemplatesAprovados(companyId: string | undefined) {
       return (data ?? []) as TemplateAprovado[];
     },
   });
+}
+
+export interface NotaInterna {
+  id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+}
+
+export function useNotas(conversaId: string | null) {
+  return useQuery({
+    queryKey: ["wa-notas", conversaId ?? ""],
+    enabled: Boolean(conversaId),
+    queryFn: async (): Promise<NotaInterna[]> => {
+      const { data, error } = await wa()
+        .from("wa_notes")
+        .select("id,author_id,body,created_at")
+        .eq("conversation_id", conversaId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as NotaInterna[];
+    },
+  });
+}
+
+/** Contagem de mensagens COBRÁVEIS por categoria no período (não é valor em reais). */
+export async function usoPorCategoria(
+  companyId: string,
+  desde: Date,
+  ate: Date,
+): Promise<Array<{ categoria: string; cobravel: boolean; total: number }>> {
+  const { data, error } = await (
+    supabase as unknown as {
+      rpc: (
+        f: string,
+        a: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
+    }
+  ).rpc("wa_uso_por_categoria", {
+    p_company_id: companyId,
+    p_desde: desde.toISOString(),
+    p_ate: ate.toISOString(),
+  });
+  if (error) throw new Error(error.message);
+  return (
+    (data ?? []) as Array<{ categoria: string; cobravel: boolean; total: number | string }>
+  ).map((l) => ({
+    categoria: l.categoria,
+    cobravel: l.cobravel,
+    total: Number(l.total),
+  }));
 }
 
 /** Zera as não lidas. Escrita simples, permitida pelo GRANT de coluna. */

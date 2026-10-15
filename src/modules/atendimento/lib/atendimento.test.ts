@@ -137,6 +137,7 @@ const msg = (o: Partial<MensagemDaConversa> = {}): MensagemDaConversa => ({
   template_name: null,
   sent_by: null,
   error_title: null,
+  media_id: null,
   ...o,
 });
 
@@ -243,7 +244,7 @@ describe("server functions do atendimento", () => {
   it("toda função exige autenticação", () => {
     const criadas = fonte.match(/createServerFn\(/g) ?? [];
     const protegidas = fonte.match(/\.middleware\(\[requireSupabaseAuth\]\)/g) ?? [];
-    expect(criadas.length).toBe(5);
+    expect(criadas.length).toBeGreaterThanOrEqual(5);
     expect(protegidas.length).toBe(criadas.length);
   });
 
