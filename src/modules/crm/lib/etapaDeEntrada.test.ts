@@ -17,12 +17,15 @@ describe("etapa de entrada nunca fica vaga", () => {
   const del = fonte.slice(fonte.indexOf("export async function deleteStage"));
 
   it("setEntryStage restaura a anterior se a nova falhar", () => {
-    expect(set).toContain("idAnterior");
+    expect(set).toContain("if (idAnterior) {");
+    expect(set).toContain("update({ is_entry: true }).eq('id', idAnterior)");
     expect(set.indexOf("if (idAnterior)")).toBeGreaterThan(set.indexOf("if (set.error)"));
   });
 
   it("deleteStage repassa o papel de entrada antes de excluir", () => {
-    expect(del).toContain("eraEntrada");
+    // o trecho exato: `if (false && eraEntrada)` não pode passar
+    expect(del).toContain("if (eraEntrada) {");
+    expect(del).toContain("is_entry: true }).eq('id', moveLeadsToStageId)");
     expect(del.indexOf("herda")).toBeGreaterThan(-1);
     expect(del.indexOf("herda")).toBeLessThan(del.indexOf(".from('stages').delete()"));
   });
