@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { celulaCsv } from '@/lib/csvSeguro';
 import {
   ChevronLeft, ChevronRight, Columns3, Download, ExternalLink, Eye, Filter, Globe, Loader2, MapPin, MoreHorizontal, Plus, Search, Share2, Trash2, UserPlus,
 } from 'lucide-react';
@@ -310,7 +311,7 @@ function LeadsPage() {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      ...rows.map(r => r.map(c => celulaCsv(c)).join(','))
     ].join('\n');
 
     const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });

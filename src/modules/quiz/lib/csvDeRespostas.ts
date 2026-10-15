@@ -1,3 +1,4 @@
+import { celulaCsv } from "@/lib/csvSeguro";
 import type { QuizBlock, QuizSchema } from "../types";
 
 /** Blocos cuja resposta vale uma coluna no CSV. */
@@ -84,7 +85,7 @@ export function tituloDaColuna(bloco: QuizBlock, indice: number): string {
 }
 
 function escapar(v: unknown): string {
-  return `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return celulaCsv(v);
 }
 
 /**

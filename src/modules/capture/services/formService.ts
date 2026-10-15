@@ -1,3 +1,4 @@
+import { celulaCsv } from '@/lib/csvSeguro';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/core/observability/logger';
 
@@ -416,7 +417,7 @@ export function submissoesParaCsv(linhas: SubmissaoDeFormulario[]): string {
 
   // Aspas duplicadas e o campo todo entre aspas: é o que faz vírgula, quebra
   // de linha e aspas dentro do texto não partirem a coluna no Excel.
-  const campo = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const campo = (v: unknown) => celulaCsv(v);
 
   const corpo = linhas.map((l) => [
     new Date(l.criado_em).toLocaleString('pt-BR'),
