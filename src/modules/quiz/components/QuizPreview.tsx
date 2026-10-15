@@ -36,6 +36,7 @@ import { CountdownTimer } from "./CountdownTimer";
 import { AudioPlayer } from "./AudioPlayer";
 import { ItensDeConteudo, SumarioDasRespostas, RedesSociais } from "./blocosDeConteudo";
 import { getVideoEmbed } from "../lib/videoEmbed";
+import { placeholderDoTelefone } from "../lib/formulario";
 import { SchedulingField } from "./SchedulingField";
 
 const CONTAINER_ALIGN_CSS: Record<string, React.CSSProperties["alignItems"]> = {
@@ -1296,7 +1297,9 @@ export function BlockRenderer({
           {heading}
           {ff.name && <FormFieldPreview design={design} label="Nome" />}
           {ff.email && <FormFieldPreview design={design} label="E-mail" />}
-          {ff.phone && <FormFieldPreview design={design} label="Telefone" />}
+          {ff.phone && (
+            <FormFieldPreview design={design} label={placeholderDoTelefone(block.formFields)} />
+          )}
           <Btn design={design} textStyle={resolveTextStyle(block, "button")}>
             {block.ctaLabel || "Enviar"}
           </Btn>

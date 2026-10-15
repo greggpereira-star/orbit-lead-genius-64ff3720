@@ -322,7 +322,7 @@ export interface QuizBlock {
   loadingSeconds?: number;
   loadingSteps?: string[];
   faqItems?: FaqItem[];
-  formFields?: { name?: boolean; email?: boolean; phone?: boolean };
+  formFields?: { name?: boolean; email?: boolean; phone?: boolean; phoneRequired?: boolean };
   pricingPrice?: string;
   pricingOriginalPrice?: string;
   pricingPeriod?: string;

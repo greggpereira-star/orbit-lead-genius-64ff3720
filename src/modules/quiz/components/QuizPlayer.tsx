@@ -14,6 +14,7 @@ import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progresso
 import { origemDaVisita } from "../lib/origemDaVisita";
 import { escolherNome } from "../lib/nomeDoLead";
 import { avisoVisivelDoEmail, sugerirCorrecao, validarEmail } from "../lib/email";
+import { formularioPodeAvancar, placeholderDoTelefone } from "../lib/formulario";
 import {
   avisoVisivelDoTelefone,
   ehCampoDeTelefone,
@@ -1866,16 +1867,10 @@ function BlockView({
       return !contatoInvalido && (!block.required || texto.trim().length > 0);
     }
     if (block.type === 'form') {
-      const ff = block.formFields ?? { name: true, email: true, phone: true };
-      /* Telefone do Formulário: opcional como era, mas se vier preenchido tem
-         que servir. Era a única entrada de contato sem NENHUMA conferência —
-         nem máscara, nem tamanho; só o e-mail era olhado. */
-      if (ff.phone && formValue.phone.trim() && validarTelefone(formValue.phone) !== null)
-        return false;
-      /* O e-mail do Formulário era obrigatório, e só conferia "não vazio". */
-      if (ff.email && formValue.email.trim() && validarEmail(formValue.email) !== null)
-        return false;
-      return !ff.email || formValue.email.trim().length > 0;
+      /* As regras moram em `formulario.ts`, fora do componente, para um teste
+         poder EXECUTÁ-LAS: telefone obrigatório quando o autor marca, telefone
+         e e-mail com formato quando preenchidos, campo escondido nunca bloqueia. */
+      return formularioPodeAvancar(block.formFields, formValue);
     }
     if (block.type === 'video-answer') {
       /* O vídeo enviado vira o `value` do bloco, como em qualquer outro. Sem
@@ -2765,7 +2760,7 @@ function BlockView({
                 <input
                   id={`field-${block.id}-phone`}
                   type="tel"
-                  placeholder="Telefone"
+                  placeholder={placeholderDoTelefone(block.formFields)}
                   inputMode="tel"
                   autoComplete="tel"
                   value={formValue.phone}

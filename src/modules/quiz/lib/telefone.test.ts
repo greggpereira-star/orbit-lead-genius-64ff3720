@@ -186,7 +186,9 @@ describe("o player usa a validação nos TRÊS caminhos", () => {
   });
 
   it("o Formulário bloqueia telefone inválido — era a entrada sem conferência nenhuma", () => {
-    expect(canSubmit).toContain("validarTelefone(formValue.phone) !== null");
+    // A regra mora em formulario.ts (função pura, testada abaixo); o player
+    // só precisa delegar a ela.
+    expect(canSubmit).toContain("formularioPodeAvancar(block.formFields, formValue)");
   });
 
   it("os dois campos formatam enquanto digitam", () => {

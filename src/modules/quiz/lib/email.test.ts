@@ -146,7 +146,7 @@ describe("o player usa a validação nos dois caminhos", () => {
   });
 
   it("o Formulário também — era só 'não vazio'", () => {
-    expect(canSubmit).toContain("validarEmail(formValue.email) !== null");
+    expect(canSubmit).toContain("formularioPodeAvancar(block.formFields, formValue)");
   });
 
   it("a sugestão só aparece depois de sair do campo", () => {

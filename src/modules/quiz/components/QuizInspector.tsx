@@ -842,6 +842,27 @@ function BlockInspector({
                     </label>
                   ))}
                 </div>
+                {/* Só aparece com o telefone ligado: um interruptor de "obrigatório"
+                    para um campo que o visitante nem vê seria controle sem efeito.
+                    O padrão é opcional, como os funis já publicados sempre se
+                    comportaram. */}
+                {(block.formFields?.phone ?? true) && (
+                  <div className="pt-3">
+                    <Toggle
+                      label="Telefone obrigatório"
+                      hint="Quem não preencher o telefone não avança"
+                      checked={block.formFields?.phoneRequired === true}
+                      onChange={(v) =>
+                        onChange({
+                          formFields: {
+                            ...(block.formFields ?? { name: true, email: true, phone: true }),
+                            phoneRequired: v,
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                )}
               </Field>
             )}
 
