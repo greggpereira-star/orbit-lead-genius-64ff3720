@@ -49,6 +49,8 @@ import {
   type BotaoDeTemplate,
   type DefinicaoDeTemplate,
 } from "@/lib/whatsapp/cloud/templates";
+import { envolverSelecao, inserirVariavel, previaDoTemplate } from "@/lib/whatsapp/cloud/previa";
+import { PreviaDoTemplate } from "@/modules/atendimento/components/PreviaDoTemplate";
 import { rotuloDaJanela } from "@/lib/whatsapp/cloud/janela";
 
 export const Route = createFileRoute("/_app/settings/whatsapp")({
@@ -496,6 +498,22 @@ function NovoTemplate({
   const criar = useServerFn(criarTemplateWhatsApp);
   const [def, setDef] = useState<DefinicaoDeTemplate>(DEFINICAO_VAZIA);
   const [enviando, setEnviando] = useState(false);
+  const corpoRef = useRef<HTMLTextAreaElement>(null);
+
+  /** Aplica a barra de ferramentas ao corpo, mantendo seleção e cursor. */
+  function aplicarNoCorpo(
+    f: (texto: string, ini: number, fim: number) => { texto: string; cursor: [number, number] },
+  ) {
+    const el = corpoRef.current;
+    const ini = el?.selectionStart ?? def.corpo.length;
+    const fim = el?.selectionEnd ?? def.corpo.length;
+    const r = f(def.corpo, ini, fim);
+    setDef((x) => ({ ...x, corpo: r.texto }));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(r.cursor[0], r.cursor[1]);
+    });
+  }
 
   // A MESMA validação do servidor, em tempo real: o autor erra na tela, e não
   // depois de esperar a revisão da Meta.
@@ -531,7 +549,7 @@ function NovoTemplate({
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
-      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo template</DialogTitle>
           <DialogDescription>
@@ -539,156 +557,211 @@ function NovoTemplate({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="t-nome">Nome</Label>
-              <Input
-                id="t-nome"
-                value={def.nome}
-                placeholder="boas_vindas_v1"
-                onChange={(e) => setDef({ ...def, nome: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="t-cat">Categoria</Label>
-              <select
-                id="t-cat"
-                className="w-full border rounded-md px-2 py-2 text-sm bg-background"
-                value={def.categoria}
-                onChange={(e) =>
-                  setDef({ ...def, categoria: e.target.value as DefinicaoDeTemplate["categoria"] })
-                }
-              >
-                <option value="UTILITY">Utilidade (acompanhamento, confirmação)</option>
-                <option value="MARKETING">Marketing (oferta, promoção)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="t-cab">Cabeçalho (opcional)</Label>
-            <Input
-              id="t-cab"
-              value={def.cabecalho ?? ""}
-              onChange={(e) => setDef({ ...def, cabecalho: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="t-corpo">Mensagem</Label>
-            <Textarea
-              id="t-corpo"
-              rows={5}
-              value={def.corpo}
-              placeholder="Olá {{1}}, recebemos seu pedido {{2}}."
-              onChange={(e) => setDef({ ...def, corpo: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Use {"{{1}}"}, {"{{2}}"}… para valores que mudam. {def.corpo.length}/1024
-            </p>
-          </div>
-
-          {nVars > 0 && (
-            <div className="space-y-2">
-              <Label>Exemplos das variáveis (a Meta exige)</Label>
-              {Array.from({ length: nVars }, (_, i) => (
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="t-nome">Nome</Label>
                 <Input
-                  key={i}
-                  placeholder={`Exemplo de {{${i + 1}}}`}
-                  value={def.exemplosDoCorpo?.[i] ?? ""}
-                  onChange={(e) => {
-                    const ex = [...(def.exemplosDoCorpo ?? [])];
-                    ex[i] = e.target.value;
-                    setDef({ ...def, exemplosDoCorpo: ex });
-                  }}
+                  id="t-nome"
+                  value={def.nome}
+                  placeholder="boas_vindas_v1"
+                  onChange={(e) => setDef({ ...def, nome: e.target.value })}
                 />
-              ))}
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="t-rod">Rodapé (opcional)</Label>
-            <Input
-              id="t-rod"
-              value={def.rodape ?? ""}
-              onChange={(e) => setDef({ ...def, rodape: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Botões (opcional)</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={(def.botoes?.length ?? 0) >= 3}
-                onClick={() =>
-                  setDef({
-                    ...def,
-                    botoes: [...(def.botoes ?? []), { tipo: "QUICK_REPLY", texto: "" }],
-                  })
-                }
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Botão
-              </Button>
-            </div>
-            {(def.botoes ?? []).map((b, i) => (
-              <div key={i} className="grid grid-cols-[130px_1fr_1fr_auto] gap-2 items-center">
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="t-cat">Categoria</Label>
                 <select
-                  className="border rounded-md px-2 py-2 text-sm bg-background"
-                  aria-label={`Tipo do botão ${i + 1}`}
-                  value={b.tipo}
-                  onChange={(e) => setBotao(i, { tipo: e.target.value as BotaoDeTemplate["tipo"] })}
-                >
-                  <option value="QUICK_REPLY">Resposta</option>
-                  <option value="URL">Link</option>
-                  <option value="PHONE_NUMBER">Ligar</option>
-                </select>
-                <Input
-                  aria-label={`Texto do botão ${i + 1}`}
-                  placeholder="Texto"
-                  value={b.texto}
-                  onChange={(e) => setBotao(i, { texto: e.target.value })}
-                />
-                <Input
-                  aria-label={`Valor do botão ${i + 1}`}
-                  placeholder={
-                    b.tipo === "URL" ? "https://…" : b.tipo === "PHONE_NUMBER" ? "+5527…" : "—"
+                  id="t-cat"
+                  className="w-full border rounded-md px-2 py-2 text-sm bg-background"
+                  value={def.categoria}
+                  onChange={(e) =>
+                    setDef({
+                      ...def,
+                      categoria: e.target.value as DefinicaoDeTemplate["categoria"],
+                    })
                   }
-                  disabled={b.tipo === "QUICK_REPLY"}
-                  value={b.valor ?? ""}
-                  onChange={(e) => setBotao(i, { valor: e.target.value })}
-                />
+                >
+                  <option value="UTILITY">Utilidade (acompanhamento, confirmação)</option>
+                  <option value="MARKETING">Marketing (oferta, promoção)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="t-cab">Cabeçalho (opcional)</Label>
+              <Input
+                id="t-cab"
+                maxLength={60}
+                value={def.cabecalho ?? ""}
+                onChange={(e) => setDef({ ...def, cabecalho: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">{(def.cabecalho ?? "").length}/60</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="t-corpo">Mensagem</Label>
+              <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Formatação">
+                {[
+                  { rotulo: "Negrito", marca: "*", ico: "B", cls: "font-bold" },
+                  { rotulo: "Itálico", marca: "_", ico: "I", cls: "italic" },
+                  { rotulo: "Tachado", marca: "~", ico: "S", cls: "line-through" },
+                  { rotulo: "Monoespaçado", marca: "```", ico: "</>", cls: "font-mono" },
+                ].map((f) => (
+                  <Button
+                    key={f.marca}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={`h-7 w-8 px-0 ${f.cls}`}
+                    aria-label={f.rotulo}
+                    title={f.rotulo}
+                    onClick={() => aplicarNoCorpo((t, a, b) => envolverSelecao(t, a, b, f.marca))}
+                  >
+                    {f.ico}
+                  </Button>
+                ))}
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remover botão ${i + 1}`}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
                   onClick={() =>
-                    setDef({ ...def, botoes: (def.botoes ?? []).filter((_, j) => j !== i) })
+                    aplicarNoCorpo((t, a, b) => {
+                      const r = inserirVariavel(t, a, b);
+                      return { texto: r.texto, cursor: [r.cursor, r.cursor] };
+                    })
                   }
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Plus className="h-3 w-3 mr-1" /> Variável
                 </Button>
               </div>
-            ))}
-          </div>
+              <Textarea
+                id="t-corpo"
+                ref={corpoRef}
+                rows={5}
+                value={def.corpo}
+                placeholder="Olá {{1}}, recebemos seu pedido {{2}}."
+                onChange={(e) => setDef({ ...def, corpo: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use {"{{1}}"}, {"{{2}}"}… para valores que mudam. {def.corpo.length}/1024
+              </p>
+            </div>
 
-          {problemas.length > 0 && def.nome + def.corpo !== "" && (
-            <ul className="space-y-1" aria-live="polite">
-              {problemas.map((p, i) => (
-                <li
-                  key={i}
-                  className={`text-sm flex gap-2 ${p.gravidade === "erro" ? "text-destructive" : "text-[var(--aviso)]"}`}
+            {nVars > 0 && (
+              <div className="space-y-2">
+                <Label>Exemplos das variáveis (a Meta exige)</Label>
+                {Array.from({ length: nVars }, (_, i) => (
+                  <Input
+                    key={i}
+                    placeholder={`Exemplo de {{${i + 1}}}`}
+                    value={def.exemplosDoCorpo?.[i] ?? ""}
+                    onChange={(e) => {
+                      const ex = [...(def.exemplosDoCorpo ?? [])];
+                      ex[i] = e.target.value;
+                      setDef({ ...def, exemplosDoCorpo: ex });
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="t-rod">Rodapé (opcional)</Label>
+              <Input
+                id="t-rod"
+                maxLength={60}
+                value={def.rodape ?? ""}
+                onChange={(e) => setDef({ ...def, rodape: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">{(def.rodape ?? "").length}/60</p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Botões (opcional)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={(def.botoes?.length ?? 0) >= 3}
+                  onClick={() =>
+                    setDef({
+                      ...def,
+                      botoes: [...(def.botoes ?? []), { tipo: "QUICK_REPLY", texto: "" }],
+                    })
+                  }
                 >
-                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  {p.texto}
-                </li>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Botão
+                </Button>
+              </div>
+              {(def.botoes ?? []).map((b, i) => (
+                <div key={i} className="grid grid-cols-[130px_1fr_1fr_auto] gap-2 items-center">
+                  <select
+                    className="border rounded-md px-2 py-2 text-sm bg-background"
+                    aria-label={`Tipo do botão ${i + 1}`}
+                    value={b.tipo}
+                    onChange={(e) =>
+                      setBotao(i, { tipo: e.target.value as BotaoDeTemplate["tipo"] })
+                    }
+                  >
+                    <option value="QUICK_REPLY">Resposta</option>
+                    <option value="URL">Link</option>
+                    <option value="PHONE_NUMBER">Ligar</option>
+                  </select>
+                  <Input
+                    aria-label={`Texto do botão ${i + 1}`}
+                    placeholder="Texto"
+                    value={b.texto}
+                    onChange={(e) => setBotao(i, { texto: e.target.value })}
+                  />
+                  <Input
+                    aria-label={`Valor do botão ${i + 1}`}
+                    placeholder={
+                      b.tipo === "URL" ? "https://…" : b.tipo === "PHONE_NUMBER" ? "+5527…" : "—"
+                    }
+                    disabled={b.tipo === "QUICK_REPLY"}
+                    value={b.valor ?? ""}
+                    onChange={(e) => setBotao(i, { valor: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remover botão ${i + 1}`}
+                    onClick={() =>
+                      setDef({ ...def, botoes: (def.botoes ?? []).filter((_, j) => j !== i) })
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
-            </ul>
-          )}
+            </div>
+
+            {problemas.length > 0 && def.nome + def.corpo !== "" && (
+              <ul className="space-y-1" aria-live="polite">
+                {problemas.map((p, i) => (
+                  <li
+                    key={i}
+                    className={`text-sm flex gap-2 ${p.gravidade === "erro" ? "text-destructive" : "text-[var(--aviso)]"}`}
+                  >
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    {p.texto}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <aside className="md:sticky md:top-0 self-start space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Pré-visualização</p>
+            <PreviaDoTemplate previa={previaDoTemplate(def)} />
+            <p className="text-[11px] text-muted-foreground">
+              Aproximação de como a mensagem aparece. Os exemplos das variáveis entram no lugar de{" "}
+              {"{{n}}"}.
+            </p>
+          </aside>
         </div>
 
         <DialogFooter>

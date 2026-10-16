@@ -1095,3 +1095,20 @@ deploy**; sem ela o despacho não faz nada e agendar devolve erro).
 
 Aviso na tela: se o horário escolhido cai depois do fim da janela, o diálogo
 diz que a mensagem livre não sairá (só template).
+
+### 14.3 Editor de template com pré-visualização (16/10/2026)
+
+Referência: a tela de templates da Central WhatsApp API do concorrente
+(editor em blocos + prévia de conversa ao vivo). Sem migração.
+
+| Peça | Detalhe |
+| --- | --- |
+| Pré-visualização | bolha de conversa com cabeçalho, corpo (exemplos no lugar de `{{n}}`), rodapé e botões |
+| Formatação | `*negrito*`, `_itálico_`, `~tachado~`, ` ```mono``` ` — marcador só vale colado ao texto e sem atravessar linha, como no aplicativo |
+| Barra de ferramentas | envolve a seleção; "Variável" insere o próximo `{{n}}` na posição do cursor |
+| Contadores | cabeçalho e rodapé x/60; corpo x/1024 (já existia) |
+| Validação | a mesma do servidor (`validarTemplate`), em tempo real |
+
+**Fica para depois:** salvar rascunho separado de "enviar à Meta" (exige onde
+guardar rascunho: coluna/status em `wa_templates`), mídia de cabeçalho e
+amostra de mídia, Flows e Carrossel.

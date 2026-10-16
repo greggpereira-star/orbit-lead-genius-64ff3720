@@ -215,3 +215,39 @@ describe("nota com menção", () => {
     expect(painel).toContain("...(mencionar.length ? { mencionar } : {})");
   });
 });
+
+describe("PreviaDoTemplate", () => {
+  it("aplica negrito/itálico e mostra os botões como o cliente verá", async () => {
+    const { PreviaDoTemplate } = await import("../components/PreviaDoTemplate");
+    const html = renderToStaticMarkup(
+      <PreviaDoTemplate
+        previa={{
+          cabecalho: "Pedido 1",
+          corpo: "Olá *Ana*, _obrigado_",
+          rodape: "Equipe",
+          botoes: [{ tipo: "URL", texto: "Ver pedido" }],
+        }}
+      />,
+    );
+    expect(html).toContain("font-bold");
+    expect(html).toContain("italic");
+    expect(html).toContain("Ver pedido");
+    expect(html).toContain("Equipe");
+  });
+
+  it("vazio mostra a dica em vez de uma bolha em branco", async () => {
+    const { PreviaDoTemplate } = await import("../components/PreviaDoTemplate");
+    const html = renderToStaticMarkup(
+      <PreviaDoTemplate previa={{ cabecalho: null, corpo: "", rodape: null, botoes: [] }} />,
+    );
+    expect(html).toContain("A mensagem aparece aqui");
+  });
+});
+
+describe("editor de template (código)", () => {
+  const fonte = readFileSync("src/routes/_app.settings.whatsapp.tsx", "utf8");
+  it("usa a MESMA validação do servidor e mostra a pré-visualização", () => {
+    expect(fonte).toContain("validarTemplate(def)");
+    expect(fonte).toContain("<PreviaDoTemplate previa={previaDoTemplate(def)} />");
+  });
+});
