@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ListaDeConversas } from "../components/ListaDeConversas";
 import type { ConversaDaLista } from "./conversas";
+
+// O roteador não existe em renderização estática: o Link vira um <a>.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to }: { children?: unknown; to?: string }) => (
+    <a href={to}>{children as never}</a>
+  ),
+}));
+vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
+vi.mock("@/lib/whatsapp-atendimento.functions", () => ({ criarNotaWhatsApp: async () => ({}) }));
 
 const base: ConversaDaLista = {
   id: "c1",
@@ -75,9 +84,12 @@ describe("a página /whatsapp", () => {
 describe("a conversa (código)", () => {
   const fonte = readFileSync("src/modules/atendimento/components/Conversa.tsx", "utf8");
   it("recusa de envio mantém o texto digitado", () => {
+    // O bloco da recusa vai até o `return;`: nada antes dele pode limpar o campo.
     const i = fonte.indexOf("if (!r.ok) {");
-    expect(fonte.slice(i, i + 220)).toContain("return;");
-    expect(fonte.slice(i, i + 220)).not.toContain('setTexto("")');
+    const fim = fonte.indexOf("return;", i);
+    expect(i).toBeGreaterThan(-1);
+    expect(fim).toBeGreaterThan(i);
+    expect(fonte.slice(i, fim)).not.toContain('setTexto("")');
   });
   it("não marca como lida com a aba em segundo plano", () => {
     expect(fonte).toContain('document.visibilityState === "visible"');
@@ -113,5 +125,38 @@ describe("VisoesDoInbox", () => {
     for (const t of ["Entrada", "Minhas", "Não atribuídas", "Resolvidas"])
       expect(html).toContain(t);
     expect(html.match(/aria-current="true"/g)).toHaveLength(1);
+  });
+});
+
+describe("PainelDoLead (renderizado)", () => {
+  async function painel(c: ConversaDaLista) {
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+    const { PainelDoLead } = await import("../components/PainelDoLead");
+    const qc = new QueryClient();
+    return renderToStaticMarkup(
+      <QueryClientProvider client={qc}>
+        <PainelDoLead conversa={c} />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("cartão do contato com ações rápidas e seções do CRM", async () => {
+    const html = await painel(base);
+    expect(html).toContain("Ana Souza");
+    expect(html).toContain("tel:+5527996318075");
+    expect(html).toContain("https://wa.me/5527996318075");
+    for (const s of ["Contato", "Negociação", "Notas"]) expect(html).toContain(s);
+    expect(html).toContain('aria-expanded="true"');
+  });
+
+  it("contato sem lead explica o vínculo em vez de mostrar campos vazios", async () => {
+    const html = await painel({ ...base, lead_id: null, lead: null });
+    expect(html).toContain("ainda não está ligado a um lead");
+    expect(html).not.toContain("Temperatura");
+  });
+
+  it("opt-out aparece no topo do painel", async () => {
+    const c = { ...base, contact: { ...base.contact!, opted_out_at: "2026-10-14T00:00:00Z" } };
+    expect(await painel(c)).toContain("Pediu para não receber mensagens");
   });
 });

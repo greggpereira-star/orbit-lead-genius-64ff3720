@@ -181,3 +181,37 @@ export async function usoPorCategoria(
     total: Number(l.total),
   }));
 }
+
+export interface LeadDoPainel {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  score: number | null;
+  temperature: string | null;
+  source: string | null;
+  utm_campaign: string | null;
+  created_at: string;
+  stage: { name: string } | null;
+  tags: Array<{ tag_name: string }>;
+}
+
+/** O que o CRM sabe do lead da conversa, para o painel lateral. Sob RLS. */
+export function useLeadDoPainel(leadId: string | null) {
+  return useQuery({
+    queryKey: ["wa-lead-painel", leadId ?? ""],
+    enabled: Boolean(leadId),
+    staleTime: 30_000,
+    queryFn: async (): Promise<LeadDoPainel | null> => {
+      const { data, error } = await wa()
+        .from("leads")
+        .select(
+          "id,name,email,phone,score,temperature,source,utm_campaign,created_at,stage:stages(name),tags:lead_tags(tag_name)",
+        )
+        .eq("id", leadId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data ?? null) as LeadDoPainel | null;
+    },
+  });
+}
