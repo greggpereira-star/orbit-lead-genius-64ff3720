@@ -1150,3 +1150,21 @@ alterar exige administrador e só atinge número da própria empresa; a recusa �
 decidida no mesmo ponto das demais políticas de envio, depois do opt-out.
 Interpretação de "automação = campanha" é nossa: os gatilhos do sistema
 (lead criado, mudança de etapa) são envios ativos, não respostas.
+
+### 14.6 Conexão manual e número de teste da Meta (16/10/2026)
+
+Para testar o atendimento sem depender do Embedded Signup. Sem migração.
+
+- **Número de teste reivindicado** no app FYNDATRACK_BETA (WhatsApp → Etapa 1):
+  `+1 (555) 665-9150`, Phone Number ID `1357165290819369`, WABA
+  `1712518090288635`. O token temporário é gerado no painel da Meta por quem
+  administra — nunca passa por este repositório nem pelo chat.
+- **Código:** `concluirOnboarding` foi dividido; do token em diante é
+  `concluirComToken` (número lido com o token, posse, inscrição com callback
+  próprio, gravação cifrada). O Embedded Signup e a conexão manual usam a mesma
+  função, então a regra de posse vale nos dois.
+- **Tela:** "Avançado: conexão manual (número de teste)" em Configurações →
+  WhatsApp oficial; token em campo de senha, limpo da memória ao conectar.
+- **Limites do número de teste:** pela documentação da Meta (não verificado
+  hoje), só envia para destinatários previamente verificados e o token expira;
+  não exercita o Embedded Signup em si.

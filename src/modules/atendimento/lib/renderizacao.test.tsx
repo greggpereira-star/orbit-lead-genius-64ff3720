@@ -11,6 +11,9 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
+vi.mock("@/lib/whatsapp-cloud.functions", () => ({
+  conectarNumeroManualWhatsApp: async () => ({}),
+}));
 vi.mock("@/lib/whatsapp-atendimento.functions", () => ({
   criarNotaWhatsApp: async () => ({}),
   listarAtendentesWhatsApp: async () => [],
@@ -249,5 +252,27 @@ describe("editor de template (código)", () => {
   it("usa a MESMA validação do servidor e mostra a pré-visualização", () => {
     expect(fonte).toContain("validarTemplate(def)");
     expect(fonte).toContain("<PreviaDoTemplate previa={previaDoTemplate(def)} />");
+  });
+});
+
+describe("conexão manual", () => {
+  it("o token é campo de senha e o formulário só valida IDs numéricos", async () => {
+    const { ehIdDaMeta } = await import("../components/ConexaoManual");
+    expect(ehIdDaMeta("1357165290819369")).toBe(true);
+    expect(ehIdDaMeta(" 1712518090288635 ")).toBe(true);
+    for (const v of ["", "abc", "123", "12 34 56", "1357165290819369x"])
+      expect(ehIdDaMeta(v)).toBe(false);
+    const fonte = readFileSync("src/modules/atendimento/components/ConexaoManual.tsx", "utf8");
+    expect(fonte).toContain('type="password"');
+    expect(fonte).toContain('setToken("")');
+  });
+
+  it("o servidor exige administrador e não devolve nem registra o token", () => {
+    const s = readFileSync("src/lib/whatsapp-cloud.functions.ts", "utf8");
+    const i = s.indexOf("export const conectarNumeroManualWhatsApp");
+    const f = s.slice(i, s.indexOf("\nexport const ", i + 10));
+    expect(f).toContain("empresaParaAdministrar(admin, context.userId)");
+    expect(f).not.toContain("console.");
+    expect(f).not.toMatch(/return[^;]*data\.token/);
   });
 });

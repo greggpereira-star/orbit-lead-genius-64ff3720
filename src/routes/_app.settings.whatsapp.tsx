@@ -54,6 +54,7 @@ import {
   type DefinicaoDeTemplate,
 } from "@/lib/whatsapp/cloud/templates";
 import { envolverSelecao, inserirVariavel, previaDoTemplate } from "@/lib/whatsapp/cloud/previa";
+import { ConexaoManual } from "@/modules/atendimento/components/ConexaoManual";
 import { PreviaDoTemplate } from "@/modules/atendimento/components/PreviaDoTemplate";
 import { rotuloDaJanela } from "@/lib/whatsapp/cloud/janela";
 
@@ -303,6 +304,7 @@ function WhatsAppOficial() {
                     Para manter o aplicativo no celular o número precisa estar no WhatsApp Business
                     há pelo menos 7 dias.
                   </p>
+                  <ConexaoManual onConectado={recarregar} />
                 </div>
               )}
 

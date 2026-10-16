@@ -128,6 +128,53 @@ export const concluirSignupWhatsApp = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
+// Conexão manual (número de teste da Meta / quem já tem WABA e token)
+// ---------------------------------------------------------------------------
+/**
+ * O token é colado por quem administra a empresa e vale como prova de acesso:
+ * a Meta o valida ao ler o número. Não passa por log nem volta na resposta.
+ */
+export const conectarNumeroManualWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        wabaId: z
+          .string()
+          .trim()
+          .regex(/^\d{5,30}$/, "ID da conta inválido."),
+        phoneNumberId: z
+          .string()
+          .trim()
+          .regex(/^\d{5,30}$/, "ID do número inválido."),
+        token: z.string().trim().min(20).max(2000),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    if (!lerEnv("WA_TOKEN_KEY")) throw new Error("WA_TOKEN_KEY não configurada no servidor.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+
+    const { concluirComToken, sincronizarTemplates } =
+      await import("@/lib/whatsapp/cloud/onboarding");
+    const r = await concluirComToken(admin, {
+      companyId,
+      wabaId: data.wabaId,
+      phoneNumberId: data.phoneNumberId,
+      token: data.token,
+    });
+    if (!r.ok) throw new Error(r.texto);
+
+    const t = await sincronizarTemplates(admin, companyId).catch(() => ({
+      ok: false as const,
+      texto: "",
+    }));
+    return { ...r, templates: t.ok ? t.total : null };
+  });
+
+// ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
 export const sincronizarTemplatesWhatsApp = createServerFn({ method: "POST" })

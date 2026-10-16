@@ -5,6 +5,7 @@ import { criarDb, rotearFetch } from "./dbFalso";
 import { lerNumero, listarTemplatesDaWaba } from "./graph";
 import {
   apagarTemplate,
+  concluirComToken,
   concluirOnboarding,
   criarTemplate,
   sincronizarTemplates,
@@ -457,5 +458,70 @@ describe("templates (serviço)", () => {
     expect(await apagarTemplate(db, { companyId: "emp", nome: "a" })).toEqual({ ok: true });
     expect(chamadas[0].init.method).toBe("DELETE");
     expect(ops.some((o) => o.tabela === "wa_templates" && o.op === "delete")).toBe(true);
+  });
+});
+
+describe("concluirComToken (conexão manual / número de teste)", () => {
+  const chave = randomBytes(32).toString("base64");
+  const base = { companyId: "emp1", wabaId: "WABA", phoneNumberId: "PNID", token: "TOKEN-COLADO" };
+  const rotas = {
+    "/PNID": {
+      corpo: {
+        id: "PNID",
+        display_phone_number: "+1 555 665 9150",
+        verified_name: "Test Number",
+        quality_rating: "GREEN",
+        is_on_biz_app: false,
+      },
+    },
+    "/WABA/subscribed_apps": { corpo: { success: true } },
+  };
+
+  beforeEach(() => {
+    vi.stubEnv("WA_TOKEN_KEY", chave);
+    vi.stubEnv("WA_WEBHOOK_VERIFY_TOKEN", "VERIFY-TESTE");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("valida o número com o token, inscreve com callback próprio e grava o token CIFRADO", async () => {
+    const { f, chamadas } = rotearFetch(rotas);
+    vi.stubGlobal("fetch", f);
+    const { db, ops } = criarDb({ tabelas: { wa_accounts: { id: "acc1" } } });
+
+    const r = await concluirComToken(db, base);
+    expect(r).toMatchObject({
+      ok: true,
+      numero: { modo: "cloud_only", displayPhone: "15556659150" },
+    });
+
+    const insc = chamadas.find((c) => c.url.includes("/WABA/subscribed_apps"))!;
+    expect(JSON.parse(String(insc.init.body))).toMatchObject({ verify_token: "VERIFY-TESTE" });
+
+    const cred = ops.find((o) => o.tabela === "wa_credentials" && o.op === "upsert")!;
+    const gravado = (cred.args[0] as { access_token_enc: string }).access_token_enc;
+    expect(gravado).not.toContain("TOKEN-COLADO");
+    expect(decifrarToken(gravado)).toBe("TOKEN-COLADO");
+    expect(JSON.stringify(r)).not.toContain("TOKEN-COLADO");
+  });
+
+  it("token que a Meta não aceita: nada é gravado", async () => {
+    const { f } = rotearFetch({
+      "/PNID": { status: 401, corpo: { error: { code: 190, message: "token inválido" } } },
+    } as never);
+    vi.stubGlobal("fetch", f);
+    const { db, ops } = criarDb({});
+    expect(await concluirComToken(db, base)).toMatchObject({ ok: false, etapa: "numero" });
+    expect(ops.filter((o) => o.op === "upsert")).toEqual([]);
+  });
+
+  it("número de OUTRA empresa continua recusado (a posse vale também no caminho manual)", async () => {
+    const { f, chamadas } = rotearFetch(rotas);
+    vi.stubGlobal("fetch", f);
+    const { db } = criarDb({ tabelas: { wa_phone_numbers: { company_id: "OUTRA" } } });
+    expect(await concluirComToken(db, base)).toMatchObject({ ok: false, etapa: "posse" });
+    expect(chamadas.some((c) => c.url.includes("subscribed_apps"))).toBe(false);
   });
 });

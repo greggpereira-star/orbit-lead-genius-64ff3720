@@ -74,6 +74,24 @@ export async function concluirOnboarding(
   }
   const token = troca.data.access_token;
 
+  return concluirComToken(db, {
+    companyId: e.companyId,
+    wabaId: e.wabaId,
+    phoneNumberId: e.phoneNumberId,
+    token,
+  });
+}
+
+/**
+ * Do token em diante: confere o número, a posse, inscreve o webhook e grava.
+ * Serve ao Embedded Signup (token trocado pelo código) e à conexão manual de
+ * teste (token colado por quem administra a empresa).
+ */
+export async function concluirComToken(
+  db: DbWa,
+  e: { companyId: string; wabaId: string; phoneNumberId: string; token: string },
+): Promise<ResultadoDoOnboarding> {
+  const token = e.token;
   // 2) o número existe e está acessível com este token
   const num = await lerNumero(e.phoneNumberId, token);
   if (!num.ok) {
