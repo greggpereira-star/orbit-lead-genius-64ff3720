@@ -160,3 +160,39 @@ describe("PainelDoLead (renderizado)", () => {
     expect(await painel(c)).toContain("Pediu para não receber mensagens");
   });
 });
+
+describe("MenuDaConversa", () => {
+  async function menu(c: ConversaDaLista) {
+    const { MenuDaConversa } = await import("../components/MenuDaConversa");
+    return renderToStaticMarkup(
+      <MenuDaConversa
+        conversa={c}
+        onNaoLida={() => {}}
+        onPendente={() => {}}
+        onPesquisar={() => {}}
+        onInformacoes={() => {}}
+        onCopiarNumero={() => {}}
+      />,
+    );
+  }
+
+  it("fechado: só o gatilho acessível (os itens abrem sob demanda)", async () => {
+    const html = await menu(base);
+    expect(html).toContain("Mais ações da conversa");
+  });
+
+  it("o conteúdo do menu cobre as ações combinadas", () => {
+    const fonte = readFileSync("src/modules/atendimento/components/MenuDaConversa.tsx", "utf8");
+    for (const t of [
+      "Marcar como não lida",
+      "Marcar como pendente",
+      "Desmarcar como pendente",
+      "Pesquisar na conversa",
+      "Copiar número",
+      "Abrir lead no CRM",
+    ])
+      expect(fonte).toContain(t);
+    // Conversa resolvida não oferece "pendente".
+    expect(fonte).toContain("{!resolvida && (");
+  });
+});

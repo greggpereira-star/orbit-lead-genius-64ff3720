@@ -462,7 +462,9 @@ export const executarCorteEvolutionWhatsApp = createServerFn({ method: "POST" })
           })
           .eq("company_id", companyId);
       }
-      throw new Error(`Não consegui remover a instância da Evolution: ${r.error ?? "erro desconhecido"}`);
+      throw new Error(
+        `Não consegui remover a instância da Evolution: ${r.error ?? "erro desconhecido"}`,
+      );
     }
 
     await admin
@@ -497,6 +499,28 @@ export const marcarConversaComoLidaWhatsApp = createServerFn({ method: "POST" })
       .update({ unread_agent: 0 })
       .eq("id", data.conversaId)
       .eq("company_id", companyId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+/**
+ * "Marcar como não lida": devolve a conversa à lista com o contador aceso.
+ * Só sobe o contador quando ele está zerado — não apaga o que já era não lido.
+ */
+export const marcarConversaComoNaoLidaWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ conversaId: idConversa }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+    const { error } = await admin
+      .from("wa_conversations")
+      .update({ unread_agent: 1 })
+      .eq("id", data.conversaId)
+      .eq("company_id", companyId)
+      .eq("unread_agent", 0);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });

@@ -282,3 +282,55 @@ describe("server functions do atendimento", () => {
     expect(fonte).not.toMatch(/companyId:\s*z\./);
   });
 });
+
+import { buscarNasMensagens } from "./mensagens";
+
+describe("buscarNasMensagens", () => {
+  const m = (id: string, body: string | null, type = "text") => ({
+    id,
+    type,
+    body,
+    template_name: null,
+  });
+  const lista = [
+    m("1", "Quero um orçamento"),
+    m("2", "ORÇAMENTO enviado"),
+    m("3", "obrigado"),
+    m("4", null, "image"),
+  ];
+
+  it("ignora caixa e acento e mantém a ordem da conversa", () => {
+    expect(buscarNasMensagens(lista, "orcamento")).toEqual(["1", "2"]);
+    expect(buscarNasMensagens(lista, "ORÇAMENTO")).toEqual(["1", "2"]);
+  });
+
+  it("menos de 2 letras não busca (casaria com tudo)", () => {
+    expect(buscarNasMensagens(lista, "o")).toEqual([]);
+    expect(buscarNasMensagens(lista, "  ")).toEqual([]);
+  });
+
+  it("acha mídia pelo rótulo exibido", () => {
+    expect(buscarNasMensagens(lista, "imagem")).toEqual(["4"]);
+  });
+});
+
+describe("menu da conversa (interligação)", () => {
+  const server = readFileSync("src/lib/whatsapp-atendimento.functions.ts", "utf8");
+  const fn = server.slice(server.indexOf("export const marcarConversaComoNaoLidaWhatsApp"));
+  const atend = readFileSync("src/modules/atendimento/components/Atendimento.tsx", "utf8");
+
+  it("marcar como não lida confere papel e empresa no servidor, sem apagar o que já era não lido", () => {
+    expect(fn).toContain("empresaParaAtender(admin, context.userId)");
+    expect(fn).toContain("conferirConversa(admin, companyId, data.conversaId)");
+    expect(fn).toContain('.eq("unread_agent", 0)');
+  });
+
+  it("depois de marcar como não lida a conversa fecha (senão a leitura automática a zeraria)", () => {
+    const i = atend.indexOf("const aoMarcarNaoLida");
+    expect(atend.slice(i, i + 400)).toContain("abrirConversa(null)");
+  });
+
+  it("pendente usa o mesmo status do banco, sem campo novo", () => {
+    expect(atend).toContain('status: ativa.status === "pending" ? "open" : "pending"');
+  });
+});

@@ -3,14 +3,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, MessageCircle, RotateCcw, Settings } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  RotateCcw,
+  Settings,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   alterarStatusConversaWhatsApp,
   atribuirConversaWhatsApp,
   listarAtendentesWhatsApp,
+  marcarConversaComoNaoLidaWhatsApp,
 } from "@/lib/whatsapp-atendimento.functions";
-import { chaves, useConversas } from "../hooks/useAtendimento";
+import { chaves, useConversas, useMensagens } from "../hooks/useAtendimento";
+import { buscarNasMensagens } from "../lib/mensagens";
+import { MenuDaConversa } from "./MenuDaConversa";
 import {
   contarPorFiltro,
   filtrarConversas,
@@ -31,6 +45,10 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
   const [filtro, setFiltro] = useState<Filtro | null>(null);
   const [busca, setBusca] = useState("");
   const [ativaId, setAtivaId] = useState<string | null>(null);
+  const [pesquisando, setPesquisando] = useState(false);
+  const [termo, setTermo] = useState("");
+  const [resultado, setResultado] = useState(0);
+  const [infoAberta, setInfoAberta] = useState(false);
 
   const contagens = useMemo(() => contarPorFiltro(lista, userId), [lista, userId]);
 
@@ -46,6 +64,19 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
     [lista, filtroAtual, userId, busca],
   );
   const ativa = lista.find((c) => c.id === ativaId) ?? null;
+
+  // As mensagens vêm da mesma consulta da conversa (cache compartilhado).
+  const mensagensDaAtiva = useMensagens(ativa?.id ?? null);
+  const idsEncontrados = useMemo(
+    () => (pesquisando ? buscarNasMensagens(mensagensDaAtiva.data ?? [], termo) : []),
+    [pesquisando, mensagensDaAtiva.data, termo],
+  );
+  const abrirConversa = (id: string | null) => {
+    setAtivaId(id);
+    setPesquisando(false);
+    setTermo("");
+    setResultado(0);
+  };
 
   const buscarAtendentes = useServerFn(listarAtendentesWhatsApp);
   const atendentes = useQuery({
@@ -63,11 +94,28 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
     onSuccess: recarregar,
     onError: (e: Error) => toast.error(e.message),
   });
+  const marcarNaoLida = useServerFn(marcarConversaComoNaoLidaWhatsApp);
+  const aoMarcarNaoLida = useMutation({
+    mutationFn: (conversaId: string) => marcarNaoLida({ data: { conversaId } }),
+    onSuccess: () => {
+      // Volta para a lista: com a conversa aberta, a leitura automática a zeraria.
+      abrirConversa(null);
+      toast.success("Marcada como não lida.");
+      recarregar();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const aoMudarStatus = useMutation({
-    mutationFn: (v: { conversaId: string; status: "open" | "resolved" }) =>
+    mutationFn: (v: { conversaId: string; status: "open" | "pending" | "resolved" }) =>
       mudarStatus({ data: v }),
     onSuccess: (_r, v) => {
-      toast.success(v.status === "resolved" ? "Conversa resolvida." : "Conversa reaberta.");
+      toast.success(
+        v.status === "resolved"
+          ? "Conversa resolvida."
+          : v.status === "pending"
+            ? "Marcada como pendente."
+            : "Conversa reaberta.",
+      );
       recarregar();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -119,7 +167,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
             atendentes={nomesDosAtendentes}
             onFiltro={setFiltro}
             onBusca={setBusca}
-            onAbrir={setAtivaId}
+            onAbrir={abrirConversa}
           />
         </div>
 
@@ -132,63 +180,168 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                 companyId={companyId}
                 onReabrir={() => aoMudarStatus.mutate({ conversaId: ativa.id, status: "open" })}
                 cabecalho={
-                  <div className="flex items-center gap-2 border-b px-3 py-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="lg:hidden"
-                      aria-label="Voltar à lista"
-                      onClick={() => setAtivaId(null)}
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{nomeDaConversa(ativa)}</div>
+                  <>
+                    <div className="flex items-center gap-2 border-b px-3 py-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="lg:hidden"
+                        aria-label="Voltar à lista"
+                        onClick={() => abrirConversa(null)}
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-medium">{nomeDaConversa(ativa)}</span>
+                          {ativa.status === "pending" && (
+                            <span className="shrink-0 rounded bg-[var(--aviso)]/15 px-1.5 text-[10px] font-medium text-[var(--aviso)]">
+                              pendente
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <select
+                        aria-label="Responsável"
+                        className="max-w-[170px] rounded-md border bg-background px-2 py-1.5 text-sm"
+                        value={ativa.assigned_to ?? ""}
+                        disabled={aoAtribuir.isPending}
+                        onChange={(e) =>
+                          aoAtribuir.mutate({
+                            conversaId: ativa.id,
+                            userId: e.target.value || null,
+                          })
+                        }
+                      >
+                        <option value="">Sem responsável</option>
+                        {(atendentes.data ?? []).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.id === userId ? `${a.nome} (eu)` : a.nome}
+                          </option>
+                        ))}
+                      </select>
+                      {ativa.status === "resolved" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={aoMudarStatus.isPending}
+                          onClick={() =>
+                            aoMudarStatus.mutate({ conversaId: ativa.id, status: "open" })
+                          }
+                        >
+                          <RotateCcw className="mr-1.5 h-4 w-4" /> Reabrir
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={aoMudarStatus.isPending}
+                          onClick={() =>
+                            aoMudarStatus.mutate({ conversaId: ativa.id, status: "resolved" })
+                          }
+                        >
+                          <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
+                        </Button>
+                      )}
+                      <MenuDaConversa
+                        conversa={ativa}
+                        ocupado={aoMudarStatus.isPending || aoMarcarNaoLida.isPending}
+                        onNaoLida={() => aoMarcarNaoLida.mutate(ativa.id)}
+                        onPendente={() =>
+                          aoMudarStatus.mutate({
+                            conversaId: ativa.id,
+                            status: ativa.status === "pending" ? "open" : "pending",
+                          })
+                        }
+                        onPesquisar={() => setPesquisando(true)}
+                        onInformacoes={() => setInfoAberta(true)}
+                        onCopiarNumero={() => {
+                          const n = ativa.contact?.wa_id ?? "";
+                          void navigator.clipboard
+                            ?.writeText(n ? `+${n}` : "")
+                            .then(() => toast.success("Número copiado."))
+                            .catch(() => toast.error("Não consegui copiar."));
+                        }}
+                      />
                     </div>
-                    <select
-                      aria-label="Responsável"
-                      className="max-w-[170px] rounded-md border bg-background px-2 py-1.5 text-sm"
-                      value={ativa.assigned_to ?? ""}
-                      disabled={aoAtribuir.isPending}
-                      onChange={(e) =>
-                        aoAtribuir.mutate({ conversaId: ativa.id, userId: e.target.value || null })
-                      }
-                    >
-                      <option value="">Sem responsável</option>
-                      {(atendentes.data ?? []).map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.id === userId ? `${a.nome} (eu)` : a.nome}
-                        </option>
-                      ))}
-                    </select>
-                    {ativa.status === "resolved" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={aoMudarStatus.isPending}
-                        onClick={() =>
-                          aoMudarStatus.mutate({ conversaId: ativa.id, status: "open" })
-                        }
-                      >
-                        <RotateCcw className="mr-1.5 h-4 w-4" /> Reabrir
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={aoMudarStatus.isPending}
-                        onClick={() =>
-                          aoMudarStatus.mutate({ conversaId: ativa.id, status: "resolved" })
-                        }
-                      >
-                        <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
-                      </Button>
+                    {pesquisando && (
+                      <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-1.5">
+                        <Input
+                          autoFocus
+                          value={termo}
+                          onChange={(e) => {
+                            setTermo(e.target.value);
+                            setResultado(0);
+                          }}
+                          placeholder="Pesquisar nesta conversa…"
+                          aria-label="Pesquisar nesta conversa"
+                          className="h-8"
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") abrirConversa(ativa.id);
+                            if (e.key === "Enter" && idsEncontrados.length > 0)
+                              setResultado((r) =>
+                                e.shiftKey
+                                  ? (r - 1 + idsEncontrados.length) % idsEncontrados.length
+                                  : (r + 1) % idsEncontrados.length,
+                              );
+                          }}
+                        />
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                          {termo.trim().length < 2
+                            ? "mín. 2 letras"
+                            : idsEncontrados.length === 0
+                              ? "nada encontrado"
+                              : `${resultado + 1} de ${idsEncontrados.length}`}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          aria-label="Resultado anterior"
+                          disabled={idsEncontrados.length === 0}
+                          onClick={() =>
+                            setResultado(
+                              (r) => (r - 1 + idsEncontrados.length) % idsEncontrados.length,
+                            )
+                          }
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          aria-label="Próximo resultado"
+                          disabled={idsEncontrados.length === 0}
+                          onClick={() => setResultado((r) => (r + 1) % idsEncontrados.length)}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          aria-label="Fechar pesquisa"
+                          onClick={() => abrirConversa(ativa.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
-                  </div>
+                  </>
                 }
+                pesquisa={pesquisando ? { ids: idsEncontrados, atual: resultado } : null}
               />
             </div>
             <PainelDoLead conversa={ativa} />
+            <Sheet open={infoAberta} onOpenChange={setInfoAberta}>
+              <SheetContent side="right" className="w-[340px] p-0 sm:max-w-[340px]">
+                <SheetHeader className="border-b px-4 py-3">
+                  <SheetTitle>Informações do contato</SheetTitle>
+                </SheetHeader>
+                <PainelDoLead conversa={ativa} emSheet />
+              </SheetContent>
+            </Sheet>
           </>
         ) : (
           <div className="hidden flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground lg:flex xl:col-span-2">

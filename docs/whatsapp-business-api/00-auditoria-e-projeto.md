@@ -1030,3 +1030,34 @@ produção (só leitura) antes de virar correção.
 
 Membros (`member`) deixam de editar regras de automação pela interface; só
 `owner` e `admin`.
+
+## 14. Atendimento no padrão de inbox (16/10/2026)
+
+Referência observada: o inbox de um produto concorrente (só layout e fluxo —
+nada de código ou identidade visual copiado). Reconstruído na nossa base, sem
+migração.
+
+| Fatia | Entrega | Onde |
+| --- | --- | --- |
+| 1 | `/whatsapp` sem número vira "Conecte seu WhatsApp"; Evolution só para quem ainda a usa (`evolutionConectada`, lida do banco — não consulta a Evolution) | `ConectarPrimeiro.tsx`, `obterEstadoDoWhatsAppOficial` |
+| 2 | Barra de visões (Entrada, Minhas, Não atribuídas, Resolvidas), selo do canal e avatar do responsável na lista | `VisoesDoInbox.tsx`, `ListaDeConversas.tsx` |
+| 3 | Painel do contato recolhível: Contato, Negociação (etapa, temperatura, pontuação, origem), Etiquetas, anúncio, Notas — lidos do lead sob RLS | `PainelDoLead.tsx`, `useLeadDoPainel` |
+| 4 | Menu "…": não lida, pendente, pesquisar na conversa, copiar número, abrir no CRM, ver informações (sheet fora do `xl`) | `MenuDaConversa.tsx` |
+
+**Como se interliga (regras que o menu respeita)**
+- *Marcar como não lida* passa por função de servidor (`empresaParaAtender` +
+  `conferirConversa`) e só sobe o contador quando ele está em 0. A conversa
+  fecha em seguida: a leitura automática (aba visível) a zeraria na hora.
+- *Pendente* é o status `pending` que o banco já tem; entra em "Entrada" e
+  mostra o selo no cabeçalho. Conversa resolvida não oferece pendente.
+- *Pesquisar* usa a mesma consulta de mensagens da conversa (cache
+  compartilhado) — alcança as últimas 500 mensagens carregadas.
+- Nada do menu contorna política de envio (opt-out, janela, teto).
+
+**Fora desta rodada (exige migração):** seguir conversa, menções, agendar
+mensagem, exportar CSV, tarefas por lead, bloquear contato (hoje o opt-out é
+do cliente; "bloquear" pela equipe precisa de regra própria na camada de
+política).
+
+**Achado de qualidade:** o `vitest` incluía só `*.test.ts`; os testes de
+renderização (`.test.tsx`) nunca rodavam. Corrigido em `vitest.config.ts`.

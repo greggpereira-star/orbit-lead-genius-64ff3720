@@ -76,6 +76,8 @@ export function Conversa(props: {
   companyId: string;
   onReabrir: () => void;
   cabecalho: React.ReactNode;
+  /** Pesquisa na conversa: ids que casam e o índice do atual. */
+  pesquisa?: { ids: string[]; atual: number } | null;
 }) {
   const { conversa } = props;
   const qc = useQueryClient();
@@ -90,9 +92,21 @@ export function Conversa(props: {
   const fimRef = useRef<HTMLDivElement>(null);
   const total = mensagens.data?.length ?? 0;
 
+  const pesquisando = Boolean(props.pesquisa?.ids.length);
+  const idAtual = props.pesquisa?.ids[props.pesquisa.atual] ?? null;
+
   useEffect(() => {
+    // Com pesquisa ativa a rolagem segue o resultado, não o fim da conversa.
+    if (pesquisando) return;
     fimRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [total, conversa.id]);
+  }, [total, conversa.id, pesquisando]);
+
+  useEffect(() => {
+    if (!idAtual) return;
+    document
+      .querySelector(`[data-msg-id="${idAtual}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [idAtual]);
 
   // Lida só com a aba à vista: abrir a caixa em segundo plano não pode "ler" tudo.
   useEffect(() => {
@@ -150,10 +164,16 @@ export function Conversa(props: {
               const marca = marcaDeEntrega(m);
               const autoria = saida ? autoriaDaSaida(m.origin) : "";
               return (
-                <div key={m.id} className={cn("flex", saida ? "justify-end" : "justify-start")}>
+                <div
+                  key={m.id}
+                  data-msg-id={m.id}
+                  className={cn("flex", saida ? "justify-end" : "justify-start")}
+                >
                   <div
                     className={cn(
                       "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+                      props.pesquisa?.ids.includes(m.id) && "ring-2 ring-amber-400/70",
+                      m.id === idAtual && "ring-2 ring-amber-500",
                       saida
                         ? "rounded-br-sm bg-primary text-primary-foreground"
                         : "rounded-bl-sm bg-background",

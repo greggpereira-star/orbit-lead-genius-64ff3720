@@ -74,7 +74,14 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
   );
 }
 
-export function PainelDoLead({ conversa }: { conversa: ConversaDaLista }) {
+export function PainelDoLead({
+  conversa,
+  emSheet = false,
+}: {
+  conversa: ConversaDaLista;
+  /** Dentro do sheet (telas sem a coluna lateral): sem borda e sempre visível. */
+  emSheet?: boolean;
+}) {
   const o = conversa.origin ?? {};
   const titulo = textoDe(o.headline);
   const anuncio = textoDe(o.source_id);
@@ -87,7 +94,12 @@ export function PainelDoLead({ conversa }: { conversa: ConversaDaLista }) {
   const email = l?.email ?? conversa.lead?.email ?? null;
 
   return (
-    <aside className="hidden min-h-0 flex-col overflow-y-auto border-l xl:flex">
+    <aside
+      className={cn(
+        "min-h-0 flex-col overflow-y-auto",
+        emSheet ? "flex" : "hidden border-l xl:flex",
+      )}
+    >
       <div className="flex flex-col items-center gap-2 p-5 text-center">
         <span
           aria-hidden

@@ -137,3 +137,22 @@ const TIPOS_DE_MIDIA = new Set(["image", "audio", "video", "document", "sticker"
 export function temMidia(m: Pick<MensagemDaConversa, "type" | "media_id">): boolean {
   return TIPOS_DE_MIDIA.has(m.type) && Boolean(m.media_id);
 }
+
+const semAcento = (t: string) =>
+  t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+/**
+ * Ids das mensagens que contêm o termo (sem acento, sem caixa), na ordem da
+ * conversa. Menos de 2 caracteres não busca: "a" casaria com tudo.
+ */
+export function buscarNasMensagens(
+  mensagens: Array<Pick<MensagemDaConversa, "id" | "type" | "body" | "template_name">>,
+  termo: string,
+): string[] {
+  const q = semAcento(termo.trim());
+  if (q.length < 2) return [];
+  return mensagens.filter((m) => semAcento(textoParaExibir(m)).includes(q)).map((m) => m.id);
+}
