@@ -12,7 +12,7 @@ export function Fluxo() {
   const total = FLUXO.nos.length;
   return (
     <div>
-      <ol className="relative grid gap-4 md:grid-cols-5 md:gap-3">
+      <ol className="relative grid gap-8 md:grid-cols-5 md:gap-5">
         {/* linha horizontal (desktop) */}
         <span aria-hidden className="absolute left-[10%] right-[10%] top-[22px] hidden h-px bg-white/10 md:block" />
         <motion.span
@@ -53,7 +53,7 @@ export function Fluxo() {
         ))}
       </ol>
       <motion.p
-        className="mx-auto mt-8 flex w-fit items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300"
+        className="mx-auto mt-14 flex w-fit items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-300"
         initial={reduzido ? false : { opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
