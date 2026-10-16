@@ -27,7 +27,9 @@ describe("rota /api/public/wa-webhook", () => {
   it("rejeita corpo grande (413) antes e depois de ler, antes da assinatura", () => {
     expect(post).toContain("LIMITE_CORPO_BYTES");
     expect(post).toContain('new Response("Payload too large", { status: 413 })');
-    expect(post.indexOf("Payload too large")).toBeLessThan(post.indexOf("verificarAssinaturaMeta("));
+    expect(post.indexOf("Payload too large")).toBeLessThan(
+      post.indexOf("verificarAssinaturaMeta("),
+    );
     expect(post.indexOf('request.headers.get("content-length")')).toBeLessThan(
       post.indexOf("await request.text()"),
     );

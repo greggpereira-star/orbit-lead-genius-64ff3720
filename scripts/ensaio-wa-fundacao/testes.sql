@@ -654,3 +654,68 @@ BEGIN
   RAISE NOTICE 'seguir/menções: 4 testes passaram';
 END
 $t$;
+
+-- ---- mensagens agendadas ----
+DO $t$
+DECLARE
+  v_a uuid; v_admin uuid; v_viewer uuid; v_outro uuid; v_conv uuid; v_n int; v_id uuid;
+BEGIN
+  IF to_regclass('public.wa_scheduled_messages') IS NULL OR to_regclass('_ens') IS NULL THEN RETURN; END IF;
+  SELECT valor::uuid INTO v_a FROM _ens WHERE chave = 'a';
+  SELECT valor::uuid INTO v_admin FROM _ens WHERE chave = 'admin';
+  SELECT valor::uuid INTO v_outro FROM _ens WHERE chave = 'outro';
+  IF v_a IS NULL THEN RETURN; END IF;
+  SELECT id INTO v_conv FROM public.wa_conversations ORDER BY created_at LIMIT 1;
+  IF v_conv IS NULL THEN RETURN; END IF;
+
+  INSERT INTO public.wa_scheduled_messages (company_id, conversation_id, body, send_at, created_by) VALUES
+    (v_a, v_conv, 'vencida 1', now() - interval '2 minutes', v_admin),
+    (v_a, v_conv, 'vencida 2', now() - interval '1 minute', v_admin),
+    (v_a, v_conv, 'futura',    now() + interval '2 hours', v_admin);
+
+  -- A1: reserva só o que venceu, e marca como 'sending'
+  SELECT count(*) INTO v_n FROM public.reservar_mensagens_agendadas(10);
+  IF v_n <> 2 THEN RAISE EXCEPTION 'A1 reservou % (esperava as 2 vencidas)', v_n; END IF;
+  IF (SELECT count(*) FROM public.wa_scheduled_messages WHERE status = 'sending') <> 2 THEN
+    RAISE EXCEPTION 'A1 não marcou como sending'; END IF;
+
+  -- A2: uma segunda chamada não pega as mesmas (nem a futura)
+  SELECT count(*) INTO v_n FROM public.reservar_mensagens_agendadas(10);
+  IF v_n <> 0 THEN RAISE EXCEPTION 'A2 reservou % de novo', v_n; END IF;
+
+  -- A3: presa há mais de 10 min volta à fila
+  UPDATE public.wa_scheduled_messages SET started_at = now() - interval '30 minutes'
+   WHERE body = 'vencida 1';
+  IF public.liberar_mensagens_agendadas_presas(10) <> 1 THEN
+    RAISE EXCEPTION 'A3 não liberou a presa'; END IF;
+  IF (SELECT status FROM public.wa_scheduled_messages WHERE body = 'vencida 1') <> 'pending' THEN
+    RAISE EXCEPTION 'A3 status errado'; END IF;
+
+  -- A4: esgotadas as 3 tentativas, a presa falha em vez de voltar
+  UPDATE public.wa_scheduled_messages SET status = 'sending', attempts = 3,
+         started_at = now() - interval '30 minutes' WHERE body = 'vencida 2';
+  PERFORM public.liberar_mensagens_agendadas_presas(10);
+  IF (SELECT status FROM public.wa_scheduled_messages WHERE body = 'vencida 2') <> 'failed' THEN
+    RAISE EXCEPTION 'A4 deveria falhar após 3 tentativas'; END IF;
+
+  -- A5: o navegador lê (da empresa) mas não grava, e outra empresa não vê
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  SELECT count(*) INTO v_n FROM public.wa_scheduled_messages;
+  IF v_n <> 3 THEN RESET ROLE; RAISE EXCEPTION 'A5 membro vê % (esperava 3)', v_n; END IF;
+  BEGIN
+    UPDATE public.wa_scheduled_messages SET body = 'x';
+    RESET ROLE; RAISE EXCEPTION 'A5 authenticated alterou agendamento';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    PERFORM public.reservar_mensagens_agendadas(1);
+    RESET ROLE; RAISE EXCEPTION 'A5 authenticated chamou a reserva';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  PERFORM set_config('request.jwt.claim.sub', v_outro::text, true);
+  SELECT count(*) INTO v_n FROM public.wa_scheduled_messages;
+  IF v_n <> 0 THEN RESET ROLE; RAISE EXCEPTION 'A5 outra empresa vê % agendamentos', v_n; END IF;
+  RESET ROLE;
+
+  RAISE NOTICE 'agendadas: 5 testes passaram';
+END
+$t$;

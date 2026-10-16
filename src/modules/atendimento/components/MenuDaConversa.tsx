@@ -1,6 +1,7 @@
 import {
   Bookmark,
   BookmarkCheck,
+  CalendarClock,
   Copy,
   ExternalLink,
   EyeOff,
@@ -32,6 +33,7 @@ export function MenuDaConversa(props: {
   ocupado?: boolean;
   seguindo?: boolean;
   onSeguir?: () => void;
+  onAgendar?: () => void;
   onNaoLida: () => void;
   onPendente: () => void;
   onPesquisar: () => void;
@@ -67,6 +69,11 @@ export function MenuDaConversa(props: {
               <Bookmark className="mr-2 h-4 w-4" />
             )}
             {props.seguindo ? "Deixar de seguir" : "Seguir"}
+          </DropdownMenuItem>
+        )}
+        {props.onAgendar && !resolvida && (
+          <DropdownMenuItem onSelect={props.onAgendar}>
+            <CalendarClock className="mr-2 h-4 w-4" /> Agendar mensagem
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />

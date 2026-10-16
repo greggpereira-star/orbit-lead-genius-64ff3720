@@ -32,6 +32,7 @@ import {
   useSeguindo,
 } from "../hooks/useAtendimento";
 import { buscarNasMensagens } from "../lib/mensagens";
+import { AgendarMensagem } from "./AgendarMensagem";
 import { MenuDaConversa } from "./MenuDaConversa";
 import {
   contarPorFiltro,
@@ -57,6 +58,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
   const [termo, setTermo] = useState("");
   const [resultado, setResultado] = useState(0);
   const [infoAberta, setInfoAberta] = useState(false);
+  const [agendando, setAgendando] = useState(false);
 
   // Conjuntos pessoais: falham em silêncio (vazio) se as tabelas ainda não existem.
   const seguindoQ = useSeguindo(companyId, userId);
@@ -300,6 +302,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                             status: ativa.status === "pending" ? "open" : "pending",
                           })
                         }
+                        onAgendar={() => setAgendando(true)}
                         onPesquisar={() => setPesquisando(true)}
                         onInformacoes={() => setInfoAberta(true)}
                         onCopiarNumero={() => {
@@ -381,6 +384,11 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
               />
             </div>
             <PainelDoLead conversa={ativa} />
+            <AgendarMensagem
+              conversa={ativa}
+              aberto={agendando}
+              onFechar={() => setAgendando(false)}
+            />
             <Sheet open={infoAberta} onOpenChange={setInfoAberta}>
               <SheetContent side="right" className="w-[340px] p-0 sm:max-w-[340px]">
                 <SheetHeader className="border-b px-4 py-3">

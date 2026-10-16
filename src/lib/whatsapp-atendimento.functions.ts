@@ -617,3 +617,74 @@ export const marcarMencoesComoLidasWhatsApp = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
+
+// ---------------------------------------------------------------------------
+// Mensagens agendadas
+// ---------------------------------------------------------------------------
+export const agendarMensagemWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        conversaId: idConversa,
+        texto: z.string().trim().min(1).max(4096),
+        enviarEm: z.string().min(10).max(40),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+
+    const { validarHorario, LIMITES_DO_AGENDAMENTO } =
+      await import("@/lib/whatsapp/cloud/agendadas");
+    const h = validarHorario(data.enviarEm);
+    if (!h.ok) throw new Error(h.texto);
+
+    // Teto por conversa: agendar não pode virar fila de disparo em massa.
+    const { count } = await admin
+      .from("wa_scheduled_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", data.conversaId)
+      .eq("status", "pending");
+    if ((count ?? 0) >= LIMITES_DO_AGENDAMENTO.pendentesPorConversa)
+      throw new Error(
+        `Esta conversa já tem ${LIMITES_DO_AGENDAMENTO.pendentesPorConversa} mensagens agendadas.`,
+      );
+
+    const { data: linha, error } = await admin
+      .from("wa_scheduled_messages")
+      .insert({
+        company_id: companyId,
+        conversation_id: data.conversaId,
+        body: data.texto,
+        send_at: h.iso,
+        created_by: context.userId,
+      })
+      .select("id")
+      .single();
+    if (error || !linha) throw new Error(error?.message ?? "Não foi possível agendar.");
+    return { ok: true as const, id: linha.id as string, enviarEm: h.iso };
+  });
+
+export const cancelarMensagemAgendadaWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    // Só cancela o que ainda não saiu, e só da própria empresa.
+    const { data: linhas, error } = await admin
+      .from("wa_scheduled_messages")
+      .update({ status: "canceled", finished_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("company_id", companyId)
+      .eq("status", "pending")
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!linhas?.length) throw new Error("Esta mensagem já foi enviada ou cancelada.");
+    return { ok: true as const };
+  });

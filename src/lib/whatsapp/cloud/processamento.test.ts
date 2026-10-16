@@ -24,7 +24,18 @@ function criarDb(config: {
   const builder = (tabela: string) => {
     const b: Record<string, unknown> = {};
     const resposta = () => ({ data: config.tabelas?.[tabela] ?? null, error: null });
-    for (const op of ["select", "eq", "in", "lt", "or", "ilike", "order", "limit", "update", "upsert"]) {
+    for (const op of [
+      "select",
+      "eq",
+      "in",
+      "lt",
+      "or",
+      "ilike",
+      "order",
+      "limit",
+      "update",
+      "upsert",
+    ]) {
       b[op] = (...args: unknown[]) => {
         ops.push({ tabela, op, args });
         return b;

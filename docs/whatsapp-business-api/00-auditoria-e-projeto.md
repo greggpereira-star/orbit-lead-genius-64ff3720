@@ -1078,3 +1078,20 @@ do código**; sem ela as visões ficam vazias e "Seguir" devolve erro).
 
 Ensaio de banco: 4 testes novos (visibilidade pessoal, autor não vê menção
 alheia, navegador não escreve, duplicata). Mutação na política foi pega.
+
+### 14.2 Fatia 6: agendar mensagem (16/10/2026)
+
+Migração `20261016140000_wa_mensagens_agendadas.sql` (**aplicar antes do
+deploy**; sem ela o despacho não faz nada e agendar devolve erro).
+
+| Peça | Regra |
+| --- | --- |
+| `wa_scheduled_messages` | pendente → enviando → enviada / falhou / cancelada; RLS: equipe da empresa lê; escrita só servidor |
+| Reserva | `reservar_mensagens_agendadas` (atômica, `SKIP LOCKED`); `liberar_..._presas` devolve à fila quem caiu no meio |
+| Envio | o mesmo `enviarTextoNaConversa` do atendente: **opt-out e janela de 24h valem na hora do envio** — agendar não contorna a política |
+| Falha | recusa de política é definitiva (marca "não enviada" com o motivo); só falha temporária do provedor volta, 5 min depois, até 3 tentativas |
+| Limites | de 1 min a 30 dias à frente; 10 pendentes por conversa |
+| Execução | dentro do `automation-dispatch` (cron de 1 min que já existe) — nenhum job novo no `pg_cron`, nenhum segredo novo |
+
+Aviso na tela: se o horário escolhido cai depois do fim da janela, o diálogo
+diz que a mensagem livre não sairá (só template).

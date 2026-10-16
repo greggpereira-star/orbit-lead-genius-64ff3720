@@ -226,6 +226,35 @@ export function useMencoesNaoLidas(companyId: string | undefined, userId: string
   });
 }
 
+export interface MensagemAgendada {
+  id: string;
+  body: string;
+  send_at: string;
+  status: "pending" | "sending" | "sent" | "failed" | "canceled";
+  result: string | null;
+}
+
+/** O que está programado (e o que falhou nas últimas 24 h) numa conversa. */
+export function useAgendadas(conversaId: string | null) {
+  return useQuery({
+    queryKey: ["wa-agendadas", conversaId ?? ""],
+    enabled: Boolean(conversaId),
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<MensagemAgendada[]> => {
+      const { data, error } = await wa()
+        .from("wa_scheduled_messages")
+        .select("id,body,send_at,status,result")
+        .eq("conversation_id", conversaId)
+        .in("status", ["pending", "sending", "failed"])
+        .gte("send_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+        .order("send_at", { ascending: true })
+        .limit(30);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as MensagemAgendada[];
+    },
+  });
+}
+
 export interface LeadDoPainel {
   id: string;
   name: string | null;

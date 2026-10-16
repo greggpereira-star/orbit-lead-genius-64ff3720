@@ -62,9 +62,18 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
         // consulta só lia `pending`) e a mensagem sumia sem aviso.
         await admin.rpc('liberar_jobs_de_automacao_presos', { p_minutos: 10 });
 
+        // Mensagens que o atendente agendou: mesmo cron, mesma política de envio.
+        const { despacharAgendadas } = await import('@/lib/whatsapp/cloud/agendadas');
+        const agendadas = await despacharAgendadas(admin).catch((e) => {
+          console.error(
+            JSON.stringify({ scope: 'cron', msg: 'agendadas_falhou', erro: String(e) }),
+          );
+          return null;
+        });
+
         const { pendentes, erro } = await reservarJobs(admin);
         if (erro) return json({ error: erro }, 500);
-        if (!pendentes.length) return json({ processados: 0 });
+        if (!pendentes.length) return json({ processados: 0, agendadas });
 
         let feitos = 0;
         let falhas = 0;
@@ -131,7 +140,7 @@ export const Route = createFileRoute('/api/public/cron/automation-dispatch')({
           }
         }
 
-        return json({ processados: pendentes.length, feitos, falhas });
+        return json({ processados: pendentes.length, feitos, falhas, agendadas });
       },
     },
   },
