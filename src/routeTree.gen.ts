@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as DataDeletionRouteImport } from './routes/data-deletion'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as GoogleOauthCallbackRouteImport } from './routes/google-oauth-callback'
 import { Route as MetaOauthCallbackRouteImport } from './routes/meta-oauth-callback'
 import { Route as OauthCallbackRouteImport } from './routes/oauth-callback'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppAnalyticsRouteImport } from './routes/_app.analytics'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppChatReportsRouteImport } from './routes/_app.chat-reports'
@@ -92,6 +95,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DataDeletionRoute = DataDeletionRouteImport.update({
+  id: '/data-deletion',
+  path: '/data-deletion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiagnosticsRoute = DiagnosticsRouteImport.update({
   id: '/diagnostics',
   path: '/diagnostics',
@@ -110,6 +118,16 @@ const MetaOauthCallbackRoute = MetaOauthCallbackRouteImport.update({
 const OauthCallbackRoute = OauthCallbackRouteImport.update({
   id: '/oauth-callback',
   path: '/oauth-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
@@ -435,10 +453,13 @@ const ApiPublicCronWaWebhookSweepRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/data-deletion': typeof DataDeletionRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/google-oauth-callback': typeof GoogleOauthCallbackRoute
   '/meta-oauth-callback': typeof MetaOauthCallbackRoute
   '/oauth-callback': typeof OauthCallbackRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/chat-reports': typeof AppChatReportsRoute
@@ -504,10 +525,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/data-deletion': typeof DataDeletionRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/google-oauth-callback': typeof GoogleOauthCallbackRoute
   '/meta-oauth-callback': typeof MetaOauthCallbackRoute
   '/oauth-callback': typeof OauthCallbackRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/automations': typeof AppAutomationsRoute
   '/chat-reports': typeof AppChatReportsRoute
@@ -575,10 +599,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/data-deletion': typeof DataDeletionRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/google-oauth-callback': typeof GoogleOauthCallbackRoute
   '/meta-oauth-callback': typeof MetaOauthCallbackRoute
   '/oauth-callback': typeof OauthCallbackRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/chat-reports': typeof AppChatReportsRoute
@@ -646,10 +673,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/data-deletion'
     | '/diagnostics'
     | '/google-oauth-callback'
     | '/meta-oauth-callback'
     | '/oauth-callback'
+    | '/privacy'
+    | '/terms'
     | '/analytics'
     | '/automations'
     | '/chat-reports'
@@ -715,10 +745,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/data-deletion'
     | '/diagnostics'
     | '/google-oauth-callback'
     | '/meta-oauth-callback'
     | '/oauth-callback'
+    | '/privacy'
+    | '/terms'
     | '/analytics'
     | '/automations'
     | '/chat-reports'
@@ -785,10 +818,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/data-deletion'
     | '/diagnostics'
     | '/google-oauth-callback'
     | '/meta-oauth-callback'
     | '/oauth-callback'
+    | '/privacy'
+    | '/terms'
     | '/_app/analytics'
     | '/_app/automations'
     | '/_app/chat-reports'
@@ -857,10 +893,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  DataDeletionRoute: typeof DataDeletionRoute
   DiagnosticsRoute: typeof DiagnosticsRoute
   GoogleOauthCallbackRoute: typeof GoogleOauthCallbackRoute
   MetaOauthCallbackRoute: typeof MetaOauthCallbackRoute
   OauthCallbackRoute: typeof OauthCallbackRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   ChatEmbedCompanyIdRoute: typeof ChatEmbedCompanyIdRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
@@ -906,6 +945,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/data-deletion': {
+      id: '/data-deletion'
+      path: '/data-deletion'
+      fullPath: '/data-deletion'
+      preLoaderRoute: typeof DataDeletionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/diagnostics': {
       id: '/diagnostics'
       path: '/diagnostics'
@@ -932,6 +978,20 @@ declare module '@tanstack/react-router' {
       path: '/oauth-callback'
       fullPath: '/oauth-callback'
       preLoaderRoute: typeof OauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/analytics': {
@@ -1505,10 +1565,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  DataDeletionRoute: DataDeletionRoute,
   DiagnosticsRoute: DiagnosticsRoute,
   GoogleOauthCallbackRoute: GoogleOauthCallbackRoute,
   MetaOauthCallbackRoute: MetaOauthCallbackRoute,
   OauthCallbackRoute: OauthCallbackRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   ChatEmbedCompanyIdRoute: ChatEmbedCompanyIdRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
