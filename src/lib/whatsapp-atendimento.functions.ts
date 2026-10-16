@@ -688,3 +688,53 @@ export const cancelarMensagemAgendadaWhatsApp = createServerFn({ method: "POST" 
     if (!linhas?.length) throw new Error("Esta mensagem já foi enviada ou cancelada.");
     return { ok: true as const };
   });
+
+// ---------------------------------------------------------------------------
+// Exportar conversa
+// ---------------------------------------------------------------------------
+const TETO_DA_EXPORTACAO = 5000;
+
+/** CSV da conversa (mensagens; as notas internas NÃO entram). */
+export const exportarConversaWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ conversaId: idConversa }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+
+    const { data: msgs, error } = await admin
+      .from("wa_messages")
+      .select(
+        "id,direction,origin,type,body,status,provider_ts,created_at,template_name,sent_by,error_title,media_id",
+      )
+      .eq("conversation_id", data.conversaId)
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: true })
+      .limit(TETO_DA_EXPORTACAO);
+    if (error) throw new Error(error.message);
+
+    const ids = [
+      ...new Set(
+        ((msgs ?? []) as Array<{ sent_by: string | null }>)
+          .map((m) => m.sent_by)
+          .filter((x): x is string => Boolean(x)),
+      ),
+    ];
+    const nomes = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: perfis } = await admin.from("profiles").select("id, full_name").in("id", ids);
+      for (const p of (perfis ?? []) as Array<{ id: string; full_name: string | null }>)
+        nomes.set(p.id, p.full_name?.trim() ?? "");
+    }
+
+    const { conversaParaCsv } = await import("@/lib/whatsapp/exportarConversa");
+    const csv = conversaParaCsv(msgs ?? [], (uid) => (uid ? (nomes.get(uid) ?? "") : ""));
+    return {
+      ok: true as const,
+      csv,
+      total: (msgs ?? []).length,
+      truncado: (msgs ?? []).length >= TETO_DA_EXPORTACAO,
+    };
+  });

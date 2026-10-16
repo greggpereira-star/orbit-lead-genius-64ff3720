@@ -1168,3 +1168,17 @@ Para testar o atendimento sem depender do Embedded Signup. Sem migração.
 - **Limites do número de teste:** pela documentação da Meta (não verificado
   hoje), só envia para destinatários previamente verificados e o token expira;
   não exercita o Embedded Signup em si.
+
+### 14.7 Exportar conversa em CSV (16/10/2026)
+
+Menu "…" → "Exportar conversa (CSV)". Sem migração.
+
+- **Conteúdo:** mensagens da conversa (data/hora ISO, direção, origem, autor,
+  tipo, texto, status, template). **Notas internas não entram.** O nome do
+  autor só aparece nas mensagens do atendente (automação e cliente não levam
+  nome de pessoa). Teto de 5 000 mensagens, com aviso quando corta.
+- **Segurança:** função de servidor com papel e empresa conferidos; filtra as
+  mensagens pela empresa. No arquivo, toda célula de texto livre que começa com
+  `=`, `+`, `-`, `@` ou tab é neutralizada (`'`): planilha executa fórmula, e o
+  texto é do cliente.
+- **Formato:** separador `;` e BOM, para o Excel em português abrir com acento.

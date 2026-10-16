@@ -21,6 +21,7 @@ import {
   atribuirConversaWhatsApp,
   listarAtendentesWhatsApp,
   marcarConversaComoNaoLidaWhatsApp,
+  exportarConversaWhatsApp,
   marcarMencoesComoLidasWhatsApp,
   seguirConversaWhatsApp,
 } from "@/lib/whatsapp-atendimento.functions";
@@ -32,6 +33,7 @@ import {
   useSeguindo,
 } from "../hooks/useAtendimento";
 import { buscarNasMensagens } from "../lib/mensagens";
+import { nomeDoArquivoDeExportacao } from "@/lib/whatsapp/exportarConversa";
 import { AgendarMensagem } from "./AgendarMensagem";
 import { MenuDaConversa } from "./MenuDaConversa";
 import {
@@ -131,6 +133,26 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
     onSuccess: (_r, v) => {
       toast.success(v.seguir ? "Você está seguindo esta conversa." : "Deixou de seguir.");
       qc.invalidateQueries({ queryKey: ["wa-seguindo"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const exportarFn = useServerFn(exportarConversaWhatsApp);
+  const aoExportar = useMutation({
+    mutationFn: (conversaId: string) => exportarFn({ data: { conversaId } }),
+    onSuccess: (r, conversaId) => {
+      const c = lista.find((x) => x.id === conversaId);
+      const blob = new Blob([r.csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nomeDoArquivoDeExportacao(c ? nomeDaConversa(c) : "conversa");
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(
+        r.truncado
+          ? `Exportadas as ${r.total} primeiras mensagens (limite).`
+          : `${r.total} mensagens exportadas.`,
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -302,6 +324,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                             status: ativa.status === "pending" ? "open" : "pending",
                           })
                         }
+                        onExportar={() => aoExportar.mutate(ativa.id)}
                         onAgendar={() => setAgendando(true)}
                         onPesquisar={() => setPesquisando(true)}
                         onInformacoes={() => setInfoAberta(true)}

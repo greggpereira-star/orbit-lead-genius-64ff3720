@@ -3,6 +3,7 @@ import {
   BookmarkCheck,
   CalendarClock,
   Copy,
+  Download,
   ExternalLink,
   EyeOff,
   Hourglass,
@@ -34,6 +35,7 @@ export function MenuDaConversa(props: {
   seguindo?: boolean;
   onSeguir?: () => void;
   onAgendar?: () => void;
+  onExportar?: () => void;
   onNaoLida: () => void;
   onPendente: () => void;
   onPesquisar: () => void;
@@ -69,6 +71,11 @@ export function MenuDaConversa(props: {
               <Bookmark className="mr-2 h-4 w-4" />
             )}
             {props.seguindo ? "Deixar de seguir" : "Seguir"}
+          </DropdownMenuItem>
+        )}
+        {props.onExportar && (
+          <DropdownMenuItem disabled={props.ocupado} onSelect={props.onExportar}>
+            <Download className="mr-2 h-4 w-4" /> Exportar conversa (CSV)
           </DropdownMenuItem>
         )}
         {props.onAgendar && !resolvida && (
