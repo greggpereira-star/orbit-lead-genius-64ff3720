@@ -22,6 +22,7 @@ import {
 } from "./conteudo";
 import { Faixa, Inclinar, PalavraGiratoria, ProgressoDeRolagem, Revelar, useHolofote } from "./efeitos";
 import { Fluxo } from "./Fluxo";
+import { Logo } from "./Logo";
 import { TELAS_POR_RECURSO, TelaDoHeroi } from "./Telas";
 
 const FOCO = "outline-none focus-visible:ring-2 focus-visible:ring-[#9DB8FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070C1B]";
@@ -52,9 +53,8 @@ function Topo() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#070C1B]/75 backdrop-blur-xl">
       <div className={cn(CONTAINER, "flex h-16 items-center justify-between gap-4")}>
-        <a href="#topo" className={cn("flex items-center gap-2 whitespace-nowrap rounded-lg text-[15px] font-bold tracking-tight text-white", FOCO)}>
-          <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2F6BFF] font-mono text-xs">A</span>
-          ALT Leadflow
+        <a href="#topo" className={cn("flex items-center rounded-lg text-white", FOCO)}>
+          <Logo className="text-[19px]" />
         </a>
         <nav aria-label="Seções da página" className="hidden items-center gap-1 lg:flex">
           {NAVEGACAO.map((n) => (
@@ -299,7 +299,7 @@ function Rodape() {
     <footer className="border-t border-white/[0.06] py-12">
       <div className={cn(CONTAINER, "flex flex-col gap-8 md:flex-row md:justify-between")}>
         <div className="space-y-1 text-sm text-white/55">
-          <p className="font-bold text-white">ALT Leadflow</p>
+          <Logo className="text-[19px] text-white" />
           <p>{RODAPE.empresa}</p>
           <p>{RODAPE.cnpj}</p>
           <p><a href={`mailto:${RODAPE.contato}`} className={cn("rounded underline-offset-4 hover:text-white hover:underline", FOCO)}>{RODAPE.contato}</a></p>

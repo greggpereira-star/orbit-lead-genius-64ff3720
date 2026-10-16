@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ALT Leadflow">
+  <defs>
+    <linearGradient id="lf-g" x1="6" y1="0" x2="58" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6A97FF"/><stop offset="1" stop-color="#1F4FD8"/>
+    </linearGradient>
+    <linearGradient id="lf-s" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="20" fill="url(#lf-g)"/>
+  <rect width="64" height="64" rx="20" fill="url(#lf-s)"/>
+  <circle cx="22" cy="16" r="6" fill="#fff"/>
+  <path d="M22 16v21a9 9 0 0 0 9 9h9" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="46" cy="46" r="5.5" fill="#34D399"/>
+</svg>
