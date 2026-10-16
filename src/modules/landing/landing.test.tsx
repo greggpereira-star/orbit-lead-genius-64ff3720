@@ -126,4 +126,11 @@ describe("página inicial (renderizada)", () => {
     expect(readFileSync("src/modules/landing/Fluxo.tsx", "utf8")).toContain("useReducedMotion");
     expect(readFileSync("src/styles.css", "utf8")).toMatch(/\.landing-faixa/);
   });
+
+  it("a imagem de compartilhamento é a da marca, hospedada por nós, e não sobra do Lovable", () => {
+    const raiz = readFileSync("src/routes/__root.tsx", "utf8");
+    expect(raiz).toContain("https://altleadflow.com.br/og-leadflow.png");
+    expect(raiz).not.toMatch(/lovable|r2\.dev|@Lovable/i);
+    expect(readFileSync("public/og-leadflow.png").subarray(1, 4).toString()).toBe("PNG");
+  });
 });

@@ -9,6 +9,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: DESCRICAO_DA_PAGINA },
       { property: "og:title", content: TITULO_DA_PAGINA },
       { property: "og:description", content: DESCRICAO_DA_PAGINA },
+      { name: "twitter:title", content: TITULO_DA_PAGINA },
+      { name: "twitter:description", content: DESCRICAO_DA_PAGINA },
     ],
   }),
   component: PaginaInicial,
