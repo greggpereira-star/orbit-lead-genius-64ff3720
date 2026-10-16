@@ -1128,3 +1128,25 @@ erro).
 | Tela | lista "Rascunhos" no cartão de templates (Continuar / Apagar) e botão "Salvar rascunho" no editor |
 
 Ensaio de banco: 2 testes novos (definição precisa ser objeto; visibilidade).
+
+### 14.5 Número "apenas receptivo" (16/10/2026)
+
+Migração `20261016180000_wa_numero_apenas_receptivo.sql` — **aplicar ANTES do
+deploy**: a lista de conversas passa a ler `wa_phone_numbers.receive_only`, e
+sem a coluna a consulta falha.
+
+Significado, conforme a própria dica da tela de referência ("o canal não pode
+enviar mensagem ativa nem ser usado em campanhas"):
+
+| Origem / tipo | Número apenas receptivo |
+| --- | --- |
+| Resposta livre do atendente **dentro** da janela de 24h | permitida |
+| Template (mensagem ativa) — atendente ou automação | **recusada** (`canal_apenas_receptivo`) |
+| Automação/campanha: texto, template, mídia | **recusada**; a ação vira "pulada" com o motivo |
+| Fora da janela | o compositor mostra o aviso em vez do seletor de template |
+
+Regras: coluna nasce **desligada** (nada muda para números existentes);
+alterar exige administrador e só atinge número da própria empresa; a recusa é
+decidida no mesmo ponto das demais políticas de envio, depois do opt-out.
+Interpretação de "automação = campanha" é nossa: os gatilhos do sistema
+(lead criado, mudança de etapa) são envios ativos, não respostas.

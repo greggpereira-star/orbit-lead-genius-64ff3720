@@ -756,3 +756,16 @@ BEGIN
   RAISE NOTICE 'rascunhos: 2 testes passaram';
 END
 $t$;
+
+-- ---- número apenas receptivo ----
+DO $t$
+DECLARE v_n int;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'wa_phone_numbers' AND column_name = 'receive_only') THEN RETURN; END IF;
+  -- P1: a coluna nasce DESLIGADA: número existente segue enviando como antes
+  SELECT count(*) INTO v_n FROM public.wa_phone_numbers WHERE receive_only IS NOT FALSE;
+  IF v_n <> 0 THEN RAISE EXCEPTION 'P1 % números nasceram receptivos', v_n; END IF;
+  RAISE NOTICE 'receptivo: 1 teste passou';
+END
+$t$;

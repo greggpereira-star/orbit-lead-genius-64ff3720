@@ -15,11 +15,12 @@ MIGRACAO5="$RAIZ/supabase/migrations/20261015220000_endurecer_acessos.sql"
 MIGRACAO6="$RAIZ/supabase/migrations/20261016120000_wa_seguir_e_mencoes.sql"
 MIGRACAO7="$RAIZ/supabase/migrations/20261016140000_wa_mensagens_agendadas.sql"
 MIGRACAO8="$RAIZ/supabase/migrations/20261016160000_wa_template_rascunhos.sql"
+MIGRACAO9="$RAIZ/supabase/migrations/20261016180000_wa_numero_apenas_receptivo.sql"
 TESTES="$RAIZ/scripts/ensaio-wa-fundacao/testes.sql"
 HOST="${ALTFLOW_SSH:-altflow}"
 CONTAINER="${ALTFLOW_DB:-altleadflow-db}"
-for a in "$MIGRACAO" "$MIGRACAO2" "$MIGRACAO3" "$MIGRACAO4" "$MIGRACAO5" "$MIGRACAO6" "$MIGRACAO7" "$MIGRACAO8" "$TESTES"; do [ -f "$a" ] || { echo "não achei $a" >&2; exit 1; }; done
+for a in "$MIGRACAO" "$MIGRACAO2" "$MIGRACAO3" "$MIGRACAO4" "$MIGRACAO5" "$MIGRACAO6" "$MIGRACAO7" "$MIGRACAO8" "$MIGRACAO9" "$TESTES"; do [ -f "$a" ] || { echo "não achei $a" >&2; exit 1; }; done
 echo "==> ensaiando contra $CONTAINER em $HOST (tudo será desfeito no fim)"
-{ echo "BEGIN;"; cat "$MIGRACAO"; cat "$MIGRACAO2"; cat "$MIGRACAO3"; cat "$MIGRACAO4"; cat "$MIGRACAO5"; cat "$MIGRACAO6"; cat "$MIGRACAO7"; cat "$MIGRACAO8"; cat "$TESTES"; echo "ROLLBACK;"; } \
+{ echo "BEGIN;"; cat "$MIGRACAO"; cat "$MIGRACAO2"; cat "$MIGRACAO3"; cat "$MIGRACAO4"; cat "$MIGRACAO5"; cat "$MIGRACAO6"; cat "$MIGRACAO7"; cat "$MIGRACAO8"; cat "$MIGRACAO9"; cat "$TESTES"; echo "ROLLBACK;"; } \
   | ssh "$HOST" "docker exec -i $CONTAINER psql -U postgres -v ON_ERROR_STOP=1 -q"
 echo "==> ensaio concluído sem erro. Nada foi gravado."

@@ -8,17 +8,21 @@ import type { EstadoDaJanela } from "../../../lib/whatsapp/cloud/janela";
  *  - `bloqueado`  o contato pediu para parar: nada vai.
  *  - `resolvida`  conversa resolvida: reabrir antes de responder.
  */
-export type ModoDoCompositor = "texto" | "template" | "bloqueado" | "resolvida";
+export type ModoDoCompositor =
+  "texto" | "template" | "bloqueado" | "resolvida" | "somente_receptivo";
 
 export function modoDoCompositor(p: {
   janela: EstadoDaJanela;
   optedOut: boolean;
   status: "open" | "pending" | "resolved";
+  /** Número apenas receptivo: fora da janela não há template para retomar. */
+  apenasReceptivo?: boolean;
 }): ModoDoCompositor {
   // Opt-out vence tudo: nem template vai.
   if (p.optedOut) return "bloqueado";
   if (p.status === "resolved") return "resolvida";
-  return p.janela.aberta ? "texto" : "template";
+  if (p.janela.aberta) return "texto";
+  return p.apenasReceptivo ? "somente_receptivo" : "template";
 }
 
 export const AVISO_DO_MODO: Record<ModoDoCompositor, string | null> = {
@@ -26,4 +30,6 @@ export const AVISO_DO_MODO: Record<ModoDoCompositor, string | null> = {
   template: "A janela de 24h está fechada: para retomar a conversa envie um template aprovado.",
   bloqueado: "Este contato pediu para não receber mensagens.",
   resolvida: "Conversa resolvida. Reabra para responder.",
+  somente_receptivo:
+    "Este número é apenas receptivo e a janela de 24h está fechada: só dá para responder quando o cliente escrever de novo.",
 };

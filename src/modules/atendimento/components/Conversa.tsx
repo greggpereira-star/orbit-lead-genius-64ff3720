@@ -86,7 +86,12 @@ export function Conversa(props: {
   const mensagens = useMensagens(conversa.id);
   const janela = janelaDaConversa(conversa, agora);
   const optedOut = Boolean(conversa.contact?.opted_out_at);
-  const modo = modoDoCompositor({ janela, optedOut, status: conversa.status });
+  const modo = modoDoCompositor({
+    janela,
+    optedOut,
+    status: conversa.status,
+    apenasReceptivo: Boolean(conversa.numero?.receive_only),
+  });
 
   const grupos = useMemo(() => agruparPorDia(mensagens.data ?? [], agora), [mensagens.data, agora]);
   const fimRef = useRef<HTMLDivElement>(null);
@@ -361,7 +366,7 @@ function Compositor(props: {
     }
   }
 
-  if (modo === "bloqueado" || modo === "resolvida") {
+  if (modo === "bloqueado" || modo === "resolvida" || modo === "somente_receptivo") {
     return (
       <div className="flex items-center justify-between gap-3 border-t bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         <span>{props.aviso}</span>

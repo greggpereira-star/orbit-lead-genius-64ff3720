@@ -42,7 +42,7 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
       admin
         .from("wa_phone_numbers")
         .select(
-          "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at",
+          "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at, receive_only",
         )
         .eq("company_id", companyId),
       admin
@@ -252,6 +252,27 @@ export const apagarRascunhoTemplateWhatsApp = createServerFn({ method: "POST" })
       .eq("company_id", companyId);
     if (error) throw new Error(error.message);
     return { ok: true as const };
+  });
+
+/** Liga/desliga "apenas receptivo" num número DA empresa. */
+export const definirApenasReceptivoWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ phoneNumberId: z.string().regex(/^\d{5,30}$/), valor: z.boolean() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+    const { data: linhas, error } = await admin
+      .from("wa_phone_numbers")
+      .update({ receive_only: data.valor })
+      .eq("phone_number_id", data.phoneNumberId)
+      .eq("company_id", companyId)
+      .select("phone_number_id");
+    if (error) throw new Error(error.message);
+    if (!linhas?.length) throw new Error("Número não encontrado.");
+    return { ok: true as const, valor: data.valor };
   });
 
 export const apagarTemplateWhatsApp = createServerFn({ method: "POST" })

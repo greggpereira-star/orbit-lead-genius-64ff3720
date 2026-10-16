@@ -26,12 +26,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   apagarRascunhoTemplateWhatsApp,
   apagarTemplateWhatsApp,
   concluirSignupWhatsApp,
   criarTemplateWhatsApp,
+  definirApenasReceptivoWhatsApp,
   obterEstadoDoWhatsAppOficial,
   salvarRascunhoTemplateWhatsApp,
   sincronizarTemplatesWhatsApp,
@@ -212,6 +214,17 @@ function WhatsAppOficial() {
   const [criando, setCriando] = useState(false);
   /** Rascunho aberto no editor (null = template novo). */
   const [rascunho, setRascunho] = useState<{ id: string; def: DefinicaoDeTemplate } | null>(null);
+  const definirReceptivo = useServerFn(definirApenasReceptivoWhatsApp);
+  const alternarReceptivo = useMutation({
+    mutationFn: (v: { phoneNumberId: string; valor: boolean }) => definirReceptivo({ data: v }),
+    onSuccess: (r) => {
+      toast.success(
+        r.valor ? "Número apenas receptivo." : "Número volta a enviar mensagens ativas.",
+      );
+      recarregar();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const apagarRascunho = useServerFn(apagarRascunhoTemplateWhatsApp);
   const removerRascunho = useMutation({
     mutationFn: (id: string) => apagarRascunho({ data: { id } }),
@@ -331,6 +344,26 @@ function WhatsAppOficial() {
                           : `${n.history_progress ?? 0}%`}
                     </Dado>
                   </dl>
+
+                  <div className="flex items-start justify-between gap-4 rounded-md bg-muted/40 p-3">
+                    <div className="space-y-0.5">
+                      <Label htmlFor={`recep-${n.phone_number_id}`} className="text-sm">
+                        Apenas receptivo
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        O número só responde a quem escreveu, dentro da janela de 24h: não envia
+                        template (mensagem ativa) e não é usado por automações nem campanhas.
+                      </p>
+                    </div>
+                    <Switch
+                      id={`recep-${n.phone_number_id}`}
+                      checked={Boolean(n.receive_only)}
+                      disabled={alternarReceptivo.isPending}
+                      onCheckedChange={(valor) =>
+                        alternarReceptivo.mutate({ phoneNumberId: n.phone_number_id, valor })
+                      }
+                    />
+                  </div>
 
                   {n.status === "disconnected" && (
                     <p className="text-sm text-destructive">

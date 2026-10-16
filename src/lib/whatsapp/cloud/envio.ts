@@ -19,12 +19,16 @@ import { parametrosDoCorpo, variaveisDe } from "./templates";
 import type { DbWa } from "./processador";
 
 export type MotivoDeRecusa =
+  | "canal_apenas_receptivo"
   | "limite_de_envio"
   | "conversa_inexistente"
   | "contato_pediu_para_parar"
   | "fora_da_janela"
   | "texto_vazio"
   | "provedor";
+
+export const TEXTO_APENAS_RECEPTIVO =
+  "Este número é apenas receptivo: só responde a quem escreveu, dentro da janela de 24h.";
 
 export type ResultadoDoEnvio =
   | { ok: true; messageId: string; providerMessageId: string }
@@ -64,14 +68,19 @@ export async function enviarTextoNaConversa(
       .eq("id", c.contact_id)
       .maybeSingle(),
     (admin.from("wa_phone_numbers") as ConsultaDb)
-      .select("phone_number_id")
+      .select("phone_number_id, receive_only")
       .eq("id", c.phone_number_id)
       .maybeSingle(),
   ]);
   const ct = contato as { wa_id: string; opted_out_at: string | null } | null;
-  const nm = numero as { phone_number_id: string } | null;
+  const nm = numero as { phone_number_id: string; receive_only?: boolean | null } | null;
   if (!ct || !nm)
     return { ok: false, motivo: "conversa_inexistente", texto: "Conversa incompleta." };
+
+  // 0) número apenas receptivo: automação/campanha não sai por ele.
+  if (nm.receive_only && entrada.origem === "automation") {
+    return { ok: false, motivo: "canal_apenas_receptivo", texto: TEXTO_APENAS_RECEPTIVO };
+  }
 
   // 1) opt-out — a coluna do contato OU a lista legada (uma fonte só, a política).
   if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
@@ -186,14 +195,24 @@ export async function enviarTemplateNaConversa(
       .eq("id", c.contact_id)
       .maybeSingle(),
     (admin.from("wa_phone_numbers") as ConsultaDb)
-      .select("phone_number_id, account_id")
+      .select("phone_number_id, account_id, receive_only")
       .eq("id", c.phone_number_id)
       .maybeSingle(),
   ]);
   const ct = contato as { wa_id: string; opted_out_at: string | null } | null;
-  const nm = numero as { phone_number_id: string; account_id: string } | null;
+  const nm = numero as {
+    phone_number_id: string;
+    account_id: string;
+    receive_only?: boolean | null;
+  } | null;
   if (!ct || !nm)
     return { ok: false, motivo: "conversa_inexistente", texto: "Conversa incompleta." };
+
+  // Template é mensagem ATIVA (abre conversa fora da janela): número apenas
+  // receptivo não envia, de nenhuma origem.
+  if (nm.receive_only) {
+    return { ok: false, motivo: "canal_apenas_receptivo", texto: TEXTO_APENAS_RECEPTIVO };
+  }
 
   if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
     return {
@@ -356,14 +375,18 @@ export async function enviarMidiaNaConversa(
       .eq("id", c.contact_id)
       .maybeSingle(),
     (admin.from("wa_phone_numbers") as ConsultaDb)
-      .select("phone_number_id")
+      .select("phone_number_id, receive_only")
       .eq("id", c.phone_number_id)
       .maybeSingle(),
   ]);
   const ct = contato as { wa_id: string; opted_out_at: string | null } | null;
-  const nm = numero as { phone_number_id: string } | null;
+  const nm = numero as { phone_number_id: string; receive_only?: boolean | null } | null;
   if (!ct || !nm)
     return { ok: false, motivo: "conversa_inexistente", texto: "Conversa incompleta." };
+
+  if (nm.receive_only && e.origem === "automation") {
+    return { ok: false, motivo: "canal_apenas_receptivo", texto: TEXTO_APENAS_RECEPTIVO };
+  }
 
   if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
     return {

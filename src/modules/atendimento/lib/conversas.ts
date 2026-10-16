@@ -28,6 +28,8 @@ export interface ConversaDaLista {
   origin: Record<string, unknown> | null;
   contact: { wa_id: string; profile_name: string | null; opted_out_at: string | null } | null;
   lead: { id: string; name: string | null; email: string | null } | null;
+  /** Número da conversa: só o que o atendimento precisa saber dele. */
+  numero?: { receive_only: boolean } | null;
 }
 
 /** 5527996318075 → +55 (27) 99631-8075. Fora do padrão BR devolve com `+`. */

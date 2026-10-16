@@ -12,6 +12,8 @@ export interface NumeroOficial {
   webhook_subscribed_at: string | null;
   history_progress: number | null;
   coexistence_synced_at: string | null;
+  /** Só responde a quem escreveu: sem template e sem automação/campanha. */
+  receive_only: boolean;
 }
 
 /** Rascunho salvo: ainda não foi à Meta. */
