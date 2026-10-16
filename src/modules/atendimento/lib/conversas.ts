@@ -6,7 +6,14 @@ import { estadoDaJanela, type EstadoDaJanela } from "../../../lib/whatsapp/cloud
 
 export type StatusDaConversa = "open" | "pending" | "resolved";
 /** "entrada" = tudo que ainda está em aberto (a visão padrão do inbox). */
-export type Filtro = "entrada" | "minhas" | "fila" | "todas" | "resolvidas";
+export type Filtro =
+  "entrada" | "minhas" | "seguindo" | "mencoes" | "fila" | "todas" | "resolvidas";
+
+/** Conjuntos pessoais (vêm de tabelas próprias): conversas seguidas e com menção não lida. */
+export interface ConjuntosPessoais {
+  seguindo?: ReadonlySet<string>;
+  mencoes?: ReadonlySet<string>;
+}
 
 export interface ConversaDaLista {
   id: string;
@@ -61,7 +68,7 @@ const naoResolvida = (c: ConversaDaLista) => c.status !== "resolved";
 /** "Minhas" = comigo e em aberto. "Fila" = ninguém pegou ainda. */
 export function filtrarConversas(
   lista: ConversaDaLista[],
-  p: { filtro: Filtro; userId: string | null; busca?: string },
+  p: { filtro: Filtro; userId: string | null; busca?: string } & ConjuntosPessoais,
 ): ConversaDaLista[] {
   const q = (p.busca ?? "").trim().toLowerCase();
   const digitos = q.replace(/\D/g, "");
@@ -73,6 +80,10 @@ export function filtrarConversas(
           return naoResolvida(c);
         case "minhas":
           return naoResolvida(c) && !!p.userId && c.assigned_to === p.userId;
+        case "seguindo":
+          return naoResolvida(c) && !!p.seguindo?.has(c.id);
+        case "mencoes":
+          return !!p.mencoes?.has(c.id);
         case "fila":
           return naoResolvida(c) && c.assigned_to === null;
         case "resolvidas":
@@ -102,11 +113,14 @@ export function filtrarConversas(
 export function contarPorFiltro(
   lista: ConversaDaLista[],
   userId: string | null,
+  pessoais: ConjuntosPessoais = {},
 ): Record<Filtro, number> {
-  const conta = (f: Filtro) => filtrarConversas(lista, { filtro: f, userId }).length;
+  const conta = (f: Filtro) => filtrarConversas(lista, { filtro: f, userId, ...pessoais }).length;
   return {
     entrada: conta("entrada"),
     minhas: conta("minhas"),
+    seguindo: conta("seguindo"),
+    mencoes: conta("mencoes"),
     fila: conta("fila"),
     todas: lista.length,
     resolvidas: conta("resolvidas"),

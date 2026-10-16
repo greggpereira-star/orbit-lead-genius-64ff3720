@@ -1061,3 +1061,20 @@ política).
 
 **Achado de qualidade:** o `vitest` incluía só `*.test.ts`; os testes de
 renderização (`.test.tsx`) nunca rodavam. Corrigido em `vitest.config.ts`.
+
+### 14.1 Fatia 5: seguir conversa e menções (16/10/2026)
+
+Migração `20261016120000_wa_seguir_e_mencoes.sql` (**aplicar antes do deploy
+do código**; sem ela as visões ficam vazias e "Seguir" devolve erro).
+
+| Peça | Regra |
+| --- | --- |
+| `wa_conversation_followers` | uma linha por (conversa, pessoa); RLS: cada pessoa só lê as próprias; escrita só servidor |
+| `wa_mentions` | uma por (nota, mencionado); `read_at` nulo = não lida; RLS: só o mencionado lê |
+| Seguir automático | ao **receber a conversa** (atribuição) e ao **ser mencionado** |
+| Menção | só membro da mesma empresa, nunca a si mesmo, até 10 por nota |
+| Leitura | abrir a conversa marca as menções dela como lidas |
+| Visões | "Seguindo" (não resolvidas) e "Menções" (não lidas, mesmo resolvida) |
+
+Ensaio de banco: 4 testes novos (visibilidade pessoal, autor não vê menção
+alheia, navegador não escreve, duplicata). Mutação na política foi pega.

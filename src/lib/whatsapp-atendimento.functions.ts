@@ -33,6 +33,16 @@ async function conferirConversa(admin: any, companyId: string, conversaId: strin
 
 const idConversa = z.string().uuid();
 
+/** Segue a conversa para a pessoa. Idempotente (a chave é conversa + pessoa). */
+async function seguir(admin: any, companyId: string, conversaId: string, userId: string) {
+  await admin
+    .from("wa_conversation_followers")
+    .upsert(
+      { conversation_id: conversaId, user_id: userId, company_id: companyId },
+      { onConflict: "conversation_id,user_id", ignoreDuplicates: true },
+    );
+}
+
 export const enviarMensagemWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
@@ -130,6 +140,8 @@ export const atribuirConversaWhatsApp = createServerFn({ method: "POST" })
       .update({ assigned_to: data.userId })
       .eq("id", data.conversaId);
     if (error) throw new Error(error.message);
+    // Quem recebe a conversa passa a acompanhá-la (some do "Seguindo" só se deixar de seguir).
+    if (data.userId) await seguir(admin, companyId, data.conversaId, data.userId).catch(() => {});
     return { ok: true as const };
   });
 
@@ -297,20 +309,56 @@ export const enviarMidiaWhatsApp = createServerFn({ method: "POST" })
 export const criarNotaWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
-    z.object({ conversaId: idConversa, texto: z.string().trim().min(1).max(4000) }).parse(raw),
+    z
+      .object({
+        conversaId: idConversa,
+        texto: z.string().trim().min(1).max(4000),
+        mencionar: z.array(z.string().uuid()).max(10).optional(),
+      })
+      .parse(raw),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
     await conferirConversa(admin, companyId, data.conversaId);
-    const { error } = await admin.from("wa_notes").insert({
-      company_id: companyId,
-      conversation_id: data.conversaId,
-      author_id: context.userId,
-      body: data.texto,
-    });
-    if (error) throw new Error(error.message);
+    const { data: nota, error } = await admin
+      .from("wa_notes")
+      .insert({
+        company_id: companyId,
+        conversation_id: data.conversaId,
+        author_id: context.userId,
+        body: data.texto,
+      })
+      .select("id")
+      .single();
+    if (error || !nota) throw new Error(error?.message ?? "Não foi possível salvar a nota.");
+
+    // Menção só vale para quem é membro DESTA empresa (e não para si mesmo).
+    const alvos = [...new Set(data.mencionar ?? [])].filter((id) => id !== context.userId);
+    if (alvos.length > 0) {
+      const { data: membros } = await admin
+        .from("memberships")
+        .select("user_id")
+        .eq("company_id", companyId)
+        .in("user_id", alvos);
+      const validos = ((membros ?? []) as Array<{ user_id: string }>).map((m) => m.user_id);
+      if (validos.length > 0) {
+        await admin.from("wa_mentions").insert(
+          validos.map((uid) => ({
+            company_id: companyId,
+            conversation_id: data.conversaId,
+            note_id: nota.id,
+            mentioned_user_id: uid,
+            author_id: context.userId,
+          })),
+        );
+        // Quem é mencionado passa a seguir a conversa.
+        await Promise.all(
+          validos.map((uid) => seguir(admin, companyId, data.conversaId, uid).catch(() => {})),
+        );
+      }
+    }
     return { ok: true as const };
   });
 
@@ -521,6 +569,51 @@ export const marcarConversaComoNaoLidaWhatsApp = createServerFn({ method: "POST"
       .eq("id", data.conversaId)
       .eq("company_id", companyId)
       .eq("unread_agent", 0);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+// ---------------------------------------------------------------------------
+// Seguir conversa e menções
+// ---------------------------------------------------------------------------
+export const seguirConversaWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ conversaId: idConversa, seguir: z.boolean() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+    if (data.seguir) {
+      await seguir(admin, companyId, data.conversaId, context.userId);
+    } else {
+      const { error } = await admin
+        .from("wa_conversation_followers")
+        .delete()
+        .eq("conversation_id", data.conversaId)
+        .eq("user_id", context.userId);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true as const };
+  });
+
+/** Abrir a conversa lê as menções que a pessoa tinha nela. */
+export const marcarMencoesComoLidasWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ conversaId: idConversa }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+    const { error } = await admin
+      .from("wa_mentions")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", data.conversaId)
+      .eq("mentioned_user_id", context.userId)
+      .is("read_at", null);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });

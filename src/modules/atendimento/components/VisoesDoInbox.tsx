@@ -1,4 +1,4 @@
-import { Archive, Inbox, UserCheck, UserX } from "lucide-react";
+import { Archive, AtSign, Bookmark, Inbox, UserCheck, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Filtro } from "../lib/conversas";
 
@@ -10,6 +10,8 @@ import type { Filtro } from "../lib/conversas";
 const VISOES: Array<{ filtro: Filtro; rotulo: string; Icone: typeof Inbox }> = [
   { filtro: "entrada", rotulo: "Entrada", Icone: Inbox },
   { filtro: "minhas", rotulo: "Minhas", Icone: UserCheck },
+  { filtro: "seguindo", rotulo: "Seguindo", Icone: Bookmark },
+  { filtro: "mencoes", rotulo: "Menções", Icone: AtSign },
   { filtro: "fila", rotulo: "Não atribuídas", Icone: UserX },
   { filtro: "resolvidas", rotulo: "Resolvidas", Icone: Archive },
 ];

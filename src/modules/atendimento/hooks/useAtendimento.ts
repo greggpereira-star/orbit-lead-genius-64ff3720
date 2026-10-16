@@ -23,6 +23,8 @@ export const chaves = {
   mensagens: (conversaId: string) => ["wa-mensagens", conversaId] as const,
   templates: (companyId: string) => ["wa-templates-aprovados", companyId] as const,
   atendentes: ["wa-atendentes"] as const,
+  seguindo: (companyId: string, userId: string) => ["wa-seguindo", companyId, userId] as const,
+  mencoes: (companyId: string, userId: string) => ["wa-mencoes", companyId, userId] as const,
 };
 
 export interface TemplateAprovado {
@@ -180,6 +182,48 @@ export async function usoPorCategoria(
     cobravel: l.cobravel,
     total: Number(l.total),
   }));
+}
+
+/** Conversas que a pessoa segue. Pessoal por RLS: a consulta só devolve as dela. */
+export function useSeguindo(companyId: string | undefined, userId: string | null) {
+  return useQuery({
+    queryKey: chaves.seguindo(companyId ?? "", userId ?? ""),
+    enabled: Boolean(companyId && userId),
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await wa()
+        .from("wa_conversation_followers")
+        .select("conversation_id")
+        .eq("company_id", companyId)
+        .eq("user_id", userId)
+        .limit(1000);
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as Array<{ conversation_id: string }>).map((l) => l.conversation_id);
+    },
+  });
+}
+
+/** Conversas em que a pessoa foi mencionada e ainda não leu. */
+export function useMencoesNaoLidas(companyId: string | undefined, userId: string | null) {
+  return useQuery({
+    queryKey: chaves.mencoes(companyId ?? "", userId ?? ""),
+    enabled: Boolean(companyId && userId),
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await wa()
+        .from("wa_mentions")
+        .select("conversation_id")
+        .eq("company_id", companyId)
+        .eq("mentioned_user_id", userId)
+        .is("read_at", null)
+        .limit(1000);
+      if (error) throw new Error(error.message);
+      return [
+        ...new Set(
+          ((data ?? []) as Array<{ conversation_id: string }>).map((l) => l.conversation_id),
+        ),
+      ];
+    },
+  });
 }
 
 export interface LeadDoPainel {

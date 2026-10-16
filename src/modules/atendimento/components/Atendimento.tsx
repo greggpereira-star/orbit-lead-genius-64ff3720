@@ -21,8 +21,16 @@ import {
   atribuirConversaWhatsApp,
   listarAtendentesWhatsApp,
   marcarConversaComoNaoLidaWhatsApp,
+  marcarMencoesComoLidasWhatsApp,
+  seguirConversaWhatsApp,
 } from "@/lib/whatsapp-atendimento.functions";
-import { chaves, useConversas, useMensagens } from "../hooks/useAtendimento";
+import {
+  chaves,
+  useConversas,
+  useMencoesNaoLidas,
+  useMensagens,
+  useSeguindo,
+} from "../hooks/useAtendimento";
 import { buscarNasMensagens } from "../lib/mensagens";
 import { MenuDaConversa } from "./MenuDaConversa";
 import {
@@ -50,7 +58,21 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
   const [resultado, setResultado] = useState(0);
   const [infoAberta, setInfoAberta] = useState(false);
 
-  const contagens = useMemo(() => contarPorFiltro(lista, userId), [lista, userId]);
+  // Conjuntos pessoais: falham em silêncio (vazio) se as tabelas ainda não existem.
+  const seguindoQ = useSeguindo(companyId, userId);
+  const mencoesQ = useMencoesNaoLidas(companyId, userId);
+  const pessoais = useMemo(
+    () => ({
+      seguindo: new Set(seguindoQ.data ?? []),
+      mencoes: new Set(mencoesQ.data ?? []),
+    }),
+    [seguindoQ.data, mencoesQ.data],
+  );
+
+  const contagens = useMemo(
+    () => contarPorFiltro(lista, userId, pessoais),
+    [lista, userId, pessoais],
+  );
 
   // Primeira exibição: "Minhas" se houver; senão "Todas". Depois é escolha da pessoa.
   useEffect(() => {
@@ -60,8 +82,8 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
 
   const filtroAtual: Filtro = filtro ?? "entrada";
   const visiveis = useMemo(
-    () => filtrarConversas(lista, { filtro: filtroAtual, userId, busca }),
-    [lista, filtroAtual, userId, busca],
+    () => filtrarConversas(lista, { filtro: filtroAtual, userId, busca, ...pessoais }),
+    [lista, filtroAtual, userId, busca, pessoais],
   );
   const ativa = lista.find((c) => c.id === ativaId) ?? null;
 
@@ -71,7 +93,14 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
     () => (pesquisando ? buscarNasMensagens(mensagensDaAtiva.data ?? [], termo) : []),
     [pesquisando, mensagensDaAtiva.data, termo],
   );
+  const lerMencoes = useServerFn(marcarMencoesComoLidasWhatsApp);
   const abrirConversa = (id: string | null) => {
+    // Abrir a conversa lê as menções que a pessoa tinha nela.
+    if (id && pessoais.mencoes.has(id)) {
+      void lerMencoes({ data: { conversaId: id } })
+        .then(() => qc.invalidateQueries({ queryKey: ["wa-mencoes"] }))
+        .catch(() => {});
+    }
     setAtivaId(id);
     setPesquisando(false);
     setTermo("");
@@ -92,6 +121,15 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
   const aoAtribuir = useMutation({
     mutationFn: (v: { conversaId: string; userId: string | null }) => atribuir({ data: v }),
     onSuccess: recarregar,
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const seguirFn = useServerFn(seguirConversaWhatsApp);
+  const aoSeguir = useMutation({
+    mutationFn: (v: { conversaId: string; seguir: boolean }) => seguirFn({ data: v }),
+    onSuccess: (_r, v) => {
+      toast.success(v.seguir ? "Você está seguindo esta conversa." : "Deixou de seguir.");
+      qc.invalidateQueries({ queryKey: ["wa-seguindo"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const marcarNaoLida = useServerFn(marcarConversaComoNaoLidaWhatsApp);
@@ -245,7 +283,16 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                       )}
                       <MenuDaConversa
                         conversa={ativa}
-                        ocupado={aoMudarStatus.isPending || aoMarcarNaoLida.isPending}
+                        ocupado={
+                          aoMudarStatus.isPending || aoMarcarNaoLida.isPending || aoSeguir.isPending
+                        }
+                        seguindo={pessoais.seguindo.has(ativa.id)}
+                        onSeguir={() =>
+                          aoSeguir.mutate({
+                            conversaId: ativa.id,
+                            seguir: !pessoais.seguindo.has(ativa.id),
+                          })
+                        }
                         onNaoLida={() => aoMarcarNaoLida.mutate(ativa.id)}
                         onPendente={() =>
                           aoMudarStatus.mutate({

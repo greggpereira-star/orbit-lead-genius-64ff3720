@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { criarNotaWhatsApp } from "@/lib/whatsapp-atendimento.functions";
+import { criarNotaWhatsApp, listarAtendentesWhatsApp } from "@/lib/whatsapp-atendimento.functions";
 import { cn } from "@/lib/utils";
-import { useLeadDoPainel, useNotas } from "../hooks/useAtendimento";
+import { chaves, useLeadDoPainel, useNotas } from "../hooks/useAtendimento";
+import { useQuery } from "@tanstack/react-query";
 import { formatarTelefone, iniciais, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
 
 /** O que veio no `referral` do primeiro contato (anúncio Click-to-WhatsApp). */
@@ -223,14 +224,25 @@ function Notas({ conversaId }: { conversaId: string }) {
   const criar = useServerFn(criarNotaWhatsApp);
   const [texto, setTexto] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [mencionar, setMencionar] = useState<string[]>([]);
+  const buscarAtendentes = useServerFn(listarAtendentesWhatsApp);
+  const atendentes = useQuery({
+    queryKey: chaves.atendentes,
+    queryFn: () => buscarAtendentes(),
+    staleTime: 5 * 60_000,
+  });
+  const nomeDe = (id: string) => atendentes.data?.find((a) => a.id === id)?.nome ?? "colega";
 
   async function salvar() {
     const t = texto.trim();
     if (!t || salvando) return;
     setSalvando(true);
     try {
-      await criar({ data: { conversaId, texto: t } });
+      await criar({
+        data: { conversaId, texto: t, ...(mencionar.length ? { mencionar } : {}) },
+      });
       setTexto("");
+      setMencionar([]);
       qc.invalidateQueries({ queryKey: ["wa-notas", conversaId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar a nota.");
@@ -269,6 +281,37 @@ function Notas({ conversaId }: { conversaId: string }) {
         aria-label="Nova nota interna"
         className="text-xs"
       />
+      <div className="flex flex-wrap items-center gap-1">
+        {mencionar.map((id) => (
+          <button
+            key={id}
+            type="button"
+            title="Tirar menção"
+            onClick={() => setMencionar((m) => m.filter((x) => x !== id))}
+            className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
+          >
+            @{nomeDe(id)} ×
+          </button>
+        ))}
+        <select
+          aria-label="Mencionar colega"
+          className="rounded-md border bg-background px-1.5 py-1 text-[11px]"
+          value=""
+          onChange={(e) => {
+            const id = e.target.value;
+            if (id) setMencionar((m) => (m.includes(id) || m.length >= 10 ? m : [...m, id]));
+          }}
+        >
+          <option value="">@ Mencionar…</option>
+          {(atendentes.data ?? [])
+            .filter((a) => !mencionar.includes(a.id))
+            .map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+        </select>
+      </div>
       <Button
         size="sm"
         variant="outline"

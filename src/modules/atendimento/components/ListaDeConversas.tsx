@@ -13,6 +13,8 @@ import {
 const ROTULO: Record<Filtro, string> = {
   entrada: "Entrada",
   minhas: "Minhas",
+  seguindo: "Seguindo",
+  mencoes: "Menções",
   fila: "Fila",
   todas: "Todas",
   resolvidas: "Resolvidas",

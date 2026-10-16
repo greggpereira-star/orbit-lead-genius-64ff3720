@@ -11,7 +11,10 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
-vi.mock("@/lib/whatsapp-atendimento.functions", () => ({ criarNotaWhatsApp: async () => ({}) }));
+vi.mock("@/lib/whatsapp-atendimento.functions", () => ({
+  criarNotaWhatsApp: async () => ({}),
+  listarAtendentesWhatsApp: async () => [],
+}));
 
 const base: ConversaDaLista = {
   id: "c1",
@@ -32,7 +35,7 @@ const props = {
   carregando: false,
   ativaId: null,
   filtro: "todas" as const,
-  contagens: { entrada: 1, minhas: 0, fila: 1, todas: 1, resolvidas: 0 },
+  contagens: { entrada: 1, minhas: 0, seguindo: 0, mencoes: 0, fila: 1, todas: 1, resolvidas: 0 },
   busca: "",
   onFiltro: () => {},
   onBusca: () => {},
@@ -118,11 +121,19 @@ describe("VisoesDoInbox", () => {
     const html = renderToStaticMarkup(
       <VisoesDoInbox
         filtro="minhas"
-        contagens={{ entrada: 7, minhas: 3, fila: 2, todas: 9, resolvidas: 2 }}
+        contagens={{
+          entrada: 7,
+          minhas: 3,
+          seguindo: 1,
+          mencoes: 2,
+          fila: 2,
+          todas: 9,
+          resolvidas: 2,
+        }}
         onFiltro={() => {}}
       />,
     );
-    for (const t of ["Entrada", "Minhas", "Não atribuídas", "Resolvidas"])
+    for (const t of ["Entrada", "Minhas", "Seguindo", "Menções", "Não atribuídas", "Resolvidas"])
       expect(html).toContain(t);
     expect(html.match(/aria-current="true"/g)).toHaveLength(1);
   });
@@ -194,5 +205,13 @@ describe("MenuDaConversa", () => {
       expect(fonte).toContain(t);
     // Conversa resolvida não oferece "pendente".
     expect(fonte).toContain("{!resolvida && (");
+  });
+});
+
+describe("nota com menção", () => {
+  it("o painel oferece mencionar colega e envia os ids ao servidor", () => {
+    const painel = readFileSync("src/modules/atendimento/components/PainelDoLead.tsx", "utf8");
+    expect(painel).toContain('aria-label="Mencionar colega"');
+    expect(painel).toContain("...(mencionar.length ? { mencionar } : {})");
   });
 });

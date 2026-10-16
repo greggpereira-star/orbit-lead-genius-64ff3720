@@ -597,3 +597,60 @@ BEGIN
   RAISE NOTICE 'retenção: 2 testes passaram';
 END
 $t$;
+
+-- ---- seguir conversa e menções ----
+DO $t$
+DECLARE
+  v_a uuid; v_admin uuid; v_viewer uuid; v_conv uuid; v_nota uuid; v_n int;
+BEGIN
+  IF to_regclass('public.wa_conversation_followers') IS NULL
+     OR to_regclass('_ens') IS NULL THEN RETURN; END IF;
+  SELECT valor::uuid INTO v_a FROM _ens WHERE chave = 'a';
+  SELECT valor::uuid INTO v_admin FROM _ens WHERE chave = 'admin';
+  SELECT valor::uuid INTO v_viewer FROM _ens WHERE chave = 'viewer';
+  IF v_a IS NULL OR v_admin IS NULL THEN RETURN; END IF;
+
+  SELECT id INTO v_conv FROM public.wa_conversations ORDER BY created_at LIMIT 1;
+  IF v_conv IS NULL THEN RETURN; END IF;
+
+  INSERT INTO public.wa_conversation_followers (conversation_id, user_id, company_id)
+  VALUES (v_conv, v_admin, v_a), (v_conv, v_viewer, v_a);
+  INSERT INTO public.wa_notes (company_id, conversation_id, author_id, body)
+  VALUES (v_a, v_conv, v_admin, 'olá @viewer') RETURNING id INTO v_nota;
+  INSERT INTO public.wa_mentions (company_id, conversation_id, note_id, mentioned_user_id, author_id)
+  VALUES (v_a, v_conv, v_nota, v_viewer, v_admin);
+
+  -- S1: duplicar o seguir é erro de chave (o servidor faz upsert)
+  BEGIN
+    INSERT INTO public.wa_conversation_followers (conversation_id, user_id, company_id)
+    VALUES (v_conv, v_admin, v_a);
+    RAISE EXCEPTION 'S1 seguidor duplicado entrou';
+  EXCEPTION WHEN unique_violation THEN NULL; END;
+
+  -- S2: cada pessoa enxerga SÓ o que é dela
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', v_viewer::text, true);
+  SELECT count(*) INTO v_n FROM public.wa_conversation_followers;
+  IF v_n <> 1 THEN RESET ROLE; RAISE EXCEPTION 'S2 viewer vê % seguidores (esperava só o seu)', v_n; END IF;
+  SELECT count(*) INTO v_n FROM public.wa_mentions;
+  IF v_n <> 1 THEN RESET ROLE; RAISE EXCEPTION 'S2 viewer vê % menções (esperava 1)', v_n; END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  SELECT count(*) INTO v_n FROM public.wa_mentions;
+  IF v_n <> 0 THEN RESET ROLE; RAISE EXCEPTION 'S3 autor vê % menções que não são dele', v_n; END IF;
+
+  -- S4: o navegador não escreve (nem se passar por outra pessoa)
+  BEGIN
+    INSERT INTO public.wa_conversation_followers (conversation_id, user_id, company_id)
+    VALUES (v_conv, v_admin, v_a) ON CONFLICT DO NOTHING;
+    RESET ROLE; RAISE EXCEPTION 'S4 authenticated conseguiu gravar seguidor';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
+    UPDATE public.wa_mentions SET read_at = now();
+    RESET ROLE; RAISE EXCEPTION 'S4 authenticated conseguiu alterar menção';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  RESET ROLE;
+
+  RAISE NOTICE 'seguir/menções: 4 testes passaram';
+END
+$t$;

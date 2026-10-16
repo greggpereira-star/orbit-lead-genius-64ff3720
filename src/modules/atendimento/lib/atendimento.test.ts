@@ -114,6 +114,8 @@ describe("filtrarConversas", () => {
     expect(contarPorFiltro(l, eu)).toEqual({
       entrada: 2,
       minhas: 1,
+      seguindo: 0,
+      mencoes: 0,
       fila: 1,
       todas: 3,
       resolvidas: 1,
@@ -332,5 +334,65 @@ describe("menu da conversa (interligação)", () => {
 
   it("pendente usa o mesmo status do banco, sem campo novo", () => {
     expect(atend).toContain('status: ativa.status === "pending" ? "open" : "pending"');
+  });
+});
+
+describe("seguindo e menções (conjuntos pessoais)", () => {
+  const lista = [conv({ id: "a" }), conv({ id: "b", status: "resolved" }), conv({ id: "c" })];
+  const seguindo = new Set(["a", "b"]);
+  const mencoes = new Set(["c", "b"]);
+  const ids = (f: "seguindo" | "mencoes") =>
+    filtrarConversas(lista, { filtro: f, userId: "u1", seguindo, mencoes })
+      .map((c) => c.id)
+      .sort();
+
+  it("seguindo = que a pessoa segue e não foram resolvidas", () =>
+    expect(ids("seguindo")).toEqual(["a"]));
+  it("menções = com menção não lida, mesmo resolvida (alguém te chamou)", () =>
+    expect(ids("mencoes")).toEqual(["b", "c"]));
+  it("sem os conjuntos, as visões ficam vazias (nunca todas)", () => {
+    expect(filtrarConversas(lista, { filtro: "seguindo", userId: "u1" })).toEqual([]);
+    expect(filtrarConversas(lista, { filtro: "mencoes", userId: "u1" })).toEqual([]);
+  });
+  it("as contagens usam os mesmos conjuntos", () => {
+    const c = contarPorFiltro(lista, "u1", { seguindo, mencoes });
+    expect([c.seguindo, c.mencoes]).toEqual([1, 2]);
+  });
+});
+
+describe("seguir e menções (servidor)", () => {
+  const server = readFileSync("src/lib/whatsapp-atendimento.functions.ts", "utf8");
+  const corpo = (nome: string) => {
+    const i = server.indexOf(`export const ${nome}`);
+    const j = server.indexOf("\nexport const ", i + 10);
+    return server.slice(i, j === -1 ? undefined : j);
+  };
+
+  it("seguir confere papel e empresa e nunca grava por outra pessoa", () => {
+    const f = corpo("seguirConversaWhatsApp");
+    expect(f).toContain("empresaParaAtender(admin, context.userId)");
+    expect(f).toContain("conferirConversa(admin, companyId, data.conversaId)");
+    expect(f).toContain('.eq("user_id", context.userId)');
+    expect(f).not.toContain("data.userId");
+  });
+
+  it("menção só vale para membro da empresa e não para si mesmo; o mencionado passa a seguir", () => {
+    const f = corpo("criarNotaWhatsApp");
+    expect(f).toContain('.eq("company_id", companyId)');
+    expect(f).toContain('.in("user_id", alvos)');
+    expect(f).toContain("id !== context.userId");
+    expect(f).toContain("seguir(admin, companyId, data.conversaId, uid)");
+  });
+
+  it("quem recebe a conversa passa a segui-la", () => {
+    expect(corpo("atribuirConversaWhatsApp")).toContain(
+      "seguir(admin, companyId, data.conversaId, data.userId)",
+    );
+  });
+
+  it("ler a conversa lê só as menções DA pessoa", () => {
+    const f = corpo("marcarMencoesComoLidasWhatsApp");
+    expect(f).toContain('.eq("mentioned_user_id", context.userId)');
+    expect(f).toContain('.is("read_at", null)');
   });
 });

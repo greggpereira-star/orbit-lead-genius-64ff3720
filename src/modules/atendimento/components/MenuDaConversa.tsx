@@ -1,4 +1,14 @@
-import { Copy, ExternalLink, EyeOff, Hourglass, Info, MoreHorizontal, Search } from "lucide-react";
+import {
+  Bookmark,
+  BookmarkCheck,
+  Copy,
+  ExternalLink,
+  EyeOff,
+  Hourglass,
+  Info,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +30,8 @@ import type { ConversaDaLista } from "../lib/conversas";
 export function MenuDaConversa(props: {
   conversa: ConversaDaLista;
   ocupado?: boolean;
+  seguindo?: boolean;
+  onSeguir?: () => void;
   onNaoLida: () => void;
   onPendente: () => void;
   onPesquisar: () => void;
@@ -45,6 +57,16 @@ export function MenuDaConversa(props: {
           <DropdownMenuItem disabled={props.ocupado} onSelect={props.onPendente}>
             <Hourglass className="mr-2 h-4 w-4" />
             {pendente ? "Desmarcar como pendente" : "Marcar como pendente"}
+          </DropdownMenuItem>
+        )}
+        {props.onSeguir && (
+          <DropdownMenuItem disabled={props.ocupado} onSelect={props.onSeguir}>
+            {props.seguindo ? (
+              <BookmarkCheck className="mr-2 h-4 w-4" />
+            ) : (
+              <Bookmark className="mr-2 h-4 w-4" />
+            )}
+            {props.seguindo ? "Deixar de seguir" : "Seguir"}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
