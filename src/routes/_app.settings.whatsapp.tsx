@@ -28,10 +28,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  apagarRascunhoTemplateWhatsApp,
   apagarTemplateWhatsApp,
   concluirSignupWhatsApp,
   criarTemplateWhatsApp,
   obterEstadoDoWhatsAppOficial,
+  salvarRascunhoTemplateWhatsApp,
   sincronizarTemplatesWhatsApp,
 } from "@/lib/whatsapp-cloud.functions";
 import { useAuth } from "@/core/auth/hooks/useAuth";
@@ -208,6 +210,17 @@ function WhatsAppOficial() {
   });
 
   const [criando, setCriando] = useState(false);
+  /** Rascunho aberto no editor (null = template novo). */
+  const [rascunho, setRascunho] = useState<{ id: string; def: DefinicaoDeTemplate } | null>(null);
+  const apagarRascunho = useServerFn(apagarRascunhoTemplateWhatsApp);
+  const removerRascunho = useMutation({
+    mutationFn: (id: string) => apagarRascunho({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Rascunho apagado.");
+      recarregar();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const d = estado.data;
   const numeros = d?.numeros ?? [];
 
@@ -360,12 +373,71 @@ function WhatsAppOficial() {
                   )}
                   Sincronizar
                 </Button>
-                <Button size="sm" disabled={numeros.length === 0} onClick={() => setCriando(true)}>
+                <Button
+                  size="sm"
+                  disabled={numeros.length === 0}
+                  onClick={() => {
+                    setRascunho(null);
+                    setCriando(true);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-1" /> Novo template
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
+              {(d.rascunhos ?? []).length > 0 && (
+                <div className="mb-4 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Rascunhos ({d.rascunhos.length}) · ainda não enviados à Meta
+                  </p>
+                  <ul className="divide-y rounded-md border">
+                    {d.rascunhos.map((r) => (
+                      <li key={r.id} className="flex items-center justify-between gap-3 p-2.5">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium">
+                            {r.name || "(sem nome)"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            salvo em{" "}
+                            {new Date(r.updated_at).toLocaleString("pt-BR", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setRascunho({
+                                id: r.id,
+                                def: { ...DEFINICAO_VAZIA, ...r.definition },
+                              });
+                              setCriando(true);
+                            }}
+                          >
+                            Continuar
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Apagar rascunho ${r.name || ""}`}
+                            disabled={removerRascunho.isPending}
+                            onClick={() => {
+                              if (window.confirm("Apagar este rascunho?"))
+                                removerRascunho.mutate(r.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {d.templates.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum template ainda.</p>
               ) : (
@@ -434,7 +506,13 @@ function WhatsAppOficial() {
         </>
       )}
 
-      <NovoTemplate aberto={criando} onFechar={() => setCriando(false)} onCriado={recarregar} />
+      <NovoTemplate
+        key={rascunho?.id ?? "novo"}
+        aberto={criando}
+        inicial={rascunho}
+        onFechar={() => setCriando(false)}
+        onCriado={recarregar}
+      />
     </div>
   );
 }
@@ -488,16 +566,38 @@ const DEFINICAO_VAZIA: DefinicaoDeTemplate = {
 
 function NovoTemplate({
   aberto,
+  inicial,
   onFechar,
   onCriado,
 }: {
   aberto: boolean;
+  inicial: { id: string; def: DefinicaoDeTemplate } | null;
   onFechar: () => void;
   onCriado: () => void;
 }) {
   const criar = useServerFn(criarTemplateWhatsApp);
-  const [def, setDef] = useState<DefinicaoDeTemplate>(DEFINICAO_VAZIA);
+  const salvarRascunho = useServerFn(salvarRascunhoTemplateWhatsApp);
+  const [def, setDef] = useState<DefinicaoDeTemplate>(inicial?.def ?? DEFINICAO_VAZIA);
+  // Id do rascunho em edição: o primeiro "Salvar rascunho" o cria, os seguintes atualizam.
+  const [rascunhoId, setRascunhoId] = useState<string | null>(inicial?.id ?? null);
   const [enviando, setEnviando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  async function guardarRascunho() {
+    setSalvando(true);
+    try {
+      const r = await salvarRascunho({
+        data: { ...(rascunhoId ? { id: rascunhoId } : {}), definicao: def },
+      });
+      setRascunhoId(r.id);
+      toast.success("Rascunho salvo.");
+      onCriado();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar o rascunho.");
+    } finally {
+      setSalvando(false);
+    }
+  }
   const corpoRef = useRef<HTMLTextAreaElement>(null);
 
   /** Aplica a barra de ferramentas ao corpo, mantendo seleção e cursor. */
@@ -523,7 +623,7 @@ function NovoTemplate({
   async function enviar() {
     setEnviando(true);
     try {
-      const r = await criar({ data: def });
+      const r = await criar({ data: { ...def, ...(rascunhoId ? { rascunhoId } : {}) } });
       if (!r.ok) {
         toast.error(r.texto);
         return;
@@ -532,6 +632,7 @@ function NovoTemplate({
         r.status === "APPROVED" ? "Template aprovado." : "Template enviado para análise da Meta.",
       );
       setDef(DEFINICAO_VAZIA);
+      setRascunhoId(null);
       onCriado();
       onFechar();
     } catch (e) {
@@ -767,6 +868,10 @@ function NovoTemplate({
         <DialogFooter>
           <Button variant="outline" onClick={onFechar}>
             Cancelar
+          </Button>
+          <Button variant="secondary" disabled={salvando || enviando} onClick={guardarRascunho}>
+            {salvando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Salvar rascunho
           </Button>
           <Button disabled={enviando || temErro(problemas) || def.nome === ""} onClick={enviar}>
             {enviando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

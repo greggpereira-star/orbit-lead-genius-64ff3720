@@ -8,7 +8,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { NumeroOficial, TemplateOficial } from "@/lib/whatsapp/cloud/tipos";
+import type {
+  NumeroOficial,
+  RascunhoDeTemplate,
+  TemplateOficial,
+} from "@/lib/whatsapp/cloud/tipos";
 import {
   empresaDoUsuario,
   empresaParaAdministrar,
@@ -29,22 +33,33 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
     const admin = supabaseAdmin as any;
     const companyId = await empresaDoUsuario(admin, context.userId);
 
-    const [{ data: numeros, error: erroNumeros }, { data: templates }, { data: instancias }] =
-      await Promise.all([
-        admin
-          .from("wa_phone_numbers")
-          .select(
-            "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at",
-          )
-          .eq("company_id", companyId),
-        admin
-          .from("wa_templates")
-          .select("id, name, language, category, status, rejection_reason, quality, updated_at")
-          .eq("company_id", companyId)
-          .order("name"),
-        // Só o banco: perguntar à Evolution aqui derruba a tela quando ela está fora.
-        admin.from("whatsapp_instances").select("status").eq("company_id", companyId),
-      ]);
+    const [
+      { data: numeros, error: erroNumeros },
+      { data: templates },
+      { data: instancias },
+      { data: rascunhos },
+    ] = await Promise.all([
+      admin
+        .from("wa_phone_numbers")
+        .select(
+          "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at",
+        )
+        .eq("company_id", companyId),
+      admin
+        .from("wa_templates")
+        .select("id, name, language, category, status, rejection_reason, quality, updated_at")
+        .eq("company_id", companyId)
+        .order("name"),
+      // Só o banco: perguntar à Evolution aqui derruba a tela quando ela está fora.
+      admin.from("whatsapp_instances").select("status").eq("company_id", companyId),
+      // Sem a tabela (migração pendente) volta vazio: a tela segue funcionando.
+      admin
+        .from("wa_template_drafts")
+        .select("id, name, definition, updated_at")
+        .eq("company_id", companyId)
+        .order("updated_at", { ascending: false })
+        .limit(50),
+    ]);
 
     return {
       // `migracaoAplicada: false` quando as tabelas ainda não existem — a tela
@@ -62,6 +77,7 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
       ),
       numeros: (numeros ?? []) as NumeroOficial[],
       templates: (templates ?? []) as TemplateOficial[],
+      rascunhos: (rascunhos ?? []) as RascunhoDeTemplate[],
     };
   });
 
@@ -132,30 +148,110 @@ const botaoSchema = z.object({
   valor: z.string().max(2100).optional(),
 });
 
+/** Forma de um template (a mesma para rascunho e para envio à Meta). */
+const definicaoSchema = z.object({
+  nome: z.string().max(512),
+  idioma: z.string().max(10),
+  categoria: z.enum(["MARKETING", "UTILITY"]),
+  cabecalho: z.string().max(200).optional(),
+  corpo: z.string().max(2000),
+  rodape: z.string().max(200).optional(),
+  botoes: z.array(botaoSchema).max(12).optional(),
+  exemplosDoCorpo: z.array(z.string().max(200)).max(20).optional(),
+  exemplosDoCabecalho: z.array(z.string().max(200)).max(2).optional(),
+});
+
 export const criarTemplateWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
-    z
-      .object({
-        nome: z.string().max(512),
-        idioma: z.string().max(10),
-        categoria: z.enum(["MARKETING", "UTILITY"]),
-        cabecalho: z.string().max(200).optional(),
-        corpo: z.string().max(2000),
-        rodape: z.string().max(200).optional(),
-        botoes: z.array(botaoSchema).max(12).optional(),
-        exemplosDoCorpo: z.array(z.string().max(200)).max(20).optional(),
-        exemplosDoCabecalho: z.array(z.string().max(200)).max(2).optional(),
-      })
-      .parse(raw),
+    definicaoSchema.extend({ rascunhoId: z.string().uuid().optional() }).parse(raw),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAdministrar(admin, context.userId);
     const { criarTemplate } = await import("@/lib/whatsapp/cloud/onboarding");
+    const { rascunhoId, ...definicao } = data;
     // Devolve o resultado (com `problemas`) em vez de lançar: a tela destaca cada campo.
-    return criarTemplate(admin, { companyId, userId: context.userId, definicao: data });
+    const r = await criarTemplate(admin, { companyId, userId: context.userId, definicao });
+    // Foi para a Meta: o rascunho cumpriu o papel. Só some se a criação deu certo.
+    if (r.ok && rascunhoId) {
+      await admin
+        .from("wa_template_drafts")
+        .delete()
+        .eq("id", rascunhoId)
+        .eq("company_id", companyId);
+    }
+    return r;
+  });
+
+const TETO_DE_RASCUNHOS = 50;
+
+export const salvarRascunhoTemplateWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ id: z.string().uuid().optional(), definicao: definicaoSchema }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+    const agora = new Date().toISOString();
+
+    if (data.id) {
+      // Atualiza só o que é DESTA empresa (o id vem do navegador).
+      const { data: linhas, error } = await admin
+        .from("wa_template_drafts")
+        .update({
+          name: data.definicao.nome,
+          definition: data.definicao,
+          updated_by: context.userId,
+          updated_at: agora,
+        })
+        .eq("id", data.id)
+        .eq("company_id", companyId)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if (!linhas?.length) throw new Error("Rascunho não encontrado.");
+      return { ok: true as const, id: data.id as string };
+    }
+
+    const { count } = await admin
+      .from("wa_template_drafts")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId);
+    if ((count ?? 0) >= TETO_DE_RASCUNHOS)
+      throw new Error(`Limite de ${TETO_DE_RASCUNHOS} rascunhos. Apague algum para salvar outro.`);
+
+    const { data: nova, error } = await admin
+      .from("wa_template_drafts")
+      .insert({
+        company_id: companyId,
+        name: data.definicao.nome,
+        definition: data.definicao,
+        created_by: context.userId,
+        updated_by: context.userId,
+      })
+      .select("id")
+      .single();
+    if (error || !nova) throw new Error(error?.message ?? "Não foi possível salvar o rascunho.");
+    return { ok: true as const, id: nova.id as string };
+  });
+
+export const apagarRascunhoTemplateWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+    const { error } = await admin
+      .from("wa_template_drafts")
+      .delete()
+      .eq("id", data.id)
+      .eq("company_id", companyId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
 
 export const apagarTemplateWhatsApp = createServerFn({ method: "POST" })

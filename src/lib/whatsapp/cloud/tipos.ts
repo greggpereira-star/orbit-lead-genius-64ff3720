@@ -14,6 +14,14 @@ export interface NumeroOficial {
   coexistence_synced_at: string | null;
 }
 
+/** Rascunho salvo: ainda não foi à Meta. */
+export interface RascunhoDeTemplate {
+  id: string;
+  name: string;
+  definition: import("./templates").DefinicaoDeTemplate;
+  updated_at: string;
+}
+
 export interface TemplateOficial {
   id: string;
   name: string;

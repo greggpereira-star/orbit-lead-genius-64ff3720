@@ -1112,3 +1112,19 @@ Referência: a tela de templates da Central WhatsApp API do concorrente
 **Fica para depois:** salvar rascunho separado de "enviar à Meta" (exige onde
 guardar rascunho: coluna/status em `wa_templates`), mídia de cabeçalho e
 amostra de mídia, Flows e Carrossel.
+
+### 14.4 Rascunho de template (16/10/2026)
+
+Migração `20261016160000_wa_template_rascunhos.sql` (**aplicar antes do
+deploy**; sem ela a lista de rascunhos fica vazia e "Salvar rascunho" devolve
+erro).
+
+| Peça | Regra |
+| --- | --- |
+| `wa_template_drafts` | definição em `jsonb` (objeto); fora de `wa_templates`, que espelha a Meta e é reescrita pela sincronização |
+| Escrita | só servidor, papel de administrador; equipe lê (RLS) |
+| Salvar | aceita texto incompleto — validar é no envio; teto de 50 por empresa |
+| Enviar à Meta | com rascunho aberto, o id vai junto e o rascunho **só some se a criação deu certo** |
+| Tela | lista "Rascunhos" no cartão de templates (Continuar / Apagar) e botão "Salvar rascunho" no editor |
+
+Ensaio de banco: 2 testes novos (definição precisa ser objeto; visibilidade).

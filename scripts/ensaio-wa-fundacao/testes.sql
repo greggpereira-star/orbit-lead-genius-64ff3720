@@ -719,3 +719,40 @@ BEGIN
   RAISE NOTICE 'agendadas: 5 testes passaram';
 END
 $t$;
+
+-- ---- rascunhos de template ----
+DO $t$
+DECLARE v_a uuid; v_admin uuid; v_outro uuid; v_n int;
+BEGIN
+  IF to_regclass('public.wa_template_drafts') IS NULL OR to_regclass('_ens') IS NULL THEN RETURN; END IF;
+  SELECT valor::uuid INTO v_a FROM _ens WHERE chave = 'a';
+  SELECT valor::uuid INTO v_admin FROM _ens WHERE chave = 'admin';
+  SELECT valor::uuid INTO v_outro FROM _ens WHERE chave = 'outro';
+  IF v_a IS NULL THEN RETURN; END IF;
+
+  INSERT INTO public.wa_template_drafts (company_id, name, definition, created_by)
+  VALUES (v_a, 'boas_vindas', '{"corpo":"Olá {{1}}"}'::jsonb, v_admin);
+
+  -- R1: definição precisa ser um objeto JSON
+  BEGIN
+    INSERT INTO public.wa_template_drafts (company_id, name, definition) VALUES (v_a, 'x', '[1]'::jsonb);
+    RAISE EXCEPTION 'R1 aceitou definição que não é objeto';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+
+  -- R2: a equipe da empresa lê; outra empresa não vê; ninguém escreve pelo navegador
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', v_admin::text, true);
+  SELECT count(*) INTO v_n FROM public.wa_template_drafts;
+  IF v_n <> 1 THEN RESET ROLE; RAISE EXCEPTION 'R2 membro vê % rascunhos (esperava 1)', v_n; END IF;
+  BEGIN
+    DELETE FROM public.wa_template_drafts;
+    RESET ROLE; RAISE EXCEPTION 'R2 authenticated apagou rascunho';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  PERFORM set_config('request.jwt.claim.sub', v_outro::text, true);
+  SELECT count(*) INTO v_n FROM public.wa_template_drafts;
+  IF v_n <> 0 THEN RESET ROLE; RAISE EXCEPTION 'R2 outra empresa vê % rascunhos', v_n; END IF;
+  RESET ROLE;
+
+  RAISE NOTICE 'rascunhos: 2 testes passaram';
+END
+$t$;
