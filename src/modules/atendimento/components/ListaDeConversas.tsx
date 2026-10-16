@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { MessageCircle, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import {
 } from "../lib/conversas";
 
 const ROTULO: Record<Filtro, string> = {
+  entrada: "Entrada",
   minhas: "Minhas",
   fila: "Fila",
   todas: "Todas",
@@ -34,6 +35,8 @@ export function ListaDeConversas(props: {
   filtro: Filtro;
   contagens: Record<Filtro, number>;
   busca: string;
+  /** id do atendente → nome, para o avatar do responsável. */
+  atendentes?: Record<string, string>;
   onFiltro: (f: Filtro) => void;
   onBusca: (v: string) => void;
   onAbrir: (id: string) => void;
@@ -51,7 +54,11 @@ export function ListaDeConversas(props: {
             aria-label="Buscar conversas"
           />
         </div>
-        <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filtrar conversas">
+        <div
+          className="flex flex-wrap gap-1 xl:hidden"
+          role="tablist"
+          aria-label="Filtrar conversas"
+        >
           {(Object.keys(ROTULO) as Filtro[]).map((f) => (
             <button
               key={f}
@@ -90,11 +97,19 @@ export function ListaDeConversas(props: {
                 props.ativaId === c.id && "bg-muted",
               )}
             >
-              <span
-                aria-hidden
-                className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-              >
-                {iniciais(nome)}
+              <span className="relative mt-0.5 shrink-0">
+                <span
+                  aria-hidden
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                >
+                  {iniciais(nome)}
+                </span>
+                <span
+                  aria-label="WhatsApp"
+                  className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-emerald-600 text-white"
+                >
+                  <MessageCircle className="h-2 w-2" />
+                </span>
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
@@ -114,14 +129,24 @@ export function ListaDeConversas(props: {
                   <span className="truncate text-xs text-muted-foreground">
                     {c.last_message_preview ?? "—"}
                   </span>
-                  {c.unread_agent > 0 && (
-                    <Badge
-                      className="h-5 min-w-5 shrink-0 rounded-full px-1.5"
-                      aria-label={`${c.unread_agent} não lidas`}
-                    >
-                      {c.unread_agent}
-                    </Badge>
-                  )}
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {c.assigned_to && props.atendentes?.[c.assigned_to] && (
+                      <span
+                        title={`Responsável: ${props.atendentes[c.assigned_to]}`}
+                        className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground"
+                      >
+                        {iniciais(props.atendentes[c.assigned_to])}
+                      </span>
+                    )}
+                    {c.unread_agent > 0 && (
+                      <Badge
+                        className="h-5 min-w-5 rounded-full px-1.5"
+                        aria-label={`${c.unread_agent} não lidas`}
+                      >
+                        {c.unread_agent}
+                      </Badge>
+                    )}
+                  </span>
                 </span>
                 {(espera || c.contact?.opted_out_at || c.assigned_to === null) && (
                   <span className="mt-1 flex flex-wrap gap-1">

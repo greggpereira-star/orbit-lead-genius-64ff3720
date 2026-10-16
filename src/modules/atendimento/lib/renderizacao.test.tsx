@@ -23,7 +23,7 @@ const props = {
   carregando: false,
   ativaId: null,
   filtro: "todas" as const,
-  contagens: { minhas: 0, fila: 1, todas: 1, resolvidas: 0 },
+  contagens: { entrada: 1, minhas: 0, fila: 1, todas: 1, resolvidas: 0 },
   busca: "",
   onFiltro: () => {},
   onBusca: () => {},
@@ -87,5 +87,31 @@ describe("a conversa (código)", () => {
   });
   it("Enter envia, Shift+Enter quebra linha, IME não envia", () => {
     expect(fonte).toContain('e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing');
+  });
+});
+
+describe("ConectarPrimeiro", () => {
+  it("a entrada é conectar pela Meta; a Evolution fica como opção secundária", async () => {
+    const { ConectarPrimeiro } = await import("../components/ConectarPrimeiro");
+    const html = renderToStaticMarkup(<ConectarPrimeiro onVerLegado={() => {}} />);
+    expect(html).toContain("Conectar número do WhatsApp Business");
+    expect(html).toContain("Usar a conexão antiga (QR code)");
+    expect(html.indexOf("Conectar número")).toBeLessThan(html.indexOf("conexão antiga"));
+  });
+});
+
+describe("VisoesDoInbox", () => {
+  it("lista as visões com a contagem e marca a ativa", async () => {
+    const { VisoesDoInbox } = await import("../components/VisoesDoInbox");
+    const html = renderToStaticMarkup(
+      <VisoesDoInbox
+        filtro="minhas"
+        contagens={{ entrada: 7, minhas: 3, fila: 2, todas: 9, resolvidas: 2 }}
+        onFiltro={() => {}}
+      />,
+    );
+    for (const t of ["Entrada", "Minhas", "Não atribuídas", "Resolvidas"])
+      expect(html).toContain(t);
+    expect(html.match(/aria-current="true"/g)).toHaveLength(1);
   });
 });

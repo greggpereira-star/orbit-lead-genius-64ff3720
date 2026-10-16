@@ -8,6 +8,7 @@
  * automáticas e auditar os envios.
  */
 import { Atendimento } from "@/modules/atendimento/components/Atendimento";
+import { ConectarPrimeiro } from "@/modules/atendimento/components/ConectarPrimeiro";
 import { obterEstadoDoWhatsAppOficial } from "@/lib/whatsapp-cloud.functions";
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -674,12 +675,15 @@ function WhatsAppPage() {
   const { company, user } = useAuth();
   const buscar = useServerFn(obterEstadoDoWhatsAppOficial);
   const estado = useQuery({ queryKey: ["wa-oficial"], queryFn: () => buscar(), enabled: Boolean(company?.id) });
+  const [verLegado, setVerLegado] = useState(false);
 
   if (estado.isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
 
   const temOficial = (estado.data?.numeros ?? []).length > 0;
   if (temOficial && company?.id) return <Atendimento companyId={company.id} userId={user?.id ?? null} />;
-  return <WhatsAppLegado />;
+  // A configuração da Evolution só aparece para quem ainda a usa (ou pediu).
+  if (estado.data?.evolutionConectada || verLegado) return <WhatsAppLegado />;
+  return <ConectarPrimeiro onVerLegado={() => setVerLegado(true)} />;
 }
 
 export const Route = createFileRoute("/_app/whatsapp")({

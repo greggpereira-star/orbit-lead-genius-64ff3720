@@ -81,6 +81,7 @@ describe("filtrarConversas", () => {
   it("minhas = comigo e não resolvidas", () => expect(ids("minhas")).toEqual(["a"]));
   it("fila = sem dono e não resolvidas", () => expect(ids("fila")).toEqual(["c"]));
   it("resolvidas", () => expect(ids("resolvidas")).toEqual(["d"]));
+  it("entrada = tudo que não foi resolvido", () => expect(ids("entrada")).toEqual(["c", "a", "b"]));
   it("todas, mais recente primeiro", () => expect(ids("todas")).toEqual(["c", "a", "b", "d"]));
 
   it("sem usuário, 'minhas' é vazio (nunca todas)", () => {
@@ -110,7 +111,13 @@ describe("filtrarConversas", () => {
       conv({ assigned_to: null, unread_agent: 2 }),
       conv({ status: "resolved", unread_agent: 9 }),
     ];
-    expect(contarPorFiltro(l, eu)).toEqual({ minhas: 1, fila: 1, todas: 3, resolvidas: 1 });
+    expect(contarPorFiltro(l, eu)).toEqual({
+      entrada: 2,
+      minhas: 1,
+      fila: 1,
+      todas: 3,
+      resolvidas: 1,
+    });
     expect(totalNaoLidas(l)).toBe(5);
   });
 

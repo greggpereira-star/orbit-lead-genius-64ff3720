@@ -20,6 +20,7 @@ import {
 } from "../lib/conversas";
 import { Conversa } from "./Conversa";
 import { ListaDeConversas } from "./ListaDeConversas";
+import { VisoesDoInbox } from "./VisoesDoInbox";
 import { PainelDoLead } from "./PainelDoLead";
 
 export function Atendimento({ companyId, userId }: { companyId: string; userId: string | null }) {
@@ -36,10 +37,10 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
   // Primeira exibição: "Minhas" se houver; senão "Todas". Depois é escolha da pessoa.
   useEffect(() => {
     if (filtro === null && !conversas.isLoading)
-      setFiltro(contagens.minhas > 0 ? "minhas" : "todas");
+      setFiltro(contagens.minhas > 0 ? "minhas" : "entrada");
   }, [filtro, conversas.isLoading, contagens.minhas]);
 
-  const filtroAtual: Filtro = filtro ?? "todas";
+  const filtroAtual: Filtro = filtro ?? "entrada";
   const visiveis = useMemo(
     () => filtrarConversas(lista, { filtro: filtroAtual, userId, busca }),
     [lista, filtroAtual, userId, busca],
@@ -72,6 +73,11 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const nomesDosAtendentes = useMemo(
+    () => Object.fromEntries((atendentes.data ?? []).map((a) => [a.id, a.nome])),
+    [atendentes.data],
+  );
+
   const naoLidas = totalNaoLidas(lista);
 
   return (
@@ -100,7 +106,8 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
         </p>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[340px_1fr] xl:grid-cols-[340px_1fr_300px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[340px_1fr] xl:grid-cols-[200px_340px_1fr_300px]">
+        <VisoesDoInbox filtro={filtroAtual} contagens={contagens} onFiltro={setFiltro} />
         <div className={ativa ? "hidden min-h-0 lg:flex lg:flex-col" : "flex min-h-0 flex-col"}>
           <ListaDeConversas
             conversas={visiveis}
@@ -109,6 +116,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
             filtro={filtroAtual}
             contagens={contagens}
             busca={busca}
+            atendentes={nomesDosAtendentes}
             onFiltro={setFiltro}
             onBusca={setBusca}
             onAbrir={setAtivaId}

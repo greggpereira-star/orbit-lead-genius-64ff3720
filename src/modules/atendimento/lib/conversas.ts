@@ -5,7 +5,8 @@
 import { estadoDaJanela, type EstadoDaJanela } from "../../../lib/whatsapp/cloud/janela";
 
 export type StatusDaConversa = "open" | "pending" | "resolved";
-export type Filtro = "minhas" | "fila" | "todas" | "resolvidas";
+/** "entrada" = tudo que ainda está em aberto (a visão padrão do inbox). */
+export type Filtro = "entrada" | "minhas" | "fila" | "todas" | "resolvidas";
 
 export interface ConversaDaLista {
   id: string;
@@ -68,6 +69,8 @@ export function filtrarConversas(
   return lista
     .filter((c) => {
       switch (p.filtro) {
+        case "entrada":
+          return naoResolvida(c);
         case "minhas":
           return naoResolvida(c) && !!p.userId && c.assigned_to === p.userId;
         case "fila":
@@ -102,6 +105,7 @@ export function contarPorFiltro(
 ): Record<Filtro, number> {
   const conta = (f: Filtro) => filtrarConversas(lista, { filtro: f, userId }).length;
   return {
+    entrada: conta("entrada"),
     minhas: conta("minhas"),
     fila: conta("fila"),
     todas: lista.length,

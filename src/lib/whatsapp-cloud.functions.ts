@@ -29,19 +29,22 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
     const admin = supabaseAdmin as any;
     const companyId = await empresaDoUsuario(admin, context.userId);
 
-    const [{ data: numeros, error: erroNumeros }, { data: templates }] = await Promise.all([
-      admin
-        .from("wa_phone_numbers")
-        .select(
-          "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at",
-        )
-        .eq("company_id", companyId),
-      admin
-        .from("wa_templates")
-        .select("id, name, language, category, status, rejection_reason, quality, updated_at")
-        .eq("company_id", companyId)
-        .order("name"),
-    ]);
+    const [{ data: numeros, error: erroNumeros }, { data: templates }, { data: instancias }] =
+      await Promise.all([
+        admin
+          .from("wa_phone_numbers")
+          .select(
+            "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at",
+          )
+          .eq("company_id", companyId),
+        admin
+          .from("wa_templates")
+          .select("id, name, language, category, status, rejection_reason, quality, updated_at")
+          .eq("company_id", companyId)
+          .order("name"),
+        // Só o banco: perguntar à Evolution aqui derruba a tela quando ela está fora.
+        admin.from("whatsapp_instances").select("status").eq("company_id", companyId),
+      ]);
 
     return {
       // `migracaoAplicada: false` quando as tabelas ainda não existem — a tela
@@ -54,6 +57,9 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
         temChaveDeCifra: Boolean(lerEnv("WA_TOKEN_KEY")),
         temTokenDeVerificacao: Boolean(lerEnv("WA_WEBHOOK_VERIFY_TOKEN")),
       },
+      evolutionConectada: ((instancias ?? []) as Array<{ status: string }>).some(
+        (i) => i.status === "connected",
+      ),
       numeros: (numeros ?? []) as NumeroOficial[],
       templates: (templates ?? []) as TemplateOficial[],
     };
