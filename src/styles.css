@@ -466,3 +466,11 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Página inicial: faixa de integrações que corre sem parar (pausa ao passar o ponteiro). */
+@keyframes landing-faixa {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.landing-faixa { animation: landing-faixa 38s linear infinite; }
+.landing-faixa:hover { animation-play-state: paused; }

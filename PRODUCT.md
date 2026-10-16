@@ -30,6 +30,8 @@ Restrições: a conexão do WhatsApp oficial para clientes de fora da empresa de
 
 ## Brand Commitments
 
+Tom da página inicial: direto e provocador, na voz de quem compra mídia; cada promessa tem um recurso real por trás.
+
 Nome: ALT Leadflow (produto) da Alt Partners. Tudo em português do Brasil. A página mantém o acesso "Entrar" para quem já é cliente. O sistema visual existente está em DESIGN.md.
 
 ## Evidence on Hand
