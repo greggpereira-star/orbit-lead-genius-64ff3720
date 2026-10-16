@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { CONTATO, EXCLUSAO, PRIVACIDADE, TERMOS, type Pagina } from "./conteudo";
+import { CONTATO, EMPRESA, EXCLUSAO, PRIVACIDADE, TERMOS, type Pagina } from "./conteudo";
 
 const texto = (p: Pagina) =>
   [p.titulo, p.resumo, ...p.secoes.flatMap((s) => [s.titulo, ...s.paragrafos])].join("\n");
@@ -58,5 +58,36 @@ describe("páginas legais exigidas pela Meta", () => {
       expect(f).toContain(`createFileRoute("/${arq}")`);
       expect(f).toContain(`pagina={${c}}`);
     }
+  });
+});
+
+describe("identificação da empresa nas páginas", () => {
+  it("as três páginas dizem quem é a controladora, com CNPJ", () => {
+    for (const p of [PRIVACIDADE, TERMOS, EXCLUSAO]) {
+      const t = texto(p);
+      expect(t).toContain(EMPRESA.razaoSocial);
+      expect(t).toContain(EMPRESA.nomeFantasia);
+      expect(t).toContain(EMPRESA.cnpj);
+    }
+  });
+
+  it("o CNPJ tem 14 dígitos e dígitos verificadores válidos (não é dado digitado errado)", () => {
+    const d = EMPRESA.cnpj.replace(/\D/g, "").split("").map(Number);
+    expect(d).toHaveLength(14);
+    const dv = (base: number[]) => {
+      const pesos =
+        base.length === 12
+          ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+          : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+      const r = base.reduce((s, n, i) => s + n * pesos[i], 0) % 11;
+      return r < 2 ? 0 : 11 - r;
+    };
+    expect(dv(d.slice(0, 12))).toBe(d[12]);
+    expect(dv(d.slice(0, 13))).toBe(d[13]);
+  });
+
+  it("o contato é o e-mail da empresa, não um pessoal", () => {
+    expect(CONTATO).toBe("altpartners.contato@gmail.com");
+    expect(texto(PRIVACIDADE)).not.toContain("gregg.pereira");
   });
 });

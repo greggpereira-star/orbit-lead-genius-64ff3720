@@ -8,7 +8,15 @@
  */
 export const PRODUTO = "ALT Leadflow";
 export const SITE = "https://altleadflow.com.br";
-export const CONTATO = "gregg.pereira@gmail.com";
+export const CONTATO = "altpartners.contato@gmail.com";
+export const EMPRESA = {
+  razaoSocial: "Alt Negocios e Solucoes Digitais LTDA",
+  nomeFantasia: "Alt Partners",
+  cnpj: "64.560.862/0001-51",
+  cidade: "Vila Velha, ES",
+} as const;
+/** Como a empresa se identifica no topo de cada documento. */
+export const IDENTIFICACAO = `${PRODUTO} é um produto de ${EMPRESA.razaoSocial} (${EMPRESA.nomeFantasia}), CNPJ ${EMPRESA.cnpj}, ${EMPRESA.cidade}.`;
 export const ATUALIZADO_EM = "16 de outubro de 2026";
 
 export interface Secao {
@@ -29,6 +37,7 @@ export const PRIVACIDADE: Pagina = {
     {
       titulo: "Quem somos e qual é o nosso papel",
       paragrafos: [
+        IDENTIFICACAO,
         "O ALT Leadflow é uma plataforma de captação, qualificação e atendimento de leads. Cada empresa que usa a plataforma (nossa cliente) decide quais dados coleta de seus contatos e para quê: ela é a controladora desses dados. O ALT Leadflow atua como operador, tratando-os conforme as instruções da cliente e esta política.",
         `Sobre os dados de quem usa a plataforma (usuários das empresas clientes), o ALT Leadflow é o controlador. Contato do encarregado: ${CONTATO}.`,
       ],
@@ -98,6 +107,7 @@ export const TERMOS: Pagina = {
     {
       titulo: "O serviço",
       paragrafos: [
+        IDENTIFICACAO,
         "O ALT Leadflow oferece captação e qualificação de leads, um atendimento por conversa e integrações com serviços de terceiros, incluindo a API oficial do WhatsApp Business da Meta. Ao usar a plataforma, a empresa cliente aceita estes termos.",
       ],
     },
@@ -137,6 +147,7 @@ export const EXCLUSAO: Pagina = {
     {
       titulo: "Como pedir",
       paragrafos: [
+        IDENTIFICACAO,
         `Envie um e-mail para ${CONTATO} com o assunto "Exclusão de dados", informando o e-mail ou o número de telefone associado aos dados. Para sua segurança, podemos pedir uma confirmação de que você é o titular.`,
         "Se você usou o login da Meta para conectar uma conta do WhatsApp Business, também pode remover o acesso do ALT Leadflow nas configurações de Integrações da sua conta empresarial na Meta; depois, peça a exclusão dos dados pelo e-mail acima.",
       ],
