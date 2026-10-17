@@ -336,3 +336,34 @@ export const apagarTemplateWhatsApp = createServerFn({ method: "POST" })
     if (!r.ok) throw new Error(r.texto);
     return r;
   });
+
+// ---------------------------------------------------------------------------
+// Avisos da Meta (eventos da conta que o sistema não trata sozinho)
+// ---------------------------------------------------------------------------
+export const listarAvisosDaMetaWhatsApp = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { montarAvisos } = await import("@/lib/whatsapp/cloud/avisos");
+    const admin = supabaseAdmin as any;
+    // Só dono e administrador: o aviso fala de risco da conta e do canal.
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+
+    const [{ data: contas }, { data: numeros }] = await Promise.all([
+      admin.from("wa_accounts").select("waba_id").eq("company_id", companyId),
+      admin.from("wa_phone_numbers").select("phone_number_id").eq("company_id", companyId),
+    ]);
+    const wabas = ((contas ?? []) as Array<{ waba_id: string }>).map((c) => c.waba_id);
+    const ids = ((numeros ?? []) as Array<{ phone_number_id: string }>).map((n) => n.phone_number_id);
+    if (wabas.length === 0 && ids.length === 0) return [];
+
+    const desde = new Date(Date.now() - 90 * 86_400_000).toISOString();
+    const { data: eventos } = await admin
+      .from("wa_webhook_events")
+      .select("id, field, received_at, phone_number_id, payload")
+      .in("field", ["conta", "ignorado"])
+      .gte("received_at", desde)
+      .order("received_at", { ascending: false })
+      .limit(300);
+    return montarAvisos((eventos ?? []) as any[], { wabas, numeros: ids });
+  });

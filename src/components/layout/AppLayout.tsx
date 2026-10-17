@@ -91,7 +91,7 @@ export function AppLayout() {
              <div className="px-3 py-1 rounded-md bg-muted/50 border text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
                State: {state}
              </div>
-             <div className="text-[9px] font-mono text-muted-foreground/40">Trace: {traceId}</div>
+             <div suppressHydrationWarning className="text-[9px] font-mono text-muted-foreground/40">Trace: {traceId}</div>
            </div>
          </div>
        </div>
@@ -136,7 +136,7 @@ export function AppLayout() {
           <div className="pt-6 border-t flex flex-col items-center gap-2">
             <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em]">Reference Metrics</p>
             <div className="flex gap-4">
-              <div className="text-[10px] font-mono text-muted-foreground">Trace: {traceId}</div>
+              <div suppressHydrationWarning className="text-[10px] font-mono text-muted-foreground">Trace: {traceId}</div>
               <div className="text-[10px] font-mono text-muted-foreground">Retries: {retryCount}</div>
             </div>
           </div>

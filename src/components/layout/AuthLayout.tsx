@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
+import { Logo } from '@/modules/landing/Logo';
 
 export function AuthLayout() {
   const { state } = useAuth();
@@ -22,11 +23,8 @@ export function AuthLayout() {
       </div>
 
       <div className="w-full max-w-md relative z-10 space-y-8">
-        <Link to="/" className="flex items-center justify-center gap-2 group">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
-            L
-          </div>
-          <span className="font-bold text-2xl tracking-tight text-foreground">Lovable CRM</span>
+        <Link to="/" className="flex items-center justify-center rounded-lg" aria-label="ALT Leadflow">
+          <Logo fundo="claro" tamanho="h-10 w-10" className="text-2xl" />
         </Link>
         <Outlet />
       </div>

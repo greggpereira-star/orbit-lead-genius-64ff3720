@@ -81,10 +81,20 @@ await comoDeve("segunda mensagem soma a não lida e atualiza a prévia", async (
   await enviarEEsperar(eventos.texto({ de: ana, nome: "Ana Souza", texto: "Qual o valor?" }));
   const c = await conversaDe(ana); igual([c.unread_agent, c.last_message_preview], [2, "Qual o valor?"]);
 });
-await comoDeve("resposta citada: o payload guarda o wamid original (nada se perde)", async () => {
+await comoDeve("resposta citada: o payload guarda o wamid original e wa_messages.reply_to aponta para a mensagem original", async () => {
   const w = novoWamid(); await enviarEEsperar(eventos.texto({ de: ana, nome: "Ana Souza", texto: "sobre aquilo", wamid: w, contexto: w1 }));
-  igual((await mensagem(w)).payload?.context?.id, w1, "payload.context.id");
-  if ((await mensagem(w)).reply_to === null) lacuna("resposta citada não preenche wa_messages.reply_to", "o parser extrai replyToWamid, mas o processador não o grava; a tela não consegue mostrar a citação (backlog: reações e resposta citada)");
+  const m = await mensagem(w); igual(m.payload?.context?.id, w1, "payload.context.id");
+  igual(m.reply_to, (await mensagem(w1)).id, "reply_to");
+});
+await comoDeve("citar uma mensagem que não existe no banco não grava vínculo nem falha", async () => {
+  const w = novoWamid(); igual((await enviarEEsperar(eventos.texto({ de: ana, nome: "Ana Souza", texto: "citando o passado", wamid: w, contexto: "wamid.NUNCA_EXISTIU" }))).status, 200);
+  const m = await mensagem(w); verdade(m, "mensagem não gravada"); igual(m.reply_to, null);
+});
+await comoDeve("citar mensagem de OUTRA conversa/contato da empresa não vaza o vínculo para fora da empresa", async () => {
+  const w = novoWamid(); await enviarEEsperar(eventos.texto({ de: telefone(), nome: "Outro", texto: "oi", wamid: w }));
+  const [{ id }] = await sql`select id from wa_messages where provider_message_id = ${w}`;
+  const w2 = novoWamid(); await enviarEEsperar(eventos.texto({ de: ana, nome: "Ana Souza", texto: "cita de outro contato", wamid: w2, contexto: w }));
+  igual((await mensagem(w2)).reply_to, id, "mesma empresa vincula");
 });
 await comoDeve("telefone e nome de contatos diferentes ficam isolados em conversas separadas", async () => {
   const b = telefone(); await enviarEEsperar(eventos.texto({ de: b, nome: "Bruno", texto: "oi" }));
@@ -180,7 +190,8 @@ await comoDeve("conta desligada pela Meta (PARTNER_REMOVED / ACCOUNT_OFFBOARDED)
 await comoDeve("eventos de conta que o código não trata (ex.: violação) respondem 200 e NÃO mexem no número", async () => {
   igual((await enviarEEsperar(eventos.conta({ evento: "ACCOUNT_VIOLATION" }))).status, 200);
   igual((await sql`select status from wa_phone_numbers where phone_number_id = ${PNID}`)[0].status, "active");
-  lacuna("violação/restrição da conta não gera alerta", "account_update com evento fora de PARTNER_REMOVED/ACCOUNT_OFFBOARDED/ACCOUNT_RECONNECTED é ignorado em silêncio; o time só saberia pela queda de qualidade ou de envio (nomes reais dos eventos [VERIFICAR] na documentação da Meta)");
+  // O evento fica guardado como 'ignorado'/'conta' e aparece em "Avisos da Meta" (configuração).
+  verdade((await sql`select 1 from wa_webhook_events where field = 'conta' and payload->>'evento' = 'ACCOUNT_VIOLATION' limit 1`).length > 0, "evento de violação não ficou guardado para o aviso");
 });
 
 console.log("\n9. Histórico (coexistência)");

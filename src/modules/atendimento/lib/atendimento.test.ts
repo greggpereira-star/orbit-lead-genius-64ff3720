@@ -13,6 +13,7 @@ import {
 import {
   agruparPorDia,
   autoriaDaSaida,
+  citacaoDe,
   marcaDeEntrega,
   textoParaExibir,
   type MensagemDaConversa,
@@ -394,5 +395,28 @@ describe("seguir e menções (servidor)", () => {
     const f = corpo("marcarMencoesComoLidasWhatsApp");
     expect(f).toContain('.eq("mentioned_user_id", context.userId)');
     expect(f).toContain('.is("read_at", null)');
+  });
+});
+
+describe("citação de resposta", () => {
+  const base = { type: "text", status: "received", provider_ts: null, created_at: "", template_name: null, sent_by: null, error_title: null, media_id: null, origin: "customer" } as const;
+  const orig = { ...base, id: "o1", direction: "inbound", body: "Qual o valor do apartamento de 2 quartos?" } as MensagemDaConversa;
+  const resp = { ...base, id: "r1", direction: "outbound", origin: "agent", body: "R$ 400 mil", reply_to: "o1" } as MensagemDaConversa;
+  it("resume a original e diz de quem era", () => {
+    expect(citacaoDe(resp, [orig, resp])).toEqual({ id: "o1", texto: "Qual o valor do apartamento de 2 quartos?", doCliente: true });
+  });
+  it("texto longo é cortado com reticências", () => {
+    const longa = { ...orig, body: "x".repeat(300) };
+    const c = citacaoDe(resp, [longa, resp])!;
+    expect(c.texto.length).toBe(90);
+    expect(c.texto.endsWith("…")).toBe(true);
+  });
+  it("sem reply_to ou com original fora da lista não há citação", () => {
+    expect(citacaoDe({ ...resp, reply_to: null }, [orig, resp])).toBeNull();
+    expect(citacaoDe(resp, [resp])).toBeNull();
+  });
+  it("mídia sem legenda vira o rótulo do tipo, não texto vazio", () => {
+    const img = { ...orig, type: "image", body: null } as MensagemDaConversa;
+    expect(citacaoDe(resp, [img, resp])!.texto).toMatch(/Imagem/i);
   });
 });

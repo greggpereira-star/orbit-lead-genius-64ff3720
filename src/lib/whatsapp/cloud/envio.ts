@@ -34,6 +34,23 @@ export type ResultadoDoEnvio =
   | { ok: true; messageId: string; providerMessageId: string }
   | { ok: false; motivo: MotivoDeRecusa; texto: string; retentavel?: boolean };
 
+/** Melhor esforço: a decisão de bloquear já foi tomada, isto só alinha a tela. */
+async function sincronizarOptoutNoContato(admin: AdminDb, contactId: string): Promise<void> {
+  try {
+    const contatos = admin.from("wa_contacts") as unknown as {
+      update(v: Record<string, unknown>): {
+        eq(c: string, v: unknown): { is(c: string, v: null): PromiseLike<unknown> };
+      };
+    };
+    await contatos
+      .update({ opted_out_at: new Date().toISOString() })
+      .eq("id", contactId)
+      .is("opted_out_at", null);
+  } catch {
+    /* não muda o resultado do envio */
+  }
+}
+
 export async function enviarTextoNaConversa(
   db: DbWa,
   entrada: {
@@ -83,7 +100,11 @@ export async function enviarTextoNaConversa(
   }
 
   // 1) opt-out — a coluna do contato OU a lista legada (uma fonte só, a política).
-  if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
+  const legado = !ct.opted_out_at && (await numeroEmOptout(admin, c.company_id, ct.wa_id));
+  if (ct.opted_out_at || legado) {
+    // O opt-out veio só da lista legada: grava no contato para a tela mostrar o
+    // mesmo estado que o servidor aplica (sem isso o composer aparece liberado).
+    if (legado) await sincronizarOptoutNoContato(admin, c.contact_id);
     return {
       ok: false,
       motivo: "contato_pediu_para_parar",
@@ -214,7 +235,11 @@ export async function enviarTemplateNaConversa(
     return { ok: false, motivo: "canal_apenas_receptivo", texto: TEXTO_APENAS_RECEPTIVO };
   }
 
-  if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
+  const legado = !ct.opted_out_at && (await numeroEmOptout(admin, c.company_id, ct.wa_id));
+  if (ct.opted_out_at || legado) {
+    // O opt-out veio só da lista legada: grava no contato para a tela mostrar o
+    // mesmo estado que o servidor aplica (sem isso o composer aparece liberado).
+    if (legado) await sincronizarOptoutNoContato(admin, c.contact_id);
     return {
       ok: false,
       motivo: "contato_pediu_para_parar",
@@ -388,7 +413,11 @@ export async function enviarMidiaNaConversa(
     return { ok: false, motivo: "canal_apenas_receptivo", texto: TEXTO_APENAS_RECEPTIVO };
   }
 
-  if (ct.opted_out_at || (await numeroEmOptout(admin, c.company_id, ct.wa_id))) {
+  const legado = !ct.opted_out_at && (await numeroEmOptout(admin, c.company_id, ct.wa_id));
+  if (ct.opted_out_at || legado) {
+    // O opt-out veio só da lista legada: grava no contato para a tela mostrar o
+    // mesmo estado que o servidor aplica (sem isso o composer aparece liberado).
+    if (legado) await sincronizarOptoutNoContato(admin, c.contact_id);
     return {
       ok: false,
       motivo: "contato_pediu_para_parar",

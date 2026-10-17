@@ -40,6 +40,7 @@ import {
 import {
   agruparPorDia,
   autoriaDaSaida,
+  citacaoDe,
   marcaDeEntrega,
   temMidia,
   textoParaExibir,
@@ -50,6 +51,18 @@ import {
   useTemplatesAprovados,
   type TemplateAprovado,
 } from "../hooks/useAtendimento";
+
+/**
+ * Recusa do servidor ao enviar. Se foi opt-out, recarrega a lista de conversas: o
+ * servidor pode ter alinhado o contato com a lista legada, e a tela precisa trocar
+ * o composer pelo aviso.
+ */
+function recusaDoEnvio(qc: ReturnType<typeof useQueryClient>, r: { texto: string; motivo?: string }) {
+  toast.error(r.texto);
+  if (r.motivo === "contato_pediu_para_parar") {
+    qc.invalidateQueries({ queryKey: [chaves.conversas("")[0]] });
+  }
+}
 
 /** Relógio que reavalia a janela de 24h sem depender de evento nenhum. */
 function useAgora(intervaloMs = 30_000): Date {
@@ -78,6 +91,8 @@ export function Conversa(props: {
   cabecalho: React.ReactNode;
   /** Pesquisa na conversa: ids que casam e o índice do atual. */
   pesquisa?: { ids: string[]; atual: number } | null;
+  /** Papel que só lê (visualizador): sem composer. */
+  somenteLeitura?: boolean;
 }) {
   const { conversa } = props;
   const qc = useQueryClient();
@@ -91,6 +106,7 @@ export function Conversa(props: {
     optedOut,
     status: conversa.status,
     apenasReceptivo: Boolean(conversa.numero?.receive_only),
+    somenteLeitura: props.somenteLeitura,
   });
 
   const grupos = useMemo(() => agruparPorDia(mensagens.data ?? [], agora), [mensagens.data, agora]);
@@ -185,6 +201,31 @@ export function Conversa(props: {
                     )}
                   >
                     {autoria && <div className="mb-0.5 text-[10px] opacity-70">{autoria}</div>}
+                    {(() => {
+                      const c = citacaoDe(m, mensagens.data ?? []);
+                      return c ? (
+                        <button
+                          type="button"
+                          title="Ver a mensagem citada"
+                          onClick={() =>
+                            document
+                              .querySelector(`[data-msg-id="${c.id}"]`)
+                              ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                          }
+                          className={cn(
+                            "mb-1 block w-full rounded-md border-l-2 px-2 py-1 text-left text-xs",
+                            saida
+                              ? "border-primary-foreground/60 bg-primary-foreground/10"
+                              : "border-primary/60 bg-muted/60",
+                          )}
+                        >
+                          <span className="block text-[10px] font-medium opacity-70">
+                            {c.doCliente ? "Cliente" : "Equipe"}
+                          </span>
+                          <span className="line-clamp-2 opacity-90">{c.texto}</span>
+                        </button>
+                      ) : null;
+                    })()}
                     {temMidia(m) && (
                       <div className="mb-1">
                         <MidiaDaMensagem mensagem={m} />
@@ -283,7 +324,7 @@ function Compositor(props: {
       const r = await enviarTexto({ data: { conversaId: conversa.id, texto: t } });
       if (!r.ok) {
         // Mantém o texto: a recusa (janela, opt-out) não pode custar a digitação.
-        toast.error(r.texto);
+        recusaDoEnvio(qc, r);
         return;
       }
       setTexto("");
@@ -354,7 +395,7 @@ function Compositor(props: {
         },
       });
       if (!r.ok) {
-        toast.error(r.texto);
+        recusaDoEnvio(qc, r);
         return;
       }
       setTexto("");
@@ -366,7 +407,12 @@ function Compositor(props: {
     }
   }
 
-  if (modo === "bloqueado" || modo === "resolvida" || modo === "somente_receptivo") {
+  if (
+    modo === "bloqueado" ||
+    modo === "resolvida" ||
+    modo === "somente_receptivo" ||
+    modo === "somente_leitura"
+  ) {
     return (
       <div className="flex items-center justify-between gap-3 border-t bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         <span>{props.aviso}</span>
@@ -496,7 +542,7 @@ function EnviarTemplate(props: {
         data: { conversaId: props.conversa.id, nome: t.name, idioma: t.language, valores: mapa },
       });
       if (!r.ok) {
-        toast.error(r.texto);
+        recusaDoEnvio(qc, r);
         return;
       }
       toast.success("Template enviado.");

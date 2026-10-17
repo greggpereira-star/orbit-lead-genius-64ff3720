@@ -104,7 +104,7 @@ export function useMensagens(conversaId: string | null) {
       const { data, error } = await wa()
         .from("wa_messages")
         .select(
-          "id,direction,origin,type,body,status,provider_ts,created_at,template_name,sent_by,error_title,media_id",
+          "id,direction,origin,type,body,status,provider_ts,created_at,template_name,sent_by,error_title,media_id,reply_to",
         )
         .eq("conversation_id", conversaId)
         .order("provider_ts", { ascending: true, nullsFirst: false })

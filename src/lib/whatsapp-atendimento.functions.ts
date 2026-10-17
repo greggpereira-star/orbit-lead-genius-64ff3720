@@ -17,6 +17,7 @@ import {
   empresaDoUsuario,
   empresaParaAdministrar,
   empresaParaAtender,
+  podeAtender,
 } from "@/lib/whatsapp/papeis";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -128,11 +129,14 @@ export const atribuirConversaWhatsApp = createServerFn({ method: "POST" })
     if (data.userId) {
       const { data: m } = await admin
         .from("memberships")
-        .select("user_id")
+        .select("user_id, role")
         .eq("company_id", companyId)
         .eq("user_id", data.userId)
         .maybeSingle();
       if (!m) throw new Error("Este atendente não pertence à empresa.");
+      // Quem só lê não pode ser responsável: a conversa ficaria sem ninguém que responda.
+      if (!podeAtender(String(m.role)))
+        throw new Error("Este usuário tem acesso somente leitura e não pode ser responsável.");
     }
 
     const { error } = await admin
@@ -172,11 +176,14 @@ export const listarAtendentesWhatsApp = createServerFn({ method: "GET" })
     const admin = supabaseAdmin as any;
     const companyId = await empresaDoUsuario(admin, context.userId);
 
+    // Quem só lê (visualizador) não pode ser responsável por conversa nem receber menção útil.
     const { data: membros } = await admin
       .from("memberships")
-      .select("user_id")
+      .select("user_id, role")
       .eq("company_id", companyId);
-    const ids = ((membros ?? []) as Array<{ user_id: string }>).map((m) => m.user_id);
+    const ids = ((membros ?? []) as Array<{ user_id: string; role: string }>)
+      .filter((m) => podeAtender(String(m.role)))
+      .map((m) => m.user_id);
     if (ids.length === 0) return [] as Array<{ id: string; nome: string }>;
 
     const { data: perfis } = await admin.from("profiles").select("id, full_name").in("id", ids);

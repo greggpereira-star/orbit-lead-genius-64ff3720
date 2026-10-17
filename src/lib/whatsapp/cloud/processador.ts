@@ -126,6 +126,20 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
 
       const leadId = await ligarContatoAoLead(db, linha.out_empresa, linha.out_conversa, e.waId);
 
+      // Resposta citada: liga a mensagem à original, para a tela mostrar a citação.
+      // Se a original não está no nosso banco (anterior à conexão), fica só o `payload`.
+      if (e.replyToWamid) {
+        const { data: original } = await tabela(db, "wa_messages")
+          .select("id")
+          .eq("company_id", linha.out_empresa)
+          .eq("provider_message_id", e.replyToWamid)
+          .maybeSingle();
+        const idOriginal = (original as { id?: string } | null)?.id;
+        if (idOriginal) {
+          await tabela(db, "wa_messages").update({ reply_to: idOriginal }).eq("id", linha.out_mensagem);
+        }
+      }
+
       // Mídia: registra e já tenta baixar — a URL da Meta expira. Falha aqui NÃO
       // derruba a mensagem (ela já foi gravada): a tela tenta de novo ao abrir.
       const midia = extrairMidia(e.type, e.payload);

@@ -34,6 +34,7 @@ import {
 } from "../hooks/useAtendimento";
 import { buscarNasMensagens } from "../lib/mensagens";
 import { nomeDoArquivoDeExportacao } from "@/lib/whatsapp/exportarConversa";
+import { podeAtender } from "@/lib/whatsapp/papeis";
 import { AgendarMensagem } from "./AgendarMensagem";
 import { MenuDaConversa } from "./MenuDaConversa";
 import {
@@ -48,7 +49,17 @@ import { ListaDeConversas } from "./ListaDeConversas";
 import { VisoesDoInbox } from "./VisoesDoInbox";
 import { PainelDoLead } from "./PainelDoLead";
 
-export function Atendimento({ companyId, userId }: { companyId: string; userId: string | null }) {
+export function Atendimento({
+  companyId,
+  userId,
+  papel,
+}: {
+  companyId: string;
+  userId: string | null;
+  /** Papel na empresa. Desconhecido não restringe a tela: o servidor é quem decide. */
+  papel?: string | null;
+}) {
+  const somenteLeitura = papel ? !podeAtender(papel) : false;
   const qc = useQueryClient();
   const conversas = useConversas(companyId);
   const lista = useMemo(() => conversas.data ?? [], [conversas.data]);
@@ -192,20 +203,23 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <header className="flex items-center justify-between gap-4 border-b px-6 py-3">
+      <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:gap-4 sm:px-6">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <MessageCircle className="h-5 w-5" /> Atendimento WhatsApp
+          <h1 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold sm:text-xl">
+            <span className="inline-flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" /> Atendimento WhatsApp
+            </span>
             {naoLidas > 0 && (
-              <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium tabular-nums text-primary-foreground">
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium tabular-nums text-primary-foreground">
                 {naoLidas} não lida{naoLidas === 1 ? "" : "s"}
               </span>
             )}
           </h1>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/settings/whatsapp">
-            <Settings className="mr-1.5 h-4 w-4" /> Número e templates
+        <Button variant="outline" size="sm" asChild className="shrink-0">
+          <Link to="/settings/whatsapp" aria-label="Número e templates">
+            <Settings className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Número e templates</span>
           </Link>
         </Button>
       </header>
@@ -240,6 +254,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                 key={ativa.id}
                 conversa={ativa}
                 companyId={companyId}
+                somenteLeitura={somenteLeitura}
                 onReabrir={() => aoMudarStatus.mutate({ conversaId: ativa.id, status: "open" })}
                 cabecalho={
                   <>
@@ -267,7 +282,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                         aria-label="Responsável"
                         className="max-w-[170px] rounded-md border bg-background px-2 py-1.5 text-sm"
                         value={ativa.assigned_to ?? ""}
-                        disabled={aoAtribuir.isPending}
+                        disabled={aoAtribuir.isPending || somenteLeitura}
                         onChange={(e) =>
                           aoAtribuir.mutate({
                             conversaId: ativa.id,
@@ -282,7 +297,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                           </option>
                         ))}
                       </select>
-                      {ativa.status === "resolved" ? (
+                      {somenteLeitura ? null : ativa.status === "resolved" ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -306,6 +321,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                         </Button>
                       )}
                       <MenuDaConversa
+                        somenteLeitura={somenteLeitura}
                         conversa={ativa}
                         ocupado={
                           aoMudarStatus.isPending || aoMarcarNaoLida.isPending || aoSeguir.isPending
@@ -406,7 +422,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                 pesquisa={pesquisando ? { ids: idsEncontrados, atual: resultado } : null}
               />
             </div>
-            <PainelDoLead conversa={ativa} />
+            <PainelDoLead conversa={ativa} somenteLeitura={somenteLeitura} />
             <AgendarMensagem
               conversa={ativa}
               aberto={agendando}
@@ -417,7 +433,7 @@ export function Atendimento({ companyId, userId }: { companyId: string; userId: 
                 <SheetHeader className="border-b px-4 py-3">
                   <SheetTitle>Informações do contato</SheetTitle>
                 </SheetHeader>
-                <PainelDoLead conversa={ativa} emSheet />
+                <PainelDoLead conversa={ativa} emSheet somenteLeitura={somenteLeitura} />
               </SheetContent>
             </Sheet>
           </>

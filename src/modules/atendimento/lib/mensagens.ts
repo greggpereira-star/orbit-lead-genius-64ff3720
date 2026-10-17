@@ -15,6 +15,8 @@ export interface MensagemDaConversa {
   sent_by: string | null;
   error_title: string | null;
   media_id: string | null;
+  /** Mensagem citada (resposta). Nula se não é resposta ou a original não está no banco. */
+  reply_to?: string | null;
 }
 
 export interface MarcaDeEntrega {
@@ -71,6 +73,22 @@ export function textoParaExibir(
       ? corpo
       : `[${ROTULO_DO_TIPO[m.type] ?? m.type}] ${corpo}`;
   return `[${ROTULO_DO_TIPO[m.type] ?? "Mensagem"}]`;
+}
+
+/** A mensagem que esta responde, resumida para a citação dentro da bolha. */
+export function citacaoDe(
+  m: Pick<MensagemDaConversa, "reply_to">,
+  todas: readonly MensagemDaConversa[],
+): { id: string; texto: string; doCliente: boolean } | null {
+  if (!m.reply_to) return null;
+  const original = todas.find((x) => x.id === m.reply_to);
+  if (!original) return null;
+  const texto = textoParaExibir(original).replace(/\s+/g, " ");
+  return {
+    id: original.id,
+    texto: texto.length > 90 ? `${texto.slice(0, 89)}…` : texto,
+    doCliente: original.direction === "inbound",
+  };
 }
 
 /** Quem enviou, para a legenda da bolha de saída. */

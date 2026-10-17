@@ -27,11 +27,22 @@ export function Simbolo({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ className, tamanho = "h-8 w-8" }: { className?: string; tamanho?: string }) {
+export function Logo({
+  className,
+  tamanho = "h-8 w-8",
+  fundo = "escuro",
+}: {
+  className?: string;
+  tamanho?: string;
+  /** `claro`: nome em tinta e "flow" em azul mais escuro (contraste sobre fundo claro). */
+  fundo?: "escuro" | "claro";
+}) {
   return (
     <span className={cn("inline-flex items-center gap-2.5 whitespace-nowrap font-extrabold tracking-[-0.045em]", className)}>
       <Simbolo className={tamanho} />
-      <span>Lead<span className="text-[#7FA6FF]">flow</span></span>
+      <span className={fundo === "claro" ? "text-[#0E172C]" : undefined}>
+        Lead<span className={fundo === "claro" ? "text-[#2F6BFF]" : "text-[#7FA6FF]"}>flow</span>
+      </span>
     </span>
   );
 }

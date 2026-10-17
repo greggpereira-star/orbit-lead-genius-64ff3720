@@ -32,6 +32,8 @@ import type { ConversaDaLista } from "../lib/conversas";
 export function MenuDaConversa(props: {
   conversa: ConversaDaLista;
   ocupado?: boolean;
+  /** Visualizador: os itens que escrevem ficam desabilitados (o servidor também barra). */
+  somenteLeitura?: boolean;
   seguindo?: boolean;
   onSeguir?: () => void;
   onAgendar?: () => void;
@@ -54,17 +56,17 @@ export function MenuDaConversa(props: {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuItem disabled={props.ocupado} onSelect={props.onNaoLida}>
+        <DropdownMenuItem disabled={props.ocupado || props.somenteLeitura} onSelect={props.onNaoLida}>
           <EyeOff className="mr-2 h-4 w-4" /> Marcar como não lida
         </DropdownMenuItem>
         {!resolvida && (
-          <DropdownMenuItem disabled={props.ocupado} onSelect={props.onPendente}>
+          <DropdownMenuItem disabled={props.ocupado || props.somenteLeitura} onSelect={props.onPendente}>
             <Hourglass className="mr-2 h-4 w-4" />
             {pendente ? "Desmarcar como pendente" : "Marcar como pendente"}
           </DropdownMenuItem>
         )}
         {props.onSeguir && (
-          <DropdownMenuItem disabled={props.ocupado} onSelect={props.onSeguir}>
+          <DropdownMenuItem disabled={props.ocupado || props.somenteLeitura} onSelect={props.onSeguir}>
             {props.seguindo ? (
               <BookmarkCheck className="mr-2 h-4 w-4" />
             ) : (
@@ -74,12 +76,12 @@ export function MenuDaConversa(props: {
           </DropdownMenuItem>
         )}
         {props.onExportar && (
-          <DropdownMenuItem disabled={props.ocupado} onSelect={props.onExportar}>
+          <DropdownMenuItem disabled={props.ocupado || props.somenteLeitura} onSelect={props.onExportar}>
             <Download className="mr-2 h-4 w-4" /> Exportar conversa (CSV)
           </DropdownMenuItem>
         )}
         {props.onAgendar && !resolvida && (
-          <DropdownMenuItem onSelect={props.onAgendar}>
+          <DropdownMenuItem disabled={props.somenteLeitura} onSelect={props.onAgendar}>
             <CalendarClock className="mr-2 h-4 w-4" /> Agendar mensagem
           </DropdownMenuItem>
         )}

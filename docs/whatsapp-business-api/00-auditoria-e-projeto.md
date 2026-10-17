@@ -1239,3 +1239,22 @@ despachado pelo cron e **agendada para quem pediu para parar falha com motivo, s
 
 **Não coberto (limites do ambiente):** realtime (o WebSocket não é simulado: a tela só atualiza ao recarregar),
 Embedded Signup, coexistência real, aprovação real de template, entrega real, e tudo o que for `[VERIFICAR]`.
+
+
+### 15.2 Correções dos achados (17/10/2026)
+
+| # | Achado | Correção | Onde |
+| --- | --- | --- | --- |
+| 1 | Resposta citada não era gravada | O processador liga `wa_messages.reply_to` à mensagem original (mesma empresa); a bolha mostra a citação ("Cliente / Equipe" + trecho) e clicar leva à original. Original fora do banco: nada é gravado e nada falha. | `processador.ts`, `Conversa.tsx`, `mensagens.ts` |
+| 2 | Violação/restrição da conta sem alerta | Cartão **"Avisos da Meta"** na configuração (só dono/admin): lista os eventos de conta e as notificações que o sistema não trata, com o nome como a Meta enviou e gravidade por pista do nome. Isolado por empresa. Sem migração. | `avisos.ts`, `listarAvisosDaMetaWhatsApp`, `_app.settings.whatsapp.tsx` |
+| 3 | Visualizador via controles habilitados | Composer vira aviso "acesso somente leitura"; sem Resolver; responsável, menu (itens que escrevem) e notas desabilitados. O servidor continua sendo quem barra. | `compositor.ts`, `Conversa.tsx`, `Atendimento.tsx`, `MenuDaConversa.tsx`, `PainelDoLead.tsx` |
+| 4 | Opt-out sem aviso na conversa | Causa real: o servidor checa o contato **e** a lista legada `whatsapp_optouts`; a tela só lia o contato. Agora o bloqueio por lista legada marca o contato e a tela recarrega e troca o composer pelo aviso. | `envio.ts` (3 pontos), `Conversa.tsx` |
+| 5 | Cabeçalho sobreposto a 375 px | Título quebra em linhas, selo não encolhe, botão vira só o ícone no celular. Medido: sem sobreposição e sem rolagem horizontal. | `Atendimento.tsx` |
+| 6 | Visualizador na lista de responsáveis | Fora da lista **e** recusado no servidor ao atribuir. | `listarAtendentesWhatsApp`, `atribuirConversaWhatsApp` |
+| 7 | Aviso de erro "preso" | **Não é defeito**: o Sonner pausa o timer com a aba em segundo plano (painel do teste). Nada alterado. | - |
+| 8 | Login com "Lovable CRM" | Marca do Leadflow no login. | `AuthLayout.tsx`, `Logo.tsx` |
+| 9 | Erro de hidratação | `suppressHydrationWarning` nos dois "Trace:" aleatórios do `AppLayout`. Sem erro na navegação conferida. | `AppLayout.tsx` |
+
+Verificação: 1 555 testes e 33 cenários de ponta a ponta passam; mutação nos dois comportamentos novos do
+servidor (citação e alinhamento do opt-out) foi detectada. A tela foi conferida no navegador como visualizador e
+como dono. Os nomes reais dos eventos de conta da Meta seguem **[VERIFICAR]**.

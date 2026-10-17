@@ -78,8 +78,11 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
 export function PainelDoLead({
   conversa,
   emSheet = false,
+  somenteLeitura = false,
 }: {
   conversa: ConversaDaLista;
+  /** Visualizador lê as notas, mas não escreve. */
+  somenteLeitura?: boolean;
   /** Dentro do sheet (telas sem a coluna lateral): sem borda e sempre visível. */
   emSheet?: boolean;
 }) {
@@ -210,7 +213,7 @@ export function PainelDoLead({
         )}
 
         <Secao titulo="Notas" icone={<StickyNote className="h-4 w-4" />} aberta>
-          <Notas conversaId={conversa.id} />
+          <Notas conversaId={conversa.id} somenteLeitura={somenteLeitura} />
         </Secao>
       </div>
     </aside>
@@ -218,7 +221,7 @@ export function PainelDoLead({
 }
 
 /** Notas internas: ficam só com a equipe e NUNCA vão ao cliente. */
-function Notas({ conversaId }: { conversaId: string }) {
+function Notas({ conversaId, somenteLeitura = false }: { conversaId: string; somenteLeitura?: boolean }) {
   const qc = useQueryClient();
   const notas = useNotas(conversaId);
   const criar = useServerFn(criarNotaWhatsApp);
@@ -280,6 +283,7 @@ function Notas({ conversaId }: { conversaId: string }) {
         placeholder="Escreva uma nota para a equipe…"
         aria-label="Nova nota interna"
         className="text-xs"
+        disabled={somenteLeitura}
       />
       <div className="flex flex-wrap items-center gap-1">
         {mencionar.map((id) => (
@@ -296,6 +300,7 @@ function Notas({ conversaId }: { conversaId: string }) {
         <select
           aria-label="Mencionar colega"
           className="rounded-md border bg-background px-1.5 py-1 text-[11px]"
+          disabled={somenteLeitura}
           value=""
           onChange={(e) => {
             const id = e.target.value;
@@ -315,7 +320,7 @@ function Notas({ conversaId }: { conversaId: string }) {
       <Button
         size="sm"
         variant="outline"
-        disabled={salvando || !texto.trim()}
+        disabled={somenteLeitura || salvando || !texto.trim()}
         onClick={() => void salvar()}
       >
         Salvar nota
