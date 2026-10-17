@@ -1182,3 +1182,24 @@ Menu "…" → "Exportar conversa (CSV)". Sem migração.
   `=`, `+`, `-`, `@` ou tab é neutralizada (`'`): planilha executa fórmula, e o
   texto é do cliente.
 - **Formato:** separador `;` e BOM, para o Excel em português abrir com acento.
+
+
+## 15. Ensaio local sem número da Meta (16/10/2026)
+
+Objetivo: chegar à liberação da API com o máximo já validado. Tudo em
+`scripts/ensaio-local/`, sempre em `127.0.0.1`, nunca contra produção.
+
+| Camada | O que prova | Como rodar |
+| --- | --- | --- |
+| **Base local fiel** | O esquema e as **permissões** (ACLs) da produção, copiados só como estrutura (sem dados) com `pg_dump -s`. Replay das migrações **não** serve: 12 das 148 falham do zero (o repositório não reproduz a produção; ex.: `leads.source`, `meta_ad_attribution`). | `bootstrap-supabase.sql` + restaurar o dump do esquema |
+| **Ensaio SQL** | 66 testes (`ensaio-wa-fundacao/testes.sql`) passam na base local: fundação, fase 2/4/5, endurecimento (viewer/admin), fila, gatilho, retenção, seguir/menções, agendadas, rascunhos, receptivo. | `psql -d leadflow_ensaio` dentro de BEGIN/ROLLBACK |
+| **Meta falsa** | O código REAL de HTTP (`graph.ts`, `cloud-provider.ts`) fala por socket com um servidor que imita a Graph API: leitura do número, templates, troca de código, inscrição da WABA com callback próprio, envio e os erros 131047/131030/131050/130429/5xx/190. 16 testes, com prova de mutação. | `npx vitest run src/lib/whatsapp/cloud/metaFalsa.test.ts` |
+
+**Limite que não some:** a Meta falsa foi escrita a partir da documentação.
+Ela prova que o código fala o protocolo que entendemos, **não** que a Meta se
+comporta assim. Embedded Signup, coexistência, nomes reais de campo, aprovação
+de template e entrega continuam [VERIFICAR] até o número de teste.
+
+**Achados do ensaio:** (1) as migrações do repositório não reproduzem a produção;
+(2) `META_GRAPH_BASE_URL` só vale para localhost (host externo é ignorado), para
+um engano nunca mandar o token da Meta a outro servidor.

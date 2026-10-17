@@ -4,7 +4,27 @@
  */
 
 export const META_API_VERSION = "v25.0";
-export const META_GRAPH_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
+/**
+ * Só para ensaio local: `META_GRAPH_BASE_URL` aponta a Graph API para um servidor
+ * de mentira (scripts/ensaio-local/meta-falsa.mjs). Só vale para localhost: um
+ * valor de outro host é ignorado, para um engano de configuração nunca mandar o
+ * token da Meta para um servidor que não é a Meta.
+ */
+export function baseDaGraph(env: Record<string, string | undefined> = process.env): string {
+  const padrao = `https://graph.facebook.com/${META_API_VERSION}`;
+  const desvio = env.META_GRAPH_BASE_URL;
+  if (!desvio) return padrao;
+  try {
+    const u = new URL(desvio);
+    const local = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+    return local && (u.protocol === "http:" || u.protocol === "https:")
+      ? desvio.replace(/\/+$/, "")
+      : padrao;
+  } catch {
+    return padrao;
+  }
+}
+export const META_GRAPH_BASE = baseDaGraph();
 
 export interface GraphError {
   message: string;
