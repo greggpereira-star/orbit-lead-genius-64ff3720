@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Sparkles,
   Share2,
+  PanelLeftClose,
+  PanelLeftOpen,
   ChevronsUpDown,
   Building2,
   LogOut,
@@ -28,6 +30,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Link, useLocation } from '@tanstack/react-router';
 import { useAuth } from '@/core/auth/hooks/useAuth';
@@ -109,20 +113,28 @@ export function AppSidebar() {
   const { company, user, logout } = useAuth();
   const { unreadCount } = useInboxNotifications(company?.id);
   const location = useLocation();
+  const { state, toggleSidebar, isMobile } = useSidebar();
+  const recolhido = state === 'collapsed';
 
   const initials = (company?.name || 'W').trim().slice(0, 1).toUpperCase();
   const userInitials = (user?.name || user?.email || 'U').trim().slice(0, 1).toUpperCase();
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader className="p-2">
+      <SidebarHeader className="p-2 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-sidebar-accent transition-colors text-left">
+            {/* Recolhido, o botão vira um quadrado de 32 px (a largura dos itens do menu): antes ele
+                mantinha o padding de 12 px, era espremido a 31 px e a caixa de 36 px da inicial
+                transbordava do menu. O nome fica no aria-label porque o texto some. */}
+            <button
+              aria-label={`Empresa ${company?.name || 'Workspace'}`}
+              className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-sidebar-accent transition-colors text-left group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:!p-0"
+            >
               <div className="relative shrink-0">
                 {/* Neutro: um bloco de 36px de acento em TODAS as telas gastava, no shell,
                     a cor que pertence à página. A inicial já identifica a empresa. */}
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--superficie-tonal)] text-lg font-bold text-foreground">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--superficie-tonal)] text-lg font-bold group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:text-base text-foreground">
                   {initials}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[var(--sucesso)] border-2 border-sidebar" />
@@ -157,7 +169,10 @@ export function AppSidebar() {
 
       <SidebarContent>
         {menuGroups.map((group) => (
-          <SidebarGroup key={group.label}>
+          <SidebarGroup
+            key={group.label}
+            className="group-data-[collapsible=icon]:mt-1 group-data-[collapsible=icon]:border-t group-data-[collapsible=icon]:border-sidebar-border/60 group-data-[collapsible=icon]:pt-2 first:group-data-[collapsible=icon]:mt-0 first:group-data-[collapsible=icon]:border-t-0 first:group-data-[collapsible=icon]:pt-2"
+          >
             <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -187,8 +202,24 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          {!isMobile && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip={recolhido ? 'Ampliar menu (Ctrl+B)' : 'Reduzir menu (Ctrl+B)'}
+                onClick={toggleSidebar}
+                aria-expanded={!recolhido}
+                aria-label={recolhido ? 'Ampliar menu' : 'Reduzir menu'}
+              >
+                {recolhido ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                <span className="flex-1">Reduzir menu</span>
+                <kbd className="rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                  Ctrl+B
+                </kbd>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Ver configurações">
+            <SidebarMenuButton asChild tooltip="Ver configurações" className="group-data-[collapsible=icon]:!p-1">
               <Link to="/settings" activeOptions={{ exact: false }}>
                 <Avatar className="h-6 w-6">
                   <AvatarFallback className="text-[10px]">{userInitials}</AvatarFallback>
@@ -202,6 +233,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

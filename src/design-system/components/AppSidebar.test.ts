@@ -22,3 +22,33 @@ describe("ícones do menu lateral", () => {
     expect(por["Chat ao vivo"]).not.toBe(por["WhatsApp"]);
   });
 });
+
+describe("menu recolhido: botão, borda e cabeçalho", () => {
+  const fonte = readFileSync("src/design-system/components/AppSidebar.tsx", "utf8");
+  const topbar = readFileSync("src/design-system/components/Topbar.tsx", "utf8");
+
+  it("há um botão de reduzir/ampliar, com nome acessível, estado e o atalho à vista", () => {
+    expect(fonte).toContain("onClick={toggleSidebar}");
+    expect(fonte).toMatch(/aria-label=\{recolhido \? 'Ampliar menu' : 'Reduzir menu'\}/);
+    expect(fonte).toContain("aria-expanded={!recolhido}");
+    expect(fonte).toContain("Ctrl+B");
+  });
+  it("a borda do menu também alterna (SidebarRail), em vez de ficar sem uso", () => {
+    expect(fonte).toContain("<SidebarRail />");
+  });
+  it("recolhido, o botão da empresa é um quadrado de 32 px (a caixa de 36 px transbordava do menu)", () => {
+    expect(fonte).toContain("group-data-[collapsible=icon]:!size-8");
+    expect(fonte).toContain("group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8");
+  });
+  it("o botão da empresa tem nome acessível mesmo com o texto escondido", () => {
+    expect(fonte).toContain("aria-label={`Empresa ${company?.name || 'Workspace'}`}");
+  });
+  it("o botão de reduzir não aparece no celular (lá o menu é uma gaveta)", () => {
+    expect(fonte).toContain("{!isMobile && (");
+  });
+  it("no celular a barra superior tem o botão que abre a gaveta (antes nada a abria)", () => {
+    expect(topbar).toContain("isMobile && (");
+    expect(topbar).toContain('aria-label="Abrir menu"');
+    expect(topbar).toContain("onClick={toggleSidebar}");
+  });
+});

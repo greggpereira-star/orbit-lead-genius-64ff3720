@@ -1,5 +1,6 @@
  import * as React from 'react';
- import { Search, Bell, User } from 'lucide-react';
+ import { Search, Bell, User, PanelLeft } from 'lucide-react';
+import { useSidebar } from '@/components/ui/sidebar';
  import { Input } from '@/components/ui/input';
  import { Button } from '@/components/ui/button';
  import {
@@ -16,9 +17,23 @@ import { AlternadorDeTema } from "./AlternadorDeTema";
  
  export function Topbar() {
    const { user, logout } = useAuth();
+   const { toggleSidebar, isMobile } = useSidebar();
  
     return (
       <header className="h-16 border-b border-border/80 bg-card flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm backdrop-blur-md">
+         {/* No celular o menu é uma gaveta e NADA a abria: não havia botão em lugar nenhum. */}
+         {isMobile && (
+           <Button
+             variant="ghost"
+             size="icon"
+             className="mr-2 shrink-0"
+             onClick={toggleSidebar}
+             aria-label="Abrir menu"
+             title="Abrir menu"
+           >
+             <PanelLeft className="h-5 w-5" />
+           </Button>
+         )}
          <div className="flex items-center flex-1 max-w-md relative group">
            <Search className="absolute left-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
            <div 
