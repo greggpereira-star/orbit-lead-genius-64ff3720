@@ -53,6 +53,15 @@ export function nomeDaConversa(c: Pick<ConversaDaLista, "lead" | "contact">): st
   return c.contact ? formatarTelefone(c.contact.wa_id) : "Contato";
 }
 
+/**
+ * O nome de VERDADE do contato (lead ou perfil do WhatsApp), ou `null` se só há o número.
+ * Serve para sugerir "Olá, {nome}" num template: sugerir o telefone como se fosse nome
+ * mandaria "Oi +55 (27) 91111-0111!" ao cliente.
+ */
+export function nomeProprioDoContato(c: Pick<ConversaDaLista, "lead" | "contact">): string | null {
+  return c.lead?.name?.trim() || c.contact?.profile_name?.trim() || null;
+}
+
 export function iniciais(nome: string): string {
   const partes = nome
     .replace(/[^\p{L}\p{N}\s]/gu, "")
@@ -141,7 +150,10 @@ export function esperaDe(
   agora: Date = new Date(),
 ): { minutos: number; texto: string; nivel: NivelDeEspera } | null {
   if (!aguardandoResposta(c, agora) || !c.last_inbound_at) return null;
-  const minutos = Math.max(0, Math.floor((agora.getTime() - Date.parse(c.last_inbound_at)) / 60_000));
+  const minutos = Math.max(
+    0,
+    Math.floor((agora.getTime() - Date.parse(c.last_inbound_at)) / 60_000),
+  );
   const texto =
     minutos < 1 ? "agora" : minutos < 60 ? `${minutos} min` : `${Math.floor(minutos / 60)} h`;
   const nivel: NivelDeEspera = minutos < 15 ? "ok" : minutos < 60 ? "atencao" : "critico";

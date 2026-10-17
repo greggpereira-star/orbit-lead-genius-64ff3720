@@ -29,11 +29,13 @@ import { variaveisDe } from "@/lib/whatsapp/cloud/templates";
 import { renderizarTexto } from "@/lib/whatsapp/cloud/render";
 import { AVISO_DO_MODO, modoDoCompositor } from "../lib/compositor";
 import { MidiaDaMensagem } from "./MidiaDaMensagem";
+import { EnviarTemplate } from "./EnviarTemplate";
 import { supabase } from "@/lib/supabase";
 import { classificarArquivoParaEnvio } from "@/lib/whatsapp/cloud/midia";
 import {
   janelaDaConversa,
   nomeDaConversa,
+  nomeProprioDoContato,
   formatarTelefone,
   type ConversaDaLista,
 } from "../lib/conversas";
@@ -57,7 +59,10 @@ import {
  * servidor pode ter alinhado o contato com a lista legada, e a tela precisa trocar
  * o composer pelo aviso.
  */
-function recusaDoEnvio(qc: ReturnType<typeof useQueryClient>, r: { texto: string; motivo?: string }) {
+function recusaDoEnvio(
+  qc: ReturnType<typeof useQueryClient>,
+  r: { texto: string; motivo?: string },
+) {
   toast.error(r.texto);
   if (r.motivo === "contato_pediu_para_parar") {
     qc.invalidateQueries({ queryKey: [chaves.conversas("")[0]] });
@@ -272,6 +277,7 @@ export function Conversa(props: {
         modo={modo}
         aviso={AVISO_DO_MODO[modo]}
         nome={nomeDaConversa(conversa)}
+        nomeProprio={nomeProprioDoContato(conversa)}
       />
     </section>
   );
@@ -283,6 +289,7 @@ function Compositor(props: {
   modo: ReturnType<typeof modoDoCompositor>;
   aviso: string | null;
   nome: string;
+  nomeProprio: string | null;
   onReabrir: () => void;
 }) {
   const { conversa, modo } = props;
@@ -426,7 +433,16 @@ function Compositor(props: {
   }
 
   if (modo === "template") {
-    return <EnviarTemplate {...props} avisoDaJanela={props.aviso} onEnviar={enviarTemplate} />;
+    return (
+      <EnviarTemplate
+        conversa={props.conversa}
+        companyId={props.companyId}
+        nomeProprio={props.nomeProprio}
+        avisoDaJanela={props.aviso}
+        onEnviar={enviarTemplate}
+        aoRecusar={(r) => recusaDoEnvio(qc, r)}
+      />
+    );
   }
 
   return (
@@ -499,123 +515,6 @@ function Compositor(props: {
           {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
-    </div>
-  );
-}
-
-function corpoDe(t: TemplateAprovado): string {
-  return String(t.components.find((c) => String(c.type).toUpperCase() === "BODY")?.text ?? "");
-}
-
-function EnviarTemplate(props: {
-  conversa: ConversaDaLista;
-  companyId: string;
-  avisoDaJanela: string | null;
-  nome: string;
-  onEnviar: ReturnType<typeof useServerFn<typeof enviarTemplateWhatsApp>>;
-}) {
-  const qc = useQueryClient();
-  const templates = useTemplatesAprovados(props.companyId);
-  const [escolhido, setEscolhido] = useState<string>("");
-  const [valores, setValores] = useState<Record<number, string>>({});
-  const [enviando, setEnviando] = useState(false);
-
-  const t = (templates.data ?? []).find((x) => `${x.name}|${x.language}` === escolhido) ?? null;
-  const corpo = t ? corpoDe(t) : "";
-  const n = new Set(variaveisDe(corpo)).size;
-  const faltando = Array.from({ length: n }, (_, i) => i + 1).some(
-    (i) => !(valores[i] ?? "").trim(),
-  );
-
-  // Sugere o nome do contato na primeira variável: é o uso mais comum e poupa digitação.
-  useEffect(() => {
-    setValores(n >= 1 ? { 1: props.nome } : {});
-  }, [escolhido, n, props.nome]);
-
-  async function enviar() {
-    if (!t) return;
-    setEnviando(true);
-    try {
-      const mapa: Record<string, string> = {};
-      for (const [k, v] of Object.entries(valores)) mapa[k] = v;
-      const r = await props.onEnviar({
-        data: { conversaId: props.conversa.id, nome: t.name, idioma: t.language, valores: mapa },
-      });
-      if (!r.ok) {
-        recusaDoEnvio(qc, r);
-        return;
-      }
-      toast.success("Template enviado.");
-      setEscolhido("");
-      qc.invalidateQueries({ queryKey: chaves.mensagens(props.conversa.id) });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível enviar.");
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  return (
-    <div className="space-y-3 border-t bg-muted/40 p-3">
-      <p className="flex items-start gap-2 text-xs text-muted-foreground">
-        <Timer className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        {props.avisoDaJanela}
-      </p>
-
-      {templates.isLoading && (
-        <p className="text-sm text-muted-foreground">Carregando templates…</p>
-      )}
-      {!templates.isLoading && (templates.data ?? []).length === 0 && (
-        <p className="text-sm text-destructive">
-          Nenhum template aprovado. Crie e aguarde a aprovação em Configurações › WhatsApp oficial.
-        </p>
-      )}
-
-      {(templates.data ?? []).length > 0 && (
-        <>
-          <select
-            className="w-full rounded-md border bg-background px-2 py-2 text-sm"
-            aria-label="Template"
-            value={escolhido}
-            onChange={(e) => setEscolhido(e.target.value)}
-          >
-            <option value="">Escolha um template…</option>
-            {(templates.data ?? []).map((x) => (
-              <option key={x.id} value={`${x.name}|${x.language}`}>
-                {x.name} · {x.language}
-              </option>
-            ))}
-          </select>
-
-          {t && n > 0 && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {Array.from({ length: n }, (_, i) => i + 1).map((i) => (
-                <input
-                  key={i}
-                  aria-label={`Variável ${i}`}
-                  placeholder={`Valor de {{${i}}}`}
-                  className="rounded-md border bg-background px-2 py-1.5 text-sm"
-                  value={valores[i] ?? ""}
-                  onChange={(e) => setValores((v) => ({ ...v, [i]: e.target.value }))}
-                />
-              ))}
-            </div>
-          )}
-
-          {t && (
-            <div className="rounded-lg bg-background p-3 text-sm whitespace-pre-wrap">
-              {renderizarTexto(corpo, valores) || corpo}
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button onClick={() => void enviar()} disabled={!t || faltando || enviando}>
-              {enviando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Enviar template
-            </Button>
-          </div>
-        </>
-      )}
     </div>
   );
 }

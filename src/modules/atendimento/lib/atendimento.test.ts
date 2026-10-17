@@ -454,3 +454,14 @@ describe("tempo de espera e ordenação", () => {
     expect(ids()).toEqual(["respondida", "nova", "antiga"]);
   });
 });
+
+import { nomeProprioDoContato } from "./conversas";
+describe("nome para sugerir no template", () => {
+  it("usa o nome do lead, depois o do perfil, e NUNCA o telefone", () => {
+    expect(nomeProprioDoContato(conv({ lead: { id: "l", name: "Marina Souza", email: null }, contact: { wa_id: "5527900000001", profile_name: "Mari", opted_out_at: null } }))).toBe("Marina Souza");
+    expect(nomeProprioDoContato(conv({ lead: null, contact: { wa_id: "5527900000001", profile_name: "Mari", opted_out_at: null } }))).toBe("Mari");
+    expect(nomeProprioDoContato(conv({ lead: null, contact: { wa_id: "5527900000001", profile_name: null, opted_out_at: null } }))).toBeNull();
+    expect(nomeProprioDoContato(conv({ lead: { id: "l", name: "   ", email: null }, contact: { wa_id: "5527900000001", profile_name: "  ", opted_out_at: null } }))).toBeNull();
+    expect(nomeProprioDoContato(conv({ lead: null, contact: null }))).toBeNull();
+  });
+});

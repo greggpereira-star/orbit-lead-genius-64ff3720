@@ -1283,3 +1283,26 @@ foco não ganhe).
 **Resultado medido** (conversa, px; menu recolhido): 1280 → **912** (painel fechado) / 612 (aberto);
 1366 → **998**; 1536 → **868** (painel aberto); 1920 → **1252** (painel aberto). Nada cortado em nenhum tamanho;
 celular (375 px) sem rolagem horizontal. 1 566 testes e 33 cenários de ponta a ponta passam.
+
+
+### 15.4 Seletor de template na conversa (17/10/2026)
+
+**Diagnóstico (CRO + UX):** o compositor fora da janela usava um `<select>` nativo: o painel de opções é do sistema
+operacional (translúcido, sem controle de estilo), a barra ocupava a largura inteira da conversa e a escolha não
+mostrava **nada** da mensagem. Mandar o template errado custa dinheiro (categoria cobrada) e qualidade do número.
+
+**Mudança** (`EnviarTemplate.tsx`, `templatesAprovados.ts`):
+- Cartão compacto, centrado (máx. 42rem), em vez de uma barra de ponta a ponta.
+- Seletor próprio: lista **opaca** (fundo branco, opacidade 1, sem desfoque), pesquisável quando há mais de 5, cada
+  item com nome, categoria em português (Utilidade/Marketing), idioma e resumo do texto.
+- **Prévia como o cliente vai ver** (cabeçalho, corpo, rodapé, botões), atualizada ao digitar; `{{n}}` fica à vista
+  enquanto falta valor.
+- Campo de cada variável com a **dica vinda do exemplo dado à Meta** ("ex.: sábado às 10h").
+- Linha de estado ("Falta preencher {{2}}" / "Pronto para enviar. Ctrl+Enter também envia."); botão fixo no rodapé do cartão.
+- Compositor com teto de 60% da altura: no celular ele ocupava quase a tela toda.
+
+**Defeito de conteúdo corrigido:** a primeira variável era sugerida com o nome do contato, mas, sem nome, vinha o
+**telefone** ("Oi +55 (27) 91111-0111!"). Agora só sugere nome de verdade (lead ou perfil do WhatsApp).
+
+**Verificado** (navegador, banco local, Meta falsa): envio de template com 2 variáveis chega com o corpo no formato
+da Meta e fica gravado com o texto já preenchido; celular (375 px) em uma coluna, sem rolagem lateral, botão sempre visível.
