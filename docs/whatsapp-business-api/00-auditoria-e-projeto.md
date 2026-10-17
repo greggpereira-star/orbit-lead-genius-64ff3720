@@ -1203,3 +1203,39 @@ de template e entrega continuam [VERIFICAR] até o número de teste.
 **Achados do ensaio:** (1) as migrações do repositório não reproduzem a produção;
 (2) `META_GRAPH_BASE_URL` só vale para localhost (host externo é ignorado), para
 um engano nunca mandar o token da Meta a outro servidor.
+
+
+### 15.1 Ensaio de ponta a ponta e a tela aberta pela primeira vez (16/10/2026)
+
+Ambiente (`scripts/ensaio-local/subir.sh`): Postgres 16 + **PostgREST real** + gateway que imita
+`/rest/v1`, `/auth/v1` (login falso) e `/storage/v1` + Meta falsa. O app roda com `npm run dev:ensaio`.
+`e2e-wa.mjs` envia webhooks **assinados** à rota real e confere o banco: **31 cenários passam, 0 falham,
+2 lacunas conhecidas**. Prova de mutação: quebrar a verificação de assinatura e o opt-out foi detectado.
+
+**Passou na tela `/whatsapp` (primeira vez aberta num navegador, com sessão e banco):**
+lista de 11 conversas vinda do webhook; envio de texto (corpo e token corretos na Graph API, mensagem
+gravada, conversa atribuída a quem respondeu); status enviado/entregue/lido; **envio bloqueado a quem pediu
+para parar, sem chamada à Meta**; fora da janela de 24 h só template aprovado (o reprovado não aparece);
+template enviado com nome/idioma corretos; criação de template (exige exemplo de cada variável; payload no
+formato da documentação); "Sincronizar" não apaga o que a Meta não devolveu; nota interna com menção
+(não vai à Meta); Seguir; Exportar CSV (3 mensagens, nota fora, autor só do atendente); agendamento
+despachado pelo cron e **agendada para quem pediu para parar falha com motivo, sem envio**; visualizador
+é barrado no servidor ("acesso somente leitura"); celular sem rolagem horizontal.
+
+**Achados (nenhum corrigido nesta rodada):**
+1. **Resposta citada não é gravada**: o parser extrai `replyToWamid`, o processador não preenche
+   `wa_messages.reply_to` (já era backlog; o `payload` guarda o dado).
+2. **Violação/restrição da conta não alerta**: `account_update` só trata PARTNER_REMOVED,
+   ACCOUNT_OFFBOARDED e ACCOUNT_RECONNECTED; o resto é ignorado em silêncio (nomes reais [VERIFICAR]).
+3. **Visualizador vê composer, Resolver e responsável habilitados**; só o servidor barra. A interface
+   deveria desabilitar ou ocultar.
+4. **Contato que pediu para parar não tem aviso na conversa**; o bloqueio só aparece ao tentar enviar.
+5. **Cabeçalho no celular (375 px)**: o botão "Número e templates" cobre o selo "N não lidas".
+6. **Seletor de responsável lista o visualizador** como atribuível.
+7. **Aviso de erro** ("O contato pediu para não receber mensagens.") ficou na tela por mais de um minuto.
+8. **Login ainda diz "Lovable CRM"** (sobra de marca).
+9. **Erro de hidratação** no `AppLayout` (`Trace: {traceId}` aleatório no estado de carregamento): anterior
+   ao módulo, inofensivo.
+
+**Não coberto (limites do ambiente):** realtime (o WebSocket não é simulado: a tela só atualiza ao recarregar),
+Embedded Signup, coexistência real, aprovação real de template, entrega real, e tudo o que for `[VERIFICAR]`.
