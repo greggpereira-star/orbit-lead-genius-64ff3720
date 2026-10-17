@@ -7,6 +7,7 @@
  *   [nosso] o bucket aceita 25 MB; documento é limitado a 20 MB para caber nele.
  */
 
+import { baseDaGraph, META_API_VERSION } from "../../meta-graph.server";
 import type { Referral } from "./payload";
 
 export type TipoDeMidia = "image" | "audio" | "video" | "document" | "sticker";
@@ -179,12 +180,26 @@ export type { Referral };
  */
 const DOMINIOS_DE_MIDIA_DA_META = ["fbsbx.com", "fbcdn.net", "facebook.com", "whatsapp.net"];
 
-export function urlDeMidiaDaMetaEhSegura(valor: string): boolean {
+export function urlDeMidiaDaMetaEhSegura(
+  valor: string,
+  env: Record<string, string | undefined> = process.env,
+): boolean {
   let u: URL;
   try {
     u = new URL(valor);
   } catch {
     return false;
+  }
+  // Ensaio local: com a Graph API desviada para um servidor de mentira em localhost,
+  // aceita SÓ a mesma origem desse servidor. Em produção `META_GRAPH_BASE_URL` não
+  // existe, então a regra abaixo vale sem exceção.
+  const desvio = env.META_GRAPH_BASE_URL;
+  if (desvio && baseDaGraph(env) !== `https://graph.facebook.com/${META_API_VERSION}`) {
+    try {
+      if (u.origin === new URL(desvio).origin) return true;
+    } catch {
+      /* desvio inválido: cai na regra normal */
+    }
   }
   if (u.protocol !== "https:" || u.username || u.password || u.port) return false;
   const host = u.hostname.toLowerCase();

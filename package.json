@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e:fixture": "tsx scripts/e2e-fixture.ts"
+    "e2e:fixture": "tsx scripts/e2e-fixture.ts",
+    "dev:ensaio": "node scripts/ensaio-local/dev.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

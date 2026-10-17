@@ -12,6 +12,7 @@ import {
   extensaoDoMime,
   extrairMidia,
   nomeSeguro,
+  urlDeMidiaDaMetaEhSegura,
 } from "./midia";
 import { processarEvento } from "./processador";
 
@@ -546,5 +547,20 @@ describe("download: a URL da Meta e o teto de leitura", () => {
     expect((await lerCorpoComTeto(pequeno, 100))?.byteLength).toBe(50);
     const declarado = new Response("x", { headers: { "content-length": "5000" } });
     expect(await lerCorpoComTeto(declarado, 100)).toBeNull();
+  });
+});
+
+describe("URL de mídia no ensaio local (desvio da Graph API)", () => {
+  const local = { META_GRAPH_BASE_URL: "http://127.0.0.1:9911/v25.0" };
+  it("aceita só a mesma origem do servidor de mentira", () => {
+    expect(urlDeMidiaDaMetaEhSegura("http://127.0.0.1:9911/baixar/m1", local)).toBe(true);
+    expect(urlDeMidiaDaMetaEhSegura("http://127.0.0.1:9999/baixar/m1", local)).toBe(false);
+    expect(urlDeMidiaDaMetaEhSegura("http://localhost:9911/baixar/m1", local)).toBe(false);
+  });
+  it("sem o desvio (produção), localhost continua recusado", () => {
+    expect(urlDeMidiaDaMetaEhSegura("http://127.0.0.1:9911/baixar/m1", {})).toBe(false);
+  });
+  it("desvio para host externo é ignorado: nenhuma exceção", () => {
+    expect(urlDeMidiaDaMetaEhSegura("https://evil.example/x", { META_GRAPH_BASE_URL: "https://evil.example/v25.0" })).toBe(false);
   });
 });
