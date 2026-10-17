@@ -1258,3 +1258,28 @@ Embedded Signup, coexistência real, aprovação real de template, entrega real,
 Verificação: 1 555 testes e 33 cenários de ponta a ponta passam; mutação nos dois comportamentos novos do
 servidor (citação e alinhamento do opt-out) foi detectada. A tela foi conferida no navegador como visualizador e
 como dono. Os nomes reais dos eventos de conta da Meta seguem **[VERIFICAR]**.
+
+
+### 15.3 Espaço da tela de atendimento: modo foco (17/10/2026)
+
+**Problema medido** (largura da área de conversa, px): em 1366 px, 378; em 1536 px, 392 (menu aberto) ou 440;
+em 1920 px, 440. Duas causas: a grade tinha três colunas fixas (200 + 340 + 300 = 840 px) e a página tinha teto de
+80rem (1280 px). Em 1280/1366 px com o menu aberto a grade passava da área útil e **cortava o painel do contato**.
+Recolher só o menu ganhava 52 px, e nada acima de 1536 px.
+
+**Decisão:** modo foco **no mesmo domínio**, e não um subdomínio (sessão e cookie são por origem; exigiria DNS,
+certificado, nginx, permissão de origem no Supabase e quebraria os atalhos para o CRM, sem ganhar espaço que o modo
+foco não ganhe).
+
+| Mudança | Detalhe |
+| --- | --- |
+| Menu | Recolhe sozinho ao entrar no atendimento e **volta ao estado anterior ao sair** (verificado). Ícones agora distintos: Chat ao vivo = fone de atendimento; WhatsApp = glifo próprio (antes os dois eram o mesmo balão). |
+| Largura | A página sai do teto de 1280 px (`data-largura-total`) e sangra até a borda do conteúdo. |
+| Colunas | Visões saem da coluna lateral e viram **abas numa linha só** acima da lista. Painel do contato **sob demanda** (botão no cabeçalho; aberto de partida só a partir de 1600 px; escolha guardada). Grade `320px + minmax(0,1fr) (+300px)`: a conversa encolhe em vez de empurrar o painel para fora. |
+| Tela cheia | Botão que esconde menu e barra superior (e usa a tela cheia do navegador; Esc sai). Em memória: recarregar ou sair do atendimento volta ao normal. |
+| Lista | Linha compacta (~64 px; cabem cerca de o dobro). **Tempo de espera** no lugar da data (cinza < 15 min, âmbar < 1 h, vermelho a partir de 1 h) e ordenação "Maior espera" (quem espera há mais tempo primeiro). Responsável só pelas iniciais; some o "sem responsável" repetido. |
+| Acabamento | Cabeçalho duplo vira uma barra só na coluna da lista; placeholder do composer encurtado. |
+
+**Resultado medido** (conversa, px; menu recolhido): 1280 → **912** (painel fechado) / 612 (aberto);
+1366 → **998**; 1536 → **868** (painel aberto); 1920 → **1252** (painel aberto). Nada cortado em nenhum tamanho;
+celular (375 px) sem rolagem horizontal. 1 566 testes e 33 cenários de ponta a ponta passam.

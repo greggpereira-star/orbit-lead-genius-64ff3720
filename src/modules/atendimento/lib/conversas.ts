@@ -70,7 +70,14 @@ const naoResolvida = (c: ConversaDaLista) => c.status !== "resolved";
 /** "Minhas" = comigo e em aberto. "Fila" = ninguém pegou ainda. */
 export function filtrarConversas(
   lista: ConversaDaLista[],
-  p: { filtro: Filtro; userId: string | null; busca?: string } & ConjuntosPessoais,
+  p: {
+    filtro: Filtro;
+    userId: string | null;
+    busca?: string;
+    /** `espera`: quem espera há mais tempo primeiro. Padrão: mais recente primeiro. */
+    ordem?: OrdemDaLista;
+    agora?: Date;
+  } & ConjuntosPessoais,
 ): ConversaDaLista[] {
   const q = (p.busca ?? "").trim().toLowerCase();
   const digitos = q.replace(/\D/g, "");
@@ -105,11 +112,40 @@ export function filtrarConversas(
       );
     })
     .sort((a, b) => {
+      if (p.ordem === "espera") {
+        // Quem espera resposta vem antes, do que espera há mais tempo ao mais recente.
+        const ea = esperaDe(a, p.agora);
+        const eb = esperaDe(b, p.agora);
+        if (ea && eb) return eb.minutos - ea.minutos;
+        if (ea) return -1;
+        if (eb) return 1;
+      }
       // Mais recente primeiro; sem mensagem vai para o fim.
       const ta = a.last_message_at ? Date.parse(a.last_message_at) : 0;
       const tb = b.last_message_at ? Date.parse(b.last_message_at) : 0;
       return tb - ta;
     });
+}
+
+export type OrdemDaLista = "recentes" | "espera";
+
+export type NivelDeEspera = "ok" | "atencao" | "critico";
+
+/**
+ * Há quanto tempo o cliente espera resposta (só se espera de fato: ele escreveu por
+ * último, a janela está aberta e a conversa não está resolvida). É a medida que
+ * importa para a venda; a data da última mensagem não diz isso.
+ */
+export function esperaDe(
+  c: ConversaDaLista,
+  agora: Date = new Date(),
+): { minutos: number; texto: string; nivel: NivelDeEspera } | null {
+  if (!aguardandoResposta(c, agora) || !c.last_inbound_at) return null;
+  const minutos = Math.max(0, Math.floor((agora.getTime() - Date.parse(c.last_inbound_at)) / 60_000));
+  const texto =
+    minutos < 1 ? "agora" : minutos < 60 ? `${minutos} min` : `${Math.floor(minutos / 60)} h`;
+  const nivel: NivelDeEspera = minutos < 15 ? "ok" : minutos < 60 ? "atencao" : "critico";
+  return { minutos, texto, nivel };
 }
 
 export function contarPorFiltro(

@@ -89,8 +89,8 @@ export function MenuDaConversa(props: {
         <DropdownMenuItem onSelect={props.onPesquisar}>
           <Search className="mr-2 h-4 w-4" /> Pesquisar na conversa
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={props.onInformacoes} className="xl:hidden">
-          <Info className="mr-2 h-4 w-4" /> Ver informações
+        <DropdownMenuItem onSelect={props.onInformacoes}>
+          <Info className="mr-2 h-4 w-4" /> Informações do contato
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={props.onCopiarNumero}>
           <Copy className="mr-2 h-4 w-4" /> Copiar número

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/design-system/components/AppSidebar';
+import { useTelaCheia } from '@/lib/modoFoco';
 import { Topbar } from '@/design-system/components/Topbar';
 import { CommandPalette } from '@/design-system/components/CommandPalette';
 import { tracker } from '@/core/tracking/tracker';
@@ -13,6 +14,7 @@ import { logger } from '@/core/observability/logger';
 export function AppLayout() {
    const { state, company, membership, user, logout, refreshContext, error, traceId } = useAuth();
   const router = useRouter();
+  const telaCheia = useTelaCheia();
   const [retryCount, setRetryCount] = useState(0);
 
    const needsLogin = state === 'UNAUTHENTICATED';
@@ -163,7 +165,7 @@ export function AppLayout() {
 
    return (
      <SidebarProvider>
-       <AppSidebar />
+       {!telaCheia && <AppSidebar />}
         {/* O shell é dono da altura da janela, e quem rola é o <main>.
             Antes era `min-h-screen` com o <main> crescendo livre, e cada página
             que quisesse ocupar a tela inteira precisava adivinhar quanto
@@ -172,7 +174,7 @@ export function AppLayout() {
             dele — era a segunda barra de rolagem. Com a altura presa aqui,
             `h-full` numa página passa a significar o que parece significar. */}
         <SidebarInset className="relative z-0 flex h-dvh flex-col overflow-hidden pointer-events-auto">
-          <Topbar />
+          {!telaCheia && <Topbar />}
           <main className="sup-tonal flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
             {/* A medida de 80rem serve texto, não um board de sete colunas de
                 20rem — num monitor grande ela escondia três etapas sem motivo.

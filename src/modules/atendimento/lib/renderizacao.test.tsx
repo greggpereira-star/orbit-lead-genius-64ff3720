@@ -51,8 +51,41 @@ describe("ListaDeConversas (renderizada)", () => {
     expect(html).toContain("Ana Souza");
     expect(html).toContain("Quero um orçamento");
     expect(html).toContain("2 não lidas");
-    expect(html).toContain("aguardando resposta");
-    expect(html).toContain("sem responsável");
+    // O cliente espera: a linha mostra HÁ QUANTO TEMPO, não só a data.
+    expect(html).toMatch(/Aguardando resposta há (agora|\d+ min|\d+ h)/);
+    // "sem responsável" em toda linha era ruído: a Fila já mostra quem ninguém pegou.
+    expect(html).not.toContain("sem responsável");
+  });
+
+  it("mostra o responsável pelas iniciais, só quando existe", () => {
+    const c = { ...base, assigned_to: "u1" };
+    const html = renderToStaticMarkup(
+      <ListaDeConversas {...props} conversas={[c]} atendentes={{ u1: "Aline Atendente" }} />,
+    );
+    expect(html).toContain("Responsável: Aline Atendente");
+    expect(renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />)).not.toContain("Responsável:");
+  });
+
+  it("as visões são abas numa linha só, sempre visíveis (sem coluna lateral)", () => {
+    const html = renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />);
+    expect(html).toContain('aria-label="Filtrar conversas"');
+    expect(html).not.toContain("xl:hidden");
+    expect(html).toContain("overflow-x-auto");
+  });
+
+  it("a ordenação só aparece quando a tela a oferece, e marca a escolhida", () => {
+    expect(renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />)).not.toContain("Maior espera");
+    const html = renderToStaticMarkup(
+      <ListaDeConversas {...props} conversas={[base]} ordem="espera" onOrdem={() => {}} />,
+    );
+    expect(html).toContain("Recentes");
+    expect(html).toContain("Maior espera");
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+  });
+
+  it("o topo da coluna é de quem monta a tela (título, tela cheia…)", () => {
+    const html = renderToStaticMarkup(<ListaDeConversas {...props} conversas={[]} topo={<h1>Topo de teste</h1>} />);
+    expect(html.indexOf("Topo de teste")).toBeLessThan(html.indexOf("Buscar conversas"));
   });
 
   it("opt-out aparece na lista", () => {
@@ -115,30 +148,6 @@ describe("ConectarPrimeiro", () => {
     expect(html).toContain("Conectar número do WhatsApp Business");
     expect(html).toContain("Usar a conexão antiga (QR code)");
     expect(html.indexOf("Conectar número")).toBeLessThan(html.indexOf("conexão antiga"));
-  });
-});
-
-describe("VisoesDoInbox", () => {
-  it("lista as visões com a contagem e marca a ativa", async () => {
-    const { VisoesDoInbox } = await import("../components/VisoesDoInbox");
-    const html = renderToStaticMarkup(
-      <VisoesDoInbox
-        filtro="minhas"
-        contagens={{
-          entrada: 7,
-          minhas: 3,
-          seguindo: 1,
-          mencoes: 2,
-          fila: 2,
-          todas: 9,
-          resolvidas: 2,
-        }}
-        onFiltro={() => {}}
-      />,
-    );
-    for (const t of ["Entrada", "Minhas", "Seguindo", "Menções", "Não atribuídas", "Resolvidas"])
-      expect(html).toContain(t);
-    expect(html.match(/aria-current="true"/g)).toHaveLength(1);
   });
 });
 

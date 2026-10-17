@@ -479,7 +479,7 @@ function Compositor(props: {
           rows={1}
           value={texto}
           disabled={enviando}
-          placeholder={`Responder ${props.nome}… ( / para respostas rápidas)`}
+          placeholder="Responder… ( / respostas rápidas)"
           aria-label="Mensagem"
           className="max-h-40 min-h-[40px] resize-none"
           onChange={(e) => setTexto(e.target.value)}

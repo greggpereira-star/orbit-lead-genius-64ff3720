@@ -420,3 +420,37 @@ describe("citação de resposta", () => {
     expect(citacaoDe(resp, [img, resp])!.texto).toMatch(/Imagem/i);
   });
 });
+
+import { esperaDe } from "./conversas";
+describe("tempo de espera e ordenação", () => {
+  const agora = new Date("2026-10-17T15:00:00Z");
+  const min = (m: number) => new Date(agora.getTime() - m * 60_000).toISOString();
+  const c = (o: Partial<ConversaDaLista>): ConversaDaLista => conv({ unread_agent: 1, last_inbound_at: min(5), last_message_at: min(5), ...o });
+
+  it("só há espera quando o cliente escreveu por último e a janela está aberta", () => {
+    expect(esperaDe(c({ last_inbound_at: min(5) }), agora)).toMatchObject({ minutos: 5, texto: "5 min", nivel: "ok" });
+    expect(esperaDe(c({ unread_agent: 0 }), agora)).toBeNull();
+    expect(esperaDe(c({ status: "resolved" }), agora)).toBeNull();
+    expect(esperaDe(c({ last_inbound_at: min(60 * 25) }), agora)).toBeNull();
+    expect(esperaDe(c({ last_inbound_at: null }), agora)).toBeNull();
+  });
+  it("texto e nível crescem com a espera", () => {
+    expect(esperaDe(c({ last_inbound_at: min(0) }), agora)?.texto).toBe("agora");
+    expect(esperaDe(c({ last_inbound_at: min(14) }), agora)?.nivel).toBe("ok");
+    expect(esperaDe(c({ last_inbound_at: min(15) }), agora)?.nivel).toBe("atencao");
+    expect(esperaDe(c({ last_inbound_at: min(59) }), agora)?.nivel).toBe("atencao");
+    expect(esperaDe(c({ last_inbound_at: min(60) }), agora)).toMatchObject({ texto: "1 h", nivel: "critico" });
+    expect(esperaDe(c({ last_inbound_at: min(150) }), agora)?.texto).toBe("2 h");
+  });
+  it("ordem 'espera': quem espera há mais tempo primeiro; os que não esperam vão depois, por recência", () => {
+    const antiga = c({ id: "antiga", last_inbound_at: min(120), last_message_at: min(120) });
+    const nova = c({ id: "nova", last_inbound_at: min(3), last_message_at: min(3) });
+    const respondida = c({ id: "respondida", unread_agent: 0, last_message_at: min(1) });
+    const ids = (o?: "espera" | "recentes") =>
+      filtrarConversas([nova, respondida, antiga], { filtro: "entrada", userId: null, ordem: o, agora }).map((x) => x.id);
+    expect(ids("espera")).toEqual(["antiga", "nova", "respondida"]);
+    // Sem a opção, o comportamento de antes (mais recente primeiro) não muda.
+    expect(ids("recentes")).toEqual(["respondida", "nova", "antiga"]);
+    expect(ids()).toEqual(["respondida", "nova", "antiga"]);
+  });
+});

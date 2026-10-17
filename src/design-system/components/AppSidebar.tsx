@@ -7,7 +7,7 @@ import {
   BarChart3,
   Settings,
   Zap,
-  MessageSquare,
+  Headset,
   Monitor,
   ShieldCheck,
   Sparkles,
@@ -41,6 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { WhatsAppIcon } from './WhatsAppIcon';
 import { useInboxNotifications } from '@/modules/chat/hooks/useInboxNotifications';
 
 interface MenuItem {
@@ -77,8 +78,8 @@ const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
     label: 'Atendimento',
     accent: '',
     items: [
-      { title: 'Chat ao vivo', icon: MessageSquare, to: '/inbox', notify: 'inbox' },
-      { title: 'WhatsApp', icon: MessageSquare, to: '/whatsapp' },
+      { title: 'Chat ao vivo', icon: Headset, to: '/inbox', notify: 'inbox' },
+      { title: 'WhatsApp', icon: WhatsAppIcon, to: '/whatsapp' },
     ],
   },
   {
