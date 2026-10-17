@@ -27,11 +27,24 @@ describe("menu recolhido: botão, borda e cabeçalho", () => {
   const fonte = readFileSync("src/design-system/components/AppSidebar.tsx", "utf8");
   const topbar = readFileSync("src/design-system/components/Topbar.tsx", "utf8");
 
-  it("há um botão de reduzir/ampliar, com nome acessível, estado e o atalho à vista", () => {
-    expect(fonte).toContain("onClick={toggleSidebar}");
+  it("a alça de reduzir/ampliar fica na borda do menu, com nome acessível, estado e o atalho na dica", () => {
+    expect(fonte).toContain("function AlcaDoMenu(");
+    expect(fonte).toContain("onClick={onAlternar}");
+    expect(fonte).toContain("<AlcaDoMenu recolhido={recolhido} onAlternar={toggleSidebar} />");
     expect(fonte).toMatch(/aria-label=\{recolhido \? 'Ampliar menu' : 'Reduzir menu'\}/);
     expect(fonte).toContain("aria-expanded={!recolhido}");
     expect(fonte).toContain("Ctrl+B");
+    // Meio da borda direita, metade para fora do menu.
+    expect(fonte).toContain("absolute right-0 top-1/2");
+    expect(fonte).toContain("-translate-y-1/2 translate-x-1/2");
+  });
+  it("não sobra a linha 'Reduzir menu' no rodapé (era item de navegação falso)", () => {
+    expect(fonte).not.toContain("<span className=\"flex-1\">Reduzir menu</span>");
+  });
+  it("o bloco do usuário tem altura para as duas linhas (antes 'Ver configurações' era cortada)", () => {
+    const rodape = fonte.slice(fonte.indexOf("<SidebarFooter"));
+    expect(rodape).toContain('size="lg"');
+    expect(rodape).toContain("pb-3");
   });
   it("a borda do menu também alterna (SidebarRail), em vez de ficar sem uso", () => {
     expect(fonte).toContain("<SidebarRail />");
@@ -43,8 +56,8 @@ describe("menu recolhido: botão, borda e cabeçalho", () => {
   it("o botão da empresa tem nome acessível mesmo com o texto escondido", () => {
     expect(fonte).toContain("aria-label={`Empresa ${company?.name || 'Workspace'}`}");
   });
-  it("o botão de reduzir não aparece no celular (lá o menu é uma gaveta)", () => {
-    expect(fonte).toContain("{!isMobile && (");
+  it("a alça não aparece no celular (lá o menu é uma gaveta)", () => {
+    expect(fonte).toContain("{!isMobile && <AlcaDoMenu");
   });
   it("no celular a barra superior tem o botão que abre a gaveta (antes nada a abria)", () => {
     expect(topbar).toContain("isMobile && (");

@@ -12,8 +12,8 @@ import {
   ShieldCheck,
   Sparkles,
   Share2,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Building2,
   LogOut,
@@ -46,6 +46,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { WhatsAppIcon } from './WhatsAppIcon';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useInboxNotifications } from '@/modules/chat/hooks/useInboxNotifications';
 
 interface MenuItem {
@@ -104,6 +106,49 @@ const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
     ],
   },
 ];
+
+/**
+ * Alça para reduzir/ampliar o menu: um botão redondo no meio da borda direita, meio dentro e meio
+ * fora do menu (o padrão do Linear e do Vercel). Antes era uma linha "Reduzir menu" no rodapé,
+ * que disputava espaço com o usuário e parecia um item de navegação. O atalho Ctrl+B aparece na dica.
+ * 22 px: a metade que invade o conteúdo (11 px) cabe no recuo das telas, sem cobrir nada.
+ */
+function AlcaDoMenu({ recolhido, onAlternar }: { recolhido: boolean; onAlternar: () => void }) {
+  const rotulo = recolhido ? 'Ampliar menu' : 'Reduzir menu';
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onAlternar}
+            aria-label={recolhido ? 'Ampliar menu' : 'Reduzir menu'}
+            aria-expanded={!recolhido}
+            className={cn(
+              'absolute right-0 top-1/2 z-30 flex h-[22px] w-[22px] -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full',
+              'border border-sidebar-border bg-background text-muted-foreground',
+              'shadow-[0_1px_2px_rgb(15_23_42/0.06),0_6px_14px_-6px_rgb(15_23_42/0.18)]',
+              'opacity-80 transition-all duration-200 ease-out',
+              'hover:scale-110 hover:border-primary/40 hover:text-primary hover:opacity-100 hover:shadow-md',
+              'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+              'active:scale-95',
+            )}
+          >
+            {recolhido ? (
+              <ChevronRight className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+            ) : (
+              <ChevronLeft className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={14} className="flex items-center gap-2">
+          {rotulo}
+          <kbd className="rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">Ctrl+B</kbd>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 function isActivePath(pathname: string, to: string): boolean {
   return pathname === to || pathname.startsWith(to + '/');
@@ -200,33 +245,28 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="gap-1 border-t border-sidebar-border/60 px-3 pb-3 pt-2 group-data-[collapsible=icon]:px-2">
         <SidebarMenu>
-          {!isMobile && (
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip={recolhido ? 'Ampliar menu (Ctrl+B)' : 'Reduzir menu (Ctrl+B)'}
-                onClick={toggleSidebar}
-                aria-expanded={!recolhido}
-                aria-label={recolhido ? 'Ampliar menu' : 'Reduzir menu'}
-              >
-                {recolhido ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                <span className="flex-1">Reduzir menu</span>
-                <kbd className="rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  Ctrl+B
-                </kbd>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Ver configurações" className="group-data-[collapsible=icon]:!p-1">
+            {/* `size="lg"` (48 px): com a altura padrão (32 px) as duas linhas de texto não cabiam e
+                "Ver configurações" era cortada pelo overflow do botão. */}
+            <SidebarMenuButton
+              asChild
+              size="lg"
+              tooltip="Ver configurações"
+              className="gap-3 rounded-lg px-2 group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:justify-center"
+            >
               <Link to="/settings" activeOptions={{ exact: false }}>
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-[10px]">{userInitials}</AvatarFallback>
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="bg-[var(--superficie-tonal)] text-xs font-semibold">
+                    {userInitials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                  <p className="text-sm font-medium truncate">{user?.name || user?.email}</p>
-                  <p className="text-xs text-muted-foreground truncate">Ver configurações</p>
+                  <p className="truncate text-sm font-medium leading-tight">{user?.name || user?.email}</p>
+                  <p className="mt-0.5 truncate text-[11px] font-normal leading-tight text-muted-foreground">
+                    Ver configurações
+                  </p>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -234,6 +274,7 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
+      {!isMobile && <AlcaDoMenu recolhido={recolhido} onAlternar={toggleSidebar} />}
     </Sidebar>
   );
 }
