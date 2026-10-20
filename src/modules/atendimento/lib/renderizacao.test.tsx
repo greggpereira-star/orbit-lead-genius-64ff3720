@@ -285,3 +285,12 @@ describe("conexão manual", () => {
     expect(f).not.toMatch(/return[^;]*data\.token/);
   });
 });
+
+describe("conexão manual com número já conectado", () => {
+  it("a configuração oferece a conexão manual também quando já há número (antes sumia)", () => {
+    const fonte = readFileSync("src/routes/_app.settings.whatsapp.tsx", "utf8");
+    expect(fonte).toMatch(/numeros\.length > 0 && <ConexaoManual/);
+    // E o caminho de quando não há número continua.
+    expect(fonte).toMatch(/numeros\.length === 0 &&/);
+  });
+});

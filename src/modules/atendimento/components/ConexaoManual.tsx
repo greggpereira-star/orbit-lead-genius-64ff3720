@@ -45,7 +45,7 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
         onClick={() => setAberto((v) => !v)}
         className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium"
       >
-        Avançado: conexão manual (número de teste)
+        Avançado: conexão manual (número de teste ou outra conta)
         <ChevronDown className={cn("h-4 w-4 transition-transform", aberto && "rotate-180")} />
       </button>
       {aberto && (
