@@ -144,7 +144,7 @@ export function Conversa(props: {
   }, [conversa.id, conversa.unread_agent, props.companyId, qc]);
 
   return (
-    <section className="flex min-h-0 flex-col">
+    <section className="flex min-h-0 flex-1 flex-col">
       {props.cabecalho}
 
       <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-5 py-2 text-xs">

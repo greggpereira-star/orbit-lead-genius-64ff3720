@@ -58,6 +58,13 @@ import { Conversa } from "./Conversa";
 import { ListaDeConversas } from "./ListaDeConversas";
 import { PainelDoLead } from "./PainelDoLead";
 
+/**
+ * Cada coluna (lista, conversa, contato) é um painel próprio sobre o fundo da tela: borda
+ * fina, canto arredondado e espaço entre elas. Antes as três eram faixas coladas uma na
+ * outra e no menu, sem nada que dissesse onde uma termina e a outra começa.
+ */
+const PAINEL = "min-h-0 overflow-hidden rounded-2xl border bg-background shadow-sm";
+
 export function Atendimento({
   companyId,
   userId,
@@ -329,8 +336,8 @@ export function Atendimento({
     <div
       data-largura-total
       className={cn(
-        // Sangra até a borda do conteúdo: o atendimento aproveita o padding da página.
-        "-m-4 flex min-h-0 flex-col md:-m-6",
+        // Sangra até a borda do conteúdo e pinta o fundo sobre o qual os painéis flutuam.
+        "-m-4 flex min-h-0 flex-col bg-muted/40 md:-m-6",
         telaCheia ? "h-dvh" : "h-[calc(100dvh-4rem)]",
       )}
     >
@@ -343,11 +350,11 @@ export function Atendimento({
       <div
         className={cn(
           // `minmax(0, 1fr)`: a conversa encolhe em vez de empurrar o painel para fora da tela.
-          "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[352px_minmax(0,1fr)]",
+          "grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 md:gap-4 md:p-4 lg:grid-cols-[352px_minmax(0,1fr)]",
           painelInline && "xl:grid-cols-[352px_minmax(0,1fr)_320px]",
         )}
       >
-        <div className={ativa ? "hidden min-h-0 lg:flex lg:flex-col" : "flex min-h-0 flex-col"}>
+        <div className={cn(PAINEL, ativa ? "hidden lg:flex lg:flex-col" : "flex flex-col")}>
           <ListaDeConversas
             conversas={visiveis}
             carregando={conversas.isLoading}
@@ -368,7 +375,7 @@ export function Atendimento({
 
         {ativa ? (
           <>
-            <div className="flex min-h-0 flex-col">
+            <div className={cn(PAINEL, "flex flex-col")}>
               <Conversa
                 key={ativa.id}
                 conversa={ativa}
@@ -563,7 +570,12 @@ export function Atendimento({
             </Sheet>
           </>
         ) : (
-          <div className="hidden flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground lg:flex">
+          <div
+            className={cn(
+              PAINEL,
+              "hidden flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground lg:flex",
+            )}
+          >
             <WhatsAppIcon className="h-12 w-12 opacity-30" />
             <p className="text-sm">Escolha uma conversa para atender.</p>
           </div>

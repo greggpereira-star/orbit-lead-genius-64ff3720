@@ -121,7 +121,7 @@ export function PainelDoLead({
     <aside
       className={cn(
         "min-h-0 min-w-0 flex-col overflow-y-auto overflow-x-hidden",
-        emSheet ? "flex" : "hidden border-l xl:flex",
+        emSheet ? "flex" : "hidden rounded-2xl border bg-background shadow-sm xl:flex",
       )}
     >
       <div className="flex flex-col items-center gap-2 p-5 text-center">

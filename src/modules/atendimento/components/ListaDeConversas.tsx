@@ -65,7 +65,7 @@ export function ListaDeConversas(props: {
 }) {
   const ordem = props.ordem ?? "recentes";
   return (
-    <aside className="flex min-h-0 min-w-0 flex-col border-r">
+    <aside className="flex min-h-0 min-w-0 flex-1 flex-col">
       {props.topo}
       <div className="space-y-3 border-b px-4 py-3">
         <div className="relative">
