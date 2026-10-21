@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
+  AtSign,
   Ban,
   ChevronDown,
   ExternalLink,
@@ -16,6 +17,14 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { criarNotaWhatsApp, listarAtendentesWhatsApp } from "@/lib/whatsapp-atendimento.functions";
 import { cn } from "@/lib/utils";
@@ -46,12 +55,12 @@ function Secao(props: {
         type="button"
         aria-expanded={aberta}
         onClick={() => setAberta((v) => !v)}
-        className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium hover:bg-muted/40"
+        className="flex w-full items-center gap-2.5 px-5 py-3.5 text-left text-sm font-semibold hover:bg-muted/40"
       >
         <span className="text-muted-foreground">{props.icone}</span>
         <span className="flex-1">{props.titulo}</span>
         {!aberta && props.resumo && (
-          <span className="max-w-[110px] truncate text-xs font-normal text-muted-foreground">
+          <span className="max-w-[120px] truncate text-xs font-normal text-muted-foreground">
             {props.resumo}
           </span>
         )}
@@ -62,15 +71,15 @@ function Secao(props: {
           )}
         />
       </button>
-      {aberta && <div className="space-y-2 px-4 pb-4 text-xs">{props.children}</div>}
+      {aberta && <div className="space-y-3 px-5 pb-5 text-sm">{props.children}</div>}
     </section>
   );
 }
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <span className="text-muted-foreground">{rotulo}</span>
+    <div className="flex items-start justify-between gap-4">
+      <span className="shrink-0 text-muted-foreground">{rotulo}</span>
       <span className="min-w-0 break-words text-right font-medium">{valor}</span>
     </div>
   );
@@ -109,7 +118,7 @@ export function PainelDoLead({
         <AvatarDoContato conversa={conversa} className="h-16 w-16 text-xl" />
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold">{nome}</div>
-          <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">{fone}</div>
+          <div className="mt-0.5 text-sm tabular-nums text-muted-foreground">{fone}</div>
         </div>
         {waId && (
           <div className="flex gap-2 pt-1">
@@ -135,7 +144,7 @@ export function PainelDoLead({
       </div>
 
       {conversa.contact?.opted_out_at && (
-        <div className="mx-4 mb-3 flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-xs text-destructive">
+        <div className="mx-5 mb-4 flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           Pediu para não receber mensagens em{" "}
           {new Date(conversa.contact.opted_out_at).toLocaleDateString("pt-BR")}. Nenhum envio é
@@ -159,7 +168,7 @@ export function PainelDoLead({
           resumo={l?.stage?.name ?? null}
         >
           {!conversa.lead ? (
-            <p className="rounded-md bg-muted/60 p-3 text-muted-foreground">
+            <p className="rounded-lg bg-muted/60 p-3.5 leading-relaxed text-muted-foreground">
               Este contato ainda não está ligado a um lead. Quando o telefone coincidir com um lead,
               o vínculo é feito automaticamente na próxima mensagem.
             </p>
@@ -192,7 +201,7 @@ export function PainelDoLead({
           >
             <div className="flex flex-wrap gap-1">
               {l!.tags.map((t) => (
-                <span key={t.tag_name} className="rounded-full bg-muted px-2 py-0.5">
+                <span key={t.tag_name} className="rounded-full bg-muted px-2.5 py-1 text-xs">
                   {t.tag_name}
                 </span>
               ))}
@@ -256,77 +265,124 @@ function Notas({
     }
   }
 
+  const opcoes = (atendentes.data ?? []).filter((a) => !mencionar.includes(a.id));
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5 text-xs font-medium">
-        <StickyNote className="h-3.5 w-3.5" /> Notas internas
-        <span className="font-normal text-muted-foreground">· não vão ao cliente</span>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-baseline gap-x-1.5 text-sm font-medium">
+        Notas internas
+        <span className="text-xs font-normal text-muted-foreground">· não vão ao cliente</span>
       </div>
-      <ul className="space-y-1.5">
-        {(notas.data ?? []).map((n) => (
-          <li
-            key={n.id}
-            className="whitespace-pre-wrap rounded-md bg-[var(--aviso)]/10 p-2 text-xs"
-          >
-            {n.body}
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              {new Date(n.created_at).toLocaleString("pt-BR", {
-                dateStyle: "short",
-                timeStyle: "short",
-              })}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {(notas.data ?? []).length > 0 && (
+        <ul className="space-y-2">
+          {(notas.data ?? []).map((n) => (
+            <li
+              key={n.id}
+              className="whitespace-pre-wrap rounded-lg bg-[var(--aviso)]/10 p-3 text-sm"
+            >
+              {n.body}
+              <div className="mt-1.5 text-xs text-muted-foreground">
+                {new Date(n.created_at).toLocaleString("pt-BR", {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
       <Textarea
-        rows={2}
+        rows={3}
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Escreva uma nota para a equipe…"
         aria-label="Nova nota interna"
-        className="text-xs"
+        className="min-h-[84px] resize-y text-sm"
         disabled={somenteLeitura}
       />
-      <div className="flex flex-wrap items-center gap-1">
-        {mencionar.map((id) => (
-          <button
-            key={id}
-            type="button"
-            title="Tirar menção"
-            onClick={() => setMencionar((m) => m.filter((x) => x !== id))}
-            className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
-          >
-            @{nomeDe(id)} ×
-          </button>
-        ))}
-        <select
-          aria-label="Mencionar colega"
-          className="rounded-md border bg-background px-1.5 py-1 text-[11px]"
-          disabled={somenteLeitura}
-          value=""
-          onChange={(e) => {
-            const id = e.target.value;
-            if (id) setMencionar((m) => (m.includes(id) || m.length >= 10 ? m : [...m, id]));
-          }}
+      {mencionar.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {mencionar.map((id) => (
+            <button
+              key={id}
+              type="button"
+              title="Tirar menção"
+              onClick={() => setMencionar((m) => m.filter((x) => x !== id))}
+              className="inline-flex h-7 items-center gap-1 rounded-full bg-primary/10 px-2.5 text-xs font-medium text-primary hover:bg-primary/15"
+            >
+              @{nomeDe(id)} <span aria-hidden>×</span>
+              <span className="sr-only">tirar menção</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Menção e salvar na MESMA linha: o botão principal nunca fica escondido atrás de uma lista. */}
+      <div className="flex items-center justify-between gap-2">
+        <MencionarColega
+          opcoes={opcoes}
+          desabilitado={somenteLeitura || mencionar.length >= 10}
+          onEscolher={(id) => setMencionar((m) => (m.includes(id) ? m : [...m, id]))}
+        />
+        <Button
+          size="sm"
+          className="h-9 px-4"
+          disabled={somenteLeitura || salvando || !texto.trim()}
+          onClick={() => void salvar()}
         >
-          <option value="">@ Mencionar…</option>
-          {(atendentes.data ?? [])
-            .filter((a) => !mencionar.includes(a.id))
-            .map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nome}
-              </option>
-            ))}
-        </select>
+          {salvando ? "Salvando…" : "Salvar nota"}
+        </Button>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={somenteLeitura || salvando || !texto.trim()}
-        onClick={() => void salvar()}
-      >
-        Salvar nota
-      </Button>
     </div>
+  );
+}
+
+/** Lista de colegas para marcar na nota: busca, rolagem e fundo opaco (o seletor nativo cortava). */
+function MencionarColega(props: {
+  opcoes: Array<{ id: string; nome: string }>;
+  desabilitado?: boolean;
+  onEscolher: (id: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <Popover open={aberto} onOpenChange={setAberto}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 px-3"
+          disabled={props.desabilitado}
+          aria-label="Mencionar colega"
+        >
+          <AtSign className="h-4 w-4" /> Mencionar
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="top"
+        sideOffset={8}
+        className="w-64 overflow-hidden rounded-xl bg-popover p-0 shadow-xl ring-1 ring-border"
+      >
+        <Command>
+          {props.opcoes.length > 5 && <CommandInput placeholder="Buscar colega…" />}
+          <CommandList className="max-h-64 p-1.5">
+            <CommandEmpty>Nenhum colega para marcar.</CommandEmpty>
+            {props.opcoes.map((a) => (
+              <CommandItem
+                key={a.id}
+                value={a.nome}
+                className="min-h-9 text-sm"
+                onSelect={() => {
+                  props.onEscolher(a.id);
+                  setAberto(false);
+                }}
+              >
+                {a.nome}
+              </CommandItem>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -186,7 +186,8 @@ export function Atendimento({
 
   const filtroAtual: Filtro = filtro ?? "entrada";
   const visiveis = useMemo(
-    () => filtrarConversas(lista, { filtro: filtroAtual, userId, busca, ordem, agora, ...pessoais }),
+    () =>
+      filtrarConversas(lista, { filtro: filtroAtual, userId, busca, ordem, agora, ...pessoais }),
     [lista, filtroAtual, userId, busca, ordem, agora, pessoais],
   );
   const ativa = lista.find((c) => c.id === ativaId) ?? null;
@@ -308,7 +309,9 @@ export function Atendimento({
           className="h-8 w-8"
           onClick={alternarTelaCheia}
           aria-label={telaCheia ? "Sair da tela cheia" : "Tela cheia"}
-          title={telaCheia ? "Sair da tela cheia" : "Tela cheia (esconde o menu e a barra superior)"}
+          title={
+            telaCheia ? "Sair da tela cheia" : "Tela cheia (esconde o menu e a barra superior)"
+          }
         >
           {telaCheia ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </Button>
@@ -339,8 +342,8 @@ export function Atendimento({
       <div
         className={cn(
           // `minmax(0, 1fr)`: a conversa encolhe em vez de empurrar o painel para fora da tela.
-          "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]",
-          painelInline && "xl:grid-cols-[320px_minmax(0,1fr)_300px]",
+          "grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[352px_minmax(0,1fr)]",
+          painelInline && "xl:grid-cols-[352px_minmax(0,1fr)_320px]",
         )}
       >
         <div className={ativa ? "hidden min-h-0 lg:flex lg:flex-col" : "flex min-h-0 flex-col"}>
@@ -373,7 +376,7 @@ export function Atendimento({
                 onReabrir={() => aoMudarStatus.mutate({ conversaId: ativa.id, status: "open" })}
                 cabecalho={
                   <>
-                    <div className="flex items-center gap-2 border-b px-3 py-2">
+                    <div className="flex items-center gap-2 border-b px-4 py-2.5">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -387,7 +390,7 @@ export function Atendimento({
                         <div className="flex items-center gap-2">
                           <span className="truncate font-medium">{nomeDaConversa(ativa)}</span>
                           {ativa.status === "pending" && (
-                            <span className="shrink-0 rounded bg-[var(--aviso)]/15 px-1.5 text-[10px] font-medium text-[var(--aviso)]">
+                            <span className="shrink-0 rounded bg-[var(--aviso)]/15 px-2 py-0.5 text-[11px] font-medium text-[var(--aviso)]">
                               pendente
                             </span>
                           )}
@@ -395,7 +398,7 @@ export function Atendimento({
                       </div>
                       <select
                         aria-label="Responsável"
-                        className="max-w-[170px] rounded-md border bg-background px-2 py-1.5 text-sm"
+                        className="h-9 max-w-[190px] rounded-md border bg-background px-2.5 text-sm"
                         value={ativa.assigned_to ?? ""}
                         disabled={aoAtribuir.isPending || somenteLeitura}
                         onChange={(e) =>
@@ -440,8 +443,12 @@ export function Atendimento({
                         size="icon"
                         className="hidden xl:inline-flex"
                         onClick={alternarPainel}
-                        aria-label={painelInline ? "Ocultar painel do contato" : "Mostrar painel do contato"}
-                        title={painelInline ? "Ocultar painel do contato" : "Mostrar painel do contato"}
+                        aria-label={
+                          painelInline ? "Ocultar painel do contato" : "Mostrar painel do contato"
+                        }
+                        title={
+                          painelInline ? "Ocultar painel do contato" : "Mostrar painel do contato"
+                        }
                       >
                         {painelInline ? (
                           <PanelRightClose className="h-4 w-4" />

@@ -63,18 +63,33 @@ describe("ListaDeConversas (renderizada)", () => {
       <ListaDeConversas {...props} conversas={[c]} atendentes={{ u1: "Aline Atendente" }} />,
     );
     expect(html).toContain("Responsável: Aline Atendente");
-    expect(renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />)).not.toContain("Responsável:");
+    expect(renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />)).not.toContain(
+      "Responsável:",
+    );
   });
 
-  it("as visões são abas numa linha só, sempre visíveis (sem coluna lateral)", () => {
+  it("as sete visões ficam todas visíveis: sem rolagem escondida que corte 'Menções'", () => {
     const html = renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />);
     expect(html).toContain('aria-label="Filtrar conversas"');
     expect(html).not.toContain("xl:hidden");
-    expect(html).toContain("overflow-x-auto");
+    // Antes era uma fila com `overflow-x-auto` sem barra: a última aba saía cortada.
+    expect(html).not.toContain("overflow-x-auto");
+    for (const rotulo of ["Entrada", "Minhas", "Seguindo", "Menções", "Fila", "Todas", "Resolvidas"])
+      expect(html).toContain(rotulo);
+    expect(html.match(/role="tab"/g)).toHaveLength(7);
+  });
+
+  it("a menção de colega é uma lista própria, não o <select> nativo que cortava", () => {
+    const painel = readFileSync("src/modules/atendimento/components/PainelDoLead.tsx", "utf8");
+    expect(painel).toContain("function MencionarColega");
+    expect(painel).not.toContain("<select");
+    expect(painel).toContain('aria-label="Mencionar colega"');
   });
 
   it("a ordenação só aparece quando a tela a oferece, e marca a escolhida", () => {
-    expect(renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />)).not.toContain("Maior espera");
+    expect(renderToStaticMarkup(<ListaDeConversas {...props} conversas={[base]} />)).not.toContain(
+      "Maior espera",
+    );
     const html = renderToStaticMarkup(
       <ListaDeConversas {...props} conversas={[base]} ordem="espera" onOrdem={() => {}} />,
     );
@@ -84,7 +99,9 @@ describe("ListaDeConversas (renderizada)", () => {
   });
 
   it("o topo da coluna é de quem monta a tela (título, tela cheia…)", () => {
-    const html = renderToStaticMarkup(<ListaDeConversas {...props} conversas={[]} topo={<h1>Topo de teste</h1>} />);
+    const html = renderToStaticMarkup(
+      <ListaDeConversas {...props} conversas={[]} topo={<h1>Topo de teste</h1>} />,
+    );
     expect(html.indexOf("Topo de teste")).toBeLessThan(html.indexOf("Buscar conversas"));
   });
 

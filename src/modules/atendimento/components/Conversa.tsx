@@ -147,7 +147,7 @@ export function Conversa(props: {
     <section className="flex min-h-0 flex-col">
       {props.cabecalho}
 
-      <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-1.5 text-xs">
+      <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-5 py-2 text-xs">
         <span className="truncate text-muted-foreground">
           {formatarTelefone(conversa.contact?.wa_id ?? "")}
           {conversa.origin && " · veio de anúncio"}
@@ -168,7 +168,7 @@ export function Conversa(props: {
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/20 px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/20 px-5 py-5">
         {mensagens.isLoading && (
           <p className="text-sm text-muted-foreground">Carregando mensagens…</p>
         )}
@@ -179,9 +179,9 @@ export function Conversa(props: {
           <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma mensagem ainda.</p>
         )}
         {grupos.map((g) => (
-          <div key={g.chave} className="space-y-2">
+          <div key={g.chave} className="space-y-2.5">
             <div className="sticky top-0 z-[1] flex justify-center py-1">
-              <span className="rounded-full bg-background/90 px-3 py-0.5 text-[11px] text-muted-foreground shadow-sm">
+              <span className="rounded-full bg-background/90 px-3 py-1 text-xs text-muted-foreground shadow-sm">
                 {g.rotulo}
               </span>
             </div>
@@ -197,7 +197,7 @@ export function Conversa(props: {
                 >
                   <div
                     className={cn(
-                      "max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+                      "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
                       props.pesquisa?.ids.includes(m.id) && "ring-2 ring-amber-400/70",
                       m.id === idAtual && "ring-2 ring-amber-500",
                       saida
@@ -205,7 +205,7 @@ export function Conversa(props: {
                         : "rounded-bl-sm bg-background",
                     )}
                   >
-                    {autoria && <div className="mb-0.5 text-[10px] opacity-70">{autoria}</div>}
+                    {autoria && <div className="mb-0.5 text-[11px] opacity-75">{autoria}</div>}
                     {(() => {
                       const c = citacaoDe(m, mensagens.data ?? []);
                       return c ? (
@@ -224,7 +224,7 @@ export function Conversa(props: {
                               : "border-primary/60 bg-muted/60",
                           )}
                         >
-                          <span className="block text-[10px] font-medium opacity-70">
+                          <span className="block text-[11px] font-medium opacity-75">
                             {c.doCliente ? "Cliente" : "Equipe"}
                           </span>
                           <span className="line-clamp-2 opacity-90">{c.texto}</span>
@@ -244,7 +244,7 @@ export function Conversa(props: {
                     )}
                     <div
                       className={cn(
-                        "mt-1 flex items-center justify-end gap-1 text-[10px]",
+                        "mt-1 flex items-center justify-end gap-1 text-[11px]",
                         saida ? "opacity-80" : "text-muted-foreground",
                       )}
                     >
@@ -259,7 +259,7 @@ export function Conversa(props: {
                       )}
                     </div>
                     {m.status === "failed" && m.error_title && (
-                      <div className="mt-1 text-[11px] text-destructive-foreground/90">
+                      <div className="mt-1 text-xs text-destructive-foreground/90">
                         Não enviada: {m.error_title}
                       </div>
                     )}
@@ -449,7 +449,7 @@ function Compositor(props: {
     <div className="relative border-t p-3">
       {sugestoes.length > 0 && (
         <div className="absolute bottom-full left-3 right-3 z-10 mb-1 max-h-56 overflow-y-auto rounded-md border bg-popover shadow-lg">
-          <div className="flex items-center gap-1 border-b px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center gap-1 border-b px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
             <Zap className="h-3 w-3" /> Respostas rápidas
           </div>
           {sugestoes.map((r) => (
