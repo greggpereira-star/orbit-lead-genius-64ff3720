@@ -1,5 +1,7 @@
 /** Formas serializáveis que o servidor entrega à tela. Sem tokens, por construção. */
 export interface NumeroOficial {
+  /** Conta (WABA) do número: é dela o token e são dela os templates. */
+  account_id: string;
   phone_number_id: string;
   display_phone: string;
   mode: "coexistence" | "cloud_only";
@@ -26,6 +28,7 @@ export interface RascunhoDeTemplate {
 
 export interface TemplateOficial {
   id: string;
+  account_id: string;
   name: string;
   language: string;
   category: string;

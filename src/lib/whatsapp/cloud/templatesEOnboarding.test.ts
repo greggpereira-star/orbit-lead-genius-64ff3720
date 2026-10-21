@@ -461,6 +461,57 @@ describe("templates (serviço)", () => {
   });
 });
 
+describe("templates com mais de uma conta (WABA) na empresa", () => {
+  const chave = randomBytes(32).toString("base64");
+  beforeEach(() => vi.stubEnv("WA_TOKEN_KEY", chave));
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  const duasContas = () => ({
+    wa_accounts: [
+      { id: "accA", waba_id: "WABA_A" },
+      { id: "accB", waba_id: "WABA_B" },
+    ],
+    wa_credentials: { access_token_enc: cifrarToken("TOK", chave) },
+  });
+
+  it("sem escolher a conta: não adivinha, pede, e NÃO chama a Meta", async () => {
+    const { f } = rotearFetch({});
+    vi.stubGlobal("fetch", f);
+    const { db } = criarDb({ tabelas: duasContas() });
+    for (const r of [
+      await sincronizarTemplates(db, "emp"),
+      await criarTemplate(db, { companyId: "emp", userId: "u", definicao: boa }),
+      await apagarTemplate(db, { companyId: "emp", nome: "a" }),
+    ]) {
+      expect(r).toMatchObject({ ok: false });
+      expect((r as { texto: string }).texto).toContain("mais de um número");
+    }
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("conta que não é da empresa (id vem do navegador) é recusada", async () => {
+    const { f } = rotearFetch({});
+    vi.stubGlobal("fetch", f);
+    const { db } = criarDb({ tabelas: duasContas() });
+    const r = await sincronizarTemplates(db, "emp", "accDeOutraEmpresa");
+    expect(r).toEqual({ ok: false, texto: "Conta do WhatsApp não encontrada nesta empresa." });
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("escolhendo a conta: lê a credencial DELA e sincroniza", async () => {
+    const { f } = rotearFetch({ "/message_templates": { corpo: { data: [] } } });
+    vi.stubGlobal("fetch", f);
+    const { db, ops } = criarDb({ tabelas: duasContas() });
+    expect(await sincronizarTemplates(db, "emp", "accB")).toEqual({ ok: true, total: 0 });
+    const eqs = ops.filter((o) => o.op === "eq").map((o) => `${o.tabela}:${o.args.join("=")}`);
+    expect(eqs).toContain("wa_accounts:id=accB");
+    expect(f).toHaveBeenCalled();
+  });
+});
+
 describe("concluirComToken (conexão manual / número de teste)", () => {
   const chave = randomBytes(32).toString("base64");
   const base = { companyId: "emp1", wabaId: "WABA", phoneNumberId: "PNID", token: "TOKEN-COLADO" };

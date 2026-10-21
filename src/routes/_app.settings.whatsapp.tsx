@@ -26,6 +26,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -196,7 +203,7 @@ function WhatsAppOficial() {
   }
 
   const sync = useMutation({
-    mutationFn: () => sincronizar(),
+    mutationFn: () => sincronizar({ data: { accountId: contaId } }),
     onSuccess: (r) => {
       toast.success(`${r.total} template(s) sincronizado(s).`);
       recarregar();
@@ -205,7 +212,7 @@ function WhatsAppOficial() {
   });
 
   const remover = useMutation({
-    mutationFn: (nome: string) => apagar({ data: { nome } }),
+    mutationFn: (nome: string) => apagar({ data: { nome, accountId: contaId } }),
     onSuccess: () => {
       toast.success("Template apagado.");
       recarregar();
@@ -238,6 +245,18 @@ function WhatsAppOficial() {
   });
   const d = estado.data;
   const numeros = d?.numeros ?? [];
+
+  // Template é da CONTA (WABA), não da empresa: com mais de uma conta o autor escolhe qual.
+  const contas = Array.from(
+    numeros.reduce((m, n) => {
+      m.set(n.account_id, [...(m.get(n.account_id) ?? []), n.display_phone]);
+      return m;
+    }, new Map<string, string[]>()),
+    ([id, fones]) => ({ id, rotulo: fones.join(" · ") }),
+  );
+  const [contaEscolhida, setContaEscolhida] = useState<string | null>(null);
+  const contaId = contas.find((c) => c.id === contaEscolhida)?.id ?? contas[0]?.id;
+  const templatesDaConta = (d?.templates ?? []).filter((t) => t.account_id === contaId);
 
   return (
     <div className="space-y-6">
@@ -399,7 +418,24 @@ function WhatsAppOficial() {
                   template aprovado.
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {contas.length > 1 && (
+                  <Select value={contaId} onValueChange={setContaEscolhida}>
+                    <SelectTrigger
+                      className="h-8 w-auto min-w-[11rem]"
+                      aria-label="Conta dos templates"
+                    >
+                      <SelectValue placeholder="Conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contas.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.rotulo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -478,11 +514,15 @@ function WhatsAppOficial() {
                   </ul>
                 </div>
               )}
-              {d.templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum template ainda.</p>
+              {templatesDaConta.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {contas.length > 1
+                    ? "Nenhum template nesta conta ainda."
+                    : "Nenhum template ainda."}
+                </p>
               ) : (
                 <ul className="divide-y">
-                  {d.templates.map((t) => (
+                  {templatesDaConta.map((t) => (
                     <li key={t.id} className="py-3 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-medium text-sm">
@@ -551,6 +591,7 @@ function WhatsAppOficial() {
         key={rascunho?.id ?? "novo"}
         aberto={criando}
         inicial={rascunho}
+        accountId={contaId}
         onFechar={() => setCriando(false)}
         onCriado={recarregar}
       />
@@ -608,11 +649,14 @@ const DEFINICAO_VAZIA: DefinicaoDeTemplate = {
 function NovoTemplate({
   aberto,
   inicial,
+  accountId,
   onFechar,
   onCriado,
 }: {
   aberto: boolean;
   inicial: { id: string; def: DefinicaoDeTemplate } | null;
+  /** Conta (WABA) que vai receber o template. */
+  accountId: string | undefined;
   onFechar: () => void;
   onCriado: () => void;
 }) {
@@ -664,7 +708,13 @@ function NovoTemplate({
   async function enviar() {
     setEnviando(true);
     try {
-      const r = await criar({ data: { ...def, ...(rascunhoId ? { rascunhoId } : {}) } });
+      const r = await criar({
+        data: {
+          ...def,
+          ...(rascunhoId ? { rascunhoId } : {}),
+          ...(accountId ? { accountId } : {}),
+        },
+      });
       if (!r.ok) {
         toast.error(r.texto);
         return;

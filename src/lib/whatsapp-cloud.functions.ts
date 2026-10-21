@@ -42,12 +42,14 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
       admin
         .from("wa_phone_numbers")
         .select(
-          "phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at, receive_only",
+          "account_id, phone_number_id, display_phone, mode, quality, messaging_tier, is_on_biz_app, status, disconnected_at, disconnection_reason, webhook_subscribed_at, history_progress, coexistence_synced_at, receive_only",
         )
         .eq("company_id", companyId),
       admin
         .from("wa_templates")
-        .select("id, name, language, category, status, rejection_reason, quality, updated_at")
+        .select(
+          "id, account_id, name, language, category, status, rejection_reason, quality, updated_at",
+        )
         .eq("company_id", companyId)
         .order("name"),
       // Só o banco: perguntar à Evolution aqui derruba a tela quando ela está fora.
@@ -106,7 +108,7 @@ export const concluirSignupWhatsApp = createServerFn({ method: "POST" })
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAdministrar(admin, context.userId);
 
-    const { concluirOnboarding, sincronizarTemplates } =
+    const { concluirOnboarding, contaIdDoNumero, sincronizarTemplates } =
       await import("@/lib/whatsapp/cloud/onboarding");
     const r = await concluirOnboarding(admin, {
       appId,
@@ -120,7 +122,10 @@ export const concluirSignupWhatsApp = createServerFn({ method: "POST" })
     if (!r.ok) throw new Error(r.texto);
 
     // Melhor esforço: a conexão já valeu, template pode ser sincronizado depois.
-    const t = await sincronizarTemplates(admin, companyId).catch(() => ({
+    // Da conta do número que acabou de conectar: com mais de um número, "a da empresa" não existe.
+    const t = await contaIdDoNumero(admin, companyId, data.phoneNumberId)
+      .then((accountId) => sincronizarTemplates(admin, companyId, accountId))
+      .catch(() => ({
       ok: false as const,
       texto: "",
     }));
@@ -157,7 +162,7 @@ export const conectarNumeroManualWhatsApp = createServerFn({ method: "POST" })
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAdministrar(admin, context.userId);
 
-    const { concluirComToken, sincronizarTemplates } =
+    const { concluirComToken, contaIdDoNumero, sincronizarTemplates } =
       await import("@/lib/whatsapp/cloud/onboarding");
     const r = await concluirComToken(admin, {
       companyId,
@@ -167,24 +172,30 @@ export const conectarNumeroManualWhatsApp = createServerFn({ method: "POST" })
     });
     if (!r.ok) throw new Error(r.texto);
 
-    const t = await sincronizarTemplates(admin, companyId).catch(() => ({
-      ok: false as const,
-      texto: "",
-    }));
+    const t = await contaIdDoNumero(admin, companyId, data.phoneNumberId)
+      .then((accountId) => sincronizarTemplates(admin, companyId, accountId))
+      .catch(() => ({
+        ok: false as const,
+        texto: "",
+      }));
     return { ...r, templates: t.ok ? t.total : null };
   });
 
 // ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
+/** `accountId` = a conta (WABA) cujos templates se quer. Opcional só quando há uma conta. */
+const contaDoTemplateSchema = z.object({ accountId: z.string().uuid().optional() });
+
 export const sincronizarTemplatesWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((raw: unknown) => contaDoTemplateSchema.parse(raw ?? {}))
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
     const { sincronizarTemplates } = await import("@/lib/whatsapp/cloud/onboarding");
-    const r = await sincronizarTemplates(admin, companyId);
+    const r = await sincronizarTemplates(admin, companyId, data.accountId);
     if (!r.ok) throw new Error(r.texto);
     return r;
   });
@@ -211,16 +222,23 @@ const definicaoSchema = z.object({
 export const criarTemplateWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
-    definicaoSchema.extend({ rascunhoId: z.string().uuid().optional() }).parse(raw),
+    definicaoSchema
+      .extend({ rascunhoId: z.string().uuid().optional(), accountId: z.string().uuid().optional() })
+      .parse(raw),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAdministrar(admin, context.userId);
     const { criarTemplate } = await import("@/lib/whatsapp/cloud/onboarding");
-    const { rascunhoId, ...definicao } = data;
+    const { rascunhoId, accountId, ...definicao } = data;
     // Devolve o resultado (com `problemas`) em vez de lançar: a tela destaca cada campo.
-    const r = await criarTemplate(admin, { companyId, userId: context.userId, definicao });
+    const r = await criarTemplate(admin, {
+      companyId,
+      userId: context.userId,
+      definicao,
+      accountId,
+    });
     // Foi para a Meta: o rascunho cumpriu o papel. Só some se a criação deu certo.
     if (r.ok && rascunhoId) {
       await admin
@@ -325,14 +343,20 @@ export const definirApenasReceptivoWhatsApp = createServerFn({ method: "POST" })
 export const apagarTemplateWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
-    z.object({ nome: z.string().regex(/^[a-z0-9_]{1,512}$/) }).parse(raw),
+    z
+      .object({ nome: z.string().regex(/^[a-z0-9_]{1,512}$/), accountId: z.string().uuid().optional() })
+      .parse(raw),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAdministrar(admin, context.userId);
     const { apagarTemplate } = await import("@/lib/whatsapp/cloud/onboarding");
-    const r = await apagarTemplate(admin, { companyId, nome: data.nome });
+    const r = await apagarTemplate(admin, {
+      companyId,
+      nome: data.nome,
+      accountId: data.accountId,
+    });
     if (!r.ok) throw new Error(r.texto);
     return r;
   });

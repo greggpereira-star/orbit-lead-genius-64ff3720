@@ -261,14 +261,64 @@ export async function contaPorId(db: DbWa, accountId: string): Promise<ContaComT
   };
 }
 
+/**
+ * Template pertence à WABA, e cada WABA tem o seu token. Com um número só, não há o que
+ * escolher; com mais de um, quem chama diz de QUAL conta é — e a conta tem que ser da
+ * empresa (o id vem do navegador). Sem escolha e com mais de uma conta, para e pede.
+ */
+export async function contaParaTemplates(
+  db: DbWa,
+  companyId: string,
+  accountId?: string | null,
+): Promise<{ ok: true; conta: ContaComToken } | { ok: false; texto: string }> {
+  const { data } = await tabela(db, "wa_accounts").select("id").eq("company_id", companyId);
+  const ids = ((Array.isArray(data) ? data : data ? [data] : []) as Array<{ id: string }>).map(
+    (c) => c.id,
+  );
+  if (ids.length === 0) return { ok: false, texto: "Conecte um número do WhatsApp primeiro." };
+
+  let alvo: string;
+  if (accountId) {
+    if (!ids.includes(accountId))
+      return { ok: false, texto: "Conta do WhatsApp não encontrada nesta empresa." };
+    alvo = accountId;
+  } else if (ids.length === 1) {
+    alvo = ids[0];
+  } else {
+    return {
+      ok: false,
+      texto: "Há mais de um número conectado. Escolha de qual conta é o template.",
+    };
+  }
+  const conta = await contaPorId(db, alvo);
+  if (!conta) return { ok: false, texto: "Conecte um número do WhatsApp primeiro." };
+  return { ok: true, conta };
+}
+
+/** Conta (WABA) de um número DA empresa, para quem acabou de conectar e quer sincronizar os templates dele. */
+export async function contaIdDoNumero(
+  db: DbWa,
+  companyId: string,
+  phoneNumberId: string,
+): Promise<string | null> {
+  const { data } = await tabela(db, "wa_phone_numbers")
+    .select("account_id")
+    .eq("phone_number_id", phoneNumberId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  return (data?.account_id as string | undefined) ?? null;
+}
+
 export type ResultadoDeTemplates = { ok: true; total: number } | { ok: false; texto: string };
 
 export async function sincronizarTemplates(
   db: DbWa,
   companyId: string,
+  accountId?: string | null,
 ): Promise<ResultadoDeTemplates> {
-  const conta = await contaDaEmpresa(db, companyId);
-  if (!conta) return { ok: false, texto: "Conecte um número do WhatsApp primeiro." };
+  const escolha = await contaParaTemplates(db, companyId, accountId);
+  if (!escolha.ok) return { ok: false, texto: escolha.texto };
+  const conta = escolha.conta;
 
   const r = await listarTemplatesDaWaba(conta.wabaId, conta.token);
   if (!r.ok) return { ok: false, texto: `Não consegui ler os templates: ${r.erro.mensagem}` };
@@ -302,15 +352,21 @@ export type ResultadoDeCriacao =
 
 export async function criarTemplate(
   db: DbWa,
-  e: { companyId: string; userId: string | null; definicao: DefinicaoDeTemplate },
+  e: {
+    companyId: string;
+    userId: string | null;
+    definicao: DefinicaoDeTemplate;
+    accountId?: string | null;
+  },
 ): Promise<ResultadoDeCriacao> {
   const problemas = validarTemplate(e.definicao);
   if (temErro(problemas)) {
     return { ok: false, texto: "Corrija os itens destacados antes de enviar.", problemas };
   }
 
-  const conta = await contaDaEmpresa(db, e.companyId);
-  if (!conta) return { ok: false, texto: "Conecte um número do WhatsApp primeiro." };
+  const escolha = await contaParaTemplates(db, e.companyId, e.accountId);
+  if (!escolha.ok) return { ok: false, texto: escolha.texto };
+  const conta = escolha.conta;
 
   const componentes = montarComponentes(e.definicao);
   const r = await criarTemplateNaMeta(conta.wabaId, conta.token, {
@@ -344,10 +400,11 @@ export async function criarTemplate(
 
 export async function apagarTemplate(
   db: DbWa,
-  e: { companyId: string; nome: string },
+  e: { companyId: string; nome: string; accountId?: string | null },
 ): Promise<{ ok: true } | { ok: false; texto: string }> {
-  const conta = await contaDaEmpresa(db, e.companyId);
-  if (!conta) return { ok: false, texto: "Conecte um número do WhatsApp primeiro." };
+  const escolha = await contaParaTemplates(db, e.companyId, e.accountId);
+  if (!escolha.ok) return { ok: false, texto: escolha.texto };
+  const conta = escolha.conta;
   const r = await apagarTemplateNaMeta(conta.wabaId, conta.token, e.nome);
   if (!r.ok) return { ok: false, texto: r.erro.mensagem };
   await tabela(db, "wa_templates").delete().eq("account_id", conta.accountId).eq("name", e.nome);
