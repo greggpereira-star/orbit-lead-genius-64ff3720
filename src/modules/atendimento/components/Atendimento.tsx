@@ -45,6 +45,7 @@ import { nomeDoArquivoDeExportacao } from "@/lib/whatsapp/exportarConversa";
 import { podeAtender } from "@/lib/whatsapp/papeis";
 import { AgendarMensagem } from "./AgendarMensagem";
 import { MenuDaConversa } from "./MenuDaConversa";
+import { SeletorDeResponsavel } from "./SeletorDeResponsavel";
 import {
   contarPorFiltro,
   filtrarConversas,
@@ -396,25 +397,13 @@ export function Atendimento({
                           )}
                         </div>
                       </div>
-                      <select
-                        aria-label="Responsável"
-                        className="h-9 max-w-[190px] rounded-md border bg-background px-2.5 text-sm"
-                        value={ativa.assigned_to ?? ""}
-                        disabled={aoAtribuir.isPending || somenteLeitura}
-                        onChange={(e) =>
-                          aoAtribuir.mutate({
-                            conversaId: ativa.id,
-                            userId: e.target.value || null,
-                          })
-                        }
-                      >
-                        <option value="">Sem responsável</option>
-                        {(atendentes.data ?? []).map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.id === userId ? `${a.nome} (eu)` : a.nome}
-                          </option>
-                        ))}
-                      </select>
+                      <SeletorDeResponsavel
+                        valor={ativa.assigned_to}
+                        atendentes={atendentes.data ?? []}
+                        userId={userId}
+                        desabilitado={aoAtribuir.isPending || somenteLeitura}
+                        onEscolher={(id) => aoAtribuir.mutate({ conversaId: ativa.id, userId: id })}
+                      />
                       {somenteLeitura ? null : ativa.status === "resolved" ? (
                         <Button
                           size="sm"

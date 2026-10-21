@@ -341,3 +341,45 @@ describe("conexão manual com número já conectado", () => {
     expect(fonte).toMatch(/numeros\.length === 0 &&/);
   });
 });
+
+describe("SeletorDeResponsavel", () => {
+  const atendentes = [
+    { id: "u1", nome: "Aline Atendente" },
+    { id: "u2", nome: "Bruno Vendas" },
+  ];
+  async function ver(valor: string | null, extra: Record<string, unknown> = {}) {
+    const { SeletorDeResponsavel } = await import("../components/SeletorDeResponsavel");
+    return renderToStaticMarkup(
+      <SeletorDeResponsavel
+        valor={valor}
+        atendentes={atendentes}
+        userId="u2"
+        onEscolher={() => {}}
+        {...extra}
+      />,
+    );
+  }
+
+  it("sem responsável: diz isso no botão", async () => {
+    const html = await ver(null);
+    expect(html).toContain("Sem responsável");
+    expect(html).toContain('aria-label="Responsável: sem responsável"');
+  });
+
+  it("com responsável: mostra o nome e as iniciais; '(eu)' para o próprio usuário", async () => {
+    const outro = await ver("u1");
+    expect(outro).toContain("Aline Atendente");
+    expect(outro).toContain(">AA<");
+    expect(await ver("u2")).toContain("Bruno Vendas (eu)");
+  });
+
+  it("travado quando não pode atribuir (somente leitura ou salvando)", async () => {
+    expect(await ver("u1", { desabilitado: true })).toContain("disabled");
+  });
+
+  it("o cabeçalho da conversa usa a lista própria, não o seletor nativo", () => {
+    const tela = readFileSync("src/modules/atendimento/components/Atendimento.tsx", "utf8");
+    expect(tela).toContain("<SeletorDeResponsavel");
+    expect(tela).not.toContain("<select");
+  });
+});
