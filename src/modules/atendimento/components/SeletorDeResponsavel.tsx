@@ -54,7 +54,9 @@ export function SeletorDeResponsavel(props: {
           >
             {atual ? iniciais(atual.nome) : <UserRound className="h-3 w-3" />}
           </span>
-          <span className={cn("truncate text-sm", !atual && "text-muted-foreground")}>
+          <span
+            className={cn("hidden truncate text-sm sm:inline", !atual && "text-muted-foreground")}
+          >
             {atual ? rotulo(atual) : "Sem responsável"}
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />

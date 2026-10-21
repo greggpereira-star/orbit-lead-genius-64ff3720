@@ -414,24 +414,28 @@ export function Atendimento({
                       {somenteLeitura ? null : ativa.status === "resolved" ? (
                         <Button
                           size="sm"
+                          aria-label="Reabrir conversa"
                           variant="outline"
                           disabled={aoMudarStatus.isPending}
                           onClick={() =>
                             aoMudarStatus.mutate({ conversaId: ativa.id, status: "open" })
                           }
                         >
-                          <RotateCcw className="mr-1.5 h-4 w-4" /> Reabrir
+                          <RotateCcw className="h-4 w-4 sm:mr-1.5" />
+                          <span className="hidden sm:inline">Reabrir</span>
                         </Button>
                       ) : (
                         <Button
                           size="sm"
+                          aria-label="Resolver conversa"
                           variant="outline"
                           disabled={aoMudarStatus.isPending}
                           onClick={() =>
                             aoMudarStatus.mutate({ conversaId: ativa.id, status: "resolved" })
                           }
                         >
-                          <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
+                          <CheckCircle2 className="h-4 w-4 sm:mr-1.5" />
+                          <span className="hidden sm:inline">Resolver</span>
                         </Button>
                       )}
                       <Button
@@ -573,7 +577,7 @@ export function Atendimento({
           <div
             className={cn(
               PAINEL,
-              "hidden flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground lg:flex",
+              "hidden flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground lg:flex xl:col-span-2",
             )}
           >
             <WhatsAppIcon className="h-12 w-12 opacity-30" />
