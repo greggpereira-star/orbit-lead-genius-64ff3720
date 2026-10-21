@@ -1,19 +1,22 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   AtSign,
   Ban,
   ChevronDown,
   ExternalLink,
   Handshake,
+  Lock,
   Megaphone,
   MessageCircle,
   Phone,
   StickyNote,
   Tag,
+  UserPlus,
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,8 +28,15 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { criarNotaWhatsApp, listarAtendentesWhatsApp } from "@/lib/whatsapp-atendimento.functions";
+import {
+  criarLeadDaConversaWhatsApp,
+  criarNotaWhatsApp,
+  listarAtendentesWhatsApp,
+  vincularConversaAoLeadWhatsApp,
+} from "@/lib/whatsapp-atendimento.functions";
+import { origemDaConversa } from "@/lib/whatsapp/cloud/leadDaConversa";
 import { cn } from "@/lib/utils";
 import { chaves, useLeadDoPainel, useNotas } from "../hooks/useAtendimento";
 import { useQuery } from "@tanstack/react-query";
@@ -168,10 +178,7 @@ export function PainelDoLead({
           resumo={l?.stage?.name ?? null}
         >
           {!conversa.lead ? (
-            <p className="rounded-lg bg-muted/60 p-3.5 leading-relaxed text-muted-foreground">
-              Este contato ainda não está ligado a um lead. Quando o telefone coincidir com um lead,
-              o vínculo é feito automaticamente na próxima mensagem.
-            </p>
+            <CriarLeadDaConversa conversa={conversa} somenteLeitura={somenteLeitura} />
           ) : lead.isLoading ? (
             <p className="text-muted-foreground">Carregando…</p>
           ) : (
@@ -384,5 +391,208 @@ function MencionarColega(props: {
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+type Duplicado = {
+  id: string;
+  name: string | null;
+  stage: string | null;
+  createdAt: string | null;
+};
+
+/**
+ * Contato sem lead: criar (e ligar) ou, se o telefone já é de um lead, ligar a ele.
+ * Fica no próprio painel, sem janela por cima, para a conversa continuar à vista.
+ */
+function CriarLeadDaConversa({
+  conversa,
+  somenteLeitura,
+}: {
+  conversa: ConversaDaLista;
+  somenteLeitura: boolean;
+}) {
+  const qc = useQueryClient();
+  const criar = useServerFn(criarLeadDaConversaWhatsApp);
+  const vincular = useServerFn(vincularConversaAoLeadWhatsApp);
+  const [aberto, setAberto] = useState(false);
+  const [nome, setNome] = useState(conversa.contact?.profile_name ?? "");
+  const [email, setEmail] = useState("");
+  const [duplicado, setDuplicado] = useState<Duplicado | null>(null);
+  const origem = origemDaConversa(conversa.origin).source;
+  const fone = formatarTelefone(conversa.contact?.wa_id ?? "");
+
+  const atualizar = () => {
+    void qc.invalidateQueries({ queryKey: ["wa-conversas"] });
+    void qc.invalidateQueries({ queryKey: ["wa-lead-painel"] });
+  };
+
+  const criarMut = useMutation({
+    mutationFn: () => criar({ data: { conversaId: conversa.id, nome, email } }),
+    onSuccess: (r) => {
+      if (r.ok) {
+        toast.success(
+          r.jaLigado
+            ? "Esta conversa já estava ligada a um lead."
+            : "Lead criado e ligado à conversa.",
+        );
+        atualizar();
+      } else if ("duplicado" in r) {
+        setDuplicado(r.duplicado);
+      } else {
+        toast.error(r.texto);
+      }
+    },
+    onError: (e: Error) => toast.error(e.message || "Não foi possível criar o lead."),
+  });
+
+  const vincularMut = useMutation({
+    mutationFn: (leadId: string) => vincular({ data: { conversaId: conversa.id, leadId } }),
+    onSuccess: (r) => {
+      if (r.ok) {
+        toast.success("Conversa ligada ao lead.");
+        atualizar();
+      } else {
+        toast.error(r.texto);
+      }
+    },
+    onError: (e: Error) => toast.error(e.message || "Não foi possível ligar ao lead."),
+  });
+
+  if (somenteLeitura) {
+    return (
+      <>
+        <p className="rounded-lg bg-muted/60 p-3.5 leading-relaxed text-muted-foreground">
+          Este contato ainda não é um lead. Peça a um atendente ou administrador para criar.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 self-start gap-1.5"
+          disabled
+        >
+          <Lock className="h-4 w-4" /> Criar lead
+        </Button>
+      </>
+    );
+  }
+
+  if (duplicado) {
+    return (
+      <>
+        <div className="flex gap-2 rounded-lg bg-[var(--aviso)]/10 p-3 text-sm leading-relaxed">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
+          <span>
+            Já existe um lead com este telefone. Ligue a conversa a ele em vez de criar outro.
+          </span>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="font-medium">{duplicado.name?.trim() || "Sem nome"}</div>
+          <div className="text-xs text-muted-foreground">
+            {[
+              duplicado.stage ? `Etapa ${duplicado.stage}` : null,
+              duplicado.createdAt
+                ? `entrou em ${new Date(duplicado.createdAt).toLocaleDateString("pt-BR")}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            className="h-9"
+            disabled={vincularMut.isPending}
+            onClick={() => vincularMut.mutate(duplicado.id)}
+          >
+            {vincularMut.isPending ? "Ligando…" : "Ligar a este lead"}
+          </Button>
+          <Button size="sm" variant="ghost" className="h-9" asChild>
+            <Link to="/leads/$id" params={{ id: duplicado.id }}>
+              Abrir lead
+            </Link>
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <>
+        <p className="rounded-lg bg-muted/60 p-3.5 leading-relaxed text-muted-foreground">
+          Este contato ainda não é um lead. Crie agora para acompanhar etapa, origem e pontuação.
+        </p>
+        <Button size="sm" className="h-9 self-start gap-1.5" onClick={() => setAberto(true)}>
+          <UserPlus className="h-4 w-4" /> Criar lead
+        </Button>
+      </>
+    );
+  }
+
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!criarMut.isPending) criarMut.mutate();
+      }}
+    >
+      <label className="block space-y-1 text-xs text-muted-foreground">
+        Nome
+        <Input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Nome do contato"
+          className="h-9 text-sm text-foreground"
+          maxLength={200}
+        />
+      </label>
+      <label className="block space-y-1 text-xs text-muted-foreground">
+        Telefone
+        <span className="relative block">
+          <Input
+            value={fone}
+            readOnly
+            className="h-9 bg-muted/50 pr-9 text-sm text-muted-foreground"
+          />
+          <Lock className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        </span>
+      </label>
+      <label className="block space-y-1 text-xs text-muted-foreground">
+        E-mail (opcional)
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="nome@empresa.com"
+          className="h-9 text-sm text-foreground"
+          maxLength={254}
+        />
+      </label>
+      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span>Origem</span>
+        <span className="rounded-full bg-muted px-2.5 py-1 font-medium text-foreground">
+          {origem}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button type="submit" size="sm" className="h-9" disabled={criarMut.isPending}>
+          {criarMut.isPending ? "Criando…" : "Criar e ligar"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-9"
+          disabled={criarMut.isPending}
+          onClick={() => setAberto(false)}
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
   );
 }

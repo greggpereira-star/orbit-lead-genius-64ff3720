@@ -17,6 +17,8 @@ vi.mock("@/lib/whatsapp-cloud.functions", () => ({
 vi.mock("@/lib/whatsapp-atendimento.functions", () => ({
   criarNotaWhatsApp: async () => ({}),
   listarAtendentesWhatsApp: async () => [],
+  criarLeadDaConversaWhatsApp: async () => ({}),
+  vincularConversaAoLeadWhatsApp: async () => ({}),
 }));
 
 const base: ConversaDaLista = {
@@ -74,9 +76,36 @@ describe("ListaDeConversas (renderizada)", () => {
     expect(html).not.toContain("xl:hidden");
     // Antes era uma fila com `overflow-x-auto` sem barra: a última aba saía cortada.
     expect(html).not.toContain("overflow-x-auto");
-    for (const rotulo of ["Entrada", "Minhas", "Seguindo", "Menções", "Fila", "Todas", "Resolvidas"])
+    for (const rotulo of [
+      "Entrada",
+      "Minhas",
+      "Seguindo",
+      "Menções",
+      "Fila",
+      "Todas",
+      "Resolvidas",
+    ])
       expect(html).toContain(rotulo);
     expect(html.match(/role="tab"/g)).toHaveLength(7);
+  });
+
+  it("contato sem lead: o painel oferece criar/ligar, e só atendente pode (visualizador vê travado)", () => {
+    const painel = readFileSync("src/modules/atendimento/components/PainelDoLead.tsx", "utf8");
+    expect(painel).toContain("function CriarLeadDaConversa");
+    expect(painel).toContain(
+      "<CriarLeadDaConversa conversa={conversa} somenteLeitura={somenteLeitura} />",
+    );
+    expect(painel).toContain("criarLeadDaConversaWhatsApp");
+    expect(painel).toContain("vincularConversaAoLeadWhatsApp");
+    expect(painel).toContain("Peça a um atendente ou administrador");
+
+    const fns = readFileSync("src/lib/whatsapp-atendimento.functions.ts", "utf8");
+    for (const nome of ["criarLeadDaConversaWhatsApp", "vincularConversaAoLeadWhatsApp"]) {
+      const i = fns.indexOf(`export const ${nome}`);
+      expect(i).toBeGreaterThan(-1);
+      // a empresa vem da SESSÃO (atendente ou acima), nunca do navegador
+      expect(fns.slice(i, i + 900)).toContain("empresaParaAtender(admin, context.userId)");
+    }
   });
 
   it("a menção de colega é uma lista própria, não o <select> nativo que cortava", () => {
@@ -189,9 +218,10 @@ describe("PainelDoLead (renderizado)", () => {
     expect(html).toContain('aria-expanded="true"');
   });
 
-  it("contato sem lead explica o vínculo em vez de mostrar campos vazios", async () => {
+  it("contato sem lead oferece criar o lead em vez de mostrar campos vazios", async () => {
     const html = await painel({ ...base, lead_id: null, lead: null });
-    expect(html).toContain("ainda não está ligado a um lead");
+    expect(html).toContain("ainda não é um lead");
+    expect(html).toContain("Criar lead");
     expect(html).not.toContain("Temperatura");
   });
 

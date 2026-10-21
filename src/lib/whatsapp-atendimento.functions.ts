@@ -311,6 +311,57 @@ export const enviarMidiaWhatsApp = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
+// Lead a partir da conversa
+// ---------------------------------------------------------------------------
+/**
+ * Cria o lead do contato da conversa e já liga os dois. Devolve `duplicado` (em vez de
+ * lançar) quando o telefone já é de um lead: a tela oferece ligar a ele.
+ */
+export const criarLeadDaConversaWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        conversaId: idConversa,
+        nome: z.string().trim().max(200).optional(),
+        email: z.string().trim().max(254).optional(),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    const { criarLeadDaConversa } = await import("@/lib/whatsapp/cloud/leadDaConversa");
+    return criarLeadDaConversa(admin, {
+      companyId,
+      userId: context.userId,
+      conversaId: data.conversaId,
+      nome: data.nome,
+      email: data.email,
+    });
+  });
+
+/** Liga a conversa a um lead que já existe (só quando o telefone do lead é o do contato). */
+export const vincularConversaAoLeadWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ conversaId: idConversa, leadId: z.string().uuid() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAtender(admin, context.userId);
+    const { vincularConversaAoLead } = await import("@/lib/whatsapp/cloud/leadDaConversa");
+    return vincularConversaAoLead(admin, {
+      companyId,
+      userId: context.userId,
+      conversaId: data.conversaId,
+      leadId: data.leadId,
+    });
+  });
+
+// ---------------------------------------------------------------------------
 // Notas internas
 // ---------------------------------------------------------------------------
 export const criarNotaWhatsApp = createServerFn({ method: "POST" })
