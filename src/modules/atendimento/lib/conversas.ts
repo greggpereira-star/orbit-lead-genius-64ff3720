@@ -74,6 +74,34 @@ export function iniciais(nome: string): string {
   return (a + b).toUpperCase();
 }
 
+/**
+ * O WhatsApp Cloud API não entrega foto de perfil (só nome e número), então o avatar
+ * é a inicial com uma cor FIXA por contato: a mesma pessoa tem sempre a mesma cor.
+ * As classes são literais para o Tailwind enxergá-las.
+ */
+const CORES_DO_AVATAR = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+  "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
+  "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+  "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
+  "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
+] as const;
+
+export function corDoAvatar(chave: string): string {
+  let h = 0;
+  for (let i = 0; i < chave.length; i++) h = (h * 31 + chave.charCodeAt(i)) >>> 0;
+  return CORES_DO_AVATAR[h % CORES_DO_AVATAR.length];
+}
+
+/** Iniciais do nome DE VERDADE; `null` quando só há o número (o avatar mostra um ícone). */
+export function iniciaisDaConversa(c: Pick<ConversaDaLista, "lead" | "contact">): string | null {
+  const nome = nomeProprioDoContato(c);
+  return nome ? iniciais(nome) : null;
+}
+
 const naoResolvida = (c: ConversaDaLista) => c.status !== "resolved";
 
 /** "Minhas" = comigo e em aberto. "Fila" = ninguém pegou ainda. */

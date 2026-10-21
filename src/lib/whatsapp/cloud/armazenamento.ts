@@ -10,7 +10,7 @@
  * empresa dona da mídia.
  */
 
-import { contaDaEmpresa } from "./onboarding";
+import { contaDaEmpresa, contaPorId } from "./onboarding";
 import { lerMetadadosDaMidia } from "./graph";
 import {
   caminhoDeEntrada,
@@ -50,6 +50,36 @@ async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   return Array.from(new Uint8Array(h), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * O token certo para baixar a mídia é o da conta do número que a RECEBEU
+ * (mídia → mensagem → conversa → número → conta). Só se a cadeia não existir
+ * (mídia solta, dado antigo) cai na conta da empresa.
+ */
+async function contaDaMidia(db: DbWa, mediaId: string, companyId: string) {
+  const { data: msg } = await tabela(db, "wa_messages")
+    .select("conversation_id")
+    .eq("media_id", mediaId)
+    .limit(1)
+    .maybeSingle();
+  if (msg?.conversation_id) {
+    const { data: conv } = await tabela(db, "wa_conversations")
+      .select("phone_number_id")
+      .eq("id", msg.conversation_id)
+      .maybeSingle();
+    if (conv?.phone_number_id) {
+      const { data: num } = await tabela(db, "wa_phone_numbers")
+        .select("account_id")
+        .eq("id", conv.phone_number_id)
+        .maybeSingle();
+      if (num?.account_id) {
+        const conta = await contaPorId(db, num.account_id);
+        if (conta) return conta;
+      }
+    }
+  }
+  return contaDaEmpresa(db, companyId);
+}
+
 export type ResultadoDoDownload =
   | { ok: true; caminho: string; jaGuardada: boolean }
   | { ok: false; texto: string; expirou: boolean };
@@ -79,7 +109,7 @@ export async function baixarEGuardarMidia(
     return { ok: false, texto, expirou };
   };
 
-  const conta = await contaDaEmpresa(db, m.company_id);
+  const conta = await contaDaMidia(db, mediaId, m.company_id);
   if (!conta) return falhou("Conta do WhatsApp sem credencial.");
 
   // 1) URL temporária

@@ -21,7 +21,8 @@ import { criarNotaWhatsApp, listarAtendentesWhatsApp } from "@/lib/whatsapp-aten
 import { cn } from "@/lib/utils";
 import { chaves, useLeadDoPainel, useNotas } from "../hooks/useAtendimento";
 import { useQuery } from "@tanstack/react-query";
-import { formatarTelefone, iniciais, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
+import { formatarTelefone, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
+import { AvatarDoContato } from "./AvatarDoContato";
 
 /** O que veio no `referral` do primeiro contato (anúncio Click-to-WhatsApp). */
 function textoDe(v: unknown): string | null {
@@ -105,12 +106,7 @@ export function PainelDoLead({
       )}
     >
       <div className="flex flex-col items-center gap-2 p-5 text-center">
-        <span
-          aria-hidden
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary"
-        >
-          {iniciais(nome)}
-        </span>
+        <AvatarDoContato conversa={conversa} className="h-16 w-16 text-xl" />
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold">{nome}</div>
           <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">{fone}</div>
@@ -221,7 +217,13 @@ export function PainelDoLead({
 }
 
 /** Notas internas: ficam só com a equipe e NUNCA vão ao cliente. */
-function Notas({ conversaId, somenteLeitura = false }: { conversaId: string; somenteLeitura?: boolean }) {
+function Notas({
+  conversaId,
+  somenteLeitura = false,
+}: {
+  conversaId: string;
+  somenteLeitura?: boolean;
+}) {
   const qc = useQueryClient();
   const notas = useNotas(conversaId);
   const criar = useServerFn(criarNotaWhatsApp);

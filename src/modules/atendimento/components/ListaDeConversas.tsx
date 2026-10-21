@@ -13,6 +13,7 @@ import {
   type NivelDeEspera,
   type OrdemDaLista,
 } from "../lib/conversas";
+import { AvatarDoContato } from "./AvatarDoContato";
 
 const ROTULO: Record<Filtro, string> = {
   entrada: "Entrada",
@@ -99,7 +100,11 @@ export function ListaDeConversas(props: {
         {props.onOrdem && (
           <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
             <span>Ordenar</span>
-            <div className="inline-flex rounded-md bg-muted p-0.5" role="group" aria-label="Ordenar conversas">
+            <div
+              className="inline-flex rounded-md bg-muted p-0.5"
+              role="group"
+              aria-label="Ordenar conversas"
+            >
               {(
                 [
                   ["recentes", "Recentes"],
@@ -112,7 +117,9 @@ export function ListaDeConversas(props: {
                   onClick={() => props.onOrdem?.(valor)}
                   className={cn(
                     "rounded px-2 py-0.5 transition-colors",
-                    ordem === valor ? "bg-background font-medium text-foreground shadow-sm" : "hover:text-foreground",
+                    ordem === valor
+                      ? "bg-background font-medium text-foreground shadow-sm"
+                      : "hover:text-foreground",
                   )}
                 >
                   {rotulo}
@@ -144,12 +151,7 @@ export function ListaDeConversas(props: {
               )}
             >
               <span className="relative mt-0.5 shrink-0">
-                <span
-                  aria-hidden
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-                >
-                  {iniciais(nome)}
-                </span>
+                <AvatarDoContato conversa={c} className="h-9 w-9 text-sm" />
                 <span
                   aria-label="WhatsApp"
                   className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-emerald-500 text-white"

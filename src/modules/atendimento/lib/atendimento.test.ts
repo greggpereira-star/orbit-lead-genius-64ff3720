@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import {
   aguardandoResposta,
   contarPorFiltro,
+  corDoAvatar,
   filtrarConversas,
   formatarTelefone,
   iniciais,
+  iniciaisDaConversa,
   nomeDaConversa,
   totalNaoLidas,
   type ConversaDaLista,
@@ -399,11 +401,37 @@ describe("seguir e menções (servidor)", () => {
 });
 
 describe("citação de resposta", () => {
-  const base = { type: "text", status: "received", provider_ts: null, created_at: "", template_name: null, sent_by: null, error_title: null, media_id: null, origin: "customer" } as const;
-  const orig = { ...base, id: "o1", direction: "inbound", body: "Qual o valor do apartamento de 2 quartos?" } as MensagemDaConversa;
-  const resp = { ...base, id: "r1", direction: "outbound", origin: "agent", body: "R$ 400 mil", reply_to: "o1" } as MensagemDaConversa;
+  const base = {
+    type: "text",
+    status: "received",
+    provider_ts: null,
+    created_at: "",
+    template_name: null,
+    sent_by: null,
+    error_title: null,
+    media_id: null,
+    origin: "customer",
+  } as const;
+  const orig = {
+    ...base,
+    id: "o1",
+    direction: "inbound",
+    body: "Qual o valor do apartamento de 2 quartos?",
+  } as MensagemDaConversa;
+  const resp = {
+    ...base,
+    id: "r1",
+    direction: "outbound",
+    origin: "agent",
+    body: "R$ 400 mil",
+    reply_to: "o1",
+  } as MensagemDaConversa;
   it("resume a original e diz de quem era", () => {
-    expect(citacaoDe(resp, [orig, resp])).toEqual({ id: "o1", texto: "Qual o valor do apartamento de 2 quartos?", doCliente: true });
+    expect(citacaoDe(resp, [orig, resp])).toEqual({
+      id: "o1",
+      texto: "Qual o valor do apartamento de 2 quartos?",
+      doCliente: true,
+    });
   });
   it("texto longo é cortado com reticências", () => {
     const longa = { ...orig, body: "x".repeat(300) };
@@ -425,10 +453,15 @@ import { esperaDe } from "./conversas";
 describe("tempo de espera e ordenação", () => {
   const agora = new Date("2026-10-17T15:00:00Z");
   const min = (m: number) => new Date(agora.getTime() - m * 60_000).toISOString();
-  const c = (o: Partial<ConversaDaLista>): ConversaDaLista => conv({ unread_agent: 1, last_inbound_at: min(5), last_message_at: min(5), ...o });
+  const c = (o: Partial<ConversaDaLista>): ConversaDaLista =>
+    conv({ unread_agent: 1, last_inbound_at: min(5), last_message_at: min(5), ...o });
 
   it("só há espera quando o cliente escreveu por último e a janela está aberta", () => {
-    expect(esperaDe(c({ last_inbound_at: min(5) }), agora)).toMatchObject({ minutos: 5, texto: "5 min", nivel: "ok" });
+    expect(esperaDe(c({ last_inbound_at: min(5) }), agora)).toMatchObject({
+      minutos: 5,
+      texto: "5 min",
+      nivel: "ok",
+    });
     expect(esperaDe(c({ unread_agent: 0 }), agora)).toBeNull();
     expect(esperaDe(c({ status: "resolved" }), agora)).toBeNull();
     expect(esperaDe(c({ last_inbound_at: min(60 * 25) }), agora)).toBeNull();
@@ -439,7 +472,10 @@ describe("tempo de espera e ordenação", () => {
     expect(esperaDe(c({ last_inbound_at: min(14) }), agora)?.nivel).toBe("ok");
     expect(esperaDe(c({ last_inbound_at: min(15) }), agora)?.nivel).toBe("atencao");
     expect(esperaDe(c({ last_inbound_at: min(59) }), agora)?.nivel).toBe("atencao");
-    expect(esperaDe(c({ last_inbound_at: min(60) }), agora)).toMatchObject({ texto: "1 h", nivel: "critico" });
+    expect(esperaDe(c({ last_inbound_at: min(60) }), agora)).toMatchObject({
+      texto: "1 h",
+      nivel: "critico",
+    });
     expect(esperaDe(c({ last_inbound_at: min(150) }), agora)?.texto).toBe("2 h");
   });
   it("ordem 'espera': quem espera há mais tempo primeiro; os que não esperam vão depois, por recência", () => {
@@ -447,7 +483,12 @@ describe("tempo de espera e ordenação", () => {
     const nova = c({ id: "nova", last_inbound_at: min(3), last_message_at: min(3) });
     const respondida = c({ id: "respondida", unread_agent: 0, last_message_at: min(1) });
     const ids = (o?: "espera" | "recentes") =>
-      filtrarConversas([nova, respondida, antiga], { filtro: "entrada", userId: null, ordem: o, agora }).map((x) => x.id);
+      filtrarConversas([nova, respondida, antiga], {
+        filtro: "entrada",
+        userId: null,
+        ordem: o,
+        agora,
+      }).map((x) => x.id);
     expect(ids("espera")).toEqual(["antiga", "nova", "respondida"]);
     // Sem a opção, o comportamento de antes (mais recente primeiro) não muda.
     expect(ids("recentes")).toEqual(["respondida", "nova", "antiga"]);
@@ -458,10 +499,68 @@ describe("tempo de espera e ordenação", () => {
 import { nomeProprioDoContato } from "./conversas";
 describe("nome para sugerir no template", () => {
   it("usa o nome do lead, depois o do perfil, e NUNCA o telefone", () => {
-    expect(nomeProprioDoContato(conv({ lead: { id: "l", name: "Marina Souza", email: null }, contact: { wa_id: "5527900000001", profile_name: "Mari", opted_out_at: null } }))).toBe("Marina Souza");
-    expect(nomeProprioDoContato(conv({ lead: null, contact: { wa_id: "5527900000001", profile_name: "Mari", opted_out_at: null } }))).toBe("Mari");
-    expect(nomeProprioDoContato(conv({ lead: null, contact: { wa_id: "5527900000001", profile_name: null, opted_out_at: null } }))).toBeNull();
-    expect(nomeProprioDoContato(conv({ lead: { id: "l", name: "   ", email: null }, contact: { wa_id: "5527900000001", profile_name: "  ", opted_out_at: null } }))).toBeNull();
+    expect(
+      nomeProprioDoContato(
+        conv({
+          lead: { id: "l", name: "Marina Souza", email: null },
+          contact: { wa_id: "5527900000001", profile_name: "Mari", opted_out_at: null },
+        }),
+      ),
+    ).toBe("Marina Souza");
+    expect(
+      nomeProprioDoContato(
+        conv({
+          lead: null,
+          contact: { wa_id: "5527900000001", profile_name: "Mari", opted_out_at: null },
+        }),
+      ),
+    ).toBe("Mari");
+    expect(
+      nomeProprioDoContato(
+        conv({
+          lead: null,
+          contact: { wa_id: "5527900000001", profile_name: null, opted_out_at: null },
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      nomeProprioDoContato(
+        conv({
+          lead: { id: "l", name: "   ", email: null },
+          contact: { wa_id: "5527900000001", profile_name: "  ", opted_out_at: null },
+        }),
+      ),
+    ).toBeNull();
     expect(nomeProprioDoContato(conv({ lead: null, contact: null }))).toBeNull();
+  });
+});
+
+describe("avatar do contato (sem foto: a Meta não entrega)", () => {
+  it("a cor é fixa por contato e vem da paleta", () => {
+    expect(corDoAvatar("5527996318075")).toBe(corDoAvatar("5527996318075"));
+    const cores = new Set(
+      [
+        "5527992634480",
+        "5527996318075",
+        "5511911110111",
+        "5521988887777",
+        "Ana",
+        "Bia",
+        "Caio",
+      ].map(corDoAvatar),
+    );
+    expect(cores.size).toBeGreaterThan(2);
+    for (const c of cores) expect(c).toMatch(/^bg-\w+-100 text-/);
+  });
+  it("iniciais só do nome de verdade; só o número → null (a tela mostra ícone)", () => {
+    expect(iniciaisDaConversa(conv())).toBe("AW");
+    expect(iniciaisDaConversa(conv({ lead: { id: "l", name: "Ana Souza", email: null } }))).toBe(
+      "AS",
+    );
+    expect(
+      iniciaisDaConversa(
+        conv({ contact: { wa_id: "5527996318075", profile_name: null, opted_out_at: null } }),
+      ),
+    ).toBeNull();
   });
 });

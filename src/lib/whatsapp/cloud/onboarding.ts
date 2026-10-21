@@ -242,6 +242,25 @@ export async function contaDaEmpresa(db: DbWa, companyId: string): Promise<Conta
   };
 }
 
+/** Credencial de UMA conta. Com mais de um número, "a conta da empresa" não existe: cada WABA tem o seu token. */
+export async function contaPorId(db: DbWa, accountId: string): Promise<ContaComToken | null> {
+  const { data: conta } = await tabela(db, "wa_accounts")
+    .select("id, waba_id")
+    .eq("id", accountId)
+    .maybeSingle();
+  if (!conta?.id) return null;
+  const { data: cred } = await tabela(db, "wa_credentials")
+    .select("access_token_enc")
+    .eq("account_id", conta.id)
+    .maybeSingle();
+  if (!cred?.access_token_enc) return null;
+  return {
+    accountId: conta.id,
+    wabaId: conta.waba_id,
+    token: decifrarToken(cred.access_token_enc),
+  };
+}
+
 export type ResultadoDeTemplates = { ok: true; total: number } | { ok: false; texto: string };
 
 export async function sincronizarTemplates(

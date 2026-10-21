@@ -215,6 +215,60 @@ describe("baixarEGuardarMidia", () => {
     expect(chamadas.length).toBeGreaterThan(0);
   });
 
+  it("empresa com dois números: baixa com o token da conta do número que recebeu, não de 'qualquer conta'", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).startsWith("https://lookaside")) {
+        expect((init?.headers as Record<string, string>).Authorization).toBe(
+          "Bearer TOK-DO-NUMERO",
+        );
+        return new Response(bytes, { status: 200 });
+      }
+      expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer TOK-DO-NUMERO");
+      return new Response(
+        JSON.stringify({
+          url: "https://lookaside.fbsbx.com/arquivo",
+          mime_type: "image/jpeg",
+          sha256: sha,
+          file_size: bytes.length,
+        }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const arm = armazenamentoFalso();
+    const base = criarDb({
+      tabelas: {
+        wa_media: {
+          id: "med1",
+          company_id: "emp",
+          provider_media_id: "MEDIA1",
+          mime: "image/jpeg",
+          sha256: sha,
+          status: "pending",
+          storage_path: null,
+          attempts: 0,
+        },
+        wa_messages: { conversation_id: "conv1" },
+        wa_conversations: { phone_number_id: "num1" },
+        wa_phone_numbers: { account_id: "accDoNumero" },
+        wa_accounts: { id: "accDoNumero", waba_id: "WDONUMERO" },
+        wa_credentials: { access_token_enc: cifrarToken("TOK-DO-NUMERO", chave) },
+      },
+    });
+    const db = Object.assign(base.db, { storage: arm.storage }) as DbComArmazenamento;
+
+    const r = await baixarEGuardarMidia(db, "med1");
+    expect(r).toMatchObject({ ok: true });
+    const eqs = base.ops.filter((o) => o.op === "eq").map((o) => `${o.tabela}:${o.args.join("=")}`);
+    expect(eqs).toContain("wa_messages:media_id=med1");
+    expect(eqs).toContain("wa_phone_numbers:id=num1");
+    expect(eqs).toContain("wa_accounts:id=accDoNumero");
+    expect(eqs).toContain("wa_credentials:account_id=accDoNumero");
+    // não caiu no "primeira conta da empresa"
+    expect(eqs).not.toContain("wa_accounts:company_id=emp");
+  });
+
   it("hash que NÃO confere: não guarda e marca como falha", async () => {
     const f = vi.fn(async (url: string) =>
       String(url).includes("lookaside")
@@ -561,6 +615,10 @@ describe("URL de mídia no ensaio local (desvio da Graph API)", () => {
     expect(urlDeMidiaDaMetaEhSegura("http://127.0.0.1:9911/baixar/m1", {})).toBe(false);
   });
   it("desvio para host externo é ignorado: nenhuma exceção", () => {
-    expect(urlDeMidiaDaMetaEhSegura("https://evil.example/x", { META_GRAPH_BASE_URL: "https://evil.example/v25.0" })).toBe(false);
+    expect(
+      urlDeMidiaDaMetaEhSegura("https://evil.example/x", {
+        META_GRAPH_BASE_URL: "https://evil.example/v25.0",
+      }),
+    ).toBe(false);
   });
 });
