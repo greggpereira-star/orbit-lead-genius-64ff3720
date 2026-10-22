@@ -88,8 +88,12 @@ export function validarTemplate(d: DefinicaoDeTemplate): Problema[] {
   if (!sequenciaValida(varsCorpo)) {
     erro("corpo", "As variáveis devem ser {{1}}, {{2}}… em sequência, sem pular número.");
   }
-  if (/^\s*\{\{\s*\d+\s*\}\}/.test(corpo) || /\{\{\s*\d+\s*\}\}\s*$/.test(corpo)) {
-    aviso("corpo", "A Meta costuma recusar corpo que começa ou termina com variável. [meta]");
+  const textoSemVariaveis = corpo.replace(VARIAVEL, "").trim();
+  if (
+    textoSemVariaveis.length >= 8 &&
+    (/^\s*\{\{\s*\d+\s*\}\}/.test(corpo) || /\{\{\s*\d+\s*\}\}\s*$/.test(corpo))
+  ) {
+    aviso("corpo", "A Meta costuma recusar corpo que começa ou termina com variável.");
   }
   const qtdCorpo = new Set(varsCorpo).size;
   const exemplos = d.exemplosDoCorpo ?? [];
@@ -111,12 +115,11 @@ export function validarTemplate(d: DefinicaoDeTemplate): Problema[] {
     const c = d.cabecalho.trim();
     if (c.length > LIMITES.cabecalho)
       erro("cabecalho", `O cabeçalho passa de ${LIMITES.cabecalho} caracteres.`);
-    if (EMOJI.test(c))
-      erro("cabecalho", "Emoji no cabeçalho é recusado pela Meta. Use no corpo. [wacli]");
+    if (EMOJI.test(c)) erro("cabecalho", "Emoji no cabeçalho é recusado pela Meta. Use no corpo.");
     if (/[\n*_~]/.test(c))
-      erro("cabecalho", "Cabeçalho não aceita quebra de linha nem formatação. [meta]");
+      erro("cabecalho", "Cabeçalho não aceita quebra de linha nem formatação.");
     if (new Set(variaveisDe(c)).size > 1)
-      erro("cabecalho", "O cabeçalho aceita no máximo 1 variável. [meta]");
+      erro("cabecalho", "O cabeçalho aceita no máximo 1 variável.");
   }
 
   // Rodapé
@@ -124,7 +127,7 @@ export function validarTemplate(d: DefinicaoDeTemplate): Problema[] {
     const r = d.rodape.trim();
     if (r.length > LIMITES.rodape)
       erro("rodape", `O rodapé passa de ${LIMITES.rodape} caracteres.`);
-    if (variaveisDe(r).length > 0) erro("rodape", "O rodapé não aceita variáveis. [meta]");
+    if (variaveisDe(r).length > 0) erro("rodape", "O rodapé não aceita variáveis.");
   }
 
   // Botões

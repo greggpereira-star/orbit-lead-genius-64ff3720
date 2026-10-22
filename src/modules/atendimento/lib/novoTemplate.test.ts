@@ -26,7 +26,7 @@ describe("Novo template (cadastro)", () => {
   });
 
   it("opcionais só aparecem quando adicionados, e o nome é corrigido enquanto digita", () => {
-    expect(tela).toContain("Opcionais");
+    expect(tela).toContain("fechadas");
     expect(tela).toContain("normalizarNomeDoTemplate(e.target.value)");
     for (const rotulo of ["Cabeçalho", "Rodapé", "Botões"]) expect(tela).toContain(rotulo);
   });
@@ -36,5 +36,30 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain("...(accountId ? { accountId } : {})");
     expect(tela).toContain("Salvar rascunho");
     expect(tela).toContain("Enviar para análise");
+  });
+
+  it("são 3 passos de navegação livre, e só o último tem o botão de enviar", () => {
+    for (const r of ["Identificação", "Mensagem", "Extras e revisão"]) expect(tela).toContain(r);
+    expect(tela).toContain("onClick={() => irPara(i)}");
+    expect(tela).toContain('aria-label="Passos do cadastro"');
+    expect(tela).toContain("passo < PASSOS.length - 1");
+    expect(tela).toContain("Próximo:");
+    // o modal não rola em tela larga: altura fixa, e a rolagem só como rede de segurança dentro da coluna
+    expect(tela).toContain("h-[min(780px,92dvh)]");
+    expect(tela).toContain("overflow-hidden p-0");
+  });
+
+  it("o passo da mensagem mostra variáveis com exemplo ao lado do editor e oferece modelos", () => {
+    expect(tela).toContain("Variáveis e exemplos");
+    expect(tela).toContain("Inserir variável");
+    expect(tela).toContain("MODELOS_DE_TEMPLATE");
+    expect(tela).toContain("Começar de um modelo");
+    expect(tela).toContain("Trocar o texto atual pelo modelo?");
+  });
+
+  it("enviar com pendência leva ao passo e ao campo certo", () => {
+    expect(tela).toContain("irPara(destino)");
+    expect(tela).toContain("t-nome");
+    expect(tela).toContain("t-corpo");
   });
 });
