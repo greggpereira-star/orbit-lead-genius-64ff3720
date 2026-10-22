@@ -1306,3 +1306,90 @@ mostrava **nada** da mensagem. Mandar o template errado custa dinheiro (categori
 
 **Verificado** (navegador, banco local, Meta falsa): envio de template com 2 variáveis chega com o corpo no formato
 da Meta e fica gravado com o texto já preenchido; celular (375 px) em uma coluna, sem rolagem lateral, botão sempre visível.
+
+
+## 16. Central WhatsApp API do concorrente: levantamento (22/10/2026)
+
+Referência observada (só leitura, na conta do próprio usuário): `/settings/whatsapp-api` do Kinbox. Só layout e fluxo —
+nada de código, textos ou identidade visual copiado. A conta observada é uma conta de demonstração: **Flows e Carrossel
+estavam vazios e sem botão de criar**, então os construtores deles **não foram vistos**; só o hub, as listas e o editor de
+templates (que tinha 3 templates aprovados).
+
+### 16.1 O que existe lá
+
+| Peça | Observado |
+| --- | --- |
+| Hub "Central WhatsApp API" | Página com 3 cartões: **Templates** ("criação, gerenciamento e publicação"), **Flows** ("criação, validação, preview e publicação") e **Carrossel** ("templates com múltiplos cards, mídia e botões"). Cada um abre uma lista própria (`/templates`, `/flows`, `/carousel`). |
+| Lista de templates | Busca por nome; filtro por **status com contagem** ("Tudo 3", "Submetido", "Aprovado 3"); colunas Nome (com total), Canal, Categoria, Idioma, Status, Última edição; menu "…" com **Sincronizar Meta**. |
+| Lista de Flows / Carrossel | Busca por nome e estado vazio ("Parece que você ainda não adicionou nenhum registro…"). Sem botão de criar visível nesta conta. |
+| Editor de template | **Página inteira** (não modal), com 3 seções recolhíveis cada uma com ✓ de estado: *Informações básicas* (canal, nome com contador x/512, idioma, categoria), *Conteúdo* e *Estrutura de botões*. Prévia **em formato de celular** (cabeçalho do contato, bolha, campo de mensagem) sempre à direita. Ações: **Salvar** e **Enviar atualização para a Meta**. |
+| Conteúdo | *Tipo de variável* (Número), *Amostra de mídia* no cabeçalho (Nenhum…), cabeçalho x/60 com "Adicionar variável", corpo x/1024 com barra: **assistente de IA** (faísca), **emoji**, B, I, tachado, código e "Adicionar variável"; bloco *Amostras de variáveis* por parte (Corpo…); rodapé x/60 ("Ex: Não responder"). |
+| Botões | "Adicionar botão" oferece **Personalizado** (resposta rápida), **Acessar o site** e **Copiar código da oferta** (cupom). |
+
+### 16.2 Onde o Alt Leadflow já está igual ou melhor
+
+Prévia ao vivo; formatação do WhatsApp; exemplos de variável; contadores; validação com o mesmo critério do servidor; rascunho
+separado de enviar (eles têm "Salvar" e "Enviar atualização"); cadastro em passos sem rolagem, modelos prontos, aviso de Utilidade
+com cara de promoção, "Antes de enviar"; seleção de conta (WABA) quando há mais de uma.
+
+### 16.3 Lacunas (o que eles têm e nós não)
+
+| # | Lacuna | Tamanho | Observação |
+| --- | --- | --- | --- |
+| 1 | **Hub "Central WhatsApp API"** com cartões e listas por recurso | pequeno | só navegação; a tela de templates de hoje mora em Configurações → WhatsApp oficial |
+| 2 | **Filtro por status com contagem** + busca por nome na lista de templates | pequeno | dados já existem em `wa_templates` |
+| 3 | **Editar template existente** e "Enviar atualização para a Meta" | médio | a Meta limita edições (frequência e o que muda); exige guardar a versão e tratar a recusa |
+| 4 | **Botão "Copiar código da oferta"** (`COPY_CODE`) | pequeno | novo tipo em `validarTemplate` e `montarComponentes` |
+| 5 | **Amostra de mídia no cabeçalho** (imagem, vídeo, documento) | médio | upload de amostra à Meta (sessão de upload) e armazenamento |
+| 6 | **Tipo de variável** (número × nome) | pequeno/médio | a Meta aceita parâmetros nomeados; muda montagem, envio e prévia |
+| 7 | **Emoji** e **assistente de IA** na barra do corpo | pequeno / médio | IA depende de provedor e custo; emoji é só um seletor |
+| 8 | **Carrossel** (template com vários cards: mídia, texto e botões) | grande | construtor próprio + regras da Meta (nº de cards, mesma estrutura entre cards) |
+| 9 | **Flows** (criação, validação, prévia, publicação) | muito grande | API de Flows da Meta e editor do JSON do Flow; envio e recebimento das respostas no atendimento |
+
+**Não vimos** (e portanto não dá para copiar o comportamento): construtor de Flows, construtor de Carrossel, o que o assistente de IA
+faz, e as regras de erro deles. Para esses dois, a fonte passa a ser a documentação da Meta, não a tela do concorrente.
+
+
+## 17. Digisac (Conexões) e Kinbox (Frases rápidas): levantamento (22/10/2026)
+
+Referência observada (só leitura, em contas do próprio usuário): `/services` do Digisac e `/settings/quick-phrases` do Kinbox. Só layout e
+fluxo — nada de código, texto ou identidade visual copiado. Nada foi criado, salvo ou alterado nos dois sistemas.
+
+### 17.1 Digisac: a conexão é uma entidade com tipo e provedor
+
+| Peça | Observado |
+| --- | --- |
+| Lista | Cartões com nome, **tipo** ("WhatsApp" ou "WhatsApp Business API - Gupshup": o **provedor aparece no cartão**), número, bot, setor padrão e estado (Conectado / Desconectado). Abas **Ativas / Arquivadas** com contagem, busca por nome e **Filtros** (Tipo, Status, Robô, Departamento). |
+| Alerta no cartão | Triângulo amarelo na conexão oficial: "Sua conexão está com restrições de uso… Acesse a aba Saúde da Conta para entender o motivo". |
+| Menu do cartão | Visualizar, Histórico de eventos, Editar, Arquivar, **Reiniciar**, **Desconectar**, Excluir (separado e em vermelho). |
+| Adicionar conexão | **Catálogo de canais com cota do plano**: WhatsApp, WhatsApp Business API, Webchat, E-mail, Telegram, SMS, Instagram, Messenger, Reclame Aqui; cada cartão diz "Limite atingido" / "1 disponível" / "Contrate essa conexão". Um cartão lateral explica o passo seguinte. |
+| Detalhe | Cabeçalho (nome, estado, tipo+provedor, telefone com copiar), **faixa de atenção** com ações ("Ver manual", "Detalhes da saúde") e 4 abas: **Sobre**, **Saúde da conta**, **Histórico de eventos**, **Configurar acessos**. |
+| Sobre | Dados principais (nome, tipo "WhatsApp Oficial", **provedor**, telefone, nome do app, ID da conexão), bloco **Atendimento** (robô conectado, **departamento padrão**), cartão "Conta conectada", criado/atualizado em. |
+| Saúde da conta | Três cartões: **Status** (Ativa), **Saúde** (qualidade: "Saúde alta") e **Envio de mensagens** ("Alcance limitado: atende aos requisitos, mas possui algumas limitações"); cartão educativo sobre saúde da conta. |
+| Histórico de eventos | Tabela Início / Fim / Status (Online, Offline) / Motivo (Conectado, Desligado), ordenável e filtrável: períodos de instabilidade da conexão. |
+| Configurar acessos | Quem pode usar a conexão: usuário, cargo, departamentos, status (Habilitado), busca, filtro e seleção em lote. |
+
+**Não visto:** o assistente de "Adicionar" do WhatsApp Business API (a cota estava no limite) e, portanto, **quais provedores existem** além do
+Gupshup; o texto completo do aviso de "Novidades" (vinha truncado: fala da nova cobrança por mensagem da Meta e de redirecionar conversas).
+
+### 17.2 Como o Leadflow modela hoje (e por que "provedor" pesa)
+
+- `provider.ts`: `ProvedorId = "evolution" | "cloud"`. A empresa tem **um canal ativo** (`resolverCanal`): a Cloud API tem prioridade e a
+  Evolution deixa de ser consultada (corte seco por cliente, 15/10/2026). `whatsapp_instances` é único por empresa.
+- `wa_accounts` (WABA) e `wa_phone_numbers` (vários por empresa) já existem; **não há** "provedor" por número (é sempre a Meta direto), nem
+  departamento padrão, nem lista de quem acessa, nem arquivar, nem histórico de estado.
+- Na tela, o número oficial e a conexão por QR code vivem em lugares e modelos diferentes; o selo de saúde só mostra o `status` do número.
+
+### 17.3 Saúde da conta: dá para ter igual, com dado da própria Meta
+
+Documentação oficial (lida em 22/10/2026): o campo `health_status` existe nos nós **WABA, número de telefone e template** e devolve
+`can_send_message` = `AVAILABLE` / `LIMITED` (com `additional_info`) / `BLOCKED` (com `errors[].error_description` e `possible_solution`),
+mais `entities[]` dizendo qual nó causa o limite (número, template, WABA, business ou app). Exemplo: `GET /{id}?fields=health_status`.
+É a fonte natural do "Alcance limitado" do Digisac.
+
+### 17.4 Kinbox: Frases rápidas
+
+Lista com busca por atalho ou frase, filtro "Tudo", filtro por **Categorias**, seletor de colunas e "Nova frase". Colunas: Atalho (contagem),
+Respostas, Categorias, **Visível para**. Formulário: **Tipo** (Texto…), Atalho, Visível para (Todos os membros…), **Categorias criáveis ao
+digitar**, Texto com **emoji** e **variáveis**, **Anexar documentos**. O Leadflow tem atalho + texto (+ setor opcional): faltam categorias,
+visibilidade por pessoa, variáveis, emoji, anexo e filtros.

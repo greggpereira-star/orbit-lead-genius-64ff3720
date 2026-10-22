@@ -98,6 +98,47 @@ export const obterSituacaoDosNumerosWhatsApp = createServerFn({ method: "GET" })
   });
 
 // ---------------------------------------------------------------------------
+// Conexões (lista única: API oficial + QR code)
+// ---------------------------------------------------------------------------
+export const listarConexoesWhatsApp = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { montarConexoes } = await import("@/lib/whatsapp/cloud/conexoes");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaDoUsuario(admin, context.userId);
+    const [{ data: numeros }, { data: instancias }] = await Promise.all([
+      admin
+        .from("wa_phone_numbers")
+        .select(
+          "phone_number_id, display_phone, mode, status, receive_only, webhook_subscribed_at, disconnection_reason, created_at, account:wa_accounts(waba_id, display_name)",
+        )
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: true }),
+      // Só o banco: perguntar à Evolution aqui derrubaria a tela quando ela está fora.
+      admin
+        .from("whatsapp_instances")
+        .select("id, status, phone_number, last_connected_at, last_error, created_at")
+        .eq("company_id", companyId),
+    ]);
+    return montarConexoes({ numeros: numeros ?? [], instancias: instancias ?? [] });
+  });
+
+/** Saúde de uma conexão oficial na Meta. Devolve o erro em vez de lançar: a tela mostra "indisponível". */
+export const obterSaudeDaConexaoWhatsApp = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ phoneNumberId: z.string().regex(/^\d{5,30}$/) }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaDoUsuario(admin, context.userId);
+    const { lerSaudeDaConexao } = await import("@/lib/whatsapp/cloud/onboarding");
+    return lerSaudeDaConexao(admin, companyId, data.phoneNumberId);
+  });
+
+// ---------------------------------------------------------------------------
 // Concluir o Embedded Signup
 // ---------------------------------------------------------------------------
 export const concluirSignupWhatsApp = createServerFn({ method: "POST" })

@@ -155,6 +155,19 @@ export async function lerNumero(
   return chamar<DadosDoNumero>(caminho, { token, query: { fields: CAMPOS_MINIMOS } });
 }
 
+/**
+ * Situação do número na Meta, incluindo `health_status` (pode enviar? limitado? bloqueado? por quê?).
+ * Consulta só do número: a documentação diz que o campo também existe no WABA e no template.
+ */
+export function lerSaudeDoNumero(phoneNumberId: string, token: string) {
+  return chamar<Record<string, unknown>>(`/${encodeURIComponent(phoneNumberId)}`, {
+    token,
+    query: {
+      fields: "health_status,status,quality_rating,messaging_limit_tier,verified_name",
+    },
+  });
+}
+
 export interface TemplateDaMeta {
   id?: string;
   name: string;

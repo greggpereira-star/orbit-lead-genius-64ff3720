@@ -76,6 +76,8 @@ import { Route as AppQuizzesIdPerformanceRouteImport } from './routes/_app.quizz
 import { Route as AppQuizzesIdPreviewRouteImport } from './routes/_app.quizzes_.$id.preview'
 import { Route as AppQuizzesIdResponsesRouteImport } from './routes/_app.quizzes_.$id.responses'
 import { Route as AppQuizzesIdResultsRouteImport } from './routes/_app.quizzes_.$id.results'
+import { Route as AppSettingsConexoesIndexRouteImport } from './routes/_app.settings.conexoes.index'
+import { Route as AppSettingsConexoesIdRouteImport } from './routes/_app.settings.conexoes.$id'
 import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/api/public/cron/automation-dispatch'
 import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
 import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/api/public/cron/meta-reprocess-failed'
@@ -421,6 +423,17 @@ const AppQuizzesIdResultsRoute = AppQuizzesIdResultsRouteImport.update({
   path: '/quizzes/$id/results',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsConexoesIndexRoute =
+  AppSettingsConexoesIndexRouteImport.update({
+    id: '/conexoes/',
+    path: '/conexoes/',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
+const AppSettingsConexoesIdRoute = AppSettingsConexoesIdRouteImport.update({
+  id: '/conexoes/$id',
+  path: '/conexoes/$id',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const ApiPublicCronAutomationDispatchRoute =
   ApiPublicCronAutomationDispatchRouteImport.update({
     id: '/api/public/cron/automation-dispatch',
@@ -517,11 +530,13 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
+  '/settings/conexoes/$id': typeof AppSettingsConexoesIdRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
+  '/settings/conexoes/': typeof AppSettingsConexoesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -588,11 +603,13 @@ export interface FileRoutesByTo {
   '/quizzes/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
+  '/settings/conexoes/$id': typeof AppSettingsConexoesIdRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
+  '/settings/conexoes': typeof AppSettingsConexoesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -663,11 +680,13 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/preview': typeof AppQuizzesIdPreviewRoute
   '/_app/quizzes_/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/_app/quizzes_/$id/results': typeof AppQuizzesIdResultsRoute
+  '/_app/settings/conexoes/$id': typeof AppSettingsConexoesIdRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
+  '/_app/settings/conexoes/': typeof AppSettingsConexoesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -737,11 +756,13 @@ export interface FileRouteTypes {
     | '/quizzes/$id/preview'
     | '/quizzes/$id/responses'
     | '/quizzes/$id/results'
+    | '/settings/conexoes/$id'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
+    | '/settings/conexoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -808,11 +829,13 @@ export interface FileRouteTypes {
     | '/quizzes/$id/preview'
     | '/quizzes/$id/responses'
     | '/quizzes/$id/results'
+    | '/settings/conexoes/$id'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
+    | '/settings/conexoes'
   id:
     | '__root__'
     | '/'
@@ -882,11 +905,13 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/preview'
     | '/_app/quizzes_/$id/responses'
     | '/_app/quizzes_/$id/results'
+    | '/_app/settings/conexoes/$id'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
+    | '/_app/settings/conexoes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1393,6 +1418,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuizzesIdResultsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/conexoes/': {
+      id: '/_app/settings/conexoes/'
+      path: '/conexoes'
+      fullPath: '/settings/conexoes/'
+      preLoaderRoute: typeof AppSettingsConexoesIndexRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/conexoes/$id': {
+      id: '/_app/settings/conexoes/$id'
+      path: '/conexoes/$id'
+      fullPath: '/settings/conexoes/$id'
+      preLoaderRoute: typeof AppSettingsConexoesIdRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/api/public/cron/automation-dispatch': {
       id: '/api/public/cron/automation-dispatch'
       path: '/api/public/cron/automation-dispatch'
@@ -1468,6 +1507,8 @@ interface AppSettingsRouteChildren {
   AppSettingsWhatsappRoute: typeof AppSettingsWhatsappRoute
   AppSettingsWidgetsRoute: typeof AppSettingsWidgetsRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+  AppSettingsConexoesIdRoute: typeof AppSettingsConexoesIdRoute
+  AppSettingsConexoesIndexRoute: typeof AppSettingsConexoesIndexRoute
 }
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
@@ -1483,6 +1524,8 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsWhatsappRoute: AppSettingsWhatsappRoute,
   AppSettingsWidgetsRoute: AppSettingsWidgetsRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
+  AppSettingsConexoesIdRoute: AppSettingsConexoesIdRoute,
+  AppSettingsConexoesIndexRoute: AppSettingsConexoesIndexRoute,
 }
 
 const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(

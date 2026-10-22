@@ -12,11 +12,13 @@ import {
   criarTemplateNaMeta,
   inscreverAppNaWaba,
   lerNumero,
+  lerSaudeDoNumero,
   listarTemplatesDaWaba,
   pedirSincronizacaoDoApp,
   trocarCodigoPorToken,
 } from "./graph";
 import type { DbWa } from "./processador";
+import { interpretarSaudeDaMeta, type SaudeDaConexao } from "./saudeDoNumero";
 import {
   montarComponentes,
   temErro,
@@ -363,6 +365,28 @@ export async function lerSituacaoDosNumeros(
       }
     }),
   );
+}
+
+/**
+ * Saúde de UM número, lida da Meta (`health_status`). O número vem do navegador: só vale se for da
+ * empresa da sessão. O token nunca sai daqui.
+ */
+export async function lerSaudeDaConexao(
+  db: DbWa,
+  companyId: string,
+  phoneNumberId: string,
+): Promise<{ ok: true; saude: SaudeDaConexao } | { ok: false; texto: string }> {
+  const { data: num } = await tabela(db, "wa_phone_numbers")
+    .select("account_id")
+    .eq("phone_number_id", phoneNumberId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (!num?.account_id) return { ok: false, texto: "Conexão não encontrada." };
+  const conta = await contaPorId(db, num.account_id as string);
+  if (!conta) return { ok: false, texto: "Sem credencial salva para esta conta." };
+  const r = await lerSaudeDoNumero(phoneNumberId, conta.token);
+  if (!r.ok) return { ok: false, texto: r.erro.mensagem };
+  return { ok: true, saude: interpretarSaudeDaMeta(r.data) };
 }
 
 export type ResultadoDeTemplates = { ok: true; total: number } | { ok: false; texto: string };

@@ -1,55 +1,69 @@
- import { Outlet, createFileRoute, Link } from '@tanstack/react-router';
- import { Card, CardContent } from '@/components/ui/card';
-import { User, Building, Shield, Bell, Share2, Zap, Users, Code2, MessageCircle, Sparkles, Rocket } from 'lucide-react';
+import { Outlet, createFileRoute, Link } from "@tanstack/react-router";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  User,
+  Building,
+  Shield,
+  Bell,
+  Share2,
+  Zap,
+  Users,
+  Code2,
+  MessageCircle,
+  Sparkles,
+  Rocket,
+  Plug,
+} from "lucide-react";
 
-export const Route = createFileRoute('/_app/settings')({
+export const Route = createFileRoute("/_app/settings")({
   component: ConfiguraçõesLayout,
 });
 
 const settingsNav = [
-   { title: 'Profile', icon: User, to: '/settings/' },
-   { title: 'Company', icon: Building, to: '/settings/company' },
-   { title: 'Integrations', icon: Share2, to: '/settings/integrations' },
-  { title: 'Instalação guiada', icon: Rocket, to: '/settings/install' },
-  { title: 'Widgets do site', icon: Code2, to: '/settings/widgets' },
-  { title: 'Chat: setores e atendentes', icon: MessageCircle, to: '/settings/chat' },
-  { title: 'Respostas rápidas', icon: Sparkles, to: '/settings/quick-replies' },
-  { title: 'WhatsApp oficial', icon: MessageCircle, to: '/settings/whatsapp' },
-  { title: 'Automations', icon: Zap, to: '/settings/automations' },
-  { title: 'Distribuição de Leads', icon: Users, to: '/settings/routing' },
-   { title: 'Security', icon: Shield, to: '/settings/security' },
-   { title: 'Notifications', icon: Bell, to: '/settings/notifications' },
+  { title: "Profile", icon: User, to: "/settings/" },
+  { title: "Company", icon: Building, to: "/settings/company" },
+  { title: "Integrations", icon: Share2, to: "/settings/integrations" },
+  { title: "Instalação guiada", icon: Rocket, to: "/settings/install" },
+  { title: "Widgets do site", icon: Code2, to: "/settings/widgets" },
+  { title: "Chat: setores e atendentes", icon: MessageCircle, to: "/settings/chat" },
+  { title: "Respostas rápidas", icon: Sparkles, to: "/settings/quick-replies" },
+  { title: "Conexões", icon: Plug, to: "/settings/conexoes" },
+  { title: "WhatsApp oficial", icon: MessageCircle, to: "/settings/whatsapp" },
+  { title: "Automations", icon: Zap, to: "/settings/automations" },
+  { title: "Distribuição de Leads", icon: Users, to: "/settings/routing" },
+  { title: "Security", icon: Shield, to: "/settings/security" },
+  { title: "Notifications", icon: Bell, to: "/settings/notifications" },
 ];
- 
- function ConfiguraçõesLayout() {
-   return (
-     <div className="space-y-6">
-       <div>
-         <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
-         <p className="text-muted-foreground text-sm">Sua conta e as preferências da plataforma.</p>
-       </div>
- 
-       <div className="flex flex-col lg:flex-row gap-8">
-         <aside className="w-full lg:w-64 shrink-0">
-           <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-             {settingsNav.map((item) => (
-               <Link
-                 key={item.title}
-                 to={item.to as any}
-                 className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-                 activeProps={{ 'data-state': 'active' }}
-               >
-                 <item.icon className="h-4 w-4" />
-                 {item.title}
-               </Link>
-             ))}
-           </nav>
-         </aside>
- 
-         <div className="flex-1 max-w-4xl">
-           <Outlet />
-         </div>
-       </div>
-     </div>
-   );
- }
+
+function ConfiguraçõesLayout() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
+        <p className="text-muted-foreground text-sm">Sua conta e as preferências da plataforma.</p>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        <aside className="w-full lg:w-64 shrink-0">
+          <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+            {settingsNav.map((item) => (
+              <Link
+                key={item.title}
+                to={item.to as any}
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-muted data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                activeProps={{ "data-state": "active" }}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="flex-1 max-w-4xl">
+          <Outlet />
+        </div>
+      </div>
+    </div>
+  );
+}
