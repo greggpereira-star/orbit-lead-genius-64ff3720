@@ -384,10 +384,10 @@ export function NovoTemplate({
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
       <DialogContent className="flex h-[min(780px,92dvh)] max-w-[min(1120px,96vw)] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="space-y-3 border-b px-6 pb-4 pt-5 [@media(max-height:720px)]:space-y-2 [@media(max-height:720px)]:pb-3 [@media(max-height:720px)]:pt-4">
+        <DialogHeader className="space-y-3 border-b px-4 pb-4 pt-5 sm:px-6 [@media(max-height:720px)]:space-y-2 [@media(max-height:720px)]:pb-3 [@media(max-height:720px)]:pt-4">
           <div className="space-y-1 pr-8">
             <DialogTitle>{rascunhoId ? "Continuar template" : "Novo template"}</DialogTitle>
-            <DialogDescription className="[@media(max-height:720px)]:hidden">
+            <DialogDescription className="max-sm:hidden [@media(max-height:720px)]:hidden">
               Escreva a mensagem e envie para a Meta analisar. Costuma levar minutos.
               {contaRotulo && (
                 <>
@@ -431,7 +431,7 @@ export function NovoTemplate({
                       i + 1
                     )}
                   </span>
-                  {p.rotulo}
+                  <span className={cn(i !== passo && "max-sm:hidden")}>{p.rotulo}</span>
                 </button>
               );
             })}
@@ -440,7 +440,7 @@ export function NovoTemplate({
 
         {/* Celular: pilha com altura natural dentro de um corpo que rola (antes as duas áreas eram espremidas e se sobrepunham). */}
         <div className="min-h-0 flex-1 max-md:overflow-y-auto md:grid md:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex flex-col gap-5 p-6 md:min-h-0 md:overflow-y-auto [@media(max-height:720px)]:gap-3 [@media(max-height:720px)]:p-4">
+          <div className="flex flex-col gap-5 p-4 sm:p-6 md:min-h-0 md:overflow-y-auto [@media(max-height:720px)]:gap-3 [@media(max-height:720px)]:p-4">
             <div className="space-y-0.5">
               <h3 className="text-base font-semibold">{atual.titulo}</h3>
               <p className="text-sm text-muted-foreground [@media(max-height:720px)]:hidden">
@@ -866,7 +866,7 @@ export function NovoTemplate({
             )}
           </div>
 
-          <aside className="flex flex-col gap-3 border-t bg-muted/30 p-6 md:min-h-0 md:overflow-y-auto md:border-l md:border-t-0 [@media(max-height:720px)]:p-4">
+          <aside className="flex flex-col gap-3 border-t bg-muted/30 p-4 sm:p-6 md:min-h-0 md:overflow-y-auto md:border-l md:border-t-0 [@media(max-height:720px)]:p-4">
             <p className="text-sm font-medium">Como o cliente vê</p>
             <PreviaDoTemplate previa={previaDoTemplate(def)} />
             {/* No último passo o espaço é da lista "Antes de enviar": a nota sai para ela caber sem rolar. */}
@@ -902,19 +902,20 @@ export function NovoTemplate({
           </aside>
         </div>
 
-        <DialogFooter className="gap-3 border-t px-6 py-4 [@media(max-height:720px)]:py-3 sm:items-center sm:justify-between sm:space-x-0">
+        <DialogFooter className="gap-3 border-t px-4 py-4 sm:px-6 [@media(max-height:720px)]:py-3 sm:items-center sm:justify-between sm:space-x-0">
           <p aria-live="polite" className="min-h-5 text-sm text-destructive">
             {tentou && faltam.length > 0
               ? `Falta: ${faltam.map((p) => p.rotulo.toLowerCase()).join(", ")}.`
               : ""}
           </p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={onFechar}>
+          <div className="flex justify-end gap-2 max-sm:w-full sm:flex-wrap">
+            <Button variant="ghost" className="max-sm:hidden" onClick={onFechar}>
               Cancelar
             </Button>
             <Button variant="outline" disabled={salvando || enviando} onClick={guardarRascunho}>
               {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar rascunho
+              <span className="max-sm:hidden">Salvar rascunho</span>
+              <span className="sm:hidden">Rascunho</span>
             </Button>
             {passo > 0 && (
               <Button variant="outline" className="gap-1.5" onClick={() => irPara(passo - 1)}>
@@ -923,7 +924,9 @@ export function NovoTemplate({
             )}
             {passo < PASSOS.length - 1 ? (
               <Button className="gap-1.5" onClick={() => irPara(passo + 1)}>
-                Próximo: {PASSOS[passo + 1].rotulo.toLowerCase()} <ArrowRight className="h-4 w-4" />
+                Próximo
+                <span className="max-sm:hidden">: {PASSOS[passo + 1].rotulo.toLowerCase()}</span>{" "}
+                <ArrowRight className="h-4 w-4" />
               </Button>
             ) : (
               <Button disabled={enviando} onClick={tentarEnviar}>

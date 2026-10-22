@@ -43,7 +43,7 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain("onClick={() => irPara(i)}");
     expect(tela).toContain('aria-label="Passos do cadastro"');
     expect(tela).toContain("passo < PASSOS.length - 1");
-    expect(tela).toContain("Próximo:");
+    expect(tela).toContain("Próximo<span");
     // o modal não rola em tela larga: altura fixa, e a rolagem só como rede de segurança dentro da coluna
     expect(tela).toContain("h-[min(780px,92dvh)]");
     expect(tela).toContain("overflow-hidden p-0");
@@ -76,5 +76,13 @@ describe("Novo template (cadastro)", () => {
     // o `min-h-0` que deixava a coluna encolher abaixo do conteúdo só vale em tela larga
     expect(tela).toContain("md:min-h-0 md:overflow-y-auto");
     expect(tela).not.toContain('"flex min-h-0 flex-col gap-5 p-6');
+  });
+
+  it("no celular o cabeçalho e o rodapé ficam compactos para sobrar área ao conteúdo", () => {
+    expect(tela).toContain('DialogDescription className="max-sm:hidden');
+    expect(tela).toContain('i !== passo && "max-sm:hidden"'); // só o passo atual mostra o nome
+    expect(tela).toContain('className="max-sm:hidden" onClick={onFechar}'); // o × do canto já fecha
+    expect(tela).toContain('<span className="sm:hidden">Rascunho</span>');
+    expect(tela).toContain("max-sm:w-full sm:flex-wrap");
   });
 });
