@@ -1,8 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { ConversaDaLista } from "../lib/conversas";
 import type { MensagemDaConversa } from "../lib/mensagens";
+import {
+  esperaDaReconexao,
+  intervaloDeReleitura,
+  tempoReal,
+  useSituacaoDoTempoReal,
+} from "../lib/tempoReal";
 
 /**
  * Leitura do atendimento direto nas tabelas `wa_*`, sob RLS.
@@ -38,9 +44,14 @@ export interface TemplateAprovado {
 export function useConversas(companyId: string | undefined) {
   const qc = useQueryClient();
 
+  const { estado } = useSituacaoDoTempoReal();
+  // Cada tentativa de reconexão cria um canal novo (o antigo, em erro, não volta sozinho).
+  const [tentativa, setTentativa] = useState(0);
+
   const q = useQuery({
     queryKey: chaves.conversas(companyId ?? ""),
     enabled: Boolean(companyId),
+    refetchInterval: intervaloDeReleitura(estado),
     queryFn: async (): Promise<ConversaDaLista[]> => {
       const { data, error } = await wa()
         .from("wa_conversations")
@@ -59,8 +70,10 @@ export function useConversas(companyId: string | undefined) {
   // invalida as consultas. O RLS decide o que este usuário recebe.
   useEffect(() => {
     if (!companyId) return;
+    let encerrado = false;
+    let religar: ReturnType<typeof setTimeout> | undefined;
     const canal = wa()
-      .channel(`wa-atendimento-${companyId}`)
+      .channel(`wa-atendimento-${companyId}-${tentativa}`)
       .on(
         "postgres_changes",
         {
@@ -87,19 +100,37 @@ export function useConversas(companyId: string | undefined) {
           qc.invalidateQueries({ queryKey: chaves.conversas(companyId) });
         },
       )
-      .subscribe();
+      .subscribe((status: string, err?: { message?: string }) => {
+        if (encerrado) return;
+        const { reconectar } = tempoReal.registrar(status, err?.message ?? null);
+        if (status === "SUBSCRIBED") {
+          // O que chegou enquanto estava fora do ar: relê tudo uma vez ao conectar.
+          qc.invalidateQueries({ queryKey: ["wa-conversas"] });
+          qc.invalidateQueries({ queryKey: ["wa-mensagens"] });
+        }
+        if (reconectar && !religar) {
+          religar = setTimeout(
+            () => setTentativa((n) => n + 1),
+            esperaDaReconexao(tempoReal.ler().tentativas),
+          );
+        }
+      });
     return () => {
+      encerrado = true;
+      if (religar) clearTimeout(religar);
       wa().removeChannel(canal);
     };
-  }, [companyId, qc]);
+  }, [companyId, qc, tentativa]);
 
   return q;
 }
 
 export function useMensagens(conversaId: string | null) {
+  const { estado } = useSituacaoDoTempoReal();
   return useQuery({
     queryKey: chaves.mensagens(conversaId ?? ""),
     enabled: Boolean(conversaId),
+    refetchInterval: intervaloDeReleitura(estado),
     queryFn: async (): Promise<MensagemDaConversa[]> => {
       const { data, error } = await wa()
         .from("wa_messages")

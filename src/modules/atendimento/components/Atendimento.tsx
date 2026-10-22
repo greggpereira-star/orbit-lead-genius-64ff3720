@@ -39,6 +39,7 @@ import {
   useMensagens,
   useSeguindo,
 } from "../hooks/useAtendimento";
+import { useSituacaoDoTempoReal } from "../lib/tempoReal";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { buscarNasMensagens } from "../lib/mensagens";
 import { nomeDoArquivoDeExportacao } from "@/lib/whatsapp/exportarConversa";
@@ -65,6 +66,29 @@ import { PainelDoLead } from "./PainelDoLead";
  */
 const PAINEL = "min-h-0 overflow-hidden rounded-2xl border bg-background shadow-sm";
 
+/** Mostra se o tempo real está conectado; reconectando, a tela relê sozinha a cada poucos segundos. */
+function IndicadorAoVivo() {
+  const { estado } = useSituacaoDoTempoReal();
+  const aoVivo = estado === "ao_vivo";
+  return (
+    <span
+      className="mr-1 flex items-center gap-1.5 text-[11px] text-muted-foreground"
+      title={
+        aoVivo
+          ? "Conectado: as mensagens aparecem na hora."
+          : "Reconectando ao tempo real. Enquanto isso a tela atualiza a cada poucos segundos."
+      }
+    >
+      <span
+        className={cn(
+          "h-2 w-2 rounded-full",
+          aoVivo ? "bg-emerald-500" : "animate-pulse bg-amber-500",
+        )}
+      />
+      {aoVivo ? "Ao vivo" : "Reconectando…"}
+    </span>
+  );
+}
 export function Atendimento({
   companyId,
   userId,
@@ -311,6 +335,7 @@ export function Atendimento({
         )}
       </h1>
       <div className="flex shrink-0 items-center">
+        <IndicadorAoVivo />
         <Button
           variant="ghost"
           size="icon"
