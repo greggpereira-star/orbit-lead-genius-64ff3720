@@ -304,7 +304,7 @@ describe("PreviaDoTemplate", () => {
 });
 
 describe("editor de template (código)", () => {
-  const fonte = readFileSync("src/routes/_app.settings.whatsapp.tsx", "utf8");
+  const fonte = readFileSync("src/modules/atendimento/components/NovoTemplate.tsx", "utf8");
   it("usa a MESMA validação do servidor e mostra a pré-visualização", () => {
     expect(fonte).toContain("validarTemplate(def)");
     expect(fonte).toContain("<PreviaDoTemplate previa={previaDoTemplate(def)} />");

@@ -576,3 +576,75 @@ describe("concluirComToken (conexão manual / número de teste)", () => {
     expect(chamadas.some((c) => c.url.includes("subscribed_apps"))).toBe(false);
   });
 });
+
+describe("cadastro de template: nome e passos", () => {
+  it("normalizarNomeDoTemplate corrige enquanto digita", async () => {
+    const { normalizarNomeDoTemplate } = await import("./templates");
+    expect(normalizarNomeDoTemplate("Boas Vindas")).toBe("boas_vindas");
+    expect(normalizarNomeDoTemplate("Confirmação-de pedido!")).toBe("confirmacao_de_pedido");
+    expect(normalizarNomeDoTemplate("a   b__c")).toBe("a_b_c");
+    expect(normalizarNomeDoTemplate("PROMO_2026")).toBe("promo_2026");
+    expect(normalizarNomeDoTemplate("")).toBe("");
+    // o que sai é sempre um nome que a validação aceita (quando não é vazio)
+    expect(/^[a-z0-9_]{1,512}$/.test(normalizarNomeDoTemplate("Olá, Mundo! #1"))).toBe(true);
+  });
+
+  it("passosDoTemplate: lista o que falta, sem passo de exemplos quando não há variável", async () => {
+    const { passosDoTemplate, validarTemplate } = await import("./templates");
+    const vazio = { nome: "", idioma: "pt_BR", categoria: "UTILITY" as const, corpo: "" };
+    const p0 = passosDoTemplate(vazio, validarTemplate(vazio));
+    expect(p0.map((p) => p.chave)).toEqual(["nome", "corpo"]);
+    expect(p0.every((p) => !p.feito)).toBe(true);
+
+    const comVar = { ...vazio, nome: "pedido_v1", corpo: "Olá {{1}}, seu pedido saiu." };
+    const p1 = passosDoTemplate(comVar, validarTemplate(comVar));
+    expect(p1.find((p) => p.chave === "exemplos")?.feito).toBe(false);
+    expect(p1.find((p) => p.chave === "nome")?.feito).toBe(true);
+
+    const pronto = { ...comVar, exemplosDoCorpo: ["Ana"] };
+    expect(passosDoTemplate(pronto, validarTemplate(pronto)).every((p) => p.feito)).toBe(true);
+  });
+
+  it("opcional com erro aparece como passo pendente", async () => {
+    const { passosDoTemplate, validarTemplate } = await import("./templates");
+    const d = {
+      nome: "a_b",
+      idioma: "pt_BR",
+      categoria: "UTILITY" as const,
+      corpo: "Texto simples.",
+      botoes: [{ tipo: "URL" as const, texto: "Ver", valor: "http://x.com" }],
+    };
+    const p = passosDoTemplate(d, validarTemplate(d));
+    expect(p.find((x) => x.chave === "opcionais")?.feito).toBe(false);
+  });
+});
+
+describe("Utilidade com cara de promoção", () => {
+  const base = { nome: "pedido_v1", idioma: "pt_BR", corpo: "" };
+  const avisoDePromocao = (categoria: "UTILITY" | "MARKETING", corpo: string) =>
+    validarTemplate({ ...base, categoria, corpo }).filter(
+      (p) => p.campo === "corpo" && p.gravidade === "aviso" && /promoção/.test(p.texto),
+    ).length;
+
+  it("avisa em Utilidade quando há oferta, cupom ou desconto", () => {
+    for (const t of [
+      "Aproveite 20% OFF na nossa coleção.",
+      "Seu cupom de desconto chegou.",
+      "Promoção de hoje: frete grátis!",
+      "Black Friday começou",
+    ])
+      expect(avisoDePromocao("UTILITY", t)).toBe(1);
+  });
+
+  it("não avisa em Marketing nem em aviso de pedido comum", () => {
+    expect(avisoDePromocao("MARKETING", "Aproveite 20% OFF.")).toBe(0);
+    expect(avisoDePromocao("UTILITY", "Seu pedido 123 saiu para entrega.")).toBe(0);
+    // palavra parecida não dispara ("compreendo", "ofertamos" colados a letras)
+    expect(avisoDePromocao("UTILITY", "Compreendemos seu pedido e ofertamos prazo.")).toBe(0);
+  });
+
+  it("é só aviso: nunca bloqueia o envio", () => {
+    const p = validarTemplate({ ...base, categoria: "UTILITY", corpo: "Cupom de desconto." });
+    expect(temErro(p.filter((x) => /promoção/.test(x.texto)))).toBe(false);
+  });
+});

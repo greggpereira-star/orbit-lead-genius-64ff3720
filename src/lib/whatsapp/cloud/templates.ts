@@ -51,6 +51,9 @@ export const LIMITES = {
 
 const EMOJI = /\p{Extended_Pictographic}/u;
 const VARIAVEL = /\{\{\s*(\d+)\s*\}\}/g;
+/** Palavras de venda (sem letra colada antes ou depois, com acento). */
+const PROMOCAO =
+  /(?<![\p{L}])(desconto|ofertas?|promo(?:ç|c)(?:ão|ao|ões|oes)|cupom|cupons|liquida(?:ç|c)(?:ão|ao)|imperd(?:í|i)vel|aproveite|compre|frete gr(?:á|a)tis|black friday|\d+\s?%\s?off)(?![\p{L}])/iu;
 
 /** Variáveis `{{n}}` de um texto, na ordem em que aparecem. */
 export function variaveisDe(texto: string): number[] {
@@ -92,6 +95,15 @@ export function validarTemplate(d: DefinicaoDeTemplate): Problema[] {
   const exemplos = d.exemplosDoCorpo ?? [];
   if (qtdCorpo > 0 && exemplos.filter((e) => e.trim() !== "").length < qtdCorpo) {
     erro("exemplos", `Informe um exemplo para cada variável do corpo (${qtdCorpo}). A Meta exige.`);
+  }
+
+  // Utilidade com cara de promoção: a Meta pode reclassificar como Marketing (e cobrar como
+  // tal). Só aviso, nunca bloqueio: a heurística erra, e quem decide a categoria é o autor.
+  if (d.categoria === "UTILITY" && PROMOCAO.test(corpo)) {
+    aviso(
+      "corpo",
+      "Esta mensagem parece promoção. Utilidade com oferta, cupom ou desconto pode ser reclassificada como Marketing pela Meta. Se é promoção, escolha Marketing.",
+    );
   }
 
   // Cabeçalho (só texto nesta fase)
@@ -144,6 +156,64 @@ export function validarTemplate(d: DefinicaoDeTemplate): Problema[] {
 }
 
 export const temErro = (p: Problema[]) => p.some((x) => x.gravidade === "erro");
+
+/**
+ * Nome do template como a Meta aceita: minúsculas, números e sublinhado. Em vez de deixar o
+ * autor errar e ler uma regra, o campo corrige enquanto ele digita ("Boas Vindas" vira
+ * "boas_vindas"): tira acento, troca espaço e hífen por "_" e some com o resto.
+ */
+export function normalizarNomeDoTemplate(bruto: string): string {
+  return bruto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_{2,}/g, "_")
+    .slice(0, 512);
+}
+
+export interface PassoDoTemplate {
+  chave: "nome" | "corpo" | "exemplos" | "opcionais";
+  rotulo: string;
+  feito: boolean;
+}
+
+/**
+ * O que falta para enviar, em passos que o autor entende. Serve ao painel "Antes de enviar":
+ * o botão não fica apagado sem dizer por quê — a lista mostra o que ainda não está pronto.
+ */
+export function passosDoTemplate(d: DefinicaoDeTemplate, problemas: Problema[]): PassoDoTemplate[] {
+  const comErro = (campo: Problema["campo"]) =>
+    problemas.some((p) => p.campo === campo && p.gravidade === "erro");
+  const passos: PassoDoTemplate[] = [
+    { chave: "nome", rotulo: "Nome do template", feito: d.nome !== "" && !comErro("nome") },
+    {
+      chave: "corpo",
+      rotulo: "Mensagem escrita",
+      feito: d.corpo.trim() !== "" && !comErro("corpo"),
+    },
+  ];
+  if (new Set(variaveisDe(d.corpo)).size > 0) {
+    passos.push({
+      chave: "exemplos",
+      rotulo: "Exemplo de cada variável",
+      feito: !comErro("exemplos"),
+    });
+  }
+  const usouOpcional =
+    (d.cabecalho ?? "").trim() !== "" ||
+    (d.rodape ?? "").trim() !== "" ||
+    (d.botoes ?? []).length > 0;
+  if (usouOpcional) {
+    passos.push({
+      chave: "opcionais",
+      rotulo: "Cabeçalho, rodapé e botões sem erro",
+      feito: !(comErro("cabecalho") || comErro("rodape") || comErro("botoes")),
+    });
+  }
+  return passos;
+}
 
 /** Define → componentes no formato da Graph API. */
 export function montarComponentes(d: DefinicaoDeTemplate): unknown[] {

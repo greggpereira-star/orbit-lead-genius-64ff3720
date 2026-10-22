@@ -7,7 +7,10 @@ const corpo = (nome: string) => {
   const j = server.indexOf("\nexport const ", i + 10);
   return server.slice(i, j === -1 ? undefined : j);
 };
-const tela = readFileSync("src/routes/_app.settings.whatsapp.tsx", "utf8");
+// A lista de rascunhos mora na tela de configurações; o editor, no componente próprio.
+const tela =
+  readFileSync("src/routes/_app.settings.whatsapp.tsx", "utf8") +
+  readFileSync("src/modules/atendimento/components/NovoTemplate.tsx", "utf8");
 
 describe("rascunhos de template (servidor)", () => {
   it("salvar exige papel de administrador e só atualiza o que é da empresa", () => {

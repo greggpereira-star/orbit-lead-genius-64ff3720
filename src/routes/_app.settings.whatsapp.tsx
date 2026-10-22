@@ -40,10 +40,9 @@ import {
   apagarRascunhoTemplateWhatsApp,
   apagarTemplateWhatsApp,
   concluirSignupWhatsApp,
-  criarTemplateWhatsApp,
+  obterSituacaoDosNumerosWhatsApp,
   definirApenasReceptivoWhatsApp,
   obterEstadoDoWhatsAppOficial,
-  salvarRascunhoTemplateWhatsApp,
   sincronizarTemplatesWhatsApp,
 } from "@/lib/whatsapp-cloud.functions";
 import { useAuth } from "@/core/auth/hooks/useAuth";
@@ -54,16 +53,10 @@ import {
 import { confirmacaoConfere, FRASE_DO_CORTE } from "@/lib/whatsapp/corte";
 import { usoPorCategoria } from "@/modules/atendimento/hooks/useAtendimento";
 import { lerMensagemDoSignup, opcoesDoLogin } from "@/lib/whatsapp/cloud/signup";
-import {
-  temErro,
-  validarTemplate,
-  variaveisDe,
-  type BotaoDeTemplate,
-  type DefinicaoDeTemplate,
-} from "@/lib/whatsapp/cloud/templates";
-import { envolverSelecao, inserirVariavel, previaDoTemplate } from "@/lib/whatsapp/cloud/previa";
+import { situacaoDoNumeroNaMeta } from "@/lib/whatsapp/cloud/situacaoDoNumero";
+import type { DefinicaoDeTemplate } from "@/lib/whatsapp/cloud/templates";
 import { ConexaoManual } from "@/modules/atendimento/components/ConexaoManual";
-import { PreviaDoTemplate } from "@/modules/atendimento/components/PreviaDoTemplate";
+import { DEFINICAO_VAZIA, NovoTemplate } from "@/modules/atendimento/components/NovoTemplate";
 import { rotuloDaJanela } from "@/lib/whatsapp/cloud/janela";
 
 export const Route = createFileRoute("/_app/settings/whatsapp")({
@@ -246,6 +239,18 @@ function WhatsAppOficial() {
   const d = estado.data;
   const numeros = d?.numeros ?? [];
 
+  // "Ativo" aqui é só "conectado ao Leadflow": quem diz se o número envia é a Meta. É uma
+  // consulta à parte (uma chamada externa por conta) para a tela não esperar por ela.
+  const buscarSituacao = useServerFn(obterSituacaoDosNumerosWhatsApp);
+  const situacao = useQuery({
+    queryKey: ["wa-situacao-numeros"],
+    queryFn: () => buscarSituacao(),
+    enabled: numeros.length > 0,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const situacaoDe = (id: string) => situacao.data?.find((x) => x.phone_number_id === id);
+
   // Template é da CONTA (WABA), não da empresa: com mais de uma conta o autor escolhe qual.
   const contas = Array.from(
     numeros.reduce((m, n) => {
@@ -334,13 +339,20 @@ function WhatsAppOficial() {
                     <div className="font-medium tabular-nums">+{n.display_phone}</div>
                     <div className="flex gap-2">
                       <Badge variant={n.status === "active" ? "default" : "destructive"}>
-                        {n.status === "active" ? "Ativo" : "Desconectado"}
+                        {n.status === "active" ? "Ativo no Leadflow" : "Desconectado"}
                       </Badge>
+                      <SituacaoNaMeta
+                        carregando={situacao.isLoading}
+                        lida={situacaoDe(n.phone_number_id)}
+                        falhou={situacao.isError}
+                      />
                       <Badge variant="secondary">
                         {n.mode === "coexistence" ? "Coexistência" : "Somente API"}
                       </Badge>
                     </div>
                   </div>
+
+                  <AvisoDaSituacao lida={situacaoDe(n.phone_number_id)} />
 
                   <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-4">
                     <Dado rotulo="Qualidade">
@@ -592,6 +604,7 @@ function WhatsAppOficial() {
         aberto={criando}
         inicial={rascunho}
         accountId={contaId}
+        contaRotulo={contas.length > 1 ? contas.find((c) => c.id === contaId)?.rotulo : undefined}
         onFechar={() => setCriando(false)}
         onCriado={recarregar}
       />
@@ -632,345 +645,6 @@ function Requisitos({
     <p className="text-sm text-[var(--aviso)]">
       Faltam variáveis no servidor: <code>{faltando.join(", ")}</code>.
     </p>
-  );
-}
-
-const DEFINICAO_VAZIA: DefinicaoDeTemplate = {
-  nome: "",
-  idioma: "pt_BR",
-  categoria: "UTILITY",
-  cabecalho: "",
-  corpo: "",
-  rodape: "",
-  botoes: [],
-  exemplosDoCorpo: [],
-};
-
-function NovoTemplate({
-  aberto,
-  inicial,
-  accountId,
-  onFechar,
-  onCriado,
-}: {
-  aberto: boolean;
-  inicial: { id: string; def: DefinicaoDeTemplate } | null;
-  /** Conta (WABA) que vai receber o template. */
-  accountId: string | undefined;
-  onFechar: () => void;
-  onCriado: () => void;
-}) {
-  const criar = useServerFn(criarTemplateWhatsApp);
-  const salvarRascunho = useServerFn(salvarRascunhoTemplateWhatsApp);
-  const [def, setDef] = useState<DefinicaoDeTemplate>(inicial?.def ?? DEFINICAO_VAZIA);
-  // Id do rascunho em edição: o primeiro "Salvar rascunho" o cria, os seguintes atualizam.
-  const [rascunhoId, setRascunhoId] = useState<string | null>(inicial?.id ?? null);
-  const [enviando, setEnviando] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-
-  async function guardarRascunho() {
-    setSalvando(true);
-    try {
-      const r = await salvarRascunho({
-        data: { ...(rascunhoId ? { id: rascunhoId } : {}), definicao: def },
-      });
-      setRascunhoId(r.id);
-      toast.success("Rascunho salvo.");
-      onCriado();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível salvar o rascunho.");
-    } finally {
-      setSalvando(false);
-    }
-  }
-  const corpoRef = useRef<HTMLTextAreaElement>(null);
-
-  /** Aplica a barra de ferramentas ao corpo, mantendo seleção e cursor. */
-  function aplicarNoCorpo(
-    f: (texto: string, ini: number, fim: number) => { texto: string; cursor: [number, number] },
-  ) {
-    const el = corpoRef.current;
-    const ini = el?.selectionStart ?? def.corpo.length;
-    const fim = el?.selectionEnd ?? def.corpo.length;
-    const r = f(def.corpo, ini, fim);
-    setDef((x) => ({ ...x, corpo: r.texto }));
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(r.cursor[0], r.cursor[1]);
-    });
-  }
-
-  // A MESMA validação do servidor, em tempo real: o autor erra na tela, e não
-  // depois de esperar a revisão da Meta.
-  const problemas = validarTemplate(def);
-  const nVars = new Set(variaveisDe(def.corpo)).size;
-
-  async function enviar() {
-    setEnviando(true);
-    try {
-      const r = await criar({
-        data: {
-          ...def,
-          ...(rascunhoId ? { rascunhoId } : {}),
-          ...(accountId ? { accountId } : {}),
-        },
-      });
-      if (!r.ok) {
-        toast.error(r.texto);
-        return;
-      }
-      toast.success(
-        r.status === "APPROVED" ? "Template aprovado." : "Template enviado para análise da Meta.",
-      );
-      setDef(DEFINICAO_VAZIA);
-      setRascunhoId(null);
-      onCriado();
-      onFechar();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível criar o template.");
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  const setBotao = (i: number, b: Partial<BotaoDeTemplate>) =>
-    setDef((x) => ({
-      ...x,
-      botoes: (x.botoes ?? []).map((o, j) => (j === i ? { ...o, ...b } : o)),
-    }));
-
-  return (
-    <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
-      <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Novo template</DialogTitle>
-          <DialogDescription>
-            A Meta analisa o template antes de liberá-lo. Isso costuma levar minutos.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="t-nome">Nome</Label>
-                <Input
-                  id="t-nome"
-                  value={def.nome}
-                  placeholder="boas_vindas_v1"
-                  onChange={(e) => setDef({ ...def, nome: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="t-cat">Categoria</Label>
-                <select
-                  id="t-cat"
-                  className="w-full border rounded-md px-2 py-2 text-sm bg-background"
-                  value={def.categoria}
-                  onChange={(e) =>
-                    setDef({
-                      ...def,
-                      categoria: e.target.value as DefinicaoDeTemplate["categoria"],
-                    })
-                  }
-                >
-                  <option value="UTILITY">Utilidade (acompanhamento, confirmação)</option>
-                  <option value="MARKETING">Marketing (oferta, promoção)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="t-cab">Cabeçalho (opcional)</Label>
-              <Input
-                id="t-cab"
-                maxLength={60}
-                value={def.cabecalho ?? ""}
-                onChange={(e) => setDef({ ...def, cabecalho: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">{(def.cabecalho ?? "").length}/60</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="t-corpo">Mensagem</Label>
-              <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Formatação">
-                {[
-                  { rotulo: "Negrito", marca: "*", ico: "B", cls: "font-bold" },
-                  { rotulo: "Itálico", marca: "_", ico: "I", cls: "italic" },
-                  { rotulo: "Tachado", marca: "~", ico: "S", cls: "line-through" },
-                  { rotulo: "Monoespaçado", marca: "```", ico: "</>", cls: "font-mono" },
-                ].map((f) => (
-                  <Button
-                    key={f.marca}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={`h-7 w-8 px-0 ${f.cls}`}
-                    aria-label={f.rotulo}
-                    title={f.rotulo}
-                    onClick={() => aplicarNoCorpo((t, a, b) => envolverSelecao(t, a, b, f.marca))}
-                  >
-                    {f.ico}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() =>
-                    aplicarNoCorpo((t, a, b) => {
-                      const r = inserirVariavel(t, a, b);
-                      return { texto: r.texto, cursor: [r.cursor, r.cursor] };
-                    })
-                  }
-                >
-                  <Plus className="h-3 w-3 mr-1" /> Variável
-                </Button>
-              </div>
-              <Textarea
-                id="t-corpo"
-                ref={corpoRef}
-                rows={5}
-                value={def.corpo}
-                placeholder="Olá {{1}}, recebemos seu pedido {{2}}."
-                onChange={(e) => setDef({ ...def, corpo: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Use {"{{1}}"}, {"{{2}}"}… para valores que mudam. {def.corpo.length}/1024
-              </p>
-            </div>
-
-            {nVars > 0 && (
-              <div className="space-y-2">
-                <Label>Exemplos das variáveis (a Meta exige)</Label>
-                {Array.from({ length: nVars }, (_, i) => (
-                  <Input
-                    key={i}
-                    placeholder={`Exemplo de {{${i + 1}}}`}
-                    value={def.exemplosDoCorpo?.[i] ?? ""}
-                    onChange={(e) => {
-                      const ex = [...(def.exemplosDoCorpo ?? [])];
-                      ex[i] = e.target.value;
-                      setDef({ ...def, exemplosDoCorpo: ex });
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="t-rod">Rodapé (opcional)</Label>
-              <Input
-                id="t-rod"
-                maxLength={60}
-                value={def.rodape ?? ""}
-                onChange={(e) => setDef({ ...def, rodape: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">{(def.rodape ?? "").length}/60</p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Botões (opcional)</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={(def.botoes?.length ?? 0) >= 3}
-                  onClick={() =>
-                    setDef({
-                      ...def,
-                      botoes: [...(def.botoes ?? []), { tipo: "QUICK_REPLY", texto: "" }],
-                    })
-                  }
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Botão
-                </Button>
-              </div>
-              {(def.botoes ?? []).map((b, i) => (
-                <div key={i} className="grid grid-cols-[130px_1fr_1fr_auto] gap-2 items-center">
-                  <select
-                    className="border rounded-md px-2 py-2 text-sm bg-background"
-                    aria-label={`Tipo do botão ${i + 1}`}
-                    value={b.tipo}
-                    onChange={(e) =>
-                      setBotao(i, { tipo: e.target.value as BotaoDeTemplate["tipo"] })
-                    }
-                  >
-                    <option value="QUICK_REPLY">Resposta</option>
-                    <option value="URL">Link</option>
-                    <option value="PHONE_NUMBER">Ligar</option>
-                  </select>
-                  <Input
-                    aria-label={`Texto do botão ${i + 1}`}
-                    placeholder="Texto"
-                    value={b.texto}
-                    onChange={(e) => setBotao(i, { texto: e.target.value })}
-                  />
-                  <Input
-                    aria-label={`Valor do botão ${i + 1}`}
-                    placeholder={
-                      b.tipo === "URL" ? "https://…" : b.tipo === "PHONE_NUMBER" ? "+5527…" : "—"
-                    }
-                    disabled={b.tipo === "QUICK_REPLY"}
-                    value={b.valor ?? ""}
-                    onChange={(e) => setBotao(i, { valor: e.target.value })}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Remover botão ${i + 1}`}
-                    onClick={() =>
-                      setDef({ ...def, botoes: (def.botoes ?? []).filter((_, j) => j !== i) })
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            {problemas.length > 0 && def.nome + def.corpo !== "" && (
-              <ul className="space-y-1" aria-live="polite">
-                {problemas.map((p, i) => (
-                  <li
-                    key={i}
-                    className={`text-sm flex gap-2 ${p.gravidade === "erro" ? "text-destructive" : "text-[var(--aviso)]"}`}
-                  >
-                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                    {p.texto}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <aside className="md:sticky md:top-0 self-start space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Pré-visualização</p>
-            <PreviaDoTemplate previa={previaDoTemplate(def)} />
-            <p className="text-[11px] text-muted-foreground">
-              Aproximação de como a mensagem aparece. Os exemplos das variáveis entram no lugar de{" "}
-              {"{{n}}"}.
-            </p>
-          </aside>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onFechar}>
-            Cancelar
-          </Button>
-          <Button variant="secondary" disabled={salvando || enviando} onClick={guardarRascunho}>
-            {salvando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Salvar rascunho
-          </Button>
-          <Button disabled={enviando || temErro(problemas) || def.nome === ""} onClick={enviar}>
-            {enviando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Enviar para análise
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -1188,5 +862,68 @@ function CorteDaEvolution() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+type SituacaoLida = { phone_number_id: string; status: string | null; erro: string | null };
+
+/** Selo com a situação do número na Meta (ao lado do "Ativo no Leadflow"). */
+function SituacaoNaMeta(props: {
+  carregando: boolean;
+  falhou: boolean;
+  lida: SituacaoLida | undefined;
+}) {
+  if (props.carregando)
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" /> Consultando a Meta…
+      </span>
+    );
+  if (props.falhou || !props.lida || props.lida.erro)
+    return (
+      <Badge variant="outline" className="text-muted-foreground">
+        Status da Meta indisponível
+      </Badge>
+    );
+  const sit = situacaoDoNumeroNaMeta(props.lida.status);
+  return (
+    <Badge
+      variant={
+        sit.nivel === "erro" ? "destructive" : sit.nivel === "aviso" ? "secondary" : "outline"
+      }
+      className={
+        sit.nivel === "ok"
+          ? "border-[var(--sucesso)]/40 text-[var(--sucesso)]"
+          : sit.nivel === "aviso"
+            ? "bg-[var(--aviso)]/15 text-[var(--aviso)]"
+            : undefined
+      }
+    >
+      {sit.rotulo}
+    </Badge>
+  );
+}
+
+/** Explica o que fazer quando a Meta não liberou o número, ou por que não deu para ler. */
+function AvisoDaSituacao({ lida }: { lida: SituacaoLida | undefined }) {
+  if (!lida) return null;
+  if (lida.erro)
+    return (
+      <p className="rounded-md bg-muted/60 p-3 text-sm text-muted-foreground">
+        Não consegui ler o status deste número na Meta: {lida.erro}
+      </p>
+    );
+  const sit = situacaoDoNumeroNaMeta(lida.status);
+  if (!sit.dica) return null;
+  return (
+    <p
+      className={
+        sit.nivel === "erro"
+          ? "rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+          : "rounded-md bg-[var(--aviso)]/10 p-3 text-sm"
+      }
+    >
+      {sit.dica}
+    </p>
   );
 }
