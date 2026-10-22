@@ -438,8 +438,9 @@ export function NovoTemplate({
           </nav>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 max-md:overflow-y-auto md:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex min-h-0 flex-col gap-5 p-6 md:overflow-y-auto [@media(max-height:720px)]:gap-3 [@media(max-height:720px)]:p-4">
+        {/* Celular: pilha com altura natural dentro de um corpo que rola (antes as duas áreas eram espremidas e se sobrepunham). */}
+        <div className="min-h-0 flex-1 max-md:overflow-y-auto md:grid md:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="flex flex-col gap-5 p-6 md:min-h-0 md:overflow-y-auto [@media(max-height:720px)]:gap-3 [@media(max-height:720px)]:p-4">
             <div className="space-y-0.5">
               <h3 className="text-base font-semibold">{atual.titulo}</h3>
               <p className="text-sm text-muted-foreground [@media(max-height:720px)]:hidden">
@@ -865,7 +866,7 @@ export function NovoTemplate({
             )}
           </div>
 
-          <aside className="flex min-h-0 flex-col gap-3 border-t bg-muted/30 p-6 md:overflow-y-auto md:border-l md:border-t-0 [@media(max-height:720px)]:p-4">
+          <aside className="flex flex-col gap-3 border-t bg-muted/30 p-6 md:min-h-0 md:overflow-y-auto md:border-l md:border-t-0 [@media(max-height:720px)]:p-4">
             <p className="text-sm font-medium">Como o cliente vê</p>
             <PreviaDoTemplate previa={previaDoTemplate(def)} />
             {/* No último passo o espaço é da lista "Antes de enviar": a nota sai para ela caber sem rolar. */}

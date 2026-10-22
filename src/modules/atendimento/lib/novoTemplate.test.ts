@@ -70,4 +70,11 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain("[@media(max-height:720px)]:hidden");
     expect(tela).toContain("max-h-[min(132px,18dvh)]");
   });
+
+  it("no celular o corpo é uma pilha com altura natural que rola (as áreas não se espremem nem se sobrepõem)", () => {
+    expect(tela).toContain("max-md:overflow-y-auto md:grid md:grid-cols-");
+    // o `min-h-0` que deixava a coluna encolher abaixo do conteúdo só vale em tela larga
+    expect(tela).toContain("md:min-h-0 md:overflow-y-auto");
+    expect(tela).not.toContain('"flex min-h-0 flex-col gap-5 p-6');
+  });
 });
