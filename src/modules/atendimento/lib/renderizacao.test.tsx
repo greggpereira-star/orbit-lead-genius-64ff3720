@@ -320,6 +320,9 @@ describe("conexão manual", () => {
       expect(ehIdDaMeta(v)).toBe(false);
     const fonte = readFileSync("src/modules/atendimento/components/ConexaoManual.tsx", "utf8");
     expect(fonte).toContain('type="password"');
+    // o gerenciador de senhas não pode preencher o token com a senha do usuário
+    expect(fonte).toContain('autoComplete="new-password"');
+    expect(fonte).not.toContain('autoComplete="off"\n              value={token}');
     expect(fonte).toContain('setToken("")');
   });
 

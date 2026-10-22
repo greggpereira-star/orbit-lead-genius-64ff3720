@@ -59,7 +59,11 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
               <Label htmlFor="m-waba">ID da conta do WhatsApp Business</Label>
               <Input
                 id="m-waba"
+                name="wa-manual-waba-id"
                 inputMode="numeric"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
                 value={wabaId}
                 onChange={(e) => setWabaId(e.target.value)}
               />
@@ -68,7 +72,11 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
               <Label htmlFor="m-pn">ID do número (Phone Number ID)</Label>
               <Input
                 id="m-pn"
+                name="wa-manual-phone-number-id"
                 inputMode="numeric"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
                 value={phoneNumberId}
                 onChange={(e) => setPhoneNumberId(e.target.value)}
               />
@@ -78,8 +86,13 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
             <Label htmlFor="m-token">Token de acesso</Label>
             <Input
               id="m-token"
+              name="wa-manual-access-token"
               type="password"
-              autoComplete="off"
+              // "off" o Chrome ignora em campo de senha e preenche com a senha salva do usuário
+              // (e e-mail no campo ao lado): o token é uma chave de API, não uma senha de login.
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
               value={token}
               onChange={(e) => setToken(e.target.value)}
             />
