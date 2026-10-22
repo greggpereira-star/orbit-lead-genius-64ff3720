@@ -86,6 +86,7 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain('className="max-sm:hidden" onClick={onFechar}'); // o × do canto já fecha
     expect(tela).toContain('<span className="sm:hidden">Rascunho</span>');
     expect(tela).toContain("text-sm text-destructive sm:min-h-5"); // sem reserva de altura no celular
-    expect(tela).toContain("max-sm:w-full sm:flex-wrap");
+    expect(tela).toContain("flex flex-wrap justify-end gap-2 max-sm:w-full"); // quebra em vez de sair do modal
+    expect(tela).toContain('<span className="sm:hidden">Enviar</span>'); // 3 botões não cabem com o texto longo
   });
 });

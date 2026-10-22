@@ -908,7 +908,7 @@ export function NovoTemplate({
               ? `Falta: ${faltam.map((p) => p.rotulo.toLowerCase()).join(", ")}.`
               : ""}
           </p>
-          <div className="flex justify-end gap-2 max-sm:w-full sm:flex-wrap">
+          <div className="flex flex-wrap justify-end gap-2 max-sm:w-full">
             <Button variant="ghost" className="max-sm:hidden" onClick={onFechar}>
               Cancelar
             </Button>
@@ -933,7 +933,8 @@ export function NovoTemplate({
             ) : (
               <Button disabled={enviando} onClick={tentarEnviar}>
                 {enviando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Enviar para análise
+                <span className="max-sm:hidden">Enviar para análise</span>
+                <span className="sm:hidden">Enviar</span>
               </Button>
             )}
           </div>
