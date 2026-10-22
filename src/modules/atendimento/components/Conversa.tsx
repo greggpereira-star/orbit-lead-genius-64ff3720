@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { quickReplyService, type ChatQuickReply } from "@/modules/chat/services/quickReplyService";
+import { aplicarVariaveisDeFrase } from "@/modules/chat/lib/variaveisDeFrase";
 import {
   marcarConversaComoLidaWhatsApp,
   enviarMensagemWhatsApp,
@@ -458,7 +459,12 @@ function Compositor(props: {
               type="button"
               className="w-full border-b px-3 py-2 text-left last:border-b-0 hover:bg-muted/60"
               onClick={() => {
-                setTexto(r.content);
+                setTexto(
+                  aplicarVariaveisDeFrase(r.content, {
+                    nome: props.nomeProprio,
+                    telefone: conversa.contact?.wa_id,
+                  }),
+                );
                 setTimeout(() => campo.current?.focus(), 0);
               }}
             >

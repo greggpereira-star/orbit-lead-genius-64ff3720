@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Trash2, Pencil, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { VARIAVEIS_DE_FRASE } from '@/modules/chat/lib/variaveisDeFrase';
 
 export const Route = createFileRoute('/_app/settings/quick-replies')({
   component: QuickRepliesSettings,
@@ -133,6 +134,20 @@ function ReplyDialog({
               onChange={(e) => setContent(e.target.value)}
               placeholder="Olá! Como posso ajudar você hoje?"
             />
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-xs text-muted-foreground">Variáveis:</span>
+              {VARIAVEIS_DE_FRASE.map((v) => (
+                <button
+                  key={v.chave}
+                  type="button"
+                  title={v.rotulo}
+                  className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[11px] hover:bg-accent"
+                  onClick={() => setContent((c) => `${c}{{${v.chave}}}`)}
+                >
+                  {`{{${v.chave}}}`}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <DialogFooter>
