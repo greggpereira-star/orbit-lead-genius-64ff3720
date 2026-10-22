@@ -13,12 +13,14 @@ import {
   inscreverAppNaWaba,
   lerNumero,
   lerSaudeDoNumero,
+  inspecionarToken,
   listarTemplatesDaWaba,
   pedirSincronizacaoDoApp,
   trocarCodigoPorToken,
 } from "./graph";
 import type { DbWa } from "./processador";
 import { interpretarSaudeDaMeta, type SaudeDaConexao } from "./saudeDoNumero";
+import { interpretarValidadeDoToken, type ValidadeDoToken } from "./validadeDoToken";
 import {
   montarComponentes,
   temErro,
@@ -387,6 +389,33 @@ export async function lerSaudeDaConexao(
   const r = await lerSaudeDoNumero(phoneNumberId, conta.token);
   if (!r.ok) return { ok: false, texto: r.erro.mensagem };
   return { ok: true, saude: interpretarSaudeDaMeta(r.data) };
+}
+
+/**
+ * Validade do token da conta do número. Tenta com o próprio token; se ele já não vale (190), tenta
+ * com o token do app (`appToken`, quando configurado), que ainda consegue inspecioná-lo. O token
+ * nunca sai daqui: só a interpretação.
+ */
+export async function lerValidadeDoToken(
+  db: DbWa,
+  companyId: string,
+  phoneNumberId: string,
+  appToken?: string | null,
+  agoraMs: number = Date.now(),
+): Promise<{ ok: true; validade: ValidadeDoToken } | { ok: false; texto: string }> {
+  const { data: num } = await tabela(db, "wa_phone_numbers")
+    .select("account_id")
+    .eq("phone_number_id", phoneNumberId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (!num?.account_id) return { ok: false, texto: "Conexão não encontrada." };
+  const conta = await contaPorId(db, num.account_id as string);
+  if (!conta) return { ok: false, texto: "Sem credencial salva para esta conta." };
+
+  let r = await inspecionarToken(conta.token, conta.token);
+  if (!r.ok && appToken) r = await inspecionarToken(conta.token, appToken);
+  if (!r.ok) return { ok: false, texto: r.erro.mensagem };
+  return { ok: true, validade: interpretarValidadeDoToken(r.data, agoraMs) };
 }
 
 export type ResultadoDeTemplates = { ok: true; total: number } | { ok: false; texto: string };

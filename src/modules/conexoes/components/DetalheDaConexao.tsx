@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { estadoEfetivo, pedeAtencao, type Conexao } from "@/lib/whatsapp/cloud/conexoes";
+import type { ValidadeDoToken } from "@/lib/whatsapp/cloud/validadeDoToken";
 import type { NivelDeEnvio, SaudeDaConexao } from "@/lib/whatsapp/cloud/saudeDoNumero";
 import { SeloDeEstado } from "./CartaoDeConexao";
 
@@ -48,7 +49,16 @@ function CartaoDeSaude(props: {
   );
 }
 
+const COR_DA_VALIDADE: Record<ValidadeDoToken["nivel"], string> = {
+  ok: COR_DO_ENVIO.ok,
+  vence_logo: COR_DO_ENVIO.limitado,
+  expirado: COR_DO_ENVIO.bloqueado,
+  desconhecido: COR_DO_ENVIO.desconhecido,
+};
+
 function AbaSaude(props: {
+  validade: ValidadeDoToken | null;
+  validadeErro: string | null;
   saude: SaudeDaConexao | null;
   carregando: boolean;
   erro: string | null;
@@ -76,6 +86,21 @@ function AbaSaude(props: {
           Atualizar
         </Button>
       </div>
+
+      {props.validade && (
+        <CartaoDeSaude
+          titulo="Acesso (token)"
+          selo={props.validade.rotulo}
+          classeDoSelo={COR_DA_VALIDADE[props.validade.nivel]}
+        >
+          <p className="text-sm text-muted-foreground">{props.validade.descricao}</p>
+        </CartaoDeSaude>
+      )}
+      {!props.validade && props.validadeErro && (
+        <p className="rounded-xl bg-muted/60 p-4 text-sm text-muted-foreground">
+          Não consegui medir a validade do token: {props.validadeErro}
+        </p>
+      )}
 
       {props.erro && (
         <p className="rounded-xl bg-muted/60 p-4 text-sm text-muted-foreground">
@@ -174,6 +199,8 @@ export function DetalheDaConexao(props: {
   saude: SaudeDaConexao | null;
   saudeCarregando: boolean;
   saudeErro: string | null;
+  validade: ValidadeDoToken | null;
+  validadeErro: string | null;
   onVoltar: () => void;
   onAtualizarSaude: () => void;
 }) {
@@ -324,6 +351,8 @@ export function DetalheDaConexao(props: {
         {c.tipo === "oficial" && (
           <TabsContent value="saude" className="pt-4">
             <AbaSaude
+              validade={props.validade}
+              validadeErro={props.validadeErro}
               saude={saude}
               carregando={props.saudeCarregando}
               erro={props.saudeErro}

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { DetalheDaConexao } from "@/modules/conexoes/components/DetalheDaConexao";
-import { useConexoes, useSaudeDaConexao } from "@/modules/conexoes/hooks";
+import { useConexoes, useSaudeDaConexao, useValidadeDoToken } from "@/modules/conexoes/hooks";
 
 export const Route = createFileRoute("/_app/settings/conexoes/$id")({
   component: PaginaDaConexao,
@@ -15,6 +15,8 @@ function PaginaDaConexao() {
   const voltar = () => navigate({ to: "/settings/conexoes" });
   // O hook roda sempre (regra dos hooks); só consulta a Meta se a conexão é oficial.
   const saude = useSaudeDaConexao(conexao?.tipo === "oficial" ? conexao.id : null);
+
+  const token = useValidadeDoToken(conexao?.tipo === "oficial" ? conexao.id : null);
 
   if (conexoesQ.isLoading) return <p className="text-sm text-muted-foreground">Carregando…</p>;
   if (!conexao)
@@ -33,6 +35,8 @@ function PaginaDaConexao() {
       saude={saude.saude}
       saudeCarregando={saude.carregando}
       saudeErro={saude.erro}
+      validade={token.validade}
+      validadeErro={token.erro}
       onVoltar={voltar}
       onAtualizarSaude={saude.atualizar}
     />

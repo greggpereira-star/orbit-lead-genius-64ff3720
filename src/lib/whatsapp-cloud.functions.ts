@@ -138,6 +138,23 @@ export const obterSaudeDaConexaoWhatsApp = createServerFn({ method: "GET" })
     return lerSaudeDaConexao(admin, companyId, data.phoneNumberId);
   });
 
+/** Validade do token do número (debug_token). Não devolve o token, só a interpretação. */
+export const obterValidadeDoTokenWhatsApp = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ phoneNumberId: z.string().regex(/^\d{5,30}$/) }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaDoUsuario(admin, context.userId);
+    const { lerValidadeDoToken } = await import("@/lib/whatsapp/cloud/onboarding");
+    const appId = lerEnv("META_APP_ID");
+    const appSecret = lerEnv("META_APP_SECRET");
+    const appToken = appId && appSecret ? `${appId}|${appSecret}` : null;
+    return lerValidadeDoToken(admin, companyId, data.phoneNumberId, appToken);
+  });
+
 // ---------------------------------------------------------------------------
 // Concluir o Embedded Signup
 // ---------------------------------------------------------------------------

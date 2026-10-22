@@ -3,8 +3,10 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   listarConexoesWhatsApp,
   obterSaudeDaConexaoWhatsApp,
+  obterValidadeDoTokenWhatsApp,
 } from "@/lib/whatsapp-cloud.functions";
 import type { Conexao } from "@/lib/whatsapp/cloud/conexoes";
+import type { ValidadeDoToken } from "@/lib/whatsapp/cloud/validadeDoToken";
 import type { SaudeDaConexao } from "@/lib/whatsapp/cloud/saudeDoNumero";
 
 export const chavesDeConexoes = {
@@ -63,5 +65,24 @@ export function useSaudeDaConexao(phoneNumberId: string | null) {
     erro: q.isError ? "Não consegui consultar a Meta agora." : d && !d.ok ? d.texto : null,
     atualizar: () =>
       qc.invalidateQueries({ queryKey: chavesDeConexoes.saude(phoneNumberId ?? "") }),
+  };
+}
+
+export function useValidadeDoToken(phoneNumberId: string | null) {
+  const buscar = useServerFn(obterValidadeDoTokenWhatsApp);
+  const q = useQuery({
+    queryKey: ["conexao-token", phoneNumberId ?? ""],
+    enabled: Boolean(phoneNumberId),
+    queryFn: () =>
+      buscar({ data: { phoneNumberId: phoneNumberId! } }) as Promise<
+        { ok: true; validade: ValidadeDoToken } | { ok: false; texto: string }
+      >,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const d = q.data;
+  return {
+    validade: d && d.ok ? d.validade : null,
+    erro: q.isError ? "Não consegui consultar a Meta agora." : d && !d.ok ? d.texto : null,
   };
 }

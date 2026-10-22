@@ -168,6 +168,17 @@ export function lerSaudeDoNumero(phoneNumberId: string, token: string) {
   });
 }
 
+/**
+ * `debug_token`: validade e escopos de um token. `tokenDeConsulta` autentica a chamada (o próprio
+ * token enquanto vale; o token do app quando o inspecionado já expirou).
+ */
+export function inspecionarToken(token: string, tokenDeConsulta: string) {
+  return chamar<Record<string, unknown>>("/debug_token", {
+    token: tokenDeConsulta,
+    query: { input_token: token },
+  });
+}
+
 export interface TemplateDaMeta {
   id?: string;
   name: string;
