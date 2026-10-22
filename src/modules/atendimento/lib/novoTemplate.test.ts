@@ -43,7 +43,9 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain("onClick={() => irPara(i)}");
     expect(tela).toContain('aria-label="Passos do cadastro"');
     expect(tela).toContain("passo < PASSOS.length - 1");
-    expect(tela).toContain("Próximo<span");
+    // "Próximo: mensagem" no desktop; só "Próximo" no celular
+    expect(tela).toContain("Próximo");
+    expect(tela).toContain("PASSOS[passo + 1].rotulo.toLowerCase()");
     // o modal não rola em tela larga: altura fixa, e a rolagem só como rede de segurança dentro da coluna
     expect(tela).toContain("h-[min(780px,92dvh)]");
     expect(tela).toContain("overflow-hidden p-0");
