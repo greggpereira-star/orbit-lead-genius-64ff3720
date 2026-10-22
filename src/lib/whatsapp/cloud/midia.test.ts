@@ -9,6 +9,7 @@ import {
   caminhoDeSaida,
   caminhoEhDaEmpresa,
   classificarArquivoParaEnvio,
+  normalizarMime,
   extensaoDoMime,
   extrairMidia,
   nomeSeguro,
@@ -620,5 +621,31 @@ describe("URL de mídia no ensaio local (desvio da Graph API)", () => {
         META_GRAPH_BASE_URL: "https://evil.example/v25.0",
       }),
     ).toBe(false);
+  });
+});
+
+describe("áudio com player (m4a e sinônimos)", () => {
+  it("audio/x-m4a e audio/m4a viram audio/mp4 e vão como áudio", () => {
+    for (const mime of ["audio/x-m4a", "audio/m4a", "audio/mp4"]) {
+      expect(classificarArquivoParaEnvio({ mime, bytes: 40_000 })).toEqual({
+        ok: true,
+        tipo: "audio",
+      });
+    }
+  });
+  it("tipo vazio ou genérico é deduzido pela extensão", () => {
+    expect(normalizarMime("", "voz.m4a")).toBe("audio/mp4");
+    expect(normalizarMime("application/octet-stream", "faixa.MP3")).toBe("audio/mpeg");
+    expect(classificarArquivoParaEnvio({ mime: "", bytes: 1000, nome: "voz.m4a" })).toEqual({
+      ok: true,
+      tipo: "audio",
+    });
+  });
+  it("tipo informado e conhecido não é sobrescrito pela extensão", () => {
+    expect(normalizarMime("application/pdf", "x.mp3")).toBe("application/pdf");
+  });
+  it("audio/mp3 vira audio/mpeg; formato fora da lista (wav) continua pedindo escolha", () => {
+    expect(normalizarMime("audio/mp3")).toBe("audio/mpeg");
+    expect(classificarArquivoParaEnvio({ mime: "audio/wav", bytes: 1000 }).ok).toBe(false);
   });
 });

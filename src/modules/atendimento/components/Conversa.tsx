@@ -32,7 +32,7 @@ import { AVISO_DO_MODO, modoDoCompositor } from "../lib/compositor";
 import { MidiaDaMensagem } from "./MidiaDaMensagem";
 import { EnviarTemplate } from "./EnviarTemplate";
 import { supabase } from "@/lib/supabase";
-import { classificarArquivoParaEnvio } from "@/lib/whatsapp/cloud/midia";
+import { classificarArquivoParaEnvio, normalizarMime } from "@/lib/whatsapp/cloud/midia";
 import {
   janelaDaConversa,
   nomeDaConversa,
@@ -351,7 +351,8 @@ function Compositor(props: {
    * O texto digitado vira a legenda.
    */
   async function anexar(arquivo: File) {
-    const c = classificarArquivoParaEnvio({ mime: arquivo.type, bytes: arquivo.size });
+    const mime = normalizarMime(arquivo.type, arquivo.name) || "application/octet-stream";
+    const c = classificarArquivoParaEnvio({ mime, bytes: arquivo.size, nome: arquivo.name });
     // Formato fora da lista de mídia: oferece enviar como documento em vez de recusar calado.
     let forcarDocumento = false;
     if (!c.ok) {
@@ -364,7 +365,7 @@ function Compositor(props: {
         data: {
           conversaId: conversa.id,
           nome: arquivo.name,
-          mime: arquivo.type || "application/octet-stream",
+          mime,
           bytes: arquivo.size,
           forcarDocumento,
         },
@@ -397,7 +398,7 @@ function Compositor(props: {
           conversaId: conversa.id,
           caminho: prep.caminho,
           tipo: prep.tipo,
-          mime: arquivo.type || "application/octet-stream",
+          mime,
           nome: arquivo.name,
           legenda: texto.trim() || null,
         },

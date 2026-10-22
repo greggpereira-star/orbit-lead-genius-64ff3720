@@ -69,6 +69,47 @@ const REGRAS_DE_ENVIO: Record<
   document: { mimes: null, max: 20 * MB, rotulo: "Documento (até 20 MB)" },
 };
 
+/** Nomes que navegadores e celulares dão ao mesmo formato → o nome que a Meta aceita. */
+const SINONIMOS_DE_MIME: Record<string, string> = {
+  "audio/x-m4a": "audio/mp4",
+  "audio/m4a": "audio/mp4",
+  "audio/mp4a-latm": "audio/mp4",
+  "audio/x-aac": "audio/aac",
+  "audio/mp3": "audio/mpeg",
+  "audio/x-mpeg": "audio/mpeg",
+  "audio/x-mp3": "audio/mpeg",
+  "audio/opus": "audio/ogg",
+  "image/jpg": "image/jpeg",
+};
+
+const MIME_POR_EXTENSAO: Record<string, string> = {
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  mp3: "audio/mpeg",
+  ogg: "audio/ogg",
+  oga: "audio/ogg",
+  opus: "audio/ogg",
+  amr: "audio/amr",
+  mp4: "video/mp4",
+  "3gp": "video/3gpp",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  pdf: "application/pdf",
+};
+
+/**
+ * Tipo do arquivo como a Meta o conhece. Sem tipo (ou genérico) deduz pela extensão; os
+ * sinônimos comuns (m4a = audio/mp4) viram o nome oficial, para o áudio sair com player
+ * em vez de cair em "enviar como documento".
+ */
+export function normalizarMime(mime: string, nome?: string): string {
+  const m = (mime ?? "").split(";")[0].trim().toLowerCase();
+  if (m && m !== "application/octet-stream") return SINONIMOS_DE_MIME[m] ?? m;
+  const ext = (nome ?? "").split(".").pop()?.toLowerCase() ?? "";
+  return MIME_POR_EXTENSAO[ext] ?? m;
+}
+
 export type ArquivoParaEnvio =
   { ok: true; tipo: Exclude<TipoDeMidia, "sticker"> } | { ok: false; texto: string };
 
@@ -81,8 +122,9 @@ export function classificarArquivoParaEnvio(a: {
   mime: string;
   bytes: number;
   forcarDocumento?: boolean;
+  nome?: string;
 }): ArquivoParaEnvio {
-  const mime = a.mime.split(";")[0].trim().toLowerCase();
+  const mime = normalizarMime(a.mime, a.nome);
   if (!mime) return { ok: false, texto: "Tipo de arquivo desconhecido." };
   if (!Number.isFinite(a.bytes) || a.bytes <= 0) return { ok: false, texto: "Arquivo vazio." };
 

@@ -255,6 +255,7 @@ export const prepararUploadDeMidiaWhatsApp = createServerFn({ method: "POST" })
       mime: data.mime,
       bytes: data.bytes,
       forcarDocumento: data.forcarDocumento,
+      nome: data.nome,
     });
     if (!c.ok) return { ok: false as const, texto: c.texto };
 
