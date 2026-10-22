@@ -85,6 +85,7 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain('i !== passo && "max-sm:hidden"'); // só o passo atual mostra o nome
     expect(tela).toContain('className="max-sm:hidden" onClick={onFechar}'); // o × do canto já fecha
     expect(tela).toContain('<span className="sm:hidden">Rascunho</span>');
+    expect(tela).toContain("text-sm text-destructive sm:min-h-5"); // sem reserva de altura no celular
     expect(tela).toContain("max-sm:w-full sm:flex-wrap");
   });
 });

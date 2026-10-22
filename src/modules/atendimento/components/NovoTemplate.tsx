@@ -902,8 +902,8 @@ export function NovoTemplate({
           </aside>
         </div>
 
-        <DialogFooter className="gap-3 border-t px-4 py-4 sm:px-6 [@media(max-height:720px)]:py-3 sm:items-center sm:justify-between sm:space-x-0">
-          <p aria-live="polite" className="min-h-5 text-sm text-destructive">
+        <DialogFooter className="gap-3 max-sm:gap-2 border-t px-4 py-4 sm:px-6 [@media(max-height:720px)]:py-3 sm:items-center sm:justify-between sm:space-x-0">
+          <p aria-live="polite" className="text-sm text-destructive sm:min-h-5">
             {tentou && faltam.length > 0
               ? `Falta: ${faltam.map((p) => p.rotulo.toLowerCase()).join(", ")}.`
               : ""}
@@ -925,7 +925,9 @@ export function NovoTemplate({
             {passo < PASSOS.length - 1 ? (
               <Button className="gap-1.5" onClick={() => irPara(passo + 1)}>
                 Próximo
-                <span className="max-sm:hidden">: {PASSOS[passo + 1].rotulo.toLowerCase()}</span>{" "}
+                <span className="max-sm:hidden">
+                  : {PASSOS[passo + 1].rotulo.toLowerCase()}
+                </span>{" "}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             ) : (
