@@ -10,7 +10,7 @@
  */
 
 import { META_GRAPH_BASE } from "../../meta-graph.server";
-import { classificarErroMeta, type ErroMeta } from "./erros";
+import { classificarErroMeta, mensagemDaMetaEmPortugues, type ErroMeta } from "./erros";
 
 export type RespostaGraph<T> =
   | { ok: true; data: T }
@@ -63,7 +63,7 @@ async function chamar<T>(caminho: string, init: Init = {}): Promise<RespostaGrap
       erro: {
         ...classificarErroMeta(codigo, res.status),
         codigo,
-        mensagem: e?.message ?? `HTTP ${res.status}`,
+        mensagem: mensagemDaMetaEmPortugues(codigo, e?.message, res.status),
         fbtraceId: e?.fbtrace_id ?? null,
         http: res.status,
       },
@@ -129,10 +129,12 @@ export interface DadosDoNumero {
   platform_type?: string;
   is_on_biz_app?: boolean;
   code_verification_status?: string;
+  /** Situação do número na Meta: CONNECTED, PENDING, BANNED… */
+  status?: string;
 }
 
 const CAMPOS_COMPLETOS =
-  "display_phone_number,verified_name,quality_rating,messaging_limit_tier,platform_type,is_on_biz_app,code_verification_status";
+  "display_phone_number,verified_name,quality_rating,messaging_limit_tier,platform_type,is_on_biz_app,code_verification_status,status";
 const CAMPOS_MINIMOS = "display_phone_number,verified_name,quality_rating";
 
 /**

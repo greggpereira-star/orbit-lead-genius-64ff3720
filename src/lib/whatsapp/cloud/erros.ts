@@ -82,3 +82,42 @@ export function classificarErroMeta(
   }
   return { classe: "desconhecido", retentavel: false, texto: "Falha ao enviar pelo WhatsApp." };
 }
+
+/**
+ * A mensagem da Graph API chega em inglês e fala em "objeto", "operação" e "permissões
+ * faltando" — o que não diz a quem está conectando o que fazer. Aqui as causas mais comuns
+ * viram uma frase com o próximo passo; o que não for reconhecido volta como a Meta mandou,
+ * para não esconder um erro novo atrás de um texto bonito.
+ */
+export function mensagemDaMetaEmPortugues(
+  codigo: number | null | undefined,
+  original: string | null | undefined,
+  http?: number,
+): string {
+  const m = (original ?? "").toLowerCase();
+  const bruto = original ?? (http ? `HTTP ${http}` : "Erro da Meta");
+
+  if (
+    /unsupported (get|post|delete) request/.test(m) ||
+    /does not exist, cannot be loaded due to missing permissions/.test(m)
+  ) {
+    return "O token não tem acesso a este recurso (o ID não existe ou o token não tem permissão sobre ele). Gere o token pela conta certa — a Etapa 1 do app ou um usuário do sistema com acesso à conta — e confira os IDs.";
+  }
+  if (
+    codigo === 190 ||
+    /error validating access token|session has expired|access token.*(expired|invalid)/.test(m)
+  ) {
+    return "O token expirou ou foi revogado. Gere um token novo e conecte de novo.";
+  }
+  if (
+    codigo === 10 ||
+    codigo === 200 ||
+    /\(#?(10|200)\)|requires .*permission|permissions? error/.test(m)
+  ) {
+    return "O token não tem as permissões necessárias (whatsapp_business_management e whatsapp_business_messaging). Gere um token com elas.";
+  }
+  if (codigo === 4 || codigo === 17 || codigo === 32 || codigo === 613 || codigo === 80007) {
+    return "A Meta limitou as chamadas por excesso de uso. Tente de novo em alguns minutos.";
+  }
+  return bruto;
+}
