@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { quickReplyService, type ChatQuickReply } from "@/modules/chat/services/quickReplyService";
 import { aplicarVariaveisDeFrase } from "@/modules/chat/lib/variaveisDeFrase";
+import { anexoDaMensagem } from "../lib/anexosDaMensagem";
+import { AnexoDaMensagemView } from "./AnexoDaMensagemView";
 import {
   marcarConversaComoLidaWhatsApp,
   enviarMensagemWhatsApp,
@@ -190,6 +192,7 @@ export function Conversa(props: {
               const saida = m.direction === "outbound";
               const marca = marcaDeEntrega(m);
               const autoria = saida ? autoriaDaSaida(m.origin) : "";
+              const anexo = anexoDaMensagem(m);
               return (
                 <div
                   key={m.id}
@@ -238,10 +241,14 @@ export function Conversa(props: {
                       </div>
                     )}
                     {/* Com mídia visível, só a legenda: "[Imagem]" seria ruído. */}
-                    {(!temMidia(m) || m.body?.trim()) && (
-                      <div className="whitespace-pre-wrap break-words">
-                        {temMidia(m) ? m.body : textoParaExibir(m)}
-                      </div>
+                    {anexo ? (
+                      <AnexoDaMensagemView anexo={anexo} />
+                    ) : (
+                      (!temMidia(m) || m.body?.trim()) && (
+                        <div className="whitespace-pre-wrap break-words">
+                          {temMidia(m) ? m.body : textoParaExibir(m)}
+                        </div>
+                      )
                     )}
                     <div
                       className={cn(

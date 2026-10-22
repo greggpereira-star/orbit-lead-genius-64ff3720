@@ -15,6 +15,8 @@ export interface MensagemDaConversa {
   sent_by: string | null;
   error_title: string | null;
   media_id: string | null;
+  /** Mensagem original do provedor; só a localização e o contato leem daqui. */
+  payload?: unknown;
   /** Mensagem citada (resposta). Nula se não é resposta ou a original não está no banco. */
   reply_to?: string | null;
 }
