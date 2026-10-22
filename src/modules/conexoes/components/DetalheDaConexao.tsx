@@ -101,6 +101,14 @@ function AbaSaude(props: {
               essas permissões.
             </p>
           )}
+          {props.validade.escoposSemAcessoAConta.length > 0 && (
+            <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              O token tem {props.validade.escoposSemAcessoAConta.join(" e ")}, mas não para a conta
+              deste número. A Meta recusa o envio (erro #131005, "Access denied"). No Business
+              Settings, atribua esta conta do WhatsApp ao usuário do sistema com controle total e
+              gere o token de novo.
+            </p>
+          )}
           {props.validade.escopos.length > 0 && (
             <p className="break-words text-xs text-muted-foreground">
               Permissões do token: {props.validade.escopos.join(", ")}

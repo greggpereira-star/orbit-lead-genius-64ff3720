@@ -16,6 +16,11 @@ export interface ValidadeDoToken {
   escopos: string[];
   /** Obrigatórias que o token NÃO tem (só calculado quando a Meta informou os escopos). */
   escoposFaltando: string[];
+  /**
+   * Obrigatórias que o token tem, mas SEM acesso à conta consultada: a Meta guarda, por permissão,
+   * a lista de contas a que ela vale (`granular_scopes`). Fora dela o envio volta #131005.
+   */
+  escoposSemAcessoAConta: string[];
   nivel: NivelDeValidade;
   rotulo: string;
   descricao: string;
@@ -33,6 +38,7 @@ const data = (ms: number) => new Date(ms).toLocaleDateString("pt-BR");
 export function interpretarValidadeDoToken(
   bruto: Record<string, unknown> | null | undefined,
   agoraMs: number,
+  wabaId?: string | null,
 ): ValidadeDoToken {
   const d = ((bruto?.data as Record<string, unknown> | undefined) ?? bruto ?? {}) as Record<
     string,
@@ -44,7 +50,24 @@ export function interpretarValidadeDoToken(
     : [];
   const escoposFaltando =
     escopos.length > 0 ? ESCOPOS_OBRIGATORIOS.filter((e) => !escopos.includes(e)) : [];
-  const base = { escopos, escoposFaltando: [...escoposFaltando] };
+  const escoposSemAcessoAConta: string[] = [];
+  if (wabaId) {
+    const granulares = Array.isArray(d.granular_scopes) ? d.granular_scopes : [];
+    for (const e of ESCOPOS_OBRIGATORIOS) {
+      const g = granulares.find(
+        (x) => x && typeof x === "object" && (x as { scope?: unknown }).scope === e,
+      ) as { target_ids?: unknown } | undefined;
+      // Sem lista (o escopo vale em tudo) não acusa; só quando há lista e a conta não está nela.
+      if (g && Array.isArray(g.target_ids) && g.target_ids.length > 0) {
+        if (!g.target_ids.map(String).includes(String(wabaId))) escoposSemAcessoAConta.push(e);
+      }
+    }
+  }
+  const base = {
+    escopos,
+    escoposFaltando: [...escoposFaltando],
+    escoposSemAcessoAConta,
+  };
   if (typeof d.is_valid !== "boolean") {
     return {
       ...base,

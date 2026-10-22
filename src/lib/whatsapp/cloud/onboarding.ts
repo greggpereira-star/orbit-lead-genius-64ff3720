@@ -415,7 +415,7 @@ export async function lerValidadeDoToken(
   let r = await inspecionarToken(conta.token, conta.token);
   if (!r.ok && appToken) r = await inspecionarToken(conta.token, appToken);
   if (!r.ok) return { ok: false, texto: r.erro.mensagem };
-  return { ok: true, validade: interpretarValidadeDoToken(r.data, agoraMs) };
+  return { ok: true, validade: interpretarValidadeDoToken(r.data, agoraMs, conta.wabaId) };
 }
 
 export type ResultadoDeTemplates = { ok: true; total: number } | { ok: false; texto: string };

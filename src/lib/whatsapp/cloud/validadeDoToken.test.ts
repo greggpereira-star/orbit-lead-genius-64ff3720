@@ -65,3 +65,60 @@ describe("escopos do token", () => {
     expect(v.escoposFaltando).toEqual([]);
   });
 });
+
+describe("permissão por conta (granular_scopes)", () => {
+  const WABA = "1712518090288635";
+  const base = { is_valid: true, expires_at: 0 };
+  it("acusa a permissão que não inclui a conta do número", () => {
+    const v = interpretarValidadeDoToken(
+      {
+        data: {
+          ...base,
+          scopes: ["whatsapp_business_messaging", "whatsapp_business_management"],
+          granular_scopes: [
+            { scope: "whatsapp_business_management", target_ids: [WABA] },
+            { scope: "whatsapp_business_messaging", target_ids: ["999"] },
+          ],
+        },
+      },
+      AGORA,
+      WABA,
+    );
+    expect(v.escoposSemAcessoAConta).toEqual(["whatsapp_business_messaging"]);
+  });
+  it("não acusa quando a conta está na lista, ou quando não há lista", () => {
+    const comLista = interpretarValidadeDoToken(
+      {
+        data: {
+          ...base,
+          scopes: ["whatsapp_business_messaging", "whatsapp_business_management"],
+          granular_scopes: [
+            { scope: "whatsapp_business_messaging", target_ids: [WABA, "1"] },
+            { scope: "whatsapp_business_management", target_ids: [WABA] },
+          ],
+        },
+      },
+      AGORA,
+      WABA,
+    );
+    expect(comLista.escoposSemAcessoAConta).toEqual([]);
+    const semLista = interpretarValidadeDoToken(
+      { data: { ...base, scopes: ["whatsapp_business_messaging"] } },
+      AGORA,
+      WABA,
+    );
+    expect(semLista.escoposSemAcessoAConta).toEqual([]);
+  });
+  it("sem o ID da conta não verifica", () => {
+    const v = interpretarValidadeDoToken(
+      {
+        data: {
+          ...base,
+          granular_scopes: [{ scope: "whatsapp_business_messaging", target_ids: ["9"] }],
+        },
+      },
+      AGORA,
+    );
+    expect(v.escoposSemAcessoAConta).toEqual([]);
+  });
+});
