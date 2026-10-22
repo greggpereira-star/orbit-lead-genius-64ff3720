@@ -30,11 +30,14 @@ describe("mídia na conversa", () => {
   });
 
   it("o anexo valida antes de subir e oferece documento em vez de recusar calado", () => {
+    expect(conversa).toContain("normalizarMime(arquivo.type, arquivo.name)");
     expect(conversa).toContain(
-      "classificarArquivoParaEnvio({ mime: arquivo.type, bytes: arquivo.size })",
+      "classificarArquivoParaEnvio({ mime, bytes: arquivo.size, nome: arquivo.name })",
     );
     expect(conversa).toContain("Enviar como documento?");
-    const v = conversa.indexOf("classificarArquivoParaEnvio({ mime: arquivo.type");
+    // O arquivo sobe com o tipo declarado: como octet-stream a Meta recusa áudio ao baixar.
+    expect(conversa).toContain("{ contentType: mime }");
+    const v = conversa.indexOf("classificarArquivoParaEnvio({ mime, bytes");
     expect(v).toBeLessThan(conversa.indexOf("prepararUpload({"));
     expect(conversa.indexOf("prepararUpload({")).toBeLessThan(conversa.indexOf("enviarMidia({"));
   });

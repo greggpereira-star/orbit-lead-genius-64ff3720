@@ -382,13 +382,16 @@ function Compositor(props: {
                 p: string,
                 t: string,
                 f: File,
+                o?: { contentType?: string },
               ) => Promise<{ error: { message: string } | null }>;
             };
           };
         }
       ).storage
         .from("wa-media")
-        .uploadToSignedUrl(prep.caminho, prep.token, arquivo);
+        // Sem o tipo o arquivo é gravado como octet-stream, e a Meta recusa áudio assim
+        // ("Media upload error") ao baixar pelo link.
+        .uploadToSignedUrl(prep.caminho, prep.token, arquivo, { contentType: mime });
       if (up.error) {
         toast.error(`Não consegui subir o arquivo: ${up.error.message}`);
         return;
