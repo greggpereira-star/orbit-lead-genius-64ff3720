@@ -384,10 +384,10 @@ export function NovoTemplate({
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
       <DialogContent className="flex h-[min(780px,92dvh)] max-w-[min(1120px,96vw)] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="space-y-3 border-b px-6 pb-4 pt-5">
+        <DialogHeader className="space-y-3 border-b px-6 pb-4 pt-5 [@media(max-height:720px)]:space-y-2 [@media(max-height:720px)]:pb-3 [@media(max-height:720px)]:pt-4">
           <div className="space-y-1 pr-8">
             <DialogTitle>{rascunhoId ? "Continuar template" : "Novo template"}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="[@media(max-height:720px)]:hidden">
               Escreva a mensagem e envie para a Meta analisar. Costuma levar minutos.
               {contaRotulo && (
                 <>
@@ -439,10 +439,12 @@ export function NovoTemplate({
         </DialogHeader>
 
         <div className="grid min-h-0 flex-1 max-md:overflow-y-auto md:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex min-h-0 flex-col gap-5 p-6 md:overflow-y-auto">
+          <div className="flex min-h-0 flex-col gap-5 p-6 md:overflow-y-auto [@media(max-height:720px)]:gap-3 [@media(max-height:720px)]:p-4">
             <div className="space-y-0.5">
               <h3 className="text-base font-semibold">{atual.titulo}</h3>
-              <p className="text-sm text-muted-foreground">{atual.texto}</p>
+              <p className="text-sm text-muted-foreground [@media(max-height:720px)]:hidden">
+                {atual.texto}
+              </p>
             </div>
 
             {passo === 0 && (
@@ -498,7 +500,7 @@ export function NovoTemplate({
                       </label>
                     ))}
                   </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
+                  <p className="text-xs leading-relaxed text-muted-foreground [@media(max-height:720px)]:hidden">
                     Marketing costuma custar bem mais por mensagem que Utilidade (veja a tabela de
                     preços da Meta). Idioma da mensagem: {IDIOMAS[def.idioma] ?? def.idioma}.
                   </p>
@@ -581,7 +583,7 @@ export function NovoTemplate({
                   </Popover>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                <div className="flex min-h-[170px] flex-1 flex-col gap-1.5">
                   <Label htmlFor="t-corpo" className="sr-only">
                     Texto que o cliente vai receber
                   </Label>
@@ -591,7 +593,7 @@ export function NovoTemplate({
                     value={def.corpo}
                     placeholder="Olá {{1}}, recebemos seu pedido {{2}}."
                     aria-invalid={comErro("corpo")}
-                    className="min-h-[150px] flex-1 resize-none text-[15px] leading-relaxed"
+                    className="min-h-[110px] flex-1 resize-none text-[15px] leading-relaxed"
                     onChange={(e) => setDef({ ...def, corpo: e.target.value })}
                   />
                   <div className="flex items-start justify-between gap-3 text-xs text-muted-foreground">
@@ -632,12 +634,12 @@ export function NovoTemplate({
                   <div className="space-y-2.5 rounded-xl border bg-muted/30 p-4">
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">Variáveis e exemplos</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground [@media(max-height:720px)]:hidden">
                         A Meta pede um exemplo de cada variável para aprovar. Ele só aparece na
                         prévia, não vai para o cliente. Toque na variável para inseri-la no texto.
                       </p>
                     </div>
-                    <div className="max-h-[132px] space-y-2 overflow-y-auto pr-1">
+                    <div className="max-h-[min(132px,18dvh)] space-y-2 overflow-y-auto pr-1">
                       {variaveis.map((n, i) => (
                         <div
                           key={n}
@@ -863,7 +865,7 @@ export function NovoTemplate({
             )}
           </div>
 
-          <aside className="flex min-h-0 flex-col gap-3 border-t bg-muted/30 p-6 md:overflow-y-auto md:border-l md:border-t-0">
+          <aside className="flex min-h-0 flex-col gap-3 border-t bg-muted/30 p-6 md:overflow-y-auto md:border-l md:border-t-0 [@media(max-height:720px)]:p-4">
             <p className="text-sm font-medium">Como o cliente vê</p>
             <PreviaDoTemplate previa={previaDoTemplate(def)} />
             {/* No último passo o espaço é da lista "Antes de enviar": a nota sai para ela caber sem rolar. */}
@@ -899,7 +901,7 @@ export function NovoTemplate({
           </aside>
         </div>
 
-        <DialogFooter className="gap-3 border-t px-6 py-4 sm:items-center sm:justify-between sm:space-x-0">
+        <DialogFooter className="gap-3 border-t px-6 py-4 [@media(max-height:720px)]:py-3 sm:items-center sm:justify-between sm:space-x-0">
           <p aria-live="polite" className="min-h-5 text-sm text-destructive">
             {tentou && faltam.length > 0
               ? `Falta: ${faltam.map((p) => p.rotulo.toLowerCase()).join(", ")}.`

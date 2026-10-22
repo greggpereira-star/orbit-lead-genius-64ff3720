@@ -62,4 +62,12 @@ describe("Novo template (cadastro)", () => {
     expect(tela).toContain("t-nome");
     expect(tela).toContain("t-corpo");
   });
+
+  it("em tela baixa o editor não é coberto pelas variáveis e o apoio de texto cede espaço", () => {
+    // antes o editor encolhia abaixo do próprio conteúdo e a caixa de variáveis passava por cima
+    expect(tela).toContain("min-h-[170px] flex-1");
+    expect(tela).not.toContain('<div className="flex min-h-0 flex-1 flex-col gap-1.5">');
+    expect(tela).toContain("[@media(max-height:720px)]:hidden");
+    expect(tela).toContain("max-h-[min(132px,18dvh)]");
+  });
 });
