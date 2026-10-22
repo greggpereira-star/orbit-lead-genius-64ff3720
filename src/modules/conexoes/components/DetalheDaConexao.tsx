@@ -94,6 +94,18 @@ function AbaSaude(props: {
           classeDoSelo={COR_DA_VALIDADE[props.validade.nivel]}
         >
           <p className="text-sm text-muted-foreground">{props.validade.descricao}</p>
+          {props.validade.escoposFaltando.length > 0 && (
+            <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              Faltam permissões neste token: {props.validade.escoposFaltando.join(", ")}. Sem elas a
+              Meta recusa o envio (erro #131005, "Access denied"). Gere o token de novo marcando
+              essas permissões.
+            </p>
+          )}
+          {props.validade.escopos.length > 0 && (
+            <p className="break-words text-xs text-muted-foreground">
+              Permissões do token: {props.validade.escopos.join(", ")}
+            </p>
+          )}
         </CartaoDeSaude>
       )}
       {!props.validade && props.validadeErro && (

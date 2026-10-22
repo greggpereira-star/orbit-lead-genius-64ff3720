@@ -5,7 +5,17 @@
 
 export type NivelDeValidade = "ok" | "vence_logo" | "expirado" | "desconhecido";
 
+/** Permissões que o atendimento precisa: enviar/receber mensagens e gerir conta e templates. */
+export const ESCOPOS_OBRIGATORIOS = [
+  "whatsapp_business_messaging",
+  "whatsapp_business_management",
+] as const;
+
 export interface ValidadeDoToken {
+  /** Permissões do token; vazio se a Meta não informou. */
+  escopos: string[];
+  /** Obrigatórias que o token NÃO tem (só calculado quando a Meta informou os escopos). */
+  escoposFaltando: string[];
   nivel: NivelDeValidade;
   rotulo: string;
   descricao: string;
@@ -29,8 +39,15 @@ export function interpretarValidadeDoToken(
     unknown
   >;
   const tipo = typeof d.type === "string" ? d.type : null;
+  const escopos = Array.isArray(d.scopes)
+    ? d.scopes.filter((x): x is string => typeof x === "string")
+    : [];
+  const escoposFaltando =
+    escopos.length > 0 ? ESCOPOS_OBRIGATORIOS.filter((e) => !escopos.includes(e)) : [];
+  const base = { escopos, escoposFaltando: [...escoposFaltando] };
   if (typeof d.is_valid !== "boolean") {
     return {
+      ...base,
       nivel: "desconhecido",
       rotulo: "Não consegui medir",
       descricao: "A Meta não informou a validade deste token.",
@@ -45,6 +62,7 @@ export function interpretarValidadeDoToken(
   if (!d.is_valid) {
     const quando = expMs ? ` em ${data(expMs)}` : "";
     return {
+      ...base,
       nivel: "expirado",
       rotulo: "Expirado ou revogado",
       descricao: `O token deixou de valer${quando}. Gere um token novo (no usuário do sistema, escolha a validade "Nunca", se aparecer) e reconecte o número.`,
@@ -54,6 +72,7 @@ export function interpretarValidadeDoToken(
   }
   if (expMs === null) {
     return {
+      ...base,
       nivel: "ok",
       rotulo: "Não expira",
       descricao: "Este token não tem data de expiração.",
@@ -64,6 +83,7 @@ export function interpretarValidadeDoToken(
   const dias = Math.floor((expMs - agoraMs) / DIA);
   if (dias <= AVISO_EM_DIAS) {
     return {
+      ...base,
       nivel: "vence_logo",
       rotulo: dias <= 0 ? "Vence hoje" : `Vence em ${dias} ${dias === 1 ? "dia" : "dias"}`,
       descricao: `O token expira em ${data(expMs)}. Gere um novo antes disso para não interromper os envios.`,
@@ -72,6 +92,7 @@ export function interpretarValidadeDoToken(
     };
   }
   return {
+    ...base,
     nivel: "ok",
     rotulo: `Válido até ${data(expMs)}`,
     descricao: `Faltam ${dias} dias para o token expirar.`,

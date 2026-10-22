@@ -30,3 +30,38 @@ describe("interpretarValidadeDoToken", () => {
     expect(interpretarValidadeDoToken(null, AGORA).nivel).toBe("desconhecido");
   });
 });
+
+describe("escopos do token", () => {
+  it("aponta as permissões obrigatórias que faltam", () => {
+    const v = interpretarValidadeDoToken(
+      {
+        data: {
+          is_valid: true,
+          expires_at: 0,
+          scopes: ["whatsapp_business_management", "ads_read"],
+        },
+      },
+      AGORA,
+    );
+    expect(v.escoposFaltando).toEqual(["whatsapp_business_messaging"]);
+    expect(v.escopos).toContain("ads_read");
+  });
+  it("com as duas, não falta nada", () => {
+    const v = interpretarValidadeDoToken(
+      {
+        data: {
+          is_valid: true,
+          expires_at: 0,
+          scopes: ["whatsapp_business_messaging", "whatsapp_business_management"],
+        },
+      },
+      AGORA,
+    );
+    expect(v.escoposFaltando).toEqual([]);
+  });
+  it("sem escopos informados não acusa falta (não dá para saber)", () => {
+    const v = interpretarValidadeDoToken({ data: { is_valid: true, expires_at: 0 } }, AGORA);
+    expect(v.escopos).toEqual([]);
+    expect(v.escoposFaltando).toEqual([]);
+  });
+});
