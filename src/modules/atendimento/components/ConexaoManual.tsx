@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -8,9 +8,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { conectarNumeroManualWhatsApp } from "@/lib/whatsapp-cloud.functions";
+import { useConexoes } from "@/modules/conexoes/hooks";
 
 /** Só dígitos, 5 a 30: o formato dos IDs da Meta. */
 export const ehIdDaMeta = (v: string) => /^\d{5,30}$/.test(v.trim());
+
+const CHAVE_DOS_IDS = "wa-conexao-manual-ids";
+
+/**
+ * Os IDs não são segredo (o token é). Ficam guardados no navegador para que renovar o token não
+ * obrigue a digitar tudo de novo; o que vale é sempre o que está nos campos ao conectar.
+ */
+export function lerIdsGuardados(
+  armazem: Pick<Storage, "getItem"> | null,
+): { wabaId: string; phoneNumberId: string } | null {
+  try {
+    const bruto = armazem?.getItem(CHAVE_DOS_IDS);
+    if (!bruto) return null;
+    const j = JSON.parse(bruto) as { wabaId?: unknown; phoneNumberId?: unknown };
+    const wabaId = typeof j.wabaId === "string" ? j.wabaId : "";
+    const phoneNumberId = typeof j.phoneNumberId === "string" ? j.phoneNumberId : "";
+    return ehIdDaMeta(wabaId) && ehIdDaMeta(phoneNumberId) ? { wabaId, phoneNumberId } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function guardarIds(
+  armazem: Pick<Storage, "setItem"> | null,
+  ids: { wabaId: string; phoneNumberId: string },
+) {
+  try {
+    if (ehIdDaMeta(ids.wabaId) && ehIdDaMeta(ids.phoneNumberId))
+      armazem?.setItem(
+        CHAVE_DOS_IDS,
+        JSON.stringify({ wabaId: ids.wabaId.trim(), phoneNumberId: ids.phoneNumberId.trim() }),
+      );
+  } catch {
+    /* navegador sem armazenamento: só não lembra */
+  }
+}
+
+const armazemLocal = () => (typeof window === "undefined" ? null : window.localStorage);
 
 /**
  * Conexão manual: para o número de teste da Meta (ou quem já tem a conta e o
@@ -24,9 +63,23 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [token, setToken] = useState("");
 
+  // Conexões oficiais que já existem: escolher uma preenche os IDs e sobra só o token.
+  const existentes = (useConexoes().data ?? []).filter(
+    (c) => c.tipo === "oficial" && c.oficial?.wabaId,
+  );
+
+  useEffect(() => {
+    const g = lerIdsGuardados(armazemLocal());
+    if (g) {
+      setWabaId((v) => v || g.wabaId);
+      setPhoneNumberId((v) => v || g.phoneNumberId);
+    }
+  }, []);
+
   const ligar = useMutation({
     mutationFn: () => conectar({ data: { wabaId, phoneNumberId, token } }),
     onSuccess: () => {
+      guardarIds(armazemLocal(), { wabaId, phoneNumberId });
       // O token sai da memória da tela assim que a conexão é feita.
       setToken("");
       toast.success("Número conectado.");
@@ -54,6 +107,31 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
             No painel da Meta, em WhatsApp → Etapa 1, reivindique o número de teste e copie o ID do
             número, o ID da conta e gere um token. O token é cifrado e nunca volta para a tela.
           </p>
+          {existentes.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="m-existente">Renovar o token de uma conexão existente</Label>
+              <select
+                id="m-existente"
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={existentes.find((c) => c.oficial?.phoneNumberId === phoneNumberId)?.id ?? ""}
+                onChange={(e) => {
+                  const c = existentes.find((x) => x.id === e.target.value);
+                  if (c?.oficial?.wabaId) {
+                    setWabaId(c.oficial.wabaId);
+                    setPhoneNumberId(c.oficial.phoneNumberId);
+                  }
+                }}
+              >
+                <option value="">Outra conta ou número (digitar os IDs)</option>
+                {existentes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                    {c.telefone ? ` · ${c.telefone}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="m-waba">ID da conta do WhatsApp Business</Label>
