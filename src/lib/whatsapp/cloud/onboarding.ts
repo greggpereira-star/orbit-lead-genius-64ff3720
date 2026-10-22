@@ -309,6 +309,62 @@ export async function contaIdDoNumero(
   return (data?.account_id as string | undefined) ?? null;
 }
 
+export interface SituacaoLidaDaMeta {
+  phone_number_id: string;
+  /** `status` do número na Meta (CONNECTED, PENDING…); `null` se não deu para ler. */
+  status: string | null;
+  /** Por que não deu para ler, já em português. */
+  erro: string | null;
+}
+
+/**
+ * Pergunta à Meta, número por número, em que situação ele está. Falha de um não derruba
+ * os outros (cada WABA tem o seu token) e o token nunca sai daqui.
+ */
+export async function lerSituacaoDosNumeros(
+  db: DbWa,
+  companyId: string,
+): Promise<SituacaoLidaDaMeta[]> {
+  const { data } = await tabela(db, "wa_phone_numbers")
+    .select("phone_number_id, account_id")
+    .eq("company_id", companyId);
+  const numeros = (Array.isArray(data) ? data : data ? [data] : []) as Array<{
+    phone_number_id: string;
+    account_id: string;
+  }>;
+
+  // Uma credencial por conta, lida uma vez só.
+  const contas = new Map<string, Promise<ContaComToken | null>>();
+  const conta = (id: string) => {
+    if (!contas.has(id)) contas.set(id, contaPorId(db, id));
+    return contas.get(id)!;
+  };
+
+  return Promise.all(
+    numeros.map(async (n): Promise<SituacaoLidaDaMeta> => {
+      try {
+        const c = await conta(n.account_id);
+        if (!c)
+          return {
+            phone_number_id: n.phone_number_id,
+            status: null,
+            erro: "Sem credencial salva para esta conta.",
+          };
+        const r = await lerNumero(n.phone_number_id, c.token);
+        if (!r.ok)
+          return { phone_number_id: n.phone_number_id, status: null, erro: r.erro.mensagem };
+        return { phone_number_id: n.phone_number_id, status: r.data.status ?? null, erro: null };
+      } catch {
+        return {
+          phone_number_id: n.phone_number_id,
+          status: null,
+          erro: "Não consegui consultar a Meta agora.",
+        };
+      }
+    }),
+  );
+}
+
 export type ResultadoDeTemplates = { ok: true; total: number } | { ok: false; texto: string };
 
 export async function sincronizarTemplates(

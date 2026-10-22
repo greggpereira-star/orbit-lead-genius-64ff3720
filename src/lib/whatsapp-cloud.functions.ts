@@ -83,6 +83,20 @@ export const obterEstadoDoWhatsAppOficial = createServerFn({ method: "GET" })
     };
   });
 
+/**
+ * Situação de cada número NA META. Separada do estado da tela de propósito: é uma chamada
+ * externa por conta, que pode demorar ou falhar, e a tela não pode esperar por ela.
+ */
+export const obterSituacaoDosNumerosWhatsApp = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaDoUsuario(admin, context.userId);
+    const { lerSituacaoDosNumeros } = await import("@/lib/whatsapp/cloud/onboarding");
+    return lerSituacaoDosNumeros(admin, companyId);
+  });
+
 // ---------------------------------------------------------------------------
 // Concluir o Embedded Signup
 // ---------------------------------------------------------------------------
