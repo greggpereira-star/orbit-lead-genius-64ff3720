@@ -859,29 +859,6 @@ export function NovoTemplate({
                     <Mensagens itens={doCampo("botoes")} />
                   </div>
                 )}
-
-                <div className="space-y-2.5 rounded-xl border p-4" aria-live="polite">
-                  <p className="text-sm font-medium">Antes de enviar</p>
-                  <ul className="grid gap-2 sm:grid-cols-2">
-                    {passos.map((p) => (
-                      <li key={p.chave} className="flex items-center gap-2 text-sm">
-                        {p.feito ? (
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--sucesso)]/15 text-[var(--sucesso)]">
-                            <Check className="h-3.5 w-3.5" />
-                          </span>
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground/60" />
-                        )}
-                        <span className={cn(!p.feito && "text-muted-foreground")}>{p.rotulo}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {faltam.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Tudo pronto. A Meta analisa e avisa o resultado aqui.
-                    </p>
-                  )}
-                </div>
               </div>
             )}
           </div>
@@ -892,6 +869,30 @@ export function NovoTemplate({
             <p className="text-xs leading-relaxed text-muted-foreground">
               Aproximação da mensagem. Os exemplos das variáveis entram no lugar de {"{{n}}"}.
             </p>
+            {passo === 2 && (
+              <div className="space-y-2.5 rounded-xl border p-4" aria-live="polite">
+                <p className="text-sm font-medium">Antes de enviar</p>
+                <ul className="space-y-2">
+                  {passos.map((p) => (
+                    <li key={p.chave} className="flex items-center gap-2 text-sm">
+                      {p.feito ? (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--sucesso)]/15 text-[var(--sucesso)]">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground/60" />
+                      )}
+                      <span className={cn(!p.feito && "text-muted-foreground")}>{p.rotulo}</span>
+                    </li>
+                  ))}
+                </ul>
+                {faltam.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Tudo pronto. A Meta analisa e avisa o resultado aqui.
+                  </p>
+                )}
+              </div>
+            )}
           </aside>
         </div>
 
