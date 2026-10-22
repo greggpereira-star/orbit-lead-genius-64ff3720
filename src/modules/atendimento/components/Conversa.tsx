@@ -374,6 +374,9 @@ function Compositor(props: {
         toast.error(prep.texto);
         return;
       }
+      // O tipo gravado no bucket sai do próprio arquivo: sem ele (ou como audio/x-m4a) a Meta
+      // recusa o áudio ao baixar. Um File novo carrega o tipo já normalizado.
+      const corpo = new File([arquivo], arquivo.name, { type: mime });
       const up = await (
         supabase as unknown as {
           storage: {
@@ -391,7 +394,7 @@ function Compositor(props: {
         .from("wa-media")
         // Sem o tipo o arquivo é gravado como octet-stream, e a Meta recusa áudio assim
         // ("Media upload error") ao baixar pelo link.
-        .uploadToSignedUrl(prep.caminho, prep.token, arquivo, { contentType: mime });
+        .uploadToSignedUrl(prep.caminho, prep.token, corpo, { contentType: mime });
       if (up.error) {
         toast.error(`Não consegui subir o arquivo: ${up.error.message}`);
         return;

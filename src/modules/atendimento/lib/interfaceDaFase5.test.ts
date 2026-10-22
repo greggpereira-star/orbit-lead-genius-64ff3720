@@ -36,6 +36,7 @@ describe("mídia na conversa", () => {
     );
     expect(conversa).toContain("Enviar como documento?");
     // O arquivo sobe com o tipo declarado: como octet-stream a Meta recusa áudio ao baixar.
+    expect(conversa).toContain("new File([arquivo], arquivo.name, { type: mime })");
     expect(conversa).toContain("{ contentType: mime }");
     const v = conversa.indexOf("classificarArquivoParaEnvio({ mime, bytes");
     expect(v).toBeLessThan(conversa.indexOf("prepararUpload({"));
