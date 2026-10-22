@@ -866,9 +866,12 @@ export function NovoTemplate({
           <aside className="flex min-h-0 flex-col gap-3 border-t bg-muted/30 p-6 md:overflow-y-auto md:border-l md:border-t-0">
             <p className="text-sm font-medium">Como o cliente vê</p>
             <PreviaDoTemplate previa={previaDoTemplate(def)} />
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Aproximação da mensagem. Os exemplos das variáveis entram no lugar de {"{{n}}"}.
-            </p>
+            {/* No último passo o espaço é da lista "Antes de enviar": a nota sai para ela caber sem rolar. */}
+            {passo !== 2 && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Aproximação da mensagem. Os exemplos das variáveis entram no lugar de {"{{n}}"}.
+              </p>
+            )}
             {passo === 2 && (
               <div className="space-y-2.5 rounded-xl border p-4" aria-live="polite">
                 <p className="text-sm font-medium">Antes de enviar</p>
