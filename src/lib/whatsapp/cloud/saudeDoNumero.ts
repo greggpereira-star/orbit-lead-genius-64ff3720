@@ -19,7 +19,18 @@ export interface PontoDeSaude {
 }
 
 export interface SaudeDaConexao {
-  envio: { nivel: NivelDeEnvio; rotulo: string; descricao: string; pontos: PontoDeSaude[] };
+  envio: {
+    nivel: NivelDeEnvio;
+    rotulo: string;
+    descricao: string;
+    pontos: PontoDeSaude[];
+    /**
+     * `ativas`: o bloqueio atinge só conversas iniciadas pela empresa (templates), como o erro de
+     * forma de pagamento; responder a quem escreveu, dentro de 24 h, segue funcionando (medido em
+     * 22/10/2026 na conta de teste). `total`: qualquer outro motivo de bloqueio.
+     */
+    alcance?: "ativas" | "total";
+  };
   status: SituacaoDoNumero;
   qualidade: {
     nivel: "alta" | "media" | "baixa" | "desconhecida";
@@ -99,11 +110,18 @@ export function interpretarSaudeDaMeta(bruto: unknown): SaudeDaConexao {
       pontos: pontosDe(hs?.entities, "LIMITED"),
     };
   } else if (pode === "BLOCKED") {
+    const pontos = pontosDe(hs?.entities, "BLOCKED");
+    // A própria Meta descreve esse caso: "...will block business initiated conversations".
+    const soAtivas =
+      pontos.length > 0 && pontos.every((p) => /business[- ]initiated/i.test(p.texto));
     envio = {
       nivel: "bloqueado",
-      rotulo: "Envio bloqueado",
-      descricao: "A conta não atende a um ou mais requisitos e não consegue enviar mensagens.",
-      pontos: pontosDe(hs?.entities, "BLOCKED"),
+      rotulo: soAtivas ? "Mensagens ativas bloqueadas" : "Envio bloqueado",
+      descricao: soAtivas
+        ? "A Meta bloqueou as conversas iniciadas pela empresa (templates e mensagens ativas). Responder a quem escreveu, dentro de 24 h, continua funcionando."
+        : "A conta não atende a um ou mais requisitos e não consegue enviar mensagens.",
+      pontos,
+      alcance: soAtivas ? "ativas" : "total",
     };
   } else {
     envio = {

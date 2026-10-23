@@ -244,7 +244,9 @@ export function DetalheDaConexao(props: {
   const textoDaFaixa = !saude
     ? ""
     : saude.envio.nivel === "bloqueado"
-      ? "A Meta bloqueou o envio desta conexão. Veja o motivo e o que fazer na aba Saúde da conta."
+      ? saude.envio.alcance === "ativas"
+        ? "A Meta bloqueou as conversas iniciadas pela empresa (templates). Responder a quem escreveu, dentro de 24 h, continua funcionando. Veja o motivo na aba Saúde da conta."
+        : "A Meta bloqueou o envio desta conexão. Veja o motivo e o que fazer na aba Saúde da conta."
       : saude.status.nivel === "aviso" || saude.status.nivel === "erro"
         ? (saude.status.dica ?? saude.status.rotulo)
         : "Esta conexão tem restrições de uso, o que pode afetar o envio e o recebimento de mensagens.";

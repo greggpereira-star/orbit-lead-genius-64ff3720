@@ -70,6 +70,63 @@ describe("interpretarSaudeDaMeta (health_status)", () => {
     ]);
   });
 
+  it("BLOCKED só por 'business initiated': diz que responder dentro de 24 h segue funcionando", () => {
+    const s = interpretarSaudeDaMeta({
+      health_status: {
+        can_send_message: "BLOCKED",
+        entities: [
+          {
+            entity_type: "WABA",
+            id: "1",
+            can_send_message: "BLOCKED",
+            errors: [
+              {
+                error_code: 141006,
+                error_description:
+                  "There is an error with the payment method. This will block business initiated conversations.",
+                possible_solution: "Add a new payment method to the account.",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(s.envio).toMatchObject({
+      nivel: "bloqueado",
+      rotulo: "Mensagens ativas bloqueadas",
+      alcance: "ativas",
+    });
+    expect(s.envio.descricao).toContain("dentro de 24 h");
+  });
+
+  it("BLOCKED misto ou sem esse motivo continua sendo bloqueio total", () => {
+    const s = interpretarSaudeDaMeta({
+      health_status: {
+        can_send_message: "BLOCKED",
+        entities: [
+          {
+            entity_type: "PHONE_NUMBER",
+            id: "1",
+            can_send_message: "BLOCKED",
+            errors: [{ error_code: 1, error_description: "The phone number is not verified." }],
+          },
+          {
+            entity_type: "WABA",
+            id: "2",
+            can_send_message: "BLOCKED",
+            errors: [
+              {
+                error_code: 2,
+                error_description: "This will block business initiated conversations.",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(s.envio).toMatchObject({ rotulo: "Envio bloqueado", alcance: "total" });
+  });
+
   it("sem health_status (ou lixo): 'Sem informação da Meta', nunca 'Pode enviar'", () => {
     for (const bruto of [
       undefined,
