@@ -68,6 +68,8 @@ export function rotuloDoPrazo(
   if (!t.scheduled_for) return { texto: "sem prazo", situacao: "sem_prazo" };
   const alvo = new Date(t.scheduled_for);
   const min = Math.round((alvo.getTime() - agora.getTime()) / 60_000);
+  // No minuto do prazo: "agora" (e não "em menos de 1 min", que fica errado no segundo seguinte).
+  if (min === 0) return { texto: "agora", situacao: "hoje" };
   const atrasada = min < 0;
   const dentroDe24h = Math.abs(min) < 24 * 60;
   const texto = dentroDe24h

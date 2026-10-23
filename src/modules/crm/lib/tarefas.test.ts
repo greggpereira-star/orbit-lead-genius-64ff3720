@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { agruparPorSituacao, contarAbertas, ehTarefa, ordenarTarefas, prazosRapidos, rotuloDoPrazo } from "./tarefas";
+import {
+  agruparPorSituacao,
+  contarAbertas,
+  ehTarefa,
+  ordenarTarefas,
+  prazosRapidos,
+  rotuloDoPrazo,
+} from "./tarefas";
 
 const agora = new Date(2026, 9, 23, 14, 0, 0); // 23/10/2026 14:00 local
 const em = (min: number) => new Date(agora.getTime() + min * 60_000).toISOString();
@@ -41,6 +48,13 @@ describe("rotuloDoPrazo", () => {
     expect(rotuloDoPrazo({ scheduled_for: em(-1246), done: false }, agora).texto).toBe(
       "há 20 h 46 min",
     );
+  });
+
+  it("no minuto do prazo diz 'agora'", () => {
+    expect(rotuloDoPrazo({ scheduled_for: em(0), done: false }, agora)).toEqual({
+      texto: "agora",
+      situacao: "hoje",
+    });
   });
 
   it("a partir de 24 h mostra a data", () => {
@@ -96,4 +110,3 @@ describe("agrupar por situação", () => {
     expect(g.proximas.map((x) => x.id)).toEqual(["futura"]);
   });
 });
-

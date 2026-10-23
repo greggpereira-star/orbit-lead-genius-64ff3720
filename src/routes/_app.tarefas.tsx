@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ListChecks } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +29,12 @@ function TarefasPage() {
   const qc = useQueryClient();
   const [quem, setQuem] = useState<"minhas" | "todas">("minhas");
   const [estado, setEstado] = useState<"abertas" | "feitas">("abertas");
+  // O rótulo do prazo depende da hora: relê a cada 30 s.
+  const [, setTique] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTique((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   const dados = useQuery({
     queryKey: ["tarefas", companyId],

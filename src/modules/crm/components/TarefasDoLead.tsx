@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -58,6 +58,12 @@ export function TarefasDoLead({
   const { user } = useAuth();
   const qc = useQueryClient();
   const tarefas = useTarefasDoLead(leadId);
+  // O rótulo do prazo ("em 2 min" → "há 1 min") depende da hora: relê a cada 30 s.
+  const [, setTique] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTique((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const equipe = useQuery({
     queryKey: ["equipe", companyId],
     enabled: Boolean(companyId) && !somenteLeitura,
