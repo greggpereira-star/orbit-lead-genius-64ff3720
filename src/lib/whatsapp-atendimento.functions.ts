@@ -13,6 +13,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { instanceNameFor, nomeDaInstanciaConfere } from "@/lib/whatsapp/evolution-nome";
+import { registrarMencoes, validarResponsavel } from "@/lib/whatsapp/cloud/equipe";
 import {
   empresaDoUsuario,
   empresaParaAdministrar,
@@ -124,20 +125,9 @@ export const atribuirConversaWhatsApp = createServerFn({ method: "POST" })
     const companyId = await empresaParaAtender(admin, context.userId);
     await conferirConversa(admin, companyId, data.conversaId);
 
-    // O destino precisa ser membro DESTA empresa — o RLS por si só aceitaria
-    // qualquer uuid, e a conversa sumiria da fila de todo mundo.
-    if (data.userId) {
-      const { data: m } = await admin
-        .from("memberships")
-        .select("user_id, role")
-        .eq("company_id", companyId)
-        .eq("user_id", data.userId)
-        .maybeSingle();
-      if (!m) throw new Error("Este atendente não pertence à empresa.");
-      // Quem só lê não pode ser responsável: a conversa ficaria sem ninguém que responda.
-      if (!podeAtender(String(m.role)))
-        throw new Error("Este usuário tem acesso somente leitura e não pode ser responsável.");
-    }
+    // O destino precisa ser membro DESTA empresa e poder atender (ver `validarResponsavel`).
+    const destino = await validarResponsavel(admin, companyId, data.userId);
+    if (!destino.ok) throw new Error(destino.texto);
 
     const { error } = await admin
       .from("wa_conversations")
@@ -433,31 +423,14 @@ export const criarNotaWhatsApp = createServerFn({ method: "POST" })
       .single();
     if (error || !nota) throw new Error(error?.message ?? "Não foi possível salvar a nota.");
 
-    // Menção só vale para quem é membro DESTA empresa (e não para si mesmo).
-    const alvos = [...new Set(data.mencionar ?? [])].filter((id) => id !== context.userId);
-    if (alvos.length > 0) {
-      const { data: membros } = await admin
-        .from("memberships")
-        .select("user_id")
-        .eq("company_id", companyId)
-        .in("user_id", alvos);
-      const validos = ((membros ?? []) as Array<{ user_id: string }>).map((m) => m.user_id);
-      if (validos.length > 0) {
-        await admin.from("wa_mentions").insert(
-          validos.map((uid) => ({
-            company_id: companyId,
-            conversation_id: data.conversaId,
-            note_id: nota.id,
-            mentioned_user_id: uid,
-            author_id: context.userId,
-          })),
-        );
-        // Quem é mencionado passa a seguir a conversa.
-        await Promise.all(
-          validos.map((uid) => seguir(admin, companyId, data.conversaId, uid).catch(() => {})),
-        );
-      }
-    }
+    await registrarMencoes(admin, {
+      companyId,
+      conversaId: data.conversaId,
+      notaId: nota.id,
+      autorId: context.userId,
+      mencionar: data.mencionar,
+      seguir: (uid) => seguir(admin, companyId, data.conversaId, uid),
+    });
     return { ok: true as const };
   });
 

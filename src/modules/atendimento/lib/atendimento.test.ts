@@ -276,9 +276,9 @@ describe("server functions do atendimento", () => {
 
   it("atribuir exige que o destino seja membro da empresa", () => {
     const t = fonte.slice(fonte.indexOf("export const atribuirConversaWhatsApp"));
-    expect(t).toContain('.eq("company_id", companyId)');
-    expect(t).toContain("Este atendente não pertence à empresa.");
-    expect(t.indexOf("Este atendente não pertence")).toBeLessThan(
+    // a regra mora em cloud/equipe.ts (testada com banco falso em equipe.test.ts)
+    expect(t).toContain("validarResponsavel(admin, companyId, data.userId)");
+    expect(t.indexOf("validarResponsavel(")).toBeLessThan(
       t.indexOf(".update({ assigned_to: data.userId })"),
     );
   });
@@ -381,9 +381,9 @@ describe("seguir e menções (servidor)", () => {
 
   it("menção só vale para membro da empresa e não para si mesmo; o mencionado passa a seguir", () => {
     const f = corpo("criarNotaWhatsApp");
-    expect(f).toContain('.eq("company_id", companyId)');
-    expect(f).toContain('.in("user_id", alvos)');
-    expect(f).toContain("id !== context.userId");
+    // a regra mora em cloud/equipe.ts (testada em equipe.test.ts)
+    expect(f).toContain("registrarMencoes(admin");
+    expect(f).toContain("autorId: context.userId");
     expect(f).toContain("seguir(admin, companyId, data.conversaId, uid)");
   });
 
