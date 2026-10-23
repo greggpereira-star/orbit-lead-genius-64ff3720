@@ -106,7 +106,7 @@ export function ListaDeConversas(props: {
                 aria-selected={props.filtro === f}
                 onClick={() => props.onFiltro(f)}
                 className={cn(
-                  "flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg px-1 text-xs font-medium transition-colors",
+                  "flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg px-1 text-xs font-medium transition-colors max-sm:h-11",
                   props.filtro === f
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground",
@@ -125,7 +125,7 @@ export function ListaDeConversas(props: {
                 aria-selected={props.filtro === f}
                 onClick={() => props.onFiltro(f)}
                 className={cn(
-                  "inline-flex h-8 items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors",
+                  "inline-flex h-8 items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors max-sm:h-10",
                   props.filtro === f
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -147,7 +147,7 @@ export function ListaDeConversas(props: {
                 onValueChange={(v) => props.onFiltroEtapa?.(v === TODAS ? null : v)}
               >
                 <SelectTrigger
-                  className="h-8 min-w-0 flex-1 text-xs"
+                  className="h-8 min-w-0 flex-1 text-xs max-sm:h-10"
                   aria-label="Filtrar por etapa"
                 >
                   <SelectValue placeholder="Etapa" />
@@ -168,7 +168,7 @@ export function ListaDeConversas(props: {
                 onValueChange={(v) => props.onFiltroEtiqueta?.(v === TODAS ? null : v)}
               >
                 <SelectTrigger
-                  className="h-8 min-w-0 flex-1 text-xs"
+                  className="h-8 min-w-0 flex-1 text-xs max-sm:h-10"
                   aria-label="Filtrar por etiqueta"
                 >
                   <SelectValue placeholder="Etiqueta" />
@@ -204,7 +204,7 @@ export function ListaDeConversas(props: {
                   aria-pressed={ordem === valor}
                   onClick={() => props.onOrdem?.(valor)}
                   className={cn(
-                    "rounded px-2.5 py-1 transition-colors",
+                    "rounded px-2.5 py-1 transition-colors max-sm:px-3.5 max-sm:py-2.5",
                     ordem === valor
                       ? "bg-background font-medium text-foreground shadow-sm"
                       : "hover:text-foreground",

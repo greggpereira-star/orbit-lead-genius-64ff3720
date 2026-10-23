@@ -90,7 +90,7 @@ export function EtapaDoLead({
         <button
           type="button"
           disabled={somenteLeitura || mutation.isPending || stagesQuery.isLoading}
-          className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium max-sm:min-h-10 max-sm:px-3.5 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
           style={
             current
               ? {
@@ -212,7 +212,7 @@ export function FecharNegocio({
           type="button"
           disabled={mutation.isPending}
           onClick={() => mutation.mutate({ stage: ganho })}
-          className="flex-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60"
+          className="flex-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60 max-sm:min-h-11"
         >
           Marcar ganho
         </button>
@@ -222,7 +222,7 @@ export function FecharNegocio({
           type="button"
           disabled={mutation.isPending}
           onClick={() => setPerguntando(true)}
-          className="flex-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60"
+          className="flex-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60 max-sm:min-h-11"
         >
           Marcar perdido
         </button>

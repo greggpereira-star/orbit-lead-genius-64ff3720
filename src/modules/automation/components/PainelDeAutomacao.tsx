@@ -225,7 +225,7 @@ function CartaoDaRegra({
           <Zap className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[13px] font-semibold leading-tight">{regra.name}</h3>
+          <h3 className="text-[13px] font-semibold leading-tight max-sm:break-words sm:truncate">{regra.name}</h3>
           <p className="text-[11px] text-muted-foreground">
             {EVENTOS.find((e) => e.valor === regra.trigger_event)?.rotulo ?? regra.trigger_event}
             {regra.trigger_config?.minutos ? ` · ${regra.trigger_config.minutos} min` : ''}
@@ -234,10 +234,10 @@ function CartaoDaRegra({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <Switch checked={regra.is_active} onCheckedChange={onAlternar} />
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEditar}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 max-sm:h-10 max-sm:w-10" onClick={onEditar}>
             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onExcluir}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 max-sm:h-10 max-sm:w-10" onClick={onExcluir}>
             <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
         </div>

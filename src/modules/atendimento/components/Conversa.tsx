@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -307,6 +308,8 @@ function Compositor(props: {
   const prepararUpload = useServerFn(prepararUploadDeMidiaWhatsApp);
   const enviarMidia = useServerFn(enviarMidiaWhatsApp);
   const arquivoRef = useRef<HTMLInputElement>(null);
+  // Celular: o placeholder comprido quebrava em duas linhas e ficava cortado.
+  const celular = useMediaQuery("(max-width: 639px)");
 
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -515,7 +518,7 @@ function Compositor(props: {
           rows={1}
           value={texto}
           disabled={enviando}
-          placeholder="Responder… ( / respostas rápidas)"
+          placeholder={celular ? "Responder…" : "Responder… ( / respostas rápidas)"}
           aria-label="Mensagem"
           className="max-h-40 min-h-[40px] resize-none"
           onChange={(e) => setTexto(e.target.value)}

@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Maximize2,
   Minimize2,
@@ -550,6 +551,44 @@ export function Atendimento({
                         }}
                       />
                     </div>
+                    {/* Sem a coluna do contato (celular e telas médias), etapa e etiquetas ficavam
+                        a dois toques, dentro do menu ⋯. Aqui ficam à vista; tocar abre o painel. */}
+                    {!painelInline && ativa.lead && (
+                      <button
+                        type="button"
+                        onClick={alternarPainel}
+                        aria-label="Abrir etapa e etiquetas do contato"
+                        className="flex min-h-11 w-full items-center gap-1.5 border-b bg-muted/20 px-4 py-2 text-left text-xs hover:bg-muted/40"
+                      >
+                        {ativa.lead.stage && (
+                          <span
+                            className="shrink-0 rounded px-1.5 py-0.5 font-medium"
+                            style={
+                              ativa.lead.stage.color
+                                ? {
+                                    backgroundColor: `${ativa.lead.stage.color}1f`,
+                                    color: ativa.lead.stage.color,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {ativa.lead.stage.name}
+                          </span>
+                        )}
+                        {(ativa.lead.tags ?? []).slice(0, 2).map((t) => (
+                          <span
+                            key={t.tag_name}
+                            className="min-w-0 truncate rounded bg-muted px-1.5 py-0.5 text-muted-foreground"
+                          >
+                            {t.tag_name}
+                          </span>
+                        ))}
+                        <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-muted-foreground">
+                          Etapa e etiquetas
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </span>
+                      </button>
+                    )}
                     {pesquisando && (
                       <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-1.5">
                         <Input

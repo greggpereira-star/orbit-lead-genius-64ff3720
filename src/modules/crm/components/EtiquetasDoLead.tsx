@@ -94,13 +94,13 @@ export function EtiquetasDoLead({
               }
             }}
             placeholder={compacto ? "Nova etiqueta" : "Ex: Investidor, Primeira compra, Urgente"}
-            className="h-9 text-sm"
+            className="h-9 text-sm max-sm:h-11"
             aria-label="Nova etiqueta"
           />
           <Button
             onClick={() => addMutation.mutate(input)}
             disabled={addMutation.isPending || !input.trim()}
-            className="h-9"
+            className="h-9 max-sm:h-11 max-sm:w-12"
             aria-label="Adicionar etiqueta"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -126,7 +126,7 @@ export function EtiquetasDoLead({
                   type="button"
                   onClick={() => removeMutation.mutate(t.id)}
                   disabled={removeMutation.isPending}
-                  className="rounded-full p-0.5 hover:bg-background"
+                  className="rounded-full p-0.5 hover:bg-background max-sm:p-2"
                   title={`Remover ${t.tag_name}`}
                   aria-label={`Remover etiqueta ${t.tag_name}`}
                 >
@@ -148,7 +148,7 @@ export function EtiquetasDoLead({
                 type="button"
                 onClick={() => addMutation.mutate(s)}
                 disabled={addMutation.isPending}
-                className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground max-sm:min-h-10 max-sm:px-3.5"
               >
                 + {s}
               </button>

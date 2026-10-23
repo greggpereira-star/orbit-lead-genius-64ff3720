@@ -41,7 +41,7 @@ import { AlternadorDeTema } from "./AlternadorDeTema";
              className="flex items-center w-full pl-10 pr-3 h-9 bg-background rounded-md border border-input hover:border-border-foreground/20 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer"
              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
            >
-             <span className="text-sm text-muted-foreground flex-1 font-medium">Search or jump to...</span>
+             <span className="text-sm text-muted-foreground flex-1 truncate whitespace-nowrap font-medium">Buscar ou ir para…</span>
              <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-bold text-foreground opacity-100">
                <span className="text-xs">⌘</span>K
              </kbd>
