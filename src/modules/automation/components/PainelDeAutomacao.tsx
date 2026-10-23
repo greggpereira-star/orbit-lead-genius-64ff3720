@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Zap, Plus, Pencil, Trash2, ArrowRight, Tag, MoveRight, UserCheck,
-  MessageSquare, Webhook, Bell, CheckCircle2, RotateCcw, Star,
+  MessageSquare, Webhook, Bell, CheckCircle2, RotateCcw, Star, ListChecks,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { duracaoCurta } from '@/lib/duracao';
@@ -185,6 +185,7 @@ const ICONE_DA_ACAO: Record<string, typeof Tag> = {
   resolver_conversa: CheckCircle2,
   reabrir_conversa: RotateCcw,
   avaliar_atendimento: Star,
+  criar_tarefa: ListChecks,
 };
 
 function CartaoDaRegra({
@@ -211,6 +212,8 @@ function CartaoDaRegra({
         return cfg.para ? `para ${cfg.para}` : 'para o lead';
       case 'webhook':
         return cfg.url || 'url não preenchida';
+      case 'criar_tarefa':
+        return `${cfg.texto || 'Retomar o contato'} · em ${duracaoCurta(Number(cfg.prazo_horas || 24) * 60)}`;
       case 'resolver_conversa':
       case 'reabrir_conversa':
         return 'conversa do evento';

@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
   LayoutDashboard,
   Users,
+  ListChecks,
   GitPullRequest,
   FileText,
   BarChart3,
@@ -76,6 +77,7 @@ const menuGroups: { label: string; accent: string; items: MenuItem[] }[] = [
     items: [
       { title: 'Leads', icon: Users, to: '/leads' },
       { title: 'Pipeline', icon: GitPullRequest, to: '/pipeline' },
+      { title: 'Tarefas', icon: ListChecks, to: '/tarefas' },
       { title: 'Forms', icon: FileText, to: '/forms' },
       { title: 'Alt Quiz', icon: Sparkles, to: '/quizzes' },
     ],

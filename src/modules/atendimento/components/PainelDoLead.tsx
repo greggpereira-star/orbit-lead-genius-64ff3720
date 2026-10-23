@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ExternalLink,
   Handshake,
+  ListChecks,
   Lock,
   Megaphone,
   MessageCircle,
@@ -44,6 +45,11 @@ import { useQuery } from "@tanstack/react-query";
 import { formatarTelefone, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
 import { AvatarDoContato } from "./AvatarDoContato";
 import { EtiquetasDoLead } from "@/modules/crm/components/EtiquetasDoLead";
+import {
+  TarefasDoLead,
+  resumoDasTarefas,
+  useTarefasDoLead,
+} from "@/modules/crm/components/TarefasDoLead";
 import { EtapaDoLead, FecharNegocio } from "@/modules/crm/components/EtapaDoLead";
 
 /** O que veio no `referral` do primeiro contato (anúncio Click-to-WhatsApp). */
@@ -169,6 +175,7 @@ export function PainelDoLead({
   const fone = formatarTelefone(waId);
   const qc = useQueryClient();
   const lead = useLeadDoPainel(conversa.lead_id);
+  const tarefasDoLead = useTarefasDoLead(conversa.lead_id);
   const l = lead.data ?? null;
   // Mover a etapa pode gerar conversão e mexe nas etiquetas (regras do CRM): o painel e a lista relêem.
   const recarregarDepoisDeMover = () => {
@@ -306,6 +313,21 @@ export function PainelDoLead({
                 void qc.invalidateQueries({ queryKey: ["wa-lead-painel"] });
                 void qc.invalidateQueries({ queryKey: ["wa-conversas"] });
               }}
+            />
+          </Secao>
+        )}
+
+        {conversa.lead && l && (
+          <Secao
+            titulo="Tarefas"
+            icone={<ListChecks className="h-4 w-4" />}
+            aberta={(tarefasDoLead.data ?? []).some((t) => !t.done)}
+            resumo={resumoDasTarefas(tarefasDoLead.data ?? [])}
+          >
+            <TarefasDoLead
+              leadId={conversa.lead.id}
+              companyId={l.company_id}
+              somenteLeitura={somenteLeitura}
             />
           </Secao>
         )}

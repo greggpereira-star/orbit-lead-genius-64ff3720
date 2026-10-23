@@ -350,6 +350,9 @@ function ConfigDaAcao({
     case 'enviar_template':
       return <EditorDeTemplate cfg={cfg} campos={campos} companyId={companyId} onMudar={set} />;
 
+    case 'criar_tarefa':
+      return <EditorDeTarefa cfg={cfg} campos={campos} equipe={equipe} onMudar={set} />;
+
     case 'resolver_conversa':
     case 'reabrir_conversa':
       return (
@@ -554,6 +557,62 @@ function EditorDeAviso({
           {campos.includes('minutos_restantes') && '  {{tempo_restante}} (ex.: 20 h 46 min)'}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Tarefa para o lead do evento: texto (com dados do evento), prazo em horas e quem faz. */
+function EditorDeTarefa({
+  cfg, campos, equipe, onMudar,
+}: {
+  cfg: Record<string, any>;
+  campos: string[];
+  equipe: MembroDaEquipe[];
+  onMudar: (patch: Record<string, any>) => void;
+}) {
+  const destino = cfg.destino ?? 'responsavel';
+  return (
+    <div className="space-y-2.5">
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">Tarefa</Label>
+        <Input className="h-9" value={cfg.texto ?? ''}
+          placeholder="Retomar o contato com {{nome}}"
+          onChange={(e) => onMudar({ texto: e.target.value })} />
+        <p className="text-[11px] text-muted-foreground">
+          Entre chaves duplas vira o dado do evento: {campos.map((c) => `{{${c}}}`).join('  ')}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label htmlFor="tarefa-prazo" className="text-[11px] font-semibold text-muted-foreground">
+          Prazo: daqui a
+        </Label>
+        <Input id="tarefa-prazo" type="number" inputMode="numeric" min={1} max={720}
+          className="h-9 w-24" value={cfg.prazo_horas ?? 24}
+          onChange={(e) => onMudar({ prazo_horas: Number(e.target.value) || 24 })} />
+        <span className="text-[11px] text-muted-foreground">horas (1 a 720)</span>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">Quem faz</Label>
+        <Select value={destino} onValueChange={(v) => onMudar({ destino: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="responsavel">Responsável da conversa ou do lead</SelectItem>
+            <SelectItem value="usuario">Uma pessoa específica</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {destino === 'usuario' && (
+        <Select value={cfg.user_id ?? ''} onValueChange={(v) => onMudar({ user_id: v })}>
+          <SelectTrigger className="h-9"><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
+          <SelectContent>
+            {equipe.map((m) => <SelectItem key={m.userId} value={m.userId}>{m.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Sem responsável encontrado, a ação não cria a tarefa (ficaria sem ninguém para avisar). O aviso
+        de prazo chega no sino.
+      </p>
     </div>
   );
 }

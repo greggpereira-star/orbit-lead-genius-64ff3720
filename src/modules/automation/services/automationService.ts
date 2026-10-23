@@ -87,6 +87,7 @@ export const ACOES = [
   { valor: 'enviar_template', rotulo: 'Enviar template do WhatsApp' },
   { valor: 'atribuir_conversa', rotulo: 'Atribuir conversa do WhatsApp' },
   { valor: 'notificar_equipe', rotulo: 'Notificar equipe (aviso no sino)' },
+  { valor: 'criar_tarefa', rotulo: 'Criar tarefa para o lead' },
   { valor: 'resolver_conversa', rotulo: 'Resolver a conversa' },
   { valor: 'reabrir_conversa', rotulo: 'Reabrir a conversa' },
   { valor: 'avaliar_atendimento', rotulo: 'Pedir avaliação do atendimento (nota de 1 a 5)' },

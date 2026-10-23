@@ -3,6 +3,7 @@ import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 import { executarAcoes, type ResultadoDeAcao } from '@/lib/automacao/executarAcoes';
 import { acaoAtribuirConversa, acaoEnviarWhatsApp, preencher } from '@/lib/automacao/acoesDeWhatsApp';
 import { acaoNotificarEquipe } from '@/lib/automacao/notificarEquipe';
+import { acaoCriarTarefa } from '@/lib/automacao/acaoCriarTarefa';
 import {
   acaoAvaliarAtendimento,
   acaoReabrirConversa,
@@ -277,6 +278,9 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
 
       case 'notificar_equipe':
         return acaoNotificarEquipe(admin, job, acao);
+
+      case 'criar_tarefa':
+        return acaoCriarTarefa(admin, job, cfg);
 
       case 'resolver_conversa':
         return acaoResolverConversa(admin, job);

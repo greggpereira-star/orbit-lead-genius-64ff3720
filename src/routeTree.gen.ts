@@ -31,6 +31,7 @@ import { Route as AppObservabilityRouteImport } from './routes/_app.observabilit
 import { Route as AppPipelineRouteImport } from './routes/_app.pipeline'
 import { Route as AppQuizzesRouteImport } from './routes/_app.quizzes'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppTarefasRouteImport } from './routes/_app.tarefas'
 import { Route as AppWhatsappRouteImport } from './routes/_app.whatsapp'
 import { Route as AuthForgotPasswordRouteImport } from './routes/_auth.forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
@@ -191,6 +192,11 @@ const AppQuizzesRoute = AppQuizzesRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTarefasRoute = AppTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
   getParentRoute: () => AppRoute,
 } as any)
 const AppWhatsappRoute = AppWhatsappRouteImport.update({
@@ -491,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/pipeline': typeof AppPipelineRoute
   '/quizzes': typeof AppQuizzesRoute
   '/settings': typeof AppSettingsRouteWithChildren
+  '/tarefas': typeof AppTarefasRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -565,6 +572,7 @@ export interface FileRoutesByTo {
   '/observability': typeof AppObservabilityRoute
   '/pipeline': typeof AppPipelineRoute
   '/quizzes': typeof AppQuizzesRoute
+  '/tarefas': typeof AppTarefasRoute
   '/whatsapp': typeof AppWhatsappRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
@@ -643,6 +651,7 @@ export interface FileRoutesById {
   '/_app/pipeline': typeof AppPipelineRoute
   '/_app/quizzes': typeof AppQuizzesRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
+  '/_app/tarefas': typeof AppTarefasRoute
   '/_app/whatsapp': typeof AppWhatsappRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -720,6 +729,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/quizzes'
     | '/settings'
+    | '/tarefas'
     | '/whatsapp'
     | '/forgot-password'
     | '/login'
@@ -794,6 +804,7 @@ export interface FileRouteTypes {
     | '/observability'
     | '/pipeline'
     | '/quizzes'
+    | '/tarefas'
     | '/whatsapp'
     | '/forgot-password'
     | '/login'
@@ -871,6 +882,7 @@ export interface FileRouteTypes {
     | '/_app/pipeline'
     | '/_app/quizzes'
     | '/_app/settings'
+    | '/_app/tarefas'
     | '/_app/whatsapp'
     | '/_auth/forgot-password'
     | '/_auth/login'
@@ -1113,6 +1125,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tarefas': {
+      id: '/_app/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof AppTarefasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/whatsapp': {
@@ -1566,6 +1585,7 @@ interface AppRouteChildren {
   AppPipelineRoute: typeof AppPipelineRoute
   AppQuizzesRoute: typeof AppQuizzesRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
+  AppTarefasRoute: typeof AppTarefasRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIntegrationsMetaRoute: typeof AppIntegrationsMetaRoute
   AppQuizzesIdBuilderRoute: typeof AppQuizzesIdBuilderRoute
@@ -1592,6 +1612,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPipelineRoute: AppPipelineRoute,
   AppQuizzesRoute: AppQuizzesRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
+  AppTarefasRoute: AppTarefasRoute,
   AppWhatsappRoute: AppWhatsappRoute,
   AppIntegrationsMetaRoute: AppIntegrationsMetaRoute,
   AppQuizzesIdBuilderRoute: AppQuizzesIdBuilderRoute,

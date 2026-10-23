@@ -85,8 +85,10 @@ describe('ações de conversa e horário de atendimento na tela', () => {
       expect(ACOES.some((x) => x.valor === a), a).toBe(true);
       expect(sql).toContain(`'${a}'`);
     }
-    // As anteriores continuam permitidas: trocar o CHECK não pode tirar ação que já existia.
-    for (const a of ACOES.map((x) => x.valor)) expect(sql).toContain(`'${a}'`);
+    // O CHECK vigente é o da migration MAIS NOVA que o troca: ela precisa listar TODAS as ações da
+    // tela (trocar o CHECK não pode tirar ação que já existia).
+    const vigente = readFileSync('supabase/migrations/20261024200000_tarefas_por_lead.sql', 'utf8');
+    for (const a of ACOES.map((x) => x.valor)) expect(vigente, a).toContain(`'${a}'`);
   });
 
   it('todo evento oferece dentro_do_horario como condição, sem ser o campo padrão', () => {

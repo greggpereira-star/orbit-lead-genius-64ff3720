@@ -16,6 +16,10 @@ export interface LeadNote {
   body: string;
   scheduled_for: string | null;
   done: boolean;
+  /** Responsável pela tarefa (quem recebe o aviso de prazo). Vazio: vale o autor. */
+  assigned_to?: string | null;
+  done_at?: string | null;
+  done_by?: string | null;
   created_at: string;
 }
 
@@ -27,6 +31,8 @@ export interface CreateNoteInput {
   scheduledFor?: string | null;
   authorId: string | null;
   authorName: string | null;
+  /** Com `scheduledFor`: quem faz a tarefa. */
+  assignedTo?: string | null;
 }
 
 export async function listLeadNotes(leadId: string): Promise<LeadNote[]> {
@@ -53,6 +59,7 @@ export async function createLeadNote(input: CreateNoteInput): Promise<LeadNote> 
       author_name: input.authorName,
       body,
       scheduled_for: input.scheduledFor || null,
+      assigned_to: input.scheduledFor ? (input.assignedTo ?? null) : null,
     })
     .select('*')
     .single();
@@ -61,13 +68,18 @@ export async function createLeadNote(input: CreateNoteInput): Promise<LeadNote> 
   return data as LeadNote;
 }
 
-/** Marca o compromisso como cumprido — some da lista de próximos. */
+/**
+ * Marca a tarefa como cumprida (ou reabre). Passa por função do banco: a política de UPDATE só deixa
+ * o AUTOR editar a anotação, e quem recebeu a tarefa também precisa concluí-la. Autor, responsável
+ * e administrador podem; a função não deixa mexer em mais nada além do "feito".
+ */
 export async function toggleNoteDone(noteId: string, done: boolean): Promise<void> {
-  const { error } = await (supabase as any)
-    .from('lead_notes')
-    .update({ done, updated_at: new Date().toISOString() })
-    .eq('id', noteId);
+  const { data, error } = await (supabase as any).rpc('concluir_tarefa', {
+    p_id: noteId,
+    p_done: done,
+  });
   if (error) throw new Error(error.message);
+  if (data === false) throw new Error('Só o autor, o responsável ou um administrador conclui esta tarefa.');
 }
 
 export async function deleteLeadNote(noteId: string): Promise<void> {
