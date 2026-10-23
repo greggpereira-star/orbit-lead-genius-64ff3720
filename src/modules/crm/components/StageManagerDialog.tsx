@@ -14,7 +14,7 @@ import { listConversionMappings } from '@/modules/crm/services/conversionMapping
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
-import { GripVertical, Plus, Trash2, Loader2, Flag, Check, Filter, Layers, Link2, DollarSign } from 'lucide-react';
+import { GripVertical, Plus, Trash2, Loader2, Flag, Check, Filter } from 'lucide-react';
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -55,6 +55,17 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
      esperar todos antes de redesenhar faria a lista "pular" de volta. */
   const [order, setOrder] = useState<Stage[]>([]);
   const [aba, setAba] = useState('etapas');
+  /* A aba de conversões tem rascunho próprio. Fechar (X, Esc, clique fora) sem salvar descartava
+     o trabalho em silêncio: quem tenta fechar com alteração pendente é perguntado antes. */
+  const [conversoesSujas, setConversoesSujas] = useState(false);
+  const tentarFechar = (aberto: boolean) => {
+    if (
+      !aberto
+      && conversoesSujas
+      && !window.confirm('Há alterações de conversão que ainda não foram salvas. Fechar e descartar?')
+    ) return;
+    onOpenChange(aberto);
+  };
 
   // Mesma condição da lista de etapas: só busca com o diálogo aberto.
   const mappingsQuery = useQuery({
@@ -147,7 +158,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={tentarFechar}>
         {/* Larga o suficiente para a tabela de conversões caber sem cortar a
             última coluna — era o interruptor de valor que sumia na borda. E com
             altura limitada ao viewport, senão sete etapas mais as explicações
@@ -159,11 +170,11 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             dentro, 72rem deixavam 9,5rem para o seletor — e o rótulo mais
             longo precisa de 15. */}
         <DialogContent className="flex max-h-[92dvh] max-w-[84rem] flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b px-6 py-5 text-left">
+          <DialogHeader className="shrink-0 border-b px-8 py-6 text-left">
             <div className="flex items-start gap-3">
               {/* O ícone não é enfeite: ele é o mesmo funil do Kanban, e dá
                   ao diálogo a identidade da tela de onde ele veio. */}
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
                 <Filter className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -181,7 +192,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             onValueChange={setAba}
             className="flex min-h-0 flex-1 flex-col gap-0"
           >
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-6 pt-4">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-8 pb-1 pt-5">
             <TabsList className="shrink-0 self-start">
               <TabsTrigger value="etapas">Etapas</TabsTrigger>
               {/* Separado porque são duas perguntas diferentes: "quais são os
@@ -196,20 +207,18 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             {/* Resumo do funil, só onde ele descreve o que está na tela. Nas
                 outras abas seria um número solto sem nada para explicá-lo. */}
             {aba === 'conversoes' && (
-              <div className="flex flex-wrap gap-2">
-                <Resumo icone={<Layers className="h-4 w-4" />} numero={resumo.etapas} titulo="etapas" legenda="no funil" />
-                <Resumo icone={<Link2 className="h-4 w-4" />} numero={resumo.eventos} titulo="eventos" legenda="mapeados" />
+              <dl className="flex items-stretch divide-x divide-border/70 rounded-xl bg-muted/60 py-1">
+                <Resumo numero={resumo.etapas} titulo="etapas" legenda="no funil" />
+                <Resumo numero={resumo.eventos} titulo="eventos" legenda="mapeados" />
                 <Resumo
-                  icone={<DollarSign className="h-4 w-4" />}
                   numero={resumo.comValor}
                   titulo={resumo.comValor === 1 ? 'conversão' : 'conversões'}
                   legenda="com valor"
-                  destaque
                 />
-              </div>
+              </dl>
             )}
             </div>
-            <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+            <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-8 py-5">
 
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="stages">
@@ -359,10 +368,14 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </TabsContent>
             {/* Sem overflow aqui: a tabela de conversões tem rodapé fixo e
                 cuida da própria rolagem. */}
-            <TabsContent value="conversoes" className="flex min-h-0 flex-1 flex-col px-6 py-4">
-              <ConversionSettingsTable companyId={companyId} onClose={() => onOpenChange(false)} />
+            <TabsContent value="conversoes" className="sup-tonal mt-4 flex min-h-0 flex-1 flex-col px-8 pt-5">
+              <ConversionSettingsTable
+                companyId={companyId}
+                onClose={() => onOpenChange(false)}
+                onSujoChange={setConversoesSujas}
+              />
             </TabsContent>
-            <TabsContent value="perdas" className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <TabsContent value="perdas" className="min-h-0 flex-1 overflow-y-auto px-8 py-5">
               <LossReasonsManager companyId={companyId} />
             </TabsContent>
           </Tabs>
@@ -433,36 +446,26 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
 }
 
 /**
- * Um número do funil, com o que ele conta logo abaixo.
+ * Os números do funil, numa faixa só.
  *
- * Três cartões em vez de uma frase porque são grandezas diferentes — degraus,
- * eventos, valor — e quem configura compara as três entre si: "sete etapas e
- * só um evento" é a leitura que faz a pessoa voltar para a tabela.
+ * Eram três cartões iguais com ícone, número e legenda: o desenho de "métrica herói" que o
+ * DESIGN.md manda evitar, e três objetos disputando o olhar com as abas. Continuam três grandezas
+ * (degraus, eventos, valor) para comparar entre si — "sete etapas e só um evento" é a leitura que
+ * faz a pessoa voltar para a tabela —, mas agora lidas de relance, separadas por um traço fino.
  */
 function Resumo({
-  icone, numero, titulo, legenda, destaque,
+  numero, titulo, legenda,
 }: {
-  icone: React.ReactNode;
   numero: number;
   titulo: string;
   legenda: string;
-  destaque?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2">
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-          destaque ? 'bg-[var(--sucesso-suave)] text-[var(--sucesso)]' : 'bg-primary/10 text-primary'
-        }`}
-      >
-        {icone}
-      </span>
-      <div className="leading-tight">
-        <p className="text-sm font-semibold">
-          {numero} <span className="font-medium text-muted-foreground">{titulo}</span>
-        </p>
-        <p className="text-xs text-muted-foreground">{legenda}</p>
-      </div>
+    <div className="px-4 leading-tight first:pl-3 last:pr-3">
+      <dt className="text-base font-semibold tabular-nums">
+        {numero} <span className="text-sm font-medium text-muted-foreground">{titulo}</span>
+      </dt>
+      <dd className="text-xs text-muted-foreground">{legenda}</dd>
     </div>
   );
 }

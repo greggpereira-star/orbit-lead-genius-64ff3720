@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -29,18 +33,19 @@ const SEM_ETIQUETA = '__sem__';
 /**
  * Grade do desktop. No celular cada campo vira um bloco com o próprio rótulo.
  *
- * Todas as colunas em `fr`, nenhuma fixa. A versão anterior fixava quatro
- * larguras e deixava só o resto para o seletor: no modal real sobravam 152px
- * para um rótulo que precisa de ~240px, e "Proposta ou inscrição enviada"
- * aparecia como "Proposta o…". Quem lê a tela não conseguia conferir a
- * configuração sem abrir cada lista.
+ * Todas as colunas em `fr`, nenhuma fixa: com larguras fixas sobravam 152px para um
+ * rótulo que precisa de ~240px, e "Proposta ou inscrição enviada" aparecia como
+ * "Proposta o…". Quem lê a tela não conseguia conferir a configuração sem abrir cada lista.
  *
- * O seletor leva a maior fatia porque é a decisão da linha. O mínimo do
- * `minmax` existe para a grade degradar em vez de espremer quando a janela é
- * menor que o previsto.
+ * O seletor leva a maior fatia porque é a decisão da linha. As duas grades existem porque a
+ * coluna da etiqueta do WhatsApp some quando o canal não está disponível (ver
+ * `mostrarWhatsapp`) — e a largura que ela ocupava volta para o seletor. As classes são
+ * literais, e não montadas, para o Tailwind enxergá-las.
  */
-const GRADE =
-  'lg:grid-cols-[minmax(8rem,1.3fr)_minmax(9rem,1.6fr)_minmax(7rem,1.2fr)_minmax(7rem,1fr)_minmax(7rem,1fr)_3rem]';
+const GRADE_COM_WHATSAPP =
+  'lg:grid-cols-[minmax(8rem,1.2fr)_minmax(10rem,1.9fr)_minmax(7rem,1.1fr)_minmax(7rem,1fr)_minmax(7rem,1fr)_3.5rem]';
+const GRADE_SEM_WHATSAPP =
+  'lg:grid-cols-[minmax(9rem,1.3fr)_minmax(11rem,2fr)_minmax(8rem,1.3fr)_minmax(9rem,1.4fr)_3.5rem]';
 
 /**
  * Sugestão de mapeamento pela posição no funil.
@@ -70,6 +75,14 @@ function doMapeamento(m: ConversionMapping | undefined): Rascunho {
   };
 }
 
+/** Texto de etiqueta para comparar: o campo guarda o que foi digitado, o banco guarda aparado. */
+const norm = (v: string | null) => (v ?? '').trim();
+/** Chave para achar etiqueta repetida: sem espaço nas pontas e sem diferenciar maiúscula. */
+const chaveDaTag = (v: string | null) => norm(v).toLowerCase();
+
+const mandaEvento = (r: Rascunho | undefined) =>
+  Boolean(r) && r!.evento !== NENHUM && r!.evento !== SO_MEDIR;
+
 /**
  * O que cada degrau do funil significa para a mídia.
  *
@@ -78,11 +91,13 @@ function doMapeamento(m: ConversionMapping | undefined): Rascunho {
  * Salvar linha a linha publicava meio funil enquanto a pessoa ainda pensava.
  */
 export function ConversionSettingsTable({
-  companyId, onClose,
+  companyId, onClose, onSujoChange,
 }: {
   companyId: string;
   /** Fechar o diálogo inteiro, do botão Cancelar. */
   onClose?: () => void;
+  /** Avisa quem hospeda o diálogo se há alteração não salva, para não fechar perdendo trabalho. */
+  onSujoChange?: (sujo: boolean) => void;
 }) {
   const qc = useQueryClient();
   const buscarEtiquetas = useServerFn(listarEtiquetasDaEmpresa);
@@ -119,6 +134,8 @@ export function ConversionSettingsTable({
 
   const [rascunho, setRascunho] = useState<Map<string, Rascunho>>(new Map());
   const [escrevendo, setEscrevendo] = useState<Set<string>>(new Set());
+  const [confirmandoAoVivo, setConfirmandoAoVivo] = useState(false);
+  const [forcarWhatsapp, setForcarWhatsapp] = useState(false);
 
   // O rascunho nasce do que está gravado e é refeito quando o servidor
   // responde. Sem isto, salvar deixaria a tela comparando contra dados velhos
@@ -137,10 +154,57 @@ export function ConversionSettingsTable({
     for (const [id, r] of rascunho) {
       const base = salvo.get(id);
       if (!base) continue;
-      if (base.evento !== r.evento || base.etiqueta !== r.etiqueta || base.etiquetaCrm !== r.etiquetaCrm || base.valor !== r.valor) ids.push(id);
+      if (
+        base.evento !== r.evento
+        || norm(base.etiqueta) !== norm(r.etiqueta)
+        || norm(base.etiquetaCrm) !== norm(r.etiquetaCrm)
+        || base.valor !== r.valor
+      ) ids.push(id);
     }
     return ids;
   }, [rascunho, salvo]);
+
+  const sujo = alterados.length > 0;
+  useEffect(() => {
+    onSujoChange?.(sujo);
+    return () => onSujoChange?.(false);
+  }, [sujo, onSujoChange]);
+
+  const lista = useMemo(() => stages.data ?? [], [stages.data]);
+
+  /**
+   * A etiqueta do WhatsApp só existe na conexão por QR code. Quando a empresa já não a tem (a
+   * consulta falha) e nenhuma etapa usa etiqueta, a coluna vira cinco campos vazios que tiram
+   * largura do que importa. Ela some, e o painel lateral diz por quê e oferece trazer de volta.
+   */
+  const listaEtiquetas = etiquetas.data?.etiquetas ?? [];
+  const semEtiquetas = etiquetas.data && !etiquetas.data.ok;
+  const algumaEtiquetaWa = lista.some((s) => norm(salvo.get(s.id)?.etiqueta ?? null) !== ''
+    || norm(rascunho.get(s.id)?.etiqueta ?? null) !== '');
+  const mostrarWhatsapp = etiquetas.data !== undefined
+    && (!semEtiquetas || algumaEtiquetaWa || forcarWhatsapp);
+  const grade = mostrarWhatsapp ? GRADE_COM_WHATSAPP : GRADE_SEM_WHATSAPP;
+
+  /** Etiqueta do CRM repetida: o banco só aceita uma etapa por etiqueta, e o erro viria no meio do lote. */
+  const erroCrmPorEtapa = useMemo(() => {
+    const porTag = new Map<string, Stage[]>();
+    for (const s of lista) {
+      const r = rascunho.get(s.id);
+      const k = chaveDaTag(r?.etiquetaCrm ?? null);
+      if (!r || r.evento === NENHUM || !k) continue;
+      porTag.set(k, [...(porTag.get(k) ?? []), s]);
+    }
+    const erros = new Map<string, string>();
+    for (const etapas of porTag.values()) {
+      if (etapas.length < 2) continue;
+      for (const e of etapas) {
+        const outras = etapas.filter((o) => o.id !== e.id).map((o) => o.name).join(', ');
+        erros.set(e.id, `Já leva a ${outras}`);
+      }
+    }
+    return erros;
+  }, [lista, rascunho]);
+  const temErro = erroCrmPorEtapa.size > 0;
 
   const gravar = useMutation({
     mutationFn: async () => {
@@ -180,14 +244,9 @@ export function ConversionSettingsTable({
     onError: (e: Error) => toast.error('Não deu para trocar o modo', { description: e.message }),
   });
 
-  const lista = stages.data ?? [];
-  const listaEtiquetas = etiquetas.data?.etiquetas ?? [];
-  const semEtiquetas = etiquetas.data && !etiquetas.data.ok;
   const emEnsaio = ensaio.data === true;
-  const nenhumMapeado = lista.every((s) => {
-    const r = rascunho.get(s.id);
-    return !r || r.evento === NENHUM || r.evento === SO_MEDIR;
-  });
+  const etapasQueEnviam = lista.filter((s) => mandaEvento(salvo.get(s.id))).length;
+  const nenhumMapeado = lista.every((s) => !mandaEvento(rascunho.get(s.id)));
 
   /** Preenche o rascunho com a escada do funil. Nada é gravado até Salvar. */
   const sugerir = () => {
@@ -212,76 +271,80 @@ export function ConversionSettingsTable({
   /**
    * As boas práticas, conferidas contra o que está no rascunho.
    *
-   * O mockup trazia quatro conselhos fixos. Conselho fixo é decoração: ele diz
-   * a mesma coisa para quem acertou e para quem errou. Duas das quatro regras
-   * são verificáveis com os dados que já estão aqui, então elas ficam verdes
-   * quando valem e âmbar quando não — nomeando as etapas envolvidas.
+   * Conselho fixo é decoração: ele diz a mesma coisa para quem acertou e para quem errou. As
+   * regras abaixo são verificáveis com os dados que já estão aqui, então ficam verdes quando
+   * valem e âmbar quando não — nomeando as etapas envolvidas. A ordem errada também marca a
+   * LINHA, para a pessoa não ter de procurar de qual etapa o aviso fala.
    */
-  const praticas = useMemo(() => {
+  const analise = useMemo(() => {
     const comEvento = lista
       .map((s) => ({ etapa: s, r: rascunho.get(s.id) }))
-      .filter((x): x is { etapa: Stage; r: Rascunho } =>
-        Boolean(x.r) && x.r!.evento !== NENHUM && x.r!.evento !== SO_MEDIR);
+      .filter((x): x is { etapa: Stage; r: Rascunho } => mandaEvento(x.r));
 
     const porNome = new Map<string, string[]>();
     for (const x of comEvento) porNome.set(x.r.evento, [...(porNome.get(x.r.evento) ?? []), x.etapa.name]);
     const repetidos = [...porNome.entries()].filter(([, e]) => e.length > 1);
 
-    const foraDeOrdem: string[] = [];
+    const foraDeOrdem: Stage[] = [];
     let maior = -1;
     for (const x of comEvento) {
       const d = profundidadeDoEvento(x.r.evento);
       if (d === -1) continue;
-      if (d < maior) foraDeOrdem.push(x.etapa.name); else maior = d;
+      if (d < maior) foraDeOrdem.push(x.etapa); else maior = d;
     }
 
     const valorForaDeVenda = comEvento
       .filter((x) => x.r.valor && x.etapa.kind !== 'won')
       .map((x) => x.etapa.name);
 
-    return [
-      {
-        ok: comEvento.length > 0,
-        bom: 'Pelo menos um degrau avisa a Meta.',
-        ruim: 'Nenhuma etapa envia conversão — a Meta não recebe sinal nenhum deste funil.',
-      },
-      {
-        ok: valorForaDeVenda.length === 0,
-        bom: 'O valor está só na etapa de venda.',
-        ruim: `Valor ligado fora da venda em ${valorForaDeVenda.join(', ')}. A Meta passaria a otimizar por receita num degrau que não tem receita.`,
-      },
-      {
-        ok: foraDeOrdem.length === 0,
-        bom: 'A ordem do funil está do raso para o fundo.',
-        ruim: `${foraDeOrdem.join(', ')} aponta para um evento mais raso que o de uma etapa anterior.`,
-      },
-      {
-        ok: repetidos.length === 0,
-        bom: 'Cada degrau manda um evento diferente.',
-        ruim: repetidos.map(([ev, et]) => `${et.join(' e ')} mandam ${ev}`).join('; ')
-          + '. Aí sim o mesmo lead conta duas vezes.',
-      },
-    ];
+    return {
+      foraDeOrdemIds: new Set(foraDeOrdem.map((e) => e.id)),
+      praticas: [
+        {
+          ok: comEvento.length > 0,
+          bom: 'Pelo menos um degrau avisa a Meta.',
+          ruim: 'Nenhuma etapa envia conversão — a Meta não recebe sinal nenhum deste funil.',
+        },
+        {
+          ok: valorForaDeVenda.length === 0,
+          bom: 'O valor está só na etapa de venda.',
+          ruim: `Valor ligado fora da venda em ${valorForaDeVenda.join(', ')}. A Meta passaria a otimizar por receita num degrau que não tem receita.`,
+        },
+        {
+          ok: foraDeOrdem.length === 0,
+          bom: 'A ordem do funil está do raso para o fundo.',
+          ruim: `${foraDeOrdem.map((e) => e.name).join(', ')} aponta para um evento mais raso que o de uma etapa anterior.`,
+        },
+        {
+          ok: repetidos.length === 0,
+          bom: 'Cada degrau manda um evento diferente.',
+          ruim: repetidos.map(([ev, et]) => `${et.join(' e ')} mandam ${ev}`).join('; ')
+            + '. Aí sim o mesmo lead conta duas vezes.',
+        },
+      ],
+    };
   }, [lista, rascunho]);
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pb-5 pr-1">
           <FaixaDeEnsaio
             ligado={emEnsaio}
             ocupado={ensaio.isLoading || trocarEnsaio.isPending}
-            aoTrocar={(v) => trocarEnsaio.mutate(v)}
+            // Ligar o ensaio é sempre seguro. Desligar manda conversão de verdade para as
+            // plataformas de anúncio e não tem desfazer: pede confirmação.
+            aoTrocar={(v) => (v ? trocarEnsaio.mutate(true) : setConfirmandoAoVivo(true))}
           />
 
           {/* Funil sem nenhum degrau mapeado é a tela mais importante e a mais
               muda: sete selects em "Não é conversão" não dizem por onde
               começar. O atalho vem para cima, onde o olho está. */}
           {lista.length > 0 && nenhumMapeado && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed p-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-foreground/15 px-5 py-4">
               <div className="text-sm">
                 <p className="font-medium">Nenhum degrau avisa a Meta ainda</p>
-                <p className="text-muted-foreground">
+                <p className="mt-0.5 text-muted-foreground">
                   Comece pela sugestão e ajuste o que não encaixar no seu nicho.
                 </p>
               </div>
@@ -292,36 +355,43 @@ export function ConversionSettingsTable({
             </div>
           )}
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
             <div className="min-w-0">
-              {/* `items-end` e `truncate`: "Status no pipeline" quebrava em duas
-                  linhas e desalinhava a base dos outros títulos. */}
-              <div className={`hidden items-end gap-x-4 px-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:grid ${GRADE}`}>
-                <span className="truncate">Etapa do funil</span>
-                <span className="truncate">O que significa</span>
-                <span className="flex items-center gap-1 truncate">
-                  <span className="truncate">Evento na Meta</span>
+              {/* Cabeçalho das colunas preso ao topo da rolagem: sem ele, depois de rolar, os
+                  campos ficavam sem título e "Digite o nome" não dizia de qual etiqueta era.
+                  `items-end` e quebra de linha permitida: um título comprido não pode cortar. */}
+              <div
+                className={`sticky top-0 z-10 hidden items-end gap-x-4 bg-[var(--superficie-tonal)] px-5 pb-2.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:grid ${grade}`}
+              >
+                <span>Etapa do funil</span>
+                <span>O que significa</span>
+                <span className="flex items-center gap-1">
+                  <span>Evento na Meta</span>
                   <Dica texto="O nome exato que a Meta recebe. É por ele que você escolhe a meta de otimização no Gerenciador de Anúncios." />
                 </span>
-                <span className="leading-tight">Etiqueta no WhatsApp</span>
+                {mostrarWhatsapp && <span className="leading-tight">Etiqueta no WhatsApp</span>}
                 <span className="flex items-end gap-1">
                   <span className="leading-tight">Etiqueta no CRM</span>
                   <Dica texto="Aplicar esta etiqueta no lead (pela tela do lead, por uma automação ou pelo formulário) move o lead para esta etapa, e a conversão sai da mudança de etapa. Só avança: etiqueta de etapa anterior não faz o lead voltar." />
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="truncate">Valor</span>
+                  <span>Valor</span>
                   <Dica texto="Manda o valor da venda junto do evento. Só faz sentido na etapa de fechamento: valor num degrau de lead ensina a Meta a otimizar pela métrica errada." />
                 </span>
               </div>
 
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {lista.map((s) => (
                   <LinhaDaEtapa
                     key={s.id}
                     etapa={s}
+                    grade={grade}
+                    mostrarWhatsapp={mostrarWhatsapp}
                     rascunho={rascunho.get(s.id) ?? doMapeamento(undefined)}
                     alterada={alterados.includes(s.id)}
                     escrevendo={escrevendo.has(s.id)}
+                    foraDeOrdem={analise.foraDeOrdemIds.has(s.id)}
+                    erroCrm={erroCrmPorEtapa.get(s.id) ?? null}
                     etiquetasDisponiveis={listaEtiquetas}
                     aoMudar={(p) => mudar(s.id, p)}
                     aoEscrever={(v) => setEscrevendo((a) => {
@@ -335,38 +405,46 @@ export function ConversionSettingsTable({
             </div>
 
             <PainelDeApoio
-              praticas={praticas}
-              semEtiquetas={semEtiquetas}
+              praticas={analise.praticas}
+              whatsappOculto={Boolean(semEtiquetas) && !mostrarWhatsapp}
+              whatsappIndisponivel={Boolean(semEtiquetas) && mostrarWhatsapp}
               motivo={etiquetas.data?.motivo ?? undefined}
+              aoMostrarWhatsapp={() => setForcarWhatsapp(true)}
             />
           </div>
         </div>
 
         {/* Barra de ações. Fixa no rodapé porque a decisão de gravar é sobre o
             conjunto inteiro, e ela não pode sumir enquanto se rola a lista. */}
-        <div className="-mx-6 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t bg-background px-6 pt-4">
+        <div className="-mx-8 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t bg-background px-8 py-4">
           <Button type="button" variant="outline" onClick={sugerir} disabled={gravar.isPending}>
             <RotateCcw className="h-4 w-4" />
             <span className="ml-2">Sugerir pelo funil</span>
           </Button>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {alterados.length > 0 && (
-              <span className="text-sm text-[var(--aviso)]">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {temErro ? (
+              <span className="flex items-center gap-1.5 text-sm text-destructive" role="alert">
+                <AlertTriangle className="h-4 w-4" />
+                Há etiquetas repetidas: cada etiqueta leva a uma etapa só.
+              </span>
+            ) : sujo ? (
+              <span className="flex items-center gap-2 text-sm text-[var(--aviso)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--aviso)]" aria-hidden />
                 {alterados.length === 1 ? '1 alteração não salva' : `${alterados.length} alterações não salvas`}
               </span>
-            )}
+            ) : null}
             <Button
               type="button" variant="ghost"
               onClick={() => { setRascunho(new Map(salvo)); onClose?.(); }}
               disabled={gravar.isPending}
             >
-              Cancelar
+              {sujo ? 'Descartar' : 'Cancelar'}
             </Button>
             <Button
               type="button"
               onClick={() => gravar.mutate()}
-              disabled={alterados.length === 0 || gravar.isPending}
+              disabled={!sujo || temErro || gravar.isPending}
             >
               <Save className="h-4 w-4" />
               <span className="ml-2">{gravar.isPending ? 'Salvando…' : 'Salvar configurações'}</span>
@@ -374,6 +452,26 @@ export function ConversionSettingsTable({
           </div>
         </div>
       </div>
+
+      <AlertDialog open={confirmandoAoVivo} onOpenChange={setConfirmandoAoVivo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar conversões de verdade?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {etapasQueEnviam > 0
+                ? `${etapasQueEnviam === 1 ? '1 etapa configurada passa' : `${etapasQueEnviam} etapas configuradas passam`} a mandar conversão real para a Meta e o Google. `
+                : 'Nenhuma etapa está configurada para enviar, então por enquanto nada sairia. '}
+              Isso entra na otimização das campanhas e não tem como desfazer o que já foi enviado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar em ensaio</AlertDialogCancel>
+            <AlertDialogAction onClick={() => trocarEnsaio.mutate(false)}>
+              Enviar de verdade
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }
@@ -397,37 +495,45 @@ function FaixaDeEnsaio({
 }: { ligado: boolean; ocupado: boolean; aoTrocar: (v: boolean) => void }) {
   return (
     <div
-      className={`flex items-start justify-between gap-4 rounded-xl border p-3 ${
+      className={`flex items-center justify-between gap-5 rounded-2xl border px-5 py-4 ${
         ligado
           ? 'border-[var(--aviso-borda)] bg-[var(--aviso-suave)]'
           : 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)]'
       }`}
     >
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-3">
         {ligado
           ? <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
           : <Radio className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sucesso)]" />}
-        <div className="space-y-0.5 text-sm">
+        <div className="space-y-1 text-sm">
           <p className="font-medium">{ligado ? 'Modo de ensaio ligado' : 'Enviando de verdade'}</p>
-          <p className="text-muted-foreground">
+          <p className="max-w-[60ch] text-muted-foreground">
             {ligado
               ? 'As etapas montam o evento e registram o que teria sido enviado, mas nada chega na Meta nem no Google. A etiqueta no WhatsApp continua sendo aplicada.'
               : 'Cada etapa configurada manda conversão real, e isso entra na otimização da campanha.'}
           </p>
         </div>
       </div>
-      <Switch checked={ligado} disabled={ocupado} onCheckedChange={aoTrocar} aria-label="Modo de ensaio" />
+      <label className="flex shrink-0 cursor-pointer items-center gap-2.5 text-xs font-medium text-muted-foreground">
+        <span className="hidden sm:inline">{ligado ? 'Ensaio' : 'Ao vivo'}</span>
+        <Switch checked={ligado} disabled={ocupado} onCheckedChange={aoTrocar} aria-label="Modo de ensaio" />
+      </label>
     </div>
   );
 }
 
 function LinhaDaEtapa({
-  etapa, rascunho, alterada, escrevendo, etiquetasDisponiveis, aoMudar, aoEscrever,
+  etapa, grade, mostrarWhatsapp, rascunho, alterada, escrevendo, foraDeOrdem, erroCrm,
+  etiquetasDisponiveis, aoMudar, aoEscrever,
 }: {
   etapa: Stage;
+  grade: string;
+  mostrarWhatsapp: boolean;
   rascunho: Rascunho;
   alterada: boolean;
   escrevendo: boolean;
+  foraDeOrdem: boolean;
+  erroCrm: string | null;
   etiquetasDisponiveis: string[];
   aoMudar: (p: Partial<Rascunho>) => void;
   aoEscrever: (v: boolean) => void;
@@ -445,11 +551,11 @@ function LinhaDaEtapa({
 
   return (
     <li
-      className={`grid gap-x-4 gap-y-3 rounded-xl border bg-card p-4 transition-colors lg:items-start ${GRADE} ${
-        alterada ? 'border-primary/40 ring-1 ring-primary/20' : ''
+      className={`grid gap-x-4 gap-y-3.5 rounded-2xl bg-[var(--superficie-cartao)] p-5 shadow-[var(--elevacao-1)] transition-shadow lg:items-start ${grade} ${
+        alterada ? 'ring-1 ring-[var(--selecao-anel)]' : ''
       }`}
     >
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-3">
         <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: etapa.color }} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold" title={etapa.name}>{etapa.name}</p>
@@ -457,7 +563,7 @@ function LinhaDaEtapa({
               e fazia a linha ficar 2,5× mais alta que a de "Novo lead". Coluna
               com altura irregular não se varre com o olho — e varrer é o que
               se faz aqui, comparando os degraus entre si. */}
-          <p className="line-clamp-2 text-xs leading-snug text-muted-foreground" title={explica}>
+          <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted-foreground" title={explica}>
             {explica}
           </p>
         </div>
@@ -473,7 +579,7 @@ function LinhaDaEtapa({
             aoMudar({ evento: v, valor: v === NENHUM || v === SO_MEDIR ? false : rascunho.valor });
           }}
         >
-          <SelectTrigger className="h-9 w-full" aria-label={`O que a etapa ${etapa.name} significa`}>
+          <SelectTrigger className="h-10 w-full" aria-label={`O que a etapa ${etapa.name} significa`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -487,85 +593,99 @@ function LinhaDaEtapa({
             <SelectItem value={EVENTO_PERSONALIZADO}>Outro evento (eu escrevo)</SelectItem>
           </SelectContent>
         </Select>
+        {foraDeOrdem && (
+          <p className="flex items-start gap-1.5 text-[11px] leading-snug text-[var(--aviso)]">
+            <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden />
+            Evento mais raso que o de uma etapa anterior
+          </p>
+        )}
       </div>
 
       <div className="min-w-0 space-y-1.5">
         <Rotulo>Evento na Meta</Rotulo>
         {noSelect === EVENTO_PERSONALIZADO ? (
+          // Controlado, e não confirmado ao sair do campo: com o botão Salvar desabilitado até
+          // o estado mudar, o primeiro clique nele só tirava o foco do campo e se perdia.
           <Input
-            defaultValue={personalizado ? rascunho.evento : ''}
+            value={personalizado ? rascunho.evento : ''}
             placeholder="ContratoEnviado"
-            className="h-9 font-mono text-xs"
+            className="h-10 font-mono text-xs"
             aria-label={`Nome do evento personalizado da etapa ${etapa.name}`}
-            onBlur={(ev) => {
+            onChange={(ev) => {
               // Sem espaço e sem acento: é um identificador que vai para a API
               // da Meta, não um rótulo de tela.
               const nome = ev.target.value
                 .normalize('NFD').replace(/[̀-ͯ]/g, '')
                 .replace(/[^A-Za-z0-9_]/g, '');
               if (nome) { aoEscrever(false); aoMudar({ evento: nome }); }
+              else { aoEscrever(true); aoMudar({ evento: NENHUM, valor: false }); }
             }}
           />
         ) : envia ? (
+          // Neutro: o nome do evento é dado, não ação nem seleção, e o acento é de quem marca
+          // "isto está sendo editado".
           <span
-            className="flex min-w-0 items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 font-mono text-xs text-primary"
+            className="flex h-10 min-w-0 items-center gap-1.5 rounded-lg bg-muted px-2.5 font-mono text-xs text-foreground"
             title={rascunho.evento}
           >
-            <Code2 className="h-3.5 w-3.5 shrink-0" />
+            <Code2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{rascunho.evento}</span>
           </span>
         ) : (
-          <span className="inline-flex items-center px-1 text-xs text-muted-foreground">—</span>
+          <span className="inline-flex h-10 items-center px-1 text-xs text-muted-foreground">—</span>
         )}
       </div>
 
-      <div className="min-w-0 space-y-1.5">
-        <Rotulo>Etiqueta no WhatsApp</Rotulo>
-        {etiquetasDisponiveis.length > 0 ? (
-          <Select
-            value={rascunho.etiqueta || SEM_ETIQUETA}
-            onValueChange={(v) => aoMudar({ etiqueta: v === SEM_ETIQUETA ? null : v })}
-          >
-            <SelectTrigger className="h-9 w-full" aria-label={`Etiqueta da etapa ${etapa.name}`}>
-              <SelectValue placeholder="Nenhuma" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SEM_ETIQUETA}>Nenhuma</SelectItem>
-              {etiquetasDisponiveis.map((n) => (
-                <SelectItem key={n} value={n}>
-                  <span className="inline-flex items-center gap-1.5"><Tag className="h-3 w-3" />{n}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          // Sem WhatsApp conectado não há lista para escolher. O campo de texto
-          // fica, porque a etiqueta digitada funciona — mas precisa parecer
-          // editável, e não um select vazio e apagado.
-          <Input
-            defaultValue={rascunho.etiqueta ?? ''}
-            placeholder="Digite o nome"
-            className="h-9 w-full"
-            aria-label={`Etiqueta da etapa ${etapa.name}`}
-            onBlur={(e) => aoMudar({ etiqueta: e.target.value.trim() || null })}
-          />
-        )}
-      </div>
+      {mostrarWhatsapp && (
+        <div className="min-w-0 space-y-1.5">
+          <Rotulo>Etiqueta no WhatsApp</Rotulo>
+          {etiquetasDisponiveis.length > 0 ? (
+            <Select
+              value={rascunho.etiqueta || SEM_ETIQUETA}
+              onValueChange={(v) => aoMudar({ etiqueta: v === SEM_ETIQUETA ? null : v })}
+            >
+              <SelectTrigger className="h-10 w-full" aria-label={`Etiqueta do WhatsApp da etapa ${etapa.name}`}>
+                <SelectValue placeholder="Nenhuma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_ETIQUETA}>Nenhuma</SelectItem>
+                {etiquetasDisponiveis.map((n) => (
+                  <SelectItem key={n} value={n}>
+                    <span className="inline-flex items-center gap-1.5"><Tag className="h-3 w-3" />{n}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            // Sem lista para escolher, o campo de texto fica: a etiqueta digitada funciona.
+            <Input
+              value={rascunho.etiqueta ?? ''}
+              placeholder="Digite o nome"
+              className="h-10 w-full"
+              aria-label={`Etiqueta do WhatsApp da etapa ${etapa.name}`}
+              onChange={(e) => aoMudar({ etiqueta: e.target.value || null })}
+            />
+          )}
+        </div>
+      )}
 
       <div className="min-w-0 space-y-1.5">
         <Rotulo>Etiqueta no CRM</Rotulo>
         {/* Só com evento (ou "Só medir"): uma linha de mapeamento define a etapa como conversão
             nos relatórios, então a etiqueta não pode criar essa linha sozinha. */}
         <Input
-          key={`${etapa.id}-${rascunho.evento === NENHUM ? 'off' : 'on'}`}
-          defaultValue={rascunho.evento === NENHUM ? '' : (rascunho.etiquetaCrm ?? '')}
+          value={rascunho.evento === NENHUM ? '' : (rascunho.etiquetaCrm ?? '')}
           placeholder={rascunho.evento === NENHUM ? 'Escolha o evento antes' : 'Ex.: qualificado'}
           disabled={rascunho.evento === NENHUM}
           maxLength={60}
-          className="h-9 w-full"
+          className="h-10 w-full"
           aria-label={`Etiqueta do CRM que leva à etapa ${etapa.name}`}
-          onBlur={(e) => aoMudar({ etiquetaCrm: e.target.value.trim() || null })}
+          aria-invalid={erroCrm ? true : undefined}
+          onChange={(e) => aoMudar({ etiquetaCrm: e.target.value || null })}
         />
+        {erroCrm && (
+          <p className="text-[11px] leading-snug text-destructive" role="alert">{erroCrm}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -574,7 +694,7 @@ function LinhaDaEtapa({
             etapa de fechamento: valor em evento de lead ensina a Meta a
             otimizar pela métrica errada. */}
         {envia ? (
-          <div className="flex h-9 items-center">
+          <div className="flex h-10 items-center">
             <Switch
               checked={rascunho.valor}
               onCheckedChange={(v) => aoMudar({ valor: v })}
@@ -582,7 +702,7 @@ function LinhaDaEtapa({
             />
           </div>
         ) : (
-          <p className="flex h-9 items-center text-xs text-muted-foreground">—</p>
+          <p className="flex h-10 items-center text-xs text-muted-foreground">—</p>
         )}
       </div>
     </li>
@@ -595,25 +715,31 @@ function Rotulo({ children }: { children: React.ReactNode }) {
 }
 
 function PainelDeApoio({
-  praticas, semEtiquetas, motivo,
+  praticas, whatsappOculto, whatsappIndisponivel, motivo, aoMostrarWhatsapp,
 }: {
   praticas: Array<{ ok: boolean; bom: string; ruim: string }>;
-  semEtiquetas: boolean | undefined;
+  /** A consulta das etiquetas do WhatsApp falhou e a coluna foi escondida. */
+  whatsappOculto: boolean;
+  /** A consulta falhou, mas a coluna está visível (há etiqueta configurada ou foi pedida). */
+  whatsappIndisponivel: boolean;
   motivo: string | undefined;
+  aoMostrarWhatsapp: () => void;
 }) {
   return (
-    <aside className="space-y-3 rounded-xl border bg-muted/40 p-4">
-      <div className="flex items-start gap-2">
-        <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+    // Preso ao topo da rolagem (só onde fica ao lado da lista): as conferências precisam estar à
+    // vista enquanto se edita a linha lá embaixo. Sem borda e sem cartão dentro de cartão.
+    <aside className="space-y-5 rounded-2xl bg-[var(--superficie-cartao)] p-5 shadow-[var(--elevacao-1)] xl:sticky xl:top-0">
+      <div className="flex items-start gap-2.5">
+        <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div>
           <p className="text-sm font-semibold">Boas práticas</p>
           <p className="text-xs text-muted-foreground">conferidas no que está na tela</p>
         </div>
       </div>
 
-      <ul className="space-y-2.5">
+      <ul className="space-y-3">
         {praticas.map((p) => (
-          <li key={p.bom} className="flex items-start gap-2 text-xs leading-snug">
+          <li key={p.bom} className="flex items-start gap-2.5 text-xs leading-snug">
             {p.ok
               ? <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--sucesso)]" />
               : <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--aviso)]" />}
@@ -622,20 +748,35 @@ function PainelDeApoio({
             </span>
           </li>
         ))}
-        {semEtiquetas && (
-          <li className="flex items-start gap-2 text-xs leading-snug">
+        {whatsappIndisponivel && (
+          <li className="flex items-start gap-2.5 text-xs leading-snug">
             <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-[var(--aviso)]" />
             <span>
-              Não deu para listar as etiquetas: {motivo}. Dá para digitar o nome, mas confira a
-              grafia — a Evolution só aplica etiqueta que já existe no aparelho.
+              Não deu para listar as etiquetas do WhatsApp{motivo ? ` (${motivo})` : ''}. Dá para
+              digitar o nome, mas confira a grafia.
+            </span>
+          </li>
+        )}
+        {whatsappOculto && (
+          <li className="flex items-start gap-2.5 text-xs leading-snug text-muted-foreground">
+            <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+            <span>
+              A coluna de etiqueta do WhatsApp está oculta: a conexão por QR code não está ativa.{' '}
+              <button
+                type="button"
+                onClick={aoMostrarWhatsapp}
+                className="font-medium text-foreground underline underline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                Mostrar mesmo assim
+              </button>
             </span>
           </li>
         )}
       </ul>
 
-      <div className="space-y-1.5 rounded-lg border bg-background p-3">
+      <div className="space-y-2 border-t pt-5">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-primary" />
+          <BookOpen className="h-4 w-4 text-muted-foreground" />
           <p className="text-sm font-medium">Evento personalizado</p>
         </div>
         <p className="text-xs leading-snug text-muted-foreground">
