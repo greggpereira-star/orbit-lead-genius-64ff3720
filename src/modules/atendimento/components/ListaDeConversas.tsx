@@ -2,6 +2,13 @@ import { Clock, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { WhatsAppIcon } from "@/design-system/components/WhatsAppIcon";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +35,9 @@ const ROTULO: Record<Filtro, string> = {
 /** Visões do dia a dia em cima (largura igual, nada cortado); as demais numa linha menor. */
 const FILTROS_PRINCIPAIS: Filtro[] = ["entrada", "minhas", "seguindo", "mencoes"];
 const FILTROS_SECUNDARIOS: Filtro[] = ["fila", "todas", "resolvidas"];
+
+/** Radix não aceita `value=""`: a ausência de filtro precisa de um token. */
+const TODAS = "__todas__";
 
 const COR_DA_ESPERA: Record<NivelDeEspera, string> = {
   ok: "bg-muted text-muted-foreground",
@@ -58,6 +68,13 @@ export function ListaDeConversas(props: {
   /** Barra do topo da coluna (título, não lidas, tela cheia…). */
   topo?: ReactNode;
   agora?: Date;
+  /** Etiquetas e etapas dos leads das conversas carregadas, para filtrar a lista. */
+  etiquetas?: string[];
+  etapas?: Array<{ id: string; nome: string; cor: string | null }>;
+  filtroEtiqueta?: string | null;
+  filtroEtapa?: string | null;
+  onFiltroEtiqueta?: (v: string | null) => void;
+  onFiltroEtapa?: (v: string | null) => void;
   onFiltro: (f: Filtro) => void;
   onBusca: (v: string) => void;
   onOrdem?: (o: OrdemDaLista) => void;
@@ -119,6 +136,55 @@ export function ListaDeConversas(props: {
             ))}
           </div>
         </div>
+        {Boolean(props.etiquetas?.length || props.etapas?.length) && (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            aria-label="Filtrar por etiqueta e etapa"
+          >
+            {props.etapas && props.etapas.length > 0 && props.onFiltroEtapa && (
+              <Select
+                value={props.filtroEtapa ?? TODAS}
+                onValueChange={(v) => props.onFiltroEtapa?.(v === TODAS ? null : v)}
+              >
+                <SelectTrigger
+                  className="h-8 min-w-0 flex-1 text-xs"
+                  aria-label="Filtrar por etapa"
+                >
+                  <SelectValue placeholder="Etapa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TODAS}>Todas as etapas</SelectItem>
+                  {props.etapas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {props.etiquetas && props.etiquetas.length > 0 && props.onFiltroEtiqueta && (
+              <Select
+                value={props.filtroEtiqueta ?? TODAS}
+                onValueChange={(v) => props.onFiltroEtiqueta?.(v === TODAS ? null : v)}
+              >
+                <SelectTrigger
+                  className="h-8 min-w-0 flex-1 text-xs"
+                  aria-label="Filtrar por etiqueta"
+                >
+                  <SelectValue placeholder="Etiqueta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TODAS}>Todas as etiquetas</SelectItem>
+                  {props.etiquetas.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
         {props.onOrdem && (
           <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>Ordenar</span>
@@ -156,7 +222,11 @@ export function ListaDeConversas(props: {
         {props.carregando && <p className="p-4 text-sm text-muted-foreground">Carregando…</p>}
         {!props.carregando && props.conversas.length === 0 && (
           <p className="p-6 text-sm text-muted-foreground">
-            {props.busca ? "Nada encontrado para essa busca." : "Nenhuma conversa nesta lista."}
+            {props.busca
+              ? "Nada encontrado para essa busca."
+              : props.filtroEtiqueta || props.filtroEtapa
+                ? "Nenhuma conversa com esses filtros."
+                : "Nenhuma conversa nesta lista."}
           </p>
         )}
         {props.conversas.map((c) => {
@@ -232,6 +302,38 @@ export function ListaDeConversas(props: {
                     )}
                   </span>
                 </span>
+                {(c.lead?.stage || (c.lead?.tags?.length ?? 0) > 0) && (
+                  <span className="mt-1 flex flex-wrap items-center gap-1">
+                    {c.lead?.stage && (
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[11px] font-medium"
+                        style={
+                          c.lead.stage.color
+                            ? {
+                                backgroundColor: `${c.lead.stage.color}1f`,
+                                color: c.lead.stage.color,
+                              }
+                            : undefined
+                        }
+                      >
+                        {c.lead.stage.name}
+                      </span>
+                    )}
+                    {(c.lead?.tags ?? []).slice(0, 2).map((t) => (
+                      <span
+                        key={t.tag_name}
+                        className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+                      >
+                        {t.tag_name}
+                      </span>
+                    ))}
+                    {(c.lead?.tags?.length ?? 0) > 2 && (
+                      <span className="text-[11px] text-muted-foreground">
+                        +{(c.lead?.tags?.length ?? 0) - 2}
+                      </span>
+                    )}
+                  </span>
+                )}
                 {c.contact?.opted_out_at && (
                   <span className="mt-1 flex">
                     <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] text-destructive">

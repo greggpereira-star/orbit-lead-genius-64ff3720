@@ -51,6 +51,7 @@ import { DadosDoTitular } from "./DadosDoTitular";
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { EtiquetasDoLead } from "./EtiquetasDoLead";
+import { EtapaDoLead } from "./EtapaDoLead";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -179,128 +180,16 @@ function avatarTone(_seed: string): string {
   return AVATAR_TOM;
 }
 
-/**
- * Etapa editável na própria pill.
- *
- * Lê as etapas reais da empresa, não uma lista fixa. Antes eram sete rótulos
- * codificados aqui dentro que gravavam `leads.status`, enquanto o pipeline lia
- * `leads.stage_id` — mudar a etapa aqui não mexia o card no board, e vice-versa.
- * Agora as duas telas escrevem pelo mesmo `moveLeadToStage`.
- */
+/** Etapa editável na própria pill: o seletor é compartilhado com o painel da conversa. */
 function StagePicker({ lead, onChanged }: { lead: LeadRow; onChanged: (status: string) => void }) {
-  const qc = useQueryClient();
-  const [currentId, setCurrentId] = useState<string | null>(
-    (lead as { stage_id?: string | null }).stage_id ?? null,
-  );
-
-  // O lead pode mudar de etapa por fora deste seletor (etiqueta do CRM, automação): quando a
-  // etapa do lead recebido muda, o seletor acompanha em vez de ficar com a leitura de quando abriu.
-  const etapaDoLead = (lead as { stage_id?: string | null }).stage_id ?? null;
-  useEffect(() => {
-    setCurrentId(etapaDoLead);
-  }, [etapaDoLead]);
-
-  const stagesQuery = useQuery({
-    queryKey: ["stages", lead.company_id],
-    queryFn: () => listStages(lead.company_id),
-    enabled: Boolean(lead.company_id),
-  });
-  const stages = stagesQuery.data ?? [];
-  const current = stages.find((s) => s.id === currentId) ?? null;
-
-  /* Mesma regra do board: etapa de perda pergunta o motivo antes de gravar.
-     Os dois caminhos de escrita precisam concordar, senão trocar a etapa pela
-     ficha produziria perda sem motivo — o buraco que este item veio fechar. */
-  const [perguntandoMotivo, setPerguntandoMotivo] = useState<Stage | null>(null);
-
-  const mutation = useMutation({
-    mutationFn: (v: { stage: Stage; lossReasonId?: string | null; lostNotes?: string | null }) =>
-      moveLeadToStage({
-        leadId: lead.id,
-        stageId: v.stage.id,
-        // O modal não conhece a posição na coluna; entra no topo, que é onde
-        // um lead recém-mexido faz sentido estar.
-        boardOrder: 0,
-        fromStageName: current?.name ?? null,
-        toStageName: v.stage.name,
-        lossReasonId: v.lossReasonId ?? null,
-        lostNotes: v.lostNotes ?? null,
-        stages,
-      }),
-    onSuccess: (_, v) => {
-      setCurrentId(v.stage.id);
-      onChanged(v.stage.id);
-      // A lista e o board atrás do modal precisam refletir a mudança na hora.
-      qc.invalidateQueries({ queryKey: ["leads"] });
-      toast.success(`Etapa alterada para ${v.stage.name}`);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const label = current?.name ?? "Sem etapa";
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          disabled={mutation.isPending || stagesQuery.isLoading}
-          className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-          style={
-            current
-              ? {
-                  borderColor: `${current.color}55`,
-                  backgroundColor: `${current.color}14`,
-                  color: current.color,
-                }
-              : undefined
-          }
-          aria-label={`Etapa atual: ${label}. Clique para alterar.`}
-        >
-          {mutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : label}
-          <ChevronDown className="h-3 w-3 opacity-60" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        {stages.map((s) => (
-          <DropdownMenuItem
-            key={s.id}
-            onClick={() => {
-              if (s.id === currentId) return;
-              if (s.kind === "lost") {
-                setPerguntandoMotivo(s);
-                return;
-              }
-              mutation.mutate({ stage: s });
-            }}
-            className="gap-2"
-          >
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-            {s.name}
-            {s.id === currentId && <Check className="ml-auto h-3.5 w-3.5" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-
-      {perguntandoMotivo && (
-        <LossReasonDialog
-          companyId={lead.company_id}
-          leadName={lead.name || "este lead"}
-          open
-          onConfirm={(motivoId, observacao) => {
-            mutation.mutate({
-              stage: perguntandoMotivo,
-              lossReasonId: motivoId,
-              lostNotes: observacao,
-            });
-            setPerguntandoMotivo(null);
-          }}
-          // Aqui nada se moveu ainda — a ficha só grava depois de confirmar —
-          // então cancelar não precisa desfazer coisa alguma.
-          onCancel={() => setPerguntandoMotivo(null)}
-        />
-      )}
-    </DropdownMenu>
+    <EtapaDoLead
+      leadId={lead.id}
+      companyId={lead.company_id}
+      leadName={lead.name}
+      stageId={(lead as { stage_id?: string | null }).stage_id ?? null}
+      onChanged={onChanged}
+    />
   );
 }
 

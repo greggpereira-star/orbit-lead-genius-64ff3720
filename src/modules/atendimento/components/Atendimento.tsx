@@ -50,6 +50,8 @@ import { SeletorDeResponsavel } from "./SeletorDeResponsavel";
 import {
   contarPorFiltro,
   filtrarConversas,
+  etiquetasDaLista,
+  etapasDaLista,
   nomeDaConversa,
   totalNaoLidas,
   type Filtro,
@@ -217,10 +219,23 @@ export function Atendimento({
   }, [filtro, conversas.isLoading, contagens.minhas]);
 
   const filtroAtual: Filtro = filtro ?? "entrada";
+  const [filtroEtiqueta, setFiltroEtiqueta] = useState<string | null>(null);
+  const [filtroEtapa, setFiltroEtapa] = useState<string | null>(null);
+  const etiquetas = useMemo(() => etiquetasDaLista(lista), [lista]);
+  const etapas = useMemo(() => etapasDaLista(lista), [lista]);
   const visiveis = useMemo(
     () =>
-      filtrarConversas(lista, { filtro: filtroAtual, userId, busca, ordem, agora, ...pessoais }),
-    [lista, filtroAtual, userId, busca, ordem, agora, pessoais],
+      filtrarConversas(lista, {
+        filtro: filtroAtual,
+        userId,
+        busca,
+        ordem,
+        agora,
+        etiqueta: filtroEtiqueta,
+        etapaId: filtroEtapa,
+        ...pessoais,
+      }),
+    [lista, filtroAtual, userId, busca, ordem, agora, filtroEtiqueta, filtroEtapa, pessoais],
   );
   const ativa = lista.find((c) => c.id === ativaId) ?? null;
 
@@ -391,6 +406,12 @@ export function Atendimento({
             ordem={ordem}
             agora={agora}
             topo={topoDaLista}
+            etiquetas={etiquetas}
+            etapas={etapas}
+            filtroEtiqueta={filtroEtiqueta}
+            filtroEtapa={filtroEtapa}
+            onFiltroEtiqueta={setFiltroEtiqueta}
+            onFiltroEtapa={setFiltroEtapa}
             onFiltro={setFiltro}
             onBusca={setBusca}
             onOrdem={setOrdem}

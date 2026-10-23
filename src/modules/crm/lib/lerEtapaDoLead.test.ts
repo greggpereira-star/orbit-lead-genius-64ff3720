@@ -45,9 +45,10 @@ describe("lerEtapaDoLead", () => {
 describe("ficha do lead acompanha a etapa que muda por fora", () => {
   const fonte = readFileSync("src/modules/crm/components/LeadDetailDialog.tsx", "utf8");
   it("o seletor de etapa ressincroniza quando a etapa do lead muda", () => {
-    expect(fonte).toContain(
-      "useEffect(() => {\n    setCurrentId(etapaDoLead);\n  }, [etapaDoLead]);",
-    );
+    // O seletor mora em EtapaDoLead (compartilhado com o painel da conversa do WhatsApp).
+    const seletor = readFileSync("src/modules/crm/components/EtapaDoLead.tsx", "utf8");
+    expect(seletor).toContain("useEffect(() => {\n    setCurrentId(stageId);\n  }, [stageId]);");
+    expect(fonte).toContain("stageId={(lead as { stage_id?: string | null }).stage_id ?? null}");
   });
   it("adicionar etiqueta relê a etapa e devolve o lead ao pai", () => {
     expect(fonte).toContain("aoAdicionar={() => void relerEtapaDoLead()}");

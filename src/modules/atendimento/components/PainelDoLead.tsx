@@ -44,6 +44,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatarTelefone, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
 import { AvatarDoContato } from "./AvatarDoContato";
 import { EtiquetasDoLead } from "@/modules/crm/components/EtiquetasDoLead";
+import { EtapaDoLead, FecharNegocio } from "@/modules/crm/components/EtapaDoLead";
 
 /** O que veio no `referral` do primeiro contato (anúncio Click-to-WhatsApp). */
 function textoDe(v: unknown): string | null {
@@ -169,6 +170,12 @@ export function PainelDoLead({
   const qc = useQueryClient();
   const lead = useLeadDoPainel(conversa.lead_id);
   const l = lead.data ?? null;
+  // Mover a etapa pode gerar conversão e mexe nas etiquetas (regras do CRM): o painel e a lista relêem.
+  const recarregarDepoisDeMover = () => {
+    void qc.invalidateQueries({ queryKey: ["wa-lead-painel"] });
+    void qc.invalidateQueries({ queryKey: ["wa-conversas"] });
+    void qc.invalidateQueries({ queryKey: ["lead-tags", conversa.lead_id] });
+  };
   const email = l?.email ?? conversa.lead?.email ?? null;
 
   return (
@@ -236,7 +243,30 @@ export function PainelDoLead({
             <p className="text-muted-foreground">Carregando…</p>
           ) : (
             <>
-              <Linha rotulo="Etapa" valor={l?.stage?.name ?? "—"} />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Etapa</span>
+                {l ? (
+                  <EtapaDoLead
+                    leadId={l.id}
+                    companyId={l.company_id}
+                    leadName={l.name}
+                    stageId={l.stage_id}
+                    somenteLeitura={somenteLeitura}
+                    onChanged={recarregarDepoisDeMover}
+                  />
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+              {l && !somenteLeitura && (
+                <FecharNegocio
+                  leadId={l.id}
+                  companyId={l.company_id}
+                  leadName={l.name}
+                  stageId={l.stage_id}
+                  onChanged={recarregarDepoisDeMover}
+                />
+              )}
               <Linha
                 rotulo="Temperatura"
                 valor={l?.temperature ? (TEMPERATURA[l.temperature] ?? l.temperature) : "—"}

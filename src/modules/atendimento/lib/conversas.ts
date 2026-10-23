@@ -27,7 +27,15 @@ export interface ConversaDaLista {
   lead_id: string | null;
   origin: Record<string, unknown> | null;
   contact: { wa_id: string; profile_name: string | null; opted_out_at: string | null } | null;
-  lead: { id: string; name: string | null; email: string | null } | null;
+  lead: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    /** Etapa e etiquetas do lead: aparecem na linha e servem de filtro. */
+    stage_id?: string | null;
+    stage?: { name: string; color: string | null; kind?: string | null } | null;
+    tags?: Array<{ tag_name: string }> | null;
+  } | null;
   /** Número da conversa: só o que o atendimento precisa saber dele. */
   numero?: { receive_only: boolean } | null;
 }
@@ -114,6 +122,10 @@ export function filtrarConversas(
     /** `espera`: quem espera há mais tempo primeiro. Padrão: mais recente primeiro. */
     ordem?: OrdemDaLista;
     agora?: Date;
+    /** Só conversas cujo lead tem esta etiqueta (sem diferenciar maiúsculas). */
+    etiqueta?: string | null;
+    /** Só conversas cujo lead está nesta etapa. */
+    etapaId?: string | null;
   } & ConjuntosPessoais,
 ): ConversaDaLista[] {
   const q = (p.busca ?? "").trim().toLowerCase();
@@ -139,6 +151,12 @@ export function filtrarConversas(
       }
     })
     .filter((c) => {
+      if (!p.etiqueta) return true;
+      const alvo = p.etiqueta.trim().toLowerCase();
+      return (c.lead?.tags ?? []).some((t) => t.tag_name.trim().toLowerCase() === alvo);
+    })
+    .filter((c) => !p.etapaId || c.lead?.stage_id === p.etapaId)
+    .filter((c) => {
       if (!q) return true;
       const nome = nomeDaConversa(c).toLowerCase();
       const fone = c.contact?.wa_id ?? "";
@@ -162,6 +180,31 @@ export function filtrarConversas(
       const tb = b.last_message_at ? Date.parse(b.last_message_at) : 0;
       return tb - ta;
     });
+}
+
+/** Etiquetas que existem nas conversas carregadas, sem repetir (maiúsculas não importam). */
+export function etiquetasDaLista(lista: ConversaDaLista[]): string[] {
+  const vistas = new Map<string, string>();
+  for (const c of lista)
+    for (const t of c.lead?.tags ?? []) {
+      const nome = t.tag_name.trim();
+      if (nome && !vistas.has(nome.toLowerCase())) vistas.set(nome.toLowerCase(), nome);
+    }
+  return [...vistas.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+/** Etapas que existem nas conversas carregadas (só o que dá resultado ao filtrar). */
+export function etapasDaLista(
+  lista: ConversaDaLista[],
+): Array<{ id: string; nome: string; cor: string | null }> {
+  const vistas = new Map<string, { id: string; nome: string; cor: string | null }>();
+  for (const c of lista) {
+    const id = c.lead?.stage_id;
+    const nome = c.lead?.stage?.name;
+    if (id && nome && !vistas.has(id))
+      vistas.set(id, { id, nome, cor: c.lead?.stage?.color ?? null });
+  }
+  return [...vistas.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
 export type OrdemDaLista = "recentes" | "espera";
