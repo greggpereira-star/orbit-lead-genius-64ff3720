@@ -33,6 +33,7 @@ export function AlternadorDeTema() {
         <Button
           variant="ghost"
           size="icon"
+          className="max-sm:h-11 max-sm:w-11"
           aria-label={`Tema: ${OPCOES.find((o) => o.valor === preferencia)?.rotulo}`}
         >
           <IconeAtual className="h-5 w-5 text-muted-foreground" />

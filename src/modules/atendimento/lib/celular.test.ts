@@ -21,7 +21,7 @@ describe("celular: alvos de toque", () => {
     const lista = ler("src/modules/atendimento/components/ListaDeConversas.tsx");
     expect(lista).toContain("max-sm:h-11");
     expect(lista).toContain("max-sm:h-10");
-    expect(lista).toContain("max-sm:py-2.5");
+    expect(lista).toContain("max-sm:py-3");
   });
 
   it("o botão de fechar do painel tem área de toque maior que o ícone", () => {

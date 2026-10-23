@@ -27,7 +27,7 @@ import { AlternadorDeTema } from "./AlternadorDeTema";
            <Button
              variant="ghost"
              size="icon"
-             className="mr-2 shrink-0"
+             className="mr-2 shrink-0 max-sm:h-11 max-sm:w-11"
              onClick={toggleSidebar}
              aria-label="Abrir menu"
              title="Abrir menu"
@@ -52,7 +52,7 @@ import { AlternadorDeTema } from "./AlternadorDeTema";
         <CentroDeAvisos />
          <DropdownMenu>
            <DropdownMenuTrigger asChild>
-             <Button variant="ghost" className="flex items-center gap-2 p-1 pl-2">
+             <Button variant="ghost" className="flex items-center gap-2 p-1 pl-2 max-sm:h-11">
                <span className="text-sm font-medium hidden sm:inline-block">{user?.name}</span>
                <Avatar className="h-8 w-8">
                  <AvatarFallback className="bg-[var(--superficie-tonal)] text-muted-foreground">

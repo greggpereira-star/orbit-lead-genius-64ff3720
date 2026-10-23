@@ -370,7 +370,7 @@ export function Atendimento({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 max-sm:h-11 max-sm:w-11"
           onClick={alternarTelaCheia}
           aria-label={telaCheia ? "Sair da tela cheia" : "Tela cheia"}
           title={

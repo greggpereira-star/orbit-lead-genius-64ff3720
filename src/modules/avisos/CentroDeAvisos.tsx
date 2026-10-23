@@ -75,7 +75,7 @@ export function CentroDeAvisos() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative max-sm:h-11 max-sm:w-11"
           aria-label={pendentes > 0 ? `Avisos: ${pendentes} não lidos` : "Avisos"}
         >
           <Bell className="h-5 w-5 text-muted-foreground" />

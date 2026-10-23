@@ -204,7 +204,7 @@ export function ListaDeConversas(props: {
                   aria-pressed={ordem === valor}
                   onClick={() => props.onOrdem?.(valor)}
                   className={cn(
-                    "rounded px-2.5 py-1 transition-colors max-sm:px-3.5 max-sm:py-2.5",
+                    "rounded px-2.5 py-1 transition-colors max-sm:px-3.5 max-sm:py-3",
                     ordem === valor
                       ? "bg-background font-medium text-foreground shadow-sm"
                       : "hover:text-foreground",
