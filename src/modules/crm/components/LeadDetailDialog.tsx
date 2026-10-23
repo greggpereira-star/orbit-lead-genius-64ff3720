@@ -50,6 +50,7 @@ import { DadosDoTitular } from "./DadosDoTitular";
 
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { Input } from "@/components/ui/input";
+import { EtiquetasDoLead } from "./EtiquetasDoLead";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -884,7 +885,7 @@ function AttachmentsTab({ leadId, companyId }: { leadId: string; companyId: stri
   );
 }
 
-/** Etiquetas com sugestão das já usadas, pra não virar "Investidor" e "investidor". */
+/** Etiquetas do lead: o editor é compartilhado com o painel da conversa do WhatsApp. */
 function TagsTab({
   leadId,
   companyId,
@@ -895,109 +896,7 @@ function TagsTab({
   /** A etiqueta pode mover o lead de etapa (feito no banco): quem abriu a ficha relê o lead. */
   aoAdicionar?: () => void;
 }) {
-  const qc = useQueryClient();
-  const [input, setInput] = useState("");
-
-  const tagsQuery = useQuery({
-    queryKey: ["lead-tags", leadId],
-    queryFn: () => listLeadTags(leadId),
-  });
-  const suggestionsQuery = useQuery({
-    queryKey: ["company-tags", companyId],
-    queryFn: () => listCompanyTagNames(companyId),
-  });
-
-  const addMutation = useMutation({
-    mutationFn: (name: string) => addLeadTag(leadId, name),
-    onSuccess: () => {
-      setInput("");
-      qc.invalidateQueries({ queryKey: ["lead-tags", leadId] });
-      qc.invalidateQueries({ queryKey: ["company-tags", companyId] });
-      // A etiqueta pode mover o lead de etapa (etiqueta do CRM → etapa, feito no banco): recarrega
-      // a lista, o kanban e o caminho no funil, e avisa a ficha para reler a etapa do lead.
-      qc.invalidateQueries({ queryKey: ["leads"] });
-      qc.invalidateQueries({ queryKey: ["caminho-do-lead", leadId] });
-      aoAdicionar?.();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const removeMutation = useMutation({
-    mutationFn: (id: string) => removeLeadTag(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["lead-tags", leadId] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const current = tagsQuery.data ?? [];
-  const currentNames = new Set(current.map((t) => t.tag_name));
-  const suggestions = (suggestionsQuery.data ?? [])
-    .filter((s) => !currentNames.has(s))
-    .slice(0, 12);
-
-  return (
-    <div className="space-y-5">
-      <div className="flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && input.trim()) {
-              e.preventDefault();
-              addMutation.mutate(input);
-            }
-          }}
-          placeholder="Ex: Investidor, Primeira compra, Urgente"
-          className="h-9 text-sm"
-          aria-label="Nova etiqueta"
-        />
-        <Button
-          onClick={() => addMutation.mutate(input)}
-          disabled={addMutation.isPending || !input.trim()}
-          className="h-9"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-
-      {current.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma etiqueta neste lead.</p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {current.map((t) => (
-            <Badge key={t.id} variant="secondary" className="gap-1 py-1 pl-2.5 pr-1 text-sm">
-              {t.tag_name}
-              <button
-                type="button"
-                onClick={() => removeMutation.mutate(t.id)}
-                className="rounded-full p-0.5 hover:bg-background"
-                title={`Remover ${t.tag_name}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {suggestions.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">Já usadas nesta empresa</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => addMutation.mutate(s)}
-                className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-              >
-                + {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <EtiquetasDoLead leadId={leadId} companyId={companyId} aoAlterar={aoAdicionar} />;
 }
 
 const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [

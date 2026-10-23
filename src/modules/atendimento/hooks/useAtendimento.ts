@@ -303,6 +303,7 @@ export function useAgendadas(conversaId: string | null) {
 
 export interface LeadDoPainel {
   id: string;
+  company_id: string;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -325,7 +326,7 @@ export function useLeadDoPainel(leadId: string | null) {
       const { data, error } = await wa()
         .from("leads")
         .select(
-          "id,name,email,phone,score,temperature,source,utm_campaign,created_at,stage:stages(name),tags:lead_tags(tag_name)",
+          "id,company_id,name,email,phone,score,temperature,source,utm_campaign,created_at,stage:stages(name),tags:lead_tags(tag_name)",
         )
         .eq("id", leadId)
         .maybeSingle();

@@ -43,6 +43,7 @@ import { chaves, useLeadDoPainel, useNotas } from "../hooks/useAtendimento";
 import { useQuery } from "@tanstack/react-query";
 import { formatarTelefone, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
 import { AvatarDoContato } from "./AvatarDoContato";
+import { EtiquetasDoLead } from "@/modules/crm/components/EtiquetasDoLead";
 
 /** O que veio no `referral` do primeiro contato (anúncio Click-to-WhatsApp). */
 function textoDe(v: unknown): string | null {
@@ -165,6 +166,7 @@ export function PainelDoLead({
   const nome = nomeDaConversa(conversa);
   const waId = conversa.contact?.wa_id ?? "";
   const fone = formatarTelefone(waId);
+  const qc = useQueryClient();
   const lead = useLeadDoPainel(conversa.lead_id);
   const l = lead.data ?? null;
   const email = l?.email ?? conversa.lead?.email ?? null;
@@ -251,19 +253,24 @@ export function PainelDoLead({
           )}
         </Secao>
 
-        {(l?.tags?.length ?? 0) > 0 && (
+        {conversa.lead && (
           <Secao
             titulo="Etiquetas"
             icone={<Tag className="h-4 w-4" />}
-            resumo={`${l!.tags.length}`}
+            aberta
+            resumo={l ? `${l.tags.length}` : null}
           >
-            <div className="flex flex-wrap gap-1">
-              {l!.tags.map((t) => (
-                <span key={t.tag_name} className="rounded-full bg-muted px-2.5 py-1 text-xs">
-                  {t.tag_name}
-                </span>
-              ))}
-            </div>
+            <EtiquetasDoLead
+              leadId={conversa.lead.id}
+              companyId={l?.company_id ?? null}
+              somenteLeitura={somenteLeitura}
+              compacto
+              aoAlterar={() => {
+                // A etiqueta pode mover a etapa: o painel e a lista relêem.
+                void qc.invalidateQueries({ queryKey: ["wa-lead-painel"] });
+                void qc.invalidateQueries({ queryKey: ["wa-conversas"] });
+              }}
+            />
           </Secao>
         )}
 

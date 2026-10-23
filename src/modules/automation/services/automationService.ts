@@ -21,6 +21,11 @@ export const EVENTOS = [
   { valor: 'stage_changed', rotulo: 'Mudou de etapa', ajuda: 'O card foi movido no pipeline.' },
   { valor: 'form_abandoned', rotulo: 'Formulário abandonado', ajuda: 'Parou de preencher e não voltou em 30 min.' },
   {
+    valor: 'tag_added',
+    rotulo: 'Etiqueta aplicada',
+    ajuda: 'Alguém (ou outra automação) pôs uma etiqueta no lead. Use a condição "etiqueta é igual a …": maiúsculas não importam.',
+  },
+  {
     valor: 'whatsapp_message_received',
     rotulo: 'Mensagem recebida no WhatsApp',
     ajuda: 'O cliente escreveu. Só mensagens dele: respostas da equipe e histórico importado não contam.',
@@ -43,6 +48,7 @@ export const CAMPOS_POR_EVENTO: Record<string, string[]> = {
                  'utm_source', 'utm_medium', 'utm_campaign', 'landing_page'],
   stage_changed: ['etapa', 'score', 'temperatura', 'nome', 'email', 'telefone'],
   form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign'],
+  tag_added: ['etiqueta', 'etapa', 'score', 'temperatura', 'origem', 'nome', 'email', 'telefone'],
   whatsapp_message_received: ['texto', 'primeira_mensagem', 'veio_de_anuncio', 'tipo_mensagem',
                               'nome', 'email', 'telefone', 'score', 'temperatura', 'origem'],
 };
@@ -56,6 +62,21 @@ export const ACOES = [
   { valor: 'atribuir_conversa', rotulo: 'Atribuir conversa do WhatsApp' },
   { valor: 'webhook', rotulo: 'Chamar webhook' },
 ] as const;
+
+/**
+ * Condição sobre a etiqueta guarda o valor em minúsculas e sem espaço nas pontas: o gatilho do
+ * banco manda `etiqueta` assim, e o operador `igual` do motor diferencia maiúsculas. Sem isso,
+ * "Orçamento" na regra nunca casaria com a etiqueta "orçamento" do lead.
+ */
+export function normalizarCondicoes(condicoes: Condicao[]): Condicao[] {
+  return condicoes
+    .filter((c) => c.campo && c.operador)
+    .map((c) =>
+      c.campo === 'etiqueta' && typeof c.valor === 'string'
+        ? { ...c, valor: c.valor.trim().toLowerCase() }
+        : c,
+    );
+}
 
 export interface Condicao {
   campo: string;
@@ -131,7 +152,7 @@ export const automationService = {
       trigger_event: p.trigger_event,
       // Condição sem campo escolhido não é gravada: ela nunca casaria e ficaria
       // na tela parecendo que filtra algo.
-      conditions: p.conditions.filter((c) => c.campo && c.operador),
+      conditions: normalizarCondicoes(p.conditions),
       priority: p.priority,
       is_active: p.is_active,
       updated_at: new Date().toISOString(),
