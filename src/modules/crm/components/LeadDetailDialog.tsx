@@ -23,6 +23,7 @@ import {
   XCircle,
   Zap,
   CheckSquare,
+  SlidersHorizontal,
   Tag as TagIcon,
   StickyNote,
   Plus,
@@ -52,6 +53,7 @@ import { useAuth } from "@/core/auth/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { EtiquetasDoLead } from "./EtiquetasDoLead";
 import { EtapaDoLead } from "./EtapaDoLead";
+import { CamposDoLead } from "./CamposDoLead";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -1810,6 +1812,14 @@ export function LeadDetailDialog({
                   </div>
 
                   <div className="flex min-w-0 flex-col gap-3.5">
+                    <CartaoFicha
+                      icone={<SlidersHorizontal className="h-4 w-4" />}
+                      titulo="Campos personalizados"
+                      descricao="Definidos pela sua empresa"
+                    >
+                      <CamposDoLead leadId={lead.id} companyId={lead.company_id} />
+                    </CartaoFicha>
+
                     <CartaoFicha
                       icone={<TagIcon className="h-4 w-4" />}
                       titulo="Etiquetas"

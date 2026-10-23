@@ -48,6 +48,7 @@ import { Route as AppIntegrationsMetaRouteImport } from './routes/_app.integrati
 import { Route as AppLeadsIdRouteImport } from './routes/_app.leads.$id'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app.settings.index'
 import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settings.automations'
+import { Route as AppSettingsCamposRouteImport } from './routes/_app.settings.campos'
 import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
 import { Route as AppSettingsHorariosRouteImport } from './routes/_app.settings.horarios'
@@ -277,6 +278,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
 const AppSettingsAutomationsRoute = AppSettingsAutomationsRouteImport.update({
   id: '/automations',
   path: '/automations',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsCamposRoute = AppSettingsCamposRouteImport.update({
+  id: '/campos',
+  path: '/campos',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsChatRoute = AppSettingsChatRouteImport.update({
@@ -513,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/integrations/meta': typeof AppIntegrationsMetaRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
+  '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
@@ -588,6 +595,7 @@ export interface FileRoutesByTo {
   '/integrations/meta': typeof AppIntegrationsMetaRoute
   '/leads/$id': typeof AppLeadsIdRoute
   '/settings/automations': typeof AppSettingsAutomationsRoute
+  '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
@@ -667,6 +675,7 @@ export interface FileRoutesById {
   '/_app/integrations/meta': typeof AppIntegrationsMetaRoute
   '/_app/leads/$id': typeof AppLeadsIdRoute
   '/_app/settings/automations': typeof AppSettingsAutomationsRoute
+  '/_app/settings/campos': typeof AppSettingsCamposRoute
   '/_app/settings/chat': typeof AppSettingsChatRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/horarios': typeof AppSettingsHorariosRoute
@@ -745,6 +754,7 @@ export interface FileRouteTypes {
     | '/integrations/meta'
     | '/leads/$id'
     | '/settings/automations'
+    | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
     | '/settings/horarios'
@@ -820,6 +830,7 @@ export interface FileRouteTypes {
     | '/integrations/meta'
     | '/leads/$id'
     | '/settings/automations'
+    | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
     | '/settings/horarios'
@@ -898,6 +909,7 @@ export interface FileRouteTypes {
     | '/_app/integrations/meta'
     | '/_app/leads/$id'
     | '/_app/settings/automations'
+    | '/_app/settings/campos'
     | '/_app/settings/chat'
     | '/_app/settings/company'
     | '/_app/settings/horarios'
@@ -1246,6 +1258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsAutomationsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/campos': {
+      id: '/_app/settings/campos'
+      path: '/campos'
+      fullPath: '/settings/campos'
+      preLoaderRoute: typeof AppSettingsCamposRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/chat': {
       id: '/_app/settings/chat'
       path: '/chat'
@@ -1534,6 +1553,7 @@ const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
 
 interface AppSettingsRouteChildren {
   AppSettingsAutomationsRoute: typeof AppSettingsAutomationsRoute
+  AppSettingsCamposRoute: typeof AppSettingsCamposRoute
   AppSettingsChatRoute: typeof AppSettingsChatRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsHorariosRoute: typeof AppSettingsHorariosRoute
@@ -1552,6 +1572,7 @@ interface AppSettingsRouteChildren {
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAutomationsRoute: AppSettingsAutomationsRoute,
+  AppSettingsCamposRoute: AppSettingsCamposRoute,
   AppSettingsChatRoute: AppSettingsChatRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsHorariosRoute: AppSettingsHorariosRoute,

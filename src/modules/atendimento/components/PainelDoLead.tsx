@@ -15,6 +15,7 @@ import {
   Megaphone,
   MessageCircle,
   Phone,
+  SlidersHorizontal,
   StickyNote,
   Tag,
   UserPlus,
@@ -45,6 +46,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatarTelefone, nomeDaConversa, type ConversaDaLista } from "../lib/conversas";
 import { AvatarDoContato } from "./AvatarDoContato";
 import { EtiquetasDoLead } from "@/modules/crm/components/EtiquetasDoLead";
+import { CamposDoLead, useCamposDoLead } from "@/modules/crm/components/CamposDoLead";
 import {
   TarefasDoLead,
   resumoDasTarefas,
@@ -176,6 +178,7 @@ export function PainelDoLead({
   const qc = useQueryClient();
   const lead = useLeadDoPainel(conversa.lead_id);
   const tarefasDoLead = useTarefasDoLead(conversa.lead_id);
+  const camposDoLead = useCamposDoLead(conversa.lead_id, lead.data?.company_id ?? null);
   const l = lead.data ?? null;
   // Mover a etapa pode gerar conversão e mexe nas etiquetas (regras do CRM): o painel e a lista relêem.
   const recarregarDepoisDeMover = () => {
@@ -314,6 +317,16 @@ export function PainelDoLead({
                 void qc.invalidateQueries({ queryKey: ["wa-conversas"] });
               }}
             />
+          </Secao>
+        )}
+
+        {conversa.lead && l && (camposDoLead.defs.data ?? []).length > 0 && (
+          <Secao
+            titulo="Campos"
+            icone={<SlidersHorizontal className="h-4 w-4" />}
+            resumo={`${Object.keys(camposDoLead.valores.data ?? {}).length} preenchido(s)`}
+          >
+            <CamposDoLead leadId={conversa.lead.id} companyId={l.company_id} somenteLeitura={somenteLeitura} />
           </Secao>
         )}
 

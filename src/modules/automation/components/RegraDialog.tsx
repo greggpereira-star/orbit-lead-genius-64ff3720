@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { listarCampos } from '@/modules/crm/services/customFieldService';
+import { variavelDaAutomacao } from '@/modules/crm/lib/camposPersonalizados';
 import { toast } from 'sonner';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import {
@@ -63,14 +66,27 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
     );
   }, [aberto, regra]);
 
-  const campos = useMemo(() => CAMPOS_POR_EVENTO[evento] ?? [], [evento]);
+  // Os campos personalizados da empresa também servem de condição e de {{variável}} (cf_<chave>).
+  const personalizados = useQuery({
+    queryKey: ['custom-field-defs', companyId],
+    enabled: aberto && Boolean(companyId),
+    queryFn: () => listarCampos(companyId),
+    staleTime: 60_000,
+  });
+  const campos = useMemo(
+    () => [
+      ...(CAMPOS_POR_EVENTO[evento] ?? []),
+      ...(personalizados.data ?? []).map((d) => variavelDaAutomacao(d.key)),
+    ],
+    [evento, personalizados.data],
+  );
 
   /* Trocar o evento invalida as condições: os campos de `lead_created` não
      existem em `form_abandoned`, e uma condição sobre campo inexistente nunca
      casa — a regra ficaria na tela parecendo configurada e nunca rodaria. */
   const trocarEvento = (novo: string) => {
     setEvento(novo);
-    setCondicoes((atuais) => atuais.filter((c) => (CAMPOS_POR_EVENTO[novo] ?? []).includes(c.campo)));
+    setCondicoes((atuais) => atuais.filter((c) => c.campo.startsWith('cf_') || (CAMPOS_POR_EVENTO[novo] ?? []).includes(c.campo)));
   };
 
   const salvar = async () => {
