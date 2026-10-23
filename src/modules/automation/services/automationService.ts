@@ -38,6 +38,16 @@ export const EVENTOS = [
     minutos: true,
   },
   {
+    valor: 'conversation_resolved',
+    rotulo: 'Conversa resolvida',
+    ajuda: 'Alguém marcou a conversa do WhatsApp como resolvida. Reabrir e resolver de novo dispara outra vez.',
+  },
+  {
+    valor: 'conversation_assigned',
+    rotulo: 'Conversa atribuída',
+    ajuda: 'A conversa do WhatsApp passou a ter um responsável (ou trocou de responsável). Tirar o responsável não dispara.',
+  },
+  {
     valor: 'whatsapp_message_received',
     rotulo: 'Mensagem recebida no WhatsApp',
     ajuda: 'O cliente escreveu. Só mensagens dele: respostas da equipe e histórico importado não contam.',
@@ -62,6 +72,8 @@ export const CAMPOS_POR_EVENTO: Record<string, string[]> = {
   form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign'],
   customer_no_reply: ['minutos_esperando', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
   window_expiring: ['minutos_restantes', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
+  conversation_resolved: ['etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'responsavel_id'],
+  conversation_assigned: ['responsavel_id', 'responsavel_anterior_id', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
   tag_added: ['etiqueta', 'etapa', 'score', 'temperatura', 'origem', 'nome', 'email', 'telefone'],
   whatsapp_message_received: ['texto', 'primeira_mensagem', 'veio_de_anuncio', 'tipo_mensagem',
                               'nome', 'email', 'telefone', 'score', 'temperatura', 'origem'],

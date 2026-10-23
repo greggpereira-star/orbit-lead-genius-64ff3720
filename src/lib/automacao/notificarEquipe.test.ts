@@ -158,6 +158,8 @@ describe("ação Notificar equipe", () => {
   it("texto padrão existe para os dois gatilhos de tempo", () => {
     expect(textoPadraoDoAviso("window_expiring").titulo).toContain("{{minutos_restantes}}");
     expect(textoPadraoDoAviso("customer_no_reply").titulo).toContain("{{minutos_esperando}}");
+    expect(textoPadraoDoAviso("conversation_resolved").titulo).toContain("{{nome}}");
+    expect(textoPadraoDoAviso("conversation_assigned").titulo).toContain("{{nome}}");
     expect(textoPadraoDoAviso("qualquer").titulo).toBeTruthy();
   });
 });

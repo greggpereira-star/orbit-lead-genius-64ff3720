@@ -37,6 +37,13 @@ export function textoPadraoDoAviso(evento: string): { titulo: string; mensagem: 
         titulo: "A janela de {{nome}} fecha em {{minutos_restantes}} min",
         mensagem: "Depois disso só dá para falar com ele por template aprovado.",
       };
+    case "conversation_resolved":
+      return { titulo: "Conversa com {{nome}} foi resolvida", mensagem: "" };
+    case "conversation_assigned":
+      return {
+        titulo: "Conversa com {{nome}} foi atribuída",
+        mensagem: "O responsável da conversa mudou.",
+      };
     default:
       return { titulo: "Aviso da automação", mensagem: "" };
   }

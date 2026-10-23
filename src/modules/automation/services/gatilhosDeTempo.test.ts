@@ -55,3 +55,25 @@ describe('gatilhos por tempo na tela', () => {
     expect(sql).toContain("'notificar_equipe'");
   });
 });
+
+describe('gatilhos "ao resolver" e "ao atribuir"', () => {
+  it('entram no vocabulário com campos para condição', () => {
+    for (const e of ['conversation_resolved', 'conversation_assigned']) {
+      expect(EVENTOS.some((x) => x.valor === e)).toBe(true);
+      expect(CAMPOS_POR_EVENTO[e]).toContain('etapa');
+      expect(precisaDeMinutos(e)).toBe(false);
+    }
+    expect(CAMPOS_POR_EVENTO.conversation_assigned).toContain('responsavel_id');
+    expect(CAMPOS_POR_EVENTO.conversation_assigned).toContain('responsavel_anterior_id');
+  });
+
+  it('o CHECK do banco aceita os dois e preserva o dos minutos', () => {
+    const sql = readFileSync('supabase/migrations/20261024140000_gatilhos_resolver_e_atribuir.sql', 'utf8');
+    for (const e of ['conversation_resolved', 'conversation_assigned']) expect(sql).toContain(`'${e}'`);
+    // Troca pelo NOME: a busca por definição derrubaria o CHECK dos minutos junto.
+    expect(sql).toContain('DROP CONSTRAINT IF EXISTS automation_rules_trigger_event_check');
+    expect(sql).not.toMatch(/ILIKE\s+'%trigger_event%'/);
+    // Todos os eventos já existentes continuam na lista nova.
+    for (const e of EVENTOS.map((x) => x.valor)) expect(sql).toContain(`'${e}'`);
+  });
+});
