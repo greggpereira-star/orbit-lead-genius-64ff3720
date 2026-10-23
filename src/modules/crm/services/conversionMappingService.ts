@@ -14,6 +14,8 @@ export interface ConversionMapping {
   google_conversion_action: string | null;
   send_deal_value: boolean;
   whatsapp_label: string | null;
+  /** Etiqueta do lead no CRM que leva o lead a esta etapa. */
+  crm_tag: string | null;
   is_active: boolean;
 }
 
@@ -97,6 +99,13 @@ export const EVENTOS_META = [
   },
 ] as const;
 
+/** O índice único barra a mesma etiqueta em duas etapas; a mensagem do banco não diz isso. */
+function mensagemDoErro(e: { code?: string; message: string }): string {
+  if (e.code === '23505' && /crm_tag/.test(e.message))
+    return 'Essa etiqueta do CRM já leva a outra etapa. Use uma etiqueta diferente em cada etapa.';
+  return e.message;
+}
+
 export async function listConversionMappings(companyId: string): Promise<ConversionMapping[]> {
   const { data, error } = await (supabase as any)
     .from('stage_conversion_mappings')
@@ -111,6 +120,8 @@ export async function salvarConversionMapping(input: {
   stageId: string;
   metaEventName: string | null;
   whatsappLabel: string | null;
+  /** Etiqueta do CRM → etapa. Só vale com evento (ou 'Só medir'); sem evento a linha é apagada. */
+  crmTag?: string | null;
   sendDealValue: boolean;
 }): Promise<void> {
   // "Não é conversão" apaga; "só medir" mantém a linha sem destino.
@@ -139,13 +150,14 @@ export async function salvarConversionMapping(input: {
           stage_id: input.stageId,
           meta_event_name: null,
           whatsapp_label: input.whatsappLabel?.trim() || null,
+          crm_tag: input.crmTag?.trim() || null,
           send_deal_value: input.sendDealValue,
           is_active: true,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'company_id,stage_id' },
       );
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(mensagemDoErro(error));
     return;
   }
 
@@ -157,13 +169,14 @@ export async function salvarConversionMapping(input: {
         stage_id: input.stageId,
         meta_event_name: input.metaEventName,
         whatsapp_label: input.whatsappLabel?.trim() || null,
+        crm_tag: input.crmTag?.trim() || null,
         send_deal_value: input.sendDealValue,
         is_active: true,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'company_id,stage_id' },
     );
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(mensagemDoErro(error));
 }
 
 /**

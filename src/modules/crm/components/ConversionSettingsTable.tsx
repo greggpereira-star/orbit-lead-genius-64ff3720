@@ -40,7 +40,7 @@ const SEM_ETIQUETA = '__sem__';
  * menor que o previsto.
  */
 const GRADE =
-  'lg:grid-cols-[minmax(8rem,1.3fr)_minmax(9rem,1.6fr)_minmax(7rem,1.2fr)_minmax(7rem,1fr)_3rem]';
+  'lg:grid-cols-[minmax(8rem,1.3fr)_minmax(9rem,1.6fr)_minmax(7rem,1.2fr)_minmax(7rem,1fr)_minmax(7rem,1fr)_3rem]';
 
 /**
  * Sugestão de mapeamento pela posição no funil.
@@ -56,6 +56,8 @@ const ESCADA = [
 interface Rascunho {
   evento: string;
   etiqueta: string | null;
+  /** Etiqueta do lead no CRM que move o lead para esta etapa. */
+  etiquetaCrm: string | null;
   valor: boolean;
 }
 
@@ -63,6 +65,7 @@ function doMapeamento(m: ConversionMapping | undefined): Rascunho {
   return {
     evento: m ? (m.meta_event_name ?? SO_MEDIR) : NENHUM,
     etiqueta: m?.whatsapp_label ?? null,
+    etiquetaCrm: m?.crm_tag ?? null,
     valor: m?.send_deal_value ?? false,
   };
 }
@@ -134,7 +137,7 @@ export function ConversionSettingsTable({
     for (const [id, r] of rascunho) {
       const base = salvo.get(id);
       if (!base) continue;
-      if (base.evento !== r.evento || base.etiqueta !== r.etiqueta || base.valor !== r.valor) ids.push(id);
+      if (base.evento !== r.evento || base.etiqueta !== r.etiqueta || base.etiquetaCrm !== r.etiquetaCrm || base.valor !== r.valor) ids.push(id);
     }
     return ids;
   }, [rascunho, salvo]);
@@ -150,6 +153,7 @@ export function ConversionSettingsTable({
           stageId,
           metaEventName: r.evento === NENHUM ? null : r.evento,
           whatsappLabel: r.etiqueta,
+          crmTag: r.etiquetaCrm,
           sendDealValue: r.valor,
         });
       }
@@ -300,6 +304,10 @@ export function ConversionSettingsTable({
                   <Dica texto="O nome exato que a Meta recebe. É por ele que você escolhe a meta de otimização no Gerenciador de Anúncios." />
                 </span>
                 <span className="truncate">Etiqueta no WhatsApp</span>
+                <span className="flex items-center gap-1 truncate">
+                  <span className="truncate">Etiqueta no CRM</span>
+                  <Dica texto="Aplicar esta etiqueta no lead (pela tela do lead, por uma automação ou pelo formulário) move o lead para esta etapa, e a conversão sai da mudança de etapa. Só avança: etiqueta de etapa anterior não faz o lead voltar." />
+                </span>
                 <span className="flex items-center gap-1">
                   <span className="truncate">Valor</span>
                   <Dica texto="Manda o valor da venda junto do evento. Só faz sentido na etapa de fechamento: valor num degrau de lead ensina a Meta a otimizar pela métrica errada." />
@@ -542,6 +550,22 @@ function LinhaDaEtapa({
             onBlur={(e) => aoMudar({ etiqueta: e.target.value.trim() || null })}
           />
         )}
+      </div>
+
+      <div className="min-w-0 space-y-1.5">
+        <Rotulo>Etiqueta no CRM</Rotulo>
+        {/* Só com evento (ou "Só medir"): uma linha de mapeamento define a etapa como conversão
+            nos relatórios, então a etiqueta não pode criar essa linha sozinha. */}
+        <Input
+          key={`${etapa.id}-${rascunho.evento === NENHUM ? 'off' : 'on'}`}
+          defaultValue={rascunho.evento === NENHUM ? '' : (rascunho.etiquetaCrm ?? '')}
+          placeholder={rascunho.evento === NENHUM ? 'Escolha o evento antes' : 'Ex.: qualificado'}
+          disabled={rascunho.evento === NENHUM}
+          maxLength={60}
+          className="h-9 w-full"
+          aria-label={`Etiqueta do CRM que leva à etapa ${etapa.name}`}
+          onBlur={(e) => aoMudar({ etiquetaCrm: e.target.value.trim() || null })}
+        />
       </div>
 
       <div className="space-y-1.5">

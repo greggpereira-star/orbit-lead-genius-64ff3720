@@ -897,6 +897,10 @@ function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
       setInput("");
       qc.invalidateQueries({ queryKey: ["lead-tags", leadId] });
       qc.invalidateQueries({ queryKey: ["company-tags", companyId] });
+      // A etiqueta pode mover o lead de etapa (etiqueta do CRM → etapa, feito no banco): recarrega
+      // o lead e o kanban para o card aparecer na coluna nova.
+      qc.invalidateQueries({ queryKey: ["lead-detail", leadId] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
