@@ -77,7 +77,7 @@ export function CamposDoLead({
           def={d}
           valor={(valores.data ?? {})[d.key]}
           somenteLeitura={somenteLeitura}
-          onGravar={(valor) => gravar.mutate({ key: d.key, valor })}
+          onGravar={(valor) => gravar.mutateAsync({ key: d.key, valor })}
         />
       ))}
     </div>
@@ -93,7 +93,8 @@ function Campo({
   def: DefinicaoDeCampo;
   valor: unknown;
   somenteLeitura: boolean;
-  onGravar: (valor: string) => void;
+  /** Rejeita quando o banco recusa o valor: o campo volta ao que está guardado. */
+  onGravar: (valor: string) => Promise<unknown>;
 }) {
   const guardado = valorParaEdicao(def.type, valor);
   const [texto, setTexto] = useState(guardado);
@@ -126,7 +127,7 @@ function Campo({
           onValueChange={(v) => {
             const novo = v === NENHUM ? "" : v;
             setTexto(novo);
-            onGravar(novo);
+            onGravar(novo).catch(() => setTexto(guardado));
           }}
         >
           <SelectTrigger id={`cf-${def.key}`} className="h-9 text-sm max-sm:h-11">
@@ -155,7 +156,8 @@ function Campo({
         maxLength={500}
         onChange={(e) => setTexto(e.target.value)}
         onBlur={() => {
-          if (texto.trim() !== guardado.trim()) onGravar(texto);
+          // Erro (valor que não é número, data inválida…): o aviso já saiu; o campo volta ao guardado.
+          if (texto.trim() !== guardado.trim()) onGravar(texto).catch(() => setTexto(guardado));
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();

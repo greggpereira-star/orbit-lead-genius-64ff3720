@@ -50,6 +50,12 @@ describe("campos personalizados na tela", () => {
     expect(r).toContain("c.campo.startsWith('cf_')");
   });
 
+  it("campo recusado pelo banco volta ao valor guardado (não fica mostrando o que foi rejeitado)", () => {
+    const c = ler("src/modules/crm/components/CamposDoLead.tsx");
+    expect(c).toContain("mutateAsync");
+    expect((c.match(/\.catch\(\(\) => setTexto\(guardado\)\)/g) ?? []).length).toBe(2);
+  });
+
   it("a página de configuração está no menu", () => {
     expect(ler("src/routes/_app.settings.tsx")).toContain('to: "/settings/campos"');
   });
