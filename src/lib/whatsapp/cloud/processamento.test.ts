@@ -690,15 +690,22 @@ describe("processarEvento — resposta citada", () => {
   it("liga a mensagem à original pelo wamid citado, dentro da mesma empresa", async () => {
     const { db, ops } = criarDb({
       rpc: { wa_registrar_mensagem: NOVA },
-      tabelas: { wa_messages: { id: "orig-1" }, wa_conversations: { contact_id: "k1", lead_id: null } },
+      tabelas: {
+        wa_messages: { id: "orig-1" },
+        wa_conversations: { contact_id: "k1", lead_id: null },
+      },
     });
     await processarEvento(db, mensagem({ replyToWamid: "wamid.ORIGINAL" }));
     const busca = ops.filter((o) => o.tabela === "wa_messages");
     expect(busca.find((o) => o.op === "eq" && o.args[0] === "company_id")?.args[1]).toBe("emp");
-    expect(busca.find((o) => o.op === "eq" && o.args[0] === "provider_message_id")?.args[1]).toBe("wamid.ORIGINAL");
+    expect(busca.find((o) => o.op === "eq" && o.args[0] === "provider_message_id")?.args[1]).toBe(
+      "wamid.ORIGINAL",
+    );
     const up = busca.find((o) => o.op === "update");
     expect(up?.args[0]).toEqual({ reply_to: "orig-1" });
-    expect(busca.filter((o) => o.op === "eq" && o.args[0] === "id").map((o) => o.args[1])).toContain("m1");
+    expect(
+      busca.filter((o) => o.op === "eq" && o.args[0] === "id").map((o) => o.args[1]),
+    ).toContain("m1");
   });
 
   it("citação de mensagem que não está no banco não grava nada e não falha", async () => {
@@ -706,7 +713,9 @@ describe("processarEvento — resposta citada", () => {
       rpc: { wa_registrar_mensagem: NOVA },
       tabelas: { wa_messages: null, wa_conversations: { contact_id: "k1", lead_id: null } },
     });
-    await expect(processarEvento(db, mensagem({ replyToWamid: "wamid.SUMIU" }))).resolves.toBe("processed");
+    await expect(processarEvento(db, mensagem({ replyToWamid: "wamid.SUMIU" }))).resolves.toBe(
+      "processed",
+    );
     expect(ops.some((o) => o.tabela === "wa_messages" && o.op === "update")).toBe(false);
   });
 

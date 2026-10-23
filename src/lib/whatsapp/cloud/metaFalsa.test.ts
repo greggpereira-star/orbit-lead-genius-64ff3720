@@ -22,7 +22,11 @@ function dbComToken(token: string, cifrar: (t: string, k: string) => string) {
     wa_credentials: { access_token_enc: cifrar(token, CHAVE) },
   };
   return {
-    from: (t: string) => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: por[t] ?? null, error: null }) }) }) }),
+    from: (t: string) => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: por[t] ?? null, error: null }) }),
+      }),
+    }),
   };
 }
 
@@ -72,13 +76,20 @@ describe("leitura do número", () => {
 
 describe("templates", () => {
   it("cria, lista pendente, vê a aprovação e apaga", async () => {
-    const def = { name: "boas_vindas", language: "pt_BR", category: "UTILITY", components: [{ type: "BODY", text: "Olá {{1}}" }] };
+    const def = {
+      name: "boas_vindas",
+      language: "pt_BR",
+      category: "UTILITY",
+      components: [{ type: "BODY", text: "Olá {{1}}" }],
+    };
     const criado = await graph.criarTemplateNaMeta("WABA1", "TOKEN_OK", def);
     expect(criado.ok).toBe(true);
     if (criado.ok) expect(criado.data.status).toBe("PENDING");
 
     let lista = await graph.listarTemplatesDaWaba("WABA1", "TOKEN_OK");
-    expect(lista.ok && lista.data.map((t) => `${t.name}:${t.status}`)).toEqual(["boas_vindas:PENDING"]);
+    expect(lista.ok && lista.data.map((t) => `${t.name}:${t.status}`)).toEqual([
+      "boas_vindas:PENDING",
+    ]);
 
     meta.aprovarTemplate("WABA1", "boas_vindas");
     lista = await graph.listarTemplatesDaWaba("WABA1", "TOKEN_OK");
@@ -91,7 +102,12 @@ describe("templates", () => {
   });
 
   it("nome de template inválido volta como erro da Meta, com a mensagem", async () => {
-    const r = await graph.criarTemplateNaMeta("WABA1", "TOKEN_OK", { name: "Nome Inválido", language: "pt_BR", category: "UTILITY", components: [] });
+    const r = await graph.criarTemplateNaMeta("WABA1", "TOKEN_OK", {
+      name: "Nome Inválido",
+      language: "pt_BR",
+      category: "UTILITY",
+      components: [],
+    });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.erro.mensagem).toMatch(/Invalid template name/);
   });
@@ -99,15 +115,25 @@ describe("templates", () => {
 
 describe("conexão da conta", () => {
   it("troca o código por token e inscreve o app na WABA com callback próprio", async () => {
-    const t = await graph.trocarCodigoPorToken({ appId: "APP", appSecret: "SEGREDO", code: "CODIGO" });
+    const t = await graph.trocarCodigoPorToken({
+      appId: "APP",
+      appSecret: "SEGREDO",
+      code: "CODIGO",
+    });
     expect(t.ok && t.data.access_token).toMatch(/^TOKEN_DA_EMPRESA_/);
     const sem = await graph.trocarCodigoPorToken({ appId: "APP", appSecret: "SEGREDO", code: "" });
     expect(sem.ok).toBe(false);
 
-    const i = await graph.inscreverAppNaWaba("WABA1", "TOKEN_OK", { url: "https://altleadflow.example/api/public/wa-webhook", verifyToken: "VT" });
+    const i = await graph.inscreverAppNaWaba("WABA1", "TOKEN_OK", {
+      url: "https://altleadflow.example/api/public/wa-webhook",
+      verifyToken: "VT",
+    });
     expect(i.ok).toBe(true);
     const c = meta.chamadas.filter((x) => x.caminho.endsWith("/subscribed_apps")).at(-1)!;
-    expect(c.corpo).toEqual({ override_callback_uri: "https://altleadflow.example/api/public/wa-webhook", verify_token: "VT" });
+    expect(c.corpo).toEqual({
+      override_callback_uri: "https://altleadflow.example/api/public/wa-webhook",
+      verify_token: "VT",
+    });
   });
 });
 
@@ -119,21 +145,41 @@ describe("envio (provedor Cloud)", () => {
     expect(r.ok).toBe(true);
     expect(r.data?.messageId).toMatch(/^wamid\./);
     const c = meta.chamadas.filter((x) => x.caminho.endsWith("/messages")).at(-1)!;
-    expect(c.corpo).toMatchObject({ messaging_product: "whatsapp", recipient_type: "individual", to: "5527999990001", type: "text", text: { body: "Olá!", preview_url: false } });
+    expect(c.corpo).toMatchObject({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: "5527999990001",
+      type: "text",
+      text: { body: "Olá!", preview_url: false },
+    });
   });
 
   it("template: nome, idioma e componentes seguem para a Meta", async () => {
-    const r = await provedor.sendTemplate(canal, "5527999990001", "boas_vindas", "pt_BR", [{ type: "body", parameters: [{ type: "text", text: "Ana" }] }]);
+    const r = await provedor.sendTemplate(canal, "5527999990001", "boas_vindas", "pt_BR", [
+      { type: "body", parameters: [{ type: "text", text: "Ana" }] },
+    ]);
     expect(r.ok).toBe(true);
     const c = meta.chamadas.filter((x) => x.caminho.endsWith("/messages")).at(-1)!;
-    expect(c.corpo).toMatchObject({ type: "template", template: { name: "boas_vindas", language: { code: "pt_BR" } } });
+    expect(c.corpo).toMatchObject({
+      type: "template",
+      template: { name: "boas_vindas", language: { code: "pt_BR" } },
+    });
   });
 
   it("mídia: áudio não leva legenda; documento leva nome de arquivo", async () => {
-    await provedor.sendMedia(canal, "5527999990001", { tipo: "audio", link: "https://x/a.ogg", legenda: "não deve ir" });
+    await provedor.sendMedia(canal, "5527999990001", {
+      tipo: "audio",
+      link: "https://x/a.ogg",
+      legenda: "não deve ir",
+    });
     let c = meta.chamadas.filter((x) => x.caminho.endsWith("/messages")).at(-1)!;
     expect((c.corpo.audio as Record<string, unknown>).caption).toBeUndefined();
-    await provedor.sendMedia(canal, "5527999990001", { tipo: "document", link: "https://x/d.pdf", legenda: "Proposta", nomeDoArquivo: "proposta.pdf" });
+    await provedor.sendMedia(canal, "5527999990001", {
+      tipo: "document",
+      link: "https://x/d.pdf",
+      legenda: "Proposta",
+      nomeDoArquivo: "proposta.pdf",
+    });
     c = meta.chamadas.filter((x) => x.caminho.endsWith("/messages")).at(-1)!;
     expect(c.corpo.document).toMatchObject({ caption: "Proposta", filename: "proposta.pdf" });
   });
@@ -144,12 +190,19 @@ describe("envio (provedor Cloud)", () => {
     ["5527999990050", "optout_de_marketing", false],
     ["5527999990429", "limite_de_taxa", true],
     ["5527999990500", "temporario", true],
-  ])("erro da Meta para %s é classificado como %s (retentável: %s)", async (para, classe, retentavel) => {
-    const r = (await provedor.sendText(canal, para, "oi")) as import("./cloud-provider").ResultadoCloud;
-    expect(r.ok).toBe(false);
-    expect(r.erroMeta?.classe).toBe(classe);
-    expect(r.erroMeta?.retentavel).toBe(retentavel);
-  });
+  ])(
+    "erro da Meta para %s é classificado como %s (retentável: %s)",
+    async (para, classe, retentavel) => {
+      const r = (await provedor.sendText(
+        canal,
+        para,
+        "oi",
+      )) as import("./cloud-provider").ResultadoCloud;
+      expect(r.ok).toBe(false);
+      expect(r.erroMeta?.classe).toBe(classe);
+      expect(r.erroMeta?.retentavel).toBe(retentavel);
+    },
+  );
 
   it("o token nunca aparece no retorno de erro", async () => {
     const r = await provedor.sendText(canal, "5527999990047", "oi");
@@ -160,9 +213,15 @@ describe("envio (provedor Cloud)", () => {
 describe("desvio do endereço da Graph API", () => {
   it("só aceita localhost: host externo é ignorado e o token não vai para lá", async () => {
     const { baseDaGraph } = await import("../../meta-graph.server");
-    expect(baseDaGraph({ META_GRAPH_BASE_URL: "https://evil.example/v25.0" })).toBe("https://graph.facebook.com/v25.0");
-    expect(baseDaGraph({ META_GRAPH_BASE_URL: "http://127.0.0.1:9911/v25.0/" })).toBe("http://127.0.0.1:9911/v25.0");
+    expect(baseDaGraph({ META_GRAPH_BASE_URL: "https://evil.example/v25.0" })).toBe(
+      "https://graph.facebook.com/v25.0",
+    );
+    expect(baseDaGraph({ META_GRAPH_BASE_URL: "http://127.0.0.1:9911/v25.0/" })).toBe(
+      "http://127.0.0.1:9911/v25.0",
+    );
     expect(baseDaGraph({})).toBe("https://graph.facebook.com/v25.0");
-    expect(baseDaGraph({ META_GRAPH_BASE_URL: "javascript:alert(1)" })).toBe("https://graph.facebook.com/v25.0");
+    expect(baseDaGraph({ META_GRAPH_BASE_URL: "javascript:alert(1)" })).toBe(
+      "https://graph.facebook.com/v25.0",
+    );
   });
 });

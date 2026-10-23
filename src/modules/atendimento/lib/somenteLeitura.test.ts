@@ -7,11 +7,17 @@ const fechada = { aberta: false } as never;
 
 describe("composer para quem só lê", () => {
   it("visualizador nunca recebe composer, nem com a janela aberta", () => {
-    expect(modoDoCompositor({ janela: aberta, optedOut: false, status: "open", somenteLeitura: true })).toBe("somente_leitura");
-    expect(modoDoCompositor({ janela: fechada, optedOut: false, status: "open", somenteLeitura: true })).toBe("somente_leitura");
+    expect(
+      modoDoCompositor({ janela: aberta, optedOut: false, status: "open", somenteLeitura: true }),
+    ).toBe("somente_leitura");
+    expect(
+      modoDoCompositor({ janela: fechada, optedOut: false, status: "open", somenteLeitura: true }),
+    ).toBe("somente_leitura");
   });
   it("quem atende segue com o comportamento de antes", () => {
-    expect(modoDoCompositor({ janela: aberta, optedOut: false, status: "open", somenteLeitura: false })).toBe("texto");
+    expect(
+      modoDoCompositor({ janela: aberta, optedOut: false, status: "open", somenteLeitura: false }),
+    ).toBe("texto");
     expect(modoDoCompositor({ janela: aberta, optedOut: true, status: "open" })).toBe("bloqueado");
     expect(modoDoCompositor({ janela: fechada, optedOut: false, status: "open" })).toBe("template");
   });
