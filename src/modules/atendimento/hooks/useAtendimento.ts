@@ -39,6 +39,10 @@ export interface TemplateAprovado {
   language: string;
   category: string;
   components: Array<Record<string, unknown>>;
+  /** Conta (WABA) a que o template pertence. */
+  account_id?: string;
+  /** Telefone do número dessa conta, para a lista dizer de qual é (vazio se não achou). */
+  numero?: string | null;
 }
 
 export function useConversas(companyId: string | undefined) {
@@ -151,14 +155,25 @@ export function useTemplatesAprovados(companyId: string | undefined) {
     queryKey: chaves.templates(companyId ?? ""),
     enabled: Boolean(companyId),
     queryFn: async (): Promise<TemplateAprovado[]> => {
-      const { data, error } = await wa()
-        .from("wa_templates")
-        .select("id,name,language,category,components")
-        .eq("company_id", companyId)
-        .eq("status", "APPROVED")
-        .order("name");
+      const [{ data, error }, { data: numeros }] = await Promise.all([
+        wa()
+          .from("wa_templates")
+          .select("id,name,language,category,components,account_id")
+          .eq("company_id", companyId)
+          .eq("status", "APPROVED")
+          .order("name"),
+        // Só para rotular: template é da CONTA, e com mais de um número a lista precisa dizer de qual.
+        wa().from("wa_phone_numbers").select("account_id,display_phone").eq("company_id", companyId),
+      ]);
       if (error) throw new Error(error.message);
-      return (data ?? []) as TemplateAprovado[];
+      const telefone = new Map<string, string>();
+      for (const n of (numeros ?? []) as Array<{ account_id: string; display_phone: string | null }>) {
+        if (n.display_phone && !telefone.has(n.account_id)) telefone.set(n.account_id, n.display_phone);
+      }
+      return ((data ?? []) as TemplateAprovado[]).map((t) => ({
+        ...t,
+        numero: t.account_id ? (telefone.get(t.account_id) ?? null) : null,
+      }));
     },
   });
 }

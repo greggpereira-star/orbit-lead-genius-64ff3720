@@ -23,6 +23,7 @@ import {
 } from "../whatsapp/politica";
 import { resolverCanal } from "../whatsapp/canal";
 import { enviarTemplateNaConversa, enviarTextoNaConversa } from "../whatsapp/cloud/envio";
+import { numeroDoTemplate } from "../whatsapp/cloud/numeroDoTemplate";
 import type { DbWa } from "../whatsapp/cloud/processador";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -139,11 +140,25 @@ export async function acaoEnviarWhatsApp(
       conversaId = payload.conversation_id;
     }
     if (!conversaId) {
+      // Template é da CONTA: a conversa nasce num número dessa conta. Sem isto ela nascia no
+      // primeiro número da empresa, e o envio procurava o template na conta errada.
+      let numeroEscolhido: string | null = null;
+      if (tipo === "enviar_template") {
+        const alvo = await numeroDoTemplate(admin, {
+          companyId: job.company_id,
+          nome: nomeDoTemplate,
+          idioma: String(cfg.idioma ?? "pt_BR"),
+          contaId: typeof cfg.conta_wa === "string" && cfg.conta_wa ? cfg.conta_wa : null,
+        });
+        if (!alvo.ok) return { acao: tipo, status: "pulada", detalhe: alvo.texto };
+        numeroEscolhido = alvo.numeroId;
+      }
       const { data, error } = await admin.rpc("wa_obter_ou_criar_conversa", {
         p_company_id: job.company_id,
         p_wa_id: numero,
         p_lead_id: paraLead ? job.lead_id : null,
         p_profile_name: paraLead ? (payload.nome ?? null) : null,
+        ...(numeroEscolhido ? { p_phone_number_id: numeroEscolhido } : {}),
       });
       if (error || !data) {
         return {

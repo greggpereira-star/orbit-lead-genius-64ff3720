@@ -14,7 +14,7 @@ const chave = randomBytes(32).toString("base64");
 
 /** Empresa COM número oficial conectado. */
 const tabelasCloud = (over: Record<string, unknown> = {}) => ({
-  wa_phone_numbers: [{ phone_number_id: "PNID", account_id: "acc1" }],
+  wa_phone_numbers: [{ id: "np1", phone_number_id: "PNID", account_id: "acc1", status: "active" }],
   wa_conversations: {
     id: "conv1",
     company_id: "emp",
@@ -25,10 +25,14 @@ const tabelasCloud = (over: Record<string, unknown> = {}) => ({
   wa_contacts: { wa_id: "5527996318075", opted_out_at: null },
   wa_credentials: { access_token_enc: cifrarToken("TOK", chave) },
   whatsapp_optouts: [],
-  wa_templates: {
-    status: "APPROVED",
-    components: [{ type: "BODY", text: "Olá {{1}}, recebemos seu contato." }],
-  },
+  // Lista, como no banco: o envio lê a primeira linha e a escolha do número lê as contas.
+  wa_templates: [
+    {
+      account_id: "acc1",
+      status: "APPROVED",
+      components: [{ type: "BODY", text: "Olá {{1}}, recebemos seu contato." }],
+    },
+  ],
   whatsapp_automation_settings: null,
   ...over,
 });
@@ -100,6 +104,8 @@ describe("acaoEnviarWhatsApp — API oficial", () => {
       p_wa_id: "5527996318075",
       p_lead_id: "lead1",
     });
+    // Template: a conversa nasce no número da conta do template, não "no primeiro da empresa".
+    expect(abre.args).toMatchObject({ p_phone_number_id: "np1" });
 
     const corpo = JSON.parse(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body));
     expect(corpo.template.components).toEqual([
@@ -305,5 +311,90 @@ describe("o despachante delega às ações testadas", () => {
   });
   it("não fala com a Evolution direto (continua isolada no provedor)", () => {
     expect(f).not.toContain("evolution.server");
+  });
+});
+
+describe("template de automação — número pela conta do template", () => {
+  beforeEach(() => {
+    vi.stubEnv("WA_TOKEN_KEY", chave);
+    vi.stubEnv("EVOLUTION_API_URL", "");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T18:00:00Z"));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ messages: [{ id: "wamid.AUT" }] }), { status: 200 }),
+      ),
+    );
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+  const cfg = { template: "hello_world", idioma: "en_US" };
+
+  it("não passa número ao abrir a conversa de um TEXTO (comportamento de sempre)", async () => {
+    const { db, rpcs } = criarDb({
+      tabelas: tabelasCloud(),
+      rpc: { wa_obter_ou_criar_conversa: { data: "conv1" }, wa_registrar_saida: { data: "m1" } },
+    });
+    await acaoEnviarWhatsApp(db, job(), { mensagem: "Oi {{nome}}" }, "enviar_whatsapp");
+    const abre = rpcs.find((x) => x.fn === "wa_obter_ou_criar_conversa")!;
+    expect(abre.args).not.toHaveProperty("p_phone_number_id");
+  });
+
+  it("template que não está aprovado em conta nenhuma: pula com o motivo, sem abrir conversa nem enviar", async () => {
+    const { db, rpcs } = criarDb({
+      tabelas: tabelasCloud({ wa_templates: [] }),
+      rpc: { wa_obter_ou_criar_conversa: { data: "conv1" } },
+    });
+    const r = await acaoEnviarWhatsApp(db, job(), cfg, "enviar_template");
+    expect(r).toMatchObject({
+      status: "pulada",
+      detalhe: expect.stringContaining("não encontrado"),
+    });
+    expect(rpcs.find((x) => x.fn === "wa_obter_ou_criar_conversa")).toBeUndefined();
+  });
+
+  it("a conta do template só tem número apenas receptivo: pula com o motivo", async () => {
+    const { db, rpcs } = criarDb({
+      tabelas: tabelasCloud({
+        wa_phone_numbers: [
+          {
+            id: "np1",
+            phone_number_id: "PNID",
+            account_id: "acc1",
+            status: "active",
+            receive_only: true,
+          },
+        ],
+      }),
+      rpc: { wa_obter_ou_criar_conversa: { data: "conv1" } },
+    });
+    const r = await acaoEnviarWhatsApp(db, job(), cfg, "enviar_template");
+    expect(r).toMatchObject({
+      status: "pulada",
+      detalhe: expect.stringContaining("Nenhum número ativo"),
+    });
+    expect(rpcs.find((x) => x.fn === "wa_obter_ou_criar_conversa")).toBeUndefined();
+  });
+
+  it("a conta escolhida na regra (conta_wa) restringe a busca do template", async () => {
+    const { db, ops } = criarDb({
+      tabelas: tabelasCloud(),
+      rpc: { wa_obter_ou_criar_conversa: { data: "conv1" }, wa_registrar_saida: { data: "m1" } },
+    });
+    await acaoEnviarWhatsApp(db, job(), { ...cfg, conta_wa: "acc1" }, "enviar_template");
+    expect(
+      ops.some(
+        (o) =>
+          o.tabela === "wa_templates" &&
+          o.op === "eq" &&
+          o.args[0] === "account_id" &&
+          o.args[1] === "acc1",
+      ),
+    ).toBe(true);
   });
 });

@@ -378,7 +378,16 @@ function EditorDeTemplate({
 }) {
   const templates = useTemplatesAprovados(companyId);
   const lista = templates.data ?? [];
-  const escolhido = lista.find((t) => t.name === cfg.template && t.language === (cfg.idioma ?? 'pt_BR')) ?? null;
+  // Template é da CONTA do WhatsApp. Com mais de uma conta, o mesmo nome pode existir em duas, e o
+  // envio abre a conversa no número da conta escolhida aqui (`conta_wa`).
+  const escolhido =
+    lista.find(
+      (t) =>
+        t.name === cfg.template
+        && t.language === (cfg.idioma ?? 'pt_BR')
+        && (!cfg.conta_wa || t.account_id === cfg.conta_wa),
+    ) ?? null;
+  const variasContas = new Set(lista.map((t) => t.account_id).filter(Boolean)).size > 1;
   const corpo = String(
     escolhido?.components.find((c) => String(c.type).toUpperCase() === 'BODY')?.text ?? '',
   );
@@ -390,16 +399,19 @@ function EditorDeTemplate({
       <div className="space-y-1.5">
         <Label className="text-[11px] font-semibold text-muted-foreground">Template aprovado</Label>
         <Select
-          value={escolhido ? `${escolhido.name}|${escolhido.language}` : ''}
+          value={escolhido ? `${escolhido.name}|${escolhido.language}|${escolhido.account_id ?? ''}` : ''}
           onValueChange={(v) => {
-            const [nome, idioma] = v.split('|');
-            onMudar({ template: nome, idioma, variaveis: {} });
+            const [nome, idioma, conta] = v.split('|');
+            onMudar({ template: nome, idioma, conta_wa: conta || undefined, variaveis: {} });
           }}
         >
           <SelectTrigger className="h-9"><SelectValue placeholder="Escolha o template" /></SelectTrigger>
           <SelectContent>
             {lista.map((t) => (
-              <SelectItem key={t.id} value={`${t.name}|${t.language}`}>{t.name} · {t.language}</SelectItem>
+              <SelectItem key={t.id} value={`${t.name}|${t.language}|${t.account_id ?? ''}`}>
+                {t.name} · {t.language}
+                {variasContas && <span className="text-muted-foreground"> · {t.numero ?? 'outra conta'}</span>}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
