@@ -18,6 +18,7 @@ vi.mock("@/lib/whatsapp-atendimento.functions", () => ({
   criarNotaWhatsApp: async () => ({}),
   listarAtendentesWhatsApp: async () => [],
   criarLeadDaConversaWhatsApp: async () => ({}),
+  reativarContatoWhatsApp: async () => ({}),
   vincularConversaAoLeadWhatsApp: async () => ({}),
 }));
 
@@ -198,13 +199,13 @@ describe("ConectarPrimeiro", () => {
 });
 
 describe("PainelDoLead (renderizado)", () => {
-  async function painel(c: ConversaDaLista) {
+  async function painel(c: ConversaDaLista, somenteLeitura = false) {
     const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
     const { PainelDoLead } = await import("../components/PainelDoLead");
     const qc = new QueryClient();
     return renderToStaticMarkup(
       <QueryClientProvider client={qc}>
-        <PainelDoLead conversa={c} />
+        <PainelDoLead conversa={c} somenteLeitura={somenteLeitura} />
       </QueryClientProvider>,
     );
   }
@@ -228,6 +229,16 @@ describe("PainelDoLead (renderizado)", () => {
   it("opt-out aparece no topo do painel", async () => {
     const c = { ...base, contact: { ...base.contact!, opted_out_at: "2026-10-14T00:00:00Z" } };
     expect(await painel(c)).toContain("Pediu para não receber mensagens");
+  });
+
+  it("opt-out oferece reativar (e a volta pelo cliente); visualizador só lê", async () => {
+    const c = { ...base, contact: { ...base.contact!, opted_out_at: "2026-10-14T00:00:00Z" } };
+    const html = await painel(c);
+    expect(html).toContain("Reativar contato");
+    expect(html).toContain("START");
+    const lido = await painel(c, true);
+    expect(lido).toContain("Pediu para não receber mensagens");
+    expect(lido).not.toContain("Reativar contato");
   });
 });
 

@@ -16,7 +16,8 @@ import { registrarCliqueDeAnuncio } from "../../ctwa.server";
 import { mesmaPessoa } from "../../../modules/crm/lib/identidadeDoLead";
 import { variantesDoNumero } from "../numero";
 import type { EventoWa, Referral } from "./payload";
-import { pedeParaParar } from "./optout";
+import { pedeParaParar, pedeParaVoltar } from "./optout";
+import { reativarContato } from "./reativacao";
 import { baixarEGuardarMidia, type DbComArmazenamento } from "./armazenamento";
 import { extrairMidia } from "./midia";
 
@@ -136,7 +137,9 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
           .maybeSingle();
         const idOriginal = (original as { id?: string } | null)?.id;
         if (idOriginal) {
-          await tabela(db, "wa_messages").update({ reply_to: idOriginal }).eq("id", linha.out_mensagem);
+          await tabela(db, "wa_messages")
+            .update({ reply_to: idOriginal })
+            .eq("id", linha.out_mensagem);
         }
       }
 
@@ -185,6 +188,14 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
           { company_id: linha.out_empresa, phone: e.waId, reason: (e.body ?? "").slice(0, 200) },
           { onConflict: "company_id,phone" },
         );
+      } else if (pedeParaVoltar(e.body)) {
+        // O próprio cliente pediu para voltar: tira dos dois lugares onde o bloqueio mora.
+        // Quem não estava em opt-out não é afetado (o update não muda nada).
+        const r = await reativarContato(db as never, {
+          companyId: linha.out_empresa,
+          waId: e.waId,
+        });
+        if (!r.ok) console.error(JSON.stringify({ scope: "wa-optin", msg: "reativacao_falhou" }));
       }
       return "processed";
     }

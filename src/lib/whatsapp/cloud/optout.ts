@@ -15,3 +15,15 @@ const PEDIDO_DE_PARADA =
 export function pedeParaParar(texto: string | null | undefined): boolean {
   return !!texto && PEDIDO_DE_PARADA.test(texto);
 }
+
+/**
+ * O contrário: o cliente que pediu para parar escreve, sozinho, que quer voltar. Também só vale
+ * a mensagem INTEIRA ("voltar", "START", "quero receber"), pelo mesmo motivo do pedido de parada:
+ * uma frase comum com a palavra no meio não pode mexer em consentimento.
+ */
+const PEDIDO_DE_VOLTA =
+  /^\s*(voltar|volto|reativar|reativa|retomar|start|iniciar|desbloquear|quero\s+(voltar\s+a\s+)?receber)(\s+(por favor|pf))?[\s.!]*$/i;
+
+export function pedeParaVoltar(texto: string | null | undefined): boolean {
+  return !!texto && PEDIDO_DE_VOLTA.test(texto);
+}

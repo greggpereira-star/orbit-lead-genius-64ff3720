@@ -34,6 +34,7 @@ import {
   criarLeadDaConversaWhatsApp,
   criarNotaWhatsApp,
   listarAtendentesWhatsApp,
+  reativarContatoWhatsApp,
   vincularConversaAoLeadWhatsApp,
 } from "@/lib/whatsapp-atendimento.functions";
 import { origemDaConversa } from "@/lib/whatsapp/cloud/leadDaConversa";
@@ -83,6 +84,57 @@ function Secao(props: {
       </button>
       {aberta && <div className="space-y-3 px-5 pb-5 text-sm">{props.children}</div>}
     </section>
+  );
+}
+
+/** Aviso de "pediu para parar", com a volta para quem pode: administrador, com confirmação. */
+function AvisoDeOptOut(props: { conversaId: string; desde: string; somenteLeitura: boolean }) {
+  const qc = useQueryClient();
+  const reativar = useServerFn(reativarContatoWhatsApp);
+  const mut = useMutation({
+    mutationFn: () => reativar({ data: { conversaId: props.conversaId } }),
+    onSuccess: (r) => {
+      if (!r.ok) {
+        toast.error(r.texto);
+        return;
+      }
+      toast.success("Contato reativado. Já é possível enviar mensagens.");
+      void qc.invalidateQueries({ queryKey: ["wa-conversas"] });
+      void qc.invalidateQueries({ queryKey: ["wa-notas", props.conversaId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <div className="mx-5 mb-4 space-y-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+      <div className="flex items-start gap-2">
+        <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>
+          Pediu para não receber mensagens em {new Date(props.desde).toLocaleDateString("pt-BR")}.
+          Nenhum envio é possível.
+        </span>
+      </div>
+      {!props.somenteLeitura && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 border-destructive/40 bg-background text-foreground"
+          disabled={mut.isPending}
+          onClick={() => {
+            if (
+              window.confirm(
+                "Reative só se o contato disse que quer voltar a receber mensagens. Fica registrado em nota interna. Reativar?",
+              )
+            )
+              mut.mutate();
+          }}
+        >
+          Reativar contato
+        </Button>
+      )}
+      <p className="text-xs opacity-80">
+        O contato também volta sozinho se escrever "voltar" ou "START".
+      </p>
+    </div>
   );
 }
 
@@ -154,12 +206,11 @@ export function PainelDoLead({
       </div>
 
       {conversa.contact?.opted_out_at && (
-        <div className="mx-5 mb-4 flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Pediu para não receber mensagens em{" "}
-          {new Date(conversa.contact.opted_out_at).toLocaleDateString("pt-BR")}. Nenhum envio é
-          possível.
-        </div>
+        <AvisoDeOptOut
+          conversaId={conversa.id}
+          desde={conversa.contact.opted_out_at}
+          somenteLeitura={somenteLeitura}
+        />
       )}
 
       <div className="border-y">

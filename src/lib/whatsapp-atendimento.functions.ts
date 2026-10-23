@@ -363,6 +363,46 @@ export const vincularConversaAoLeadWhatsApp = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
+// Reativar contato (opt-out)
+// ---------------------------------------------------------------------------
+/**
+ * Tira o contato da lista de "não receber". Só administrador: é consentimento do cliente, e quem
+ * reativa precisa ter ouvido dele que quer voltar. Fica registrado como nota interna na conversa
+ * (quem, quando), porque o opt-out em si não guarda histórico.
+ */
+export const reativarContatoWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ conversaId: idConversa }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId);
+
+    const { data: conv } = await admin
+      .from("wa_conversations")
+      .select("contact:wa_contacts(wa_id, opted_out_at)")
+      .eq("id", data.conversaId)
+      .maybeSingle();
+    const contato = conv?.contact as { wa_id?: string; opted_out_at?: string | null } | null;
+    if (!contato?.wa_id) return { ok: false as const, texto: "Contato não encontrado." };
+    if (!contato.opted_out_at)
+      return { ok: false as const, texto: "Este contato não está bloqueado." };
+
+    const { reativarContato } = await import("@/lib/whatsapp/cloud/reativacao");
+    const r = await reativarContato(admin, { companyId, waId: contato.wa_id });
+    if (!r.ok) return r;
+
+    await admin.from("wa_notes").insert({
+      company_id: companyId,
+      conversation_id: data.conversaId,
+      author_id: context.userId,
+      body: "Contato reativado: o bloqueio de envio (pediu para parar) foi removido por um administrador.",
+    });
+    return { ok: true as const };
+  });
+
+// ---------------------------------------------------------------------------
 // Notas internas
 // ---------------------------------------------------------------------------
 export const criarNotaWhatsApp = createServerFn({ method: "POST" })
