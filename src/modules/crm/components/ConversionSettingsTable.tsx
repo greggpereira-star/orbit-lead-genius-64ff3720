@@ -452,7 +452,14 @@ export function ConversionSettingsTable({
               disabled={!sujo || temErro || gravar.isPending}
             >
               <Save className="h-4 w-4" />
-              <span className="ml-2">{gravar.isPending ? 'Salvando…' : 'Salvar configurações'}</span>
+              <span className="ml-2">
+                {gravar.isPending ? 'Salvando…' : (
+                  <>
+                    <span className="sm:hidden">Salvar</span>
+                    <span className="hidden sm:inline">Salvar configurações</span>
+                  </>
+                )}
+              </span>
             </Button>
           </div>
         </div>
