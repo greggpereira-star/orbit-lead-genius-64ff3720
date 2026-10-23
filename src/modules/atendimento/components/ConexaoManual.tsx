@@ -68,6 +68,9 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
     (c) => c.tipo === "oficial" && c.oficial?.wabaId,
   );
 
+  // A conexão que o token vai substituir: o que o par de IDs dos campos aponta hoje.
+  const alvo = existentes.find((c) => c.oficial?.phoneNumberId === phoneNumberId.trim()) ?? null;
+
   useEffect(() => {
     const g = lerIdsGuardados(armazemLocal());
     if (g) {
@@ -175,6 +178,30 @@ export function ConexaoManual({ onConectado }: { onConectado: () => void }) {
               onChange={(e) => setToken(e.target.value)}
             />
           </div>
+          {(ehIdDaMeta(wabaId) || ehIdDaMeta(phoneNumberId)) && (
+            <p
+              className={cn(
+                "rounded-md border p-2.5 text-sm",
+                alvo
+                  ? "border-amber-500/40 bg-amber-500/10"
+                  : "border-dashed text-muted-foreground",
+              )}
+              role="status"
+            >
+              {alvo ? (
+                <>
+                  Este token vai <strong>substituir o token</strong> da conexão{" "}
+                  <strong>
+                    {alvo.nome}
+                    {alvo.telefone ? ` (${alvo.telefone})` : ""}
+                  </strong>
+                  . Confira se é essa antes de conectar.
+                </>
+              ) : (
+                "Nenhuma conexão existente tem esses IDs: será criada uma nova."
+              )}
+            </p>
+          )}
           <Button disabled={!pronto || ligar.isPending} onClick={() => ligar.mutate()}>
             {ligar.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Conectar
