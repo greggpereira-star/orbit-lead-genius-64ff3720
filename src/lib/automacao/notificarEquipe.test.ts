@@ -156,10 +156,42 @@ describe("ação Notificar equipe", () => {
   });
 
   it("texto padrão existe para os dois gatilhos de tempo", () => {
-    expect(textoPadraoDoAviso("window_expiring").titulo).toContain("{{minutos_restantes}}");
-    expect(textoPadraoDoAviso("customer_no_reply").titulo).toContain("{{minutos_esperando}}");
+    expect(textoPadraoDoAviso("window_expiring").titulo).toContain("{{tempo_restante}}");
+    expect(textoPadraoDoAviso("customer_no_reply").titulo).toContain("{{tempo_esperando}}");
     expect(textoPadraoDoAviso("conversation_resolved").titulo).toContain("{{nome}}");
     expect(textoPadraoDoAviso("conversation_assigned").titulo).toContain("{{nome}}");
     expect(textoPadraoDoAviso("qualquer").titulo).toBeTruthy();
+  });
+
+  it("o texto padrão mostra horas e minutos, nunca minutos brutos", async () => {
+    const { db, gravadas } = dbFalso({ equipe });
+    await acaoNotificarEquipe(
+      db,
+      job({
+        payload: { nome: "Ana", minutos_esperando: 180, responsavel_id: "u2" },
+      }),
+      { id: "a1", config: { destino: "responsavel" } },
+    );
+    expect(gravadas[0].title).toBe("Ana está sem resposta há 3 h");
+
+    await acaoNotificarEquipe(
+      db,
+      job({
+        trigger_event: "window_expiring",
+        payload: { nome: "Ana", minutos_restantes: 1246, responsavel_id: "u2" },
+      }),
+      { id: "a2", config: { destino: "responsavel" } },
+    );
+    expect(gravadas.at(-1)!.title).toBe("A janela de Ana fecha em 20 h 46 min");
+  });
+
+  it("{{tempo_esperando}} e {{tempo_restante}} servem no texto escrito pela regra", async () => {
+    const { db, gravadas } = dbFalso({ equipe });
+    await acaoNotificarEquipe(
+      db,
+      job({ payload: { nome: "Ana", minutos_esperando: 95, responsavel_id: "u2" } }),
+      { id: "a1", config: { destino: "responsavel", mensagem: "Espera: {{tempo_esperando}}" } },
+    );
+    expect(gravadas[0].body).toBe("Espera: 1 h 35 min");
   });
 });

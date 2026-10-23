@@ -8,6 +8,7 @@
  *                   "cliente sem resposta" que não chega a ninguém é pior que um aviso para todos;
  *   - `todos`       quem atende (owner, admin, member). Visualizador não é avisado: não pode agir.
  */
+import { duracaoCurta } from "../duracao";
 import { preencher, type ResultadoSimples } from "./acoesDeWhatsApp";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -29,12 +30,12 @@ export function textoPadraoDoAviso(evento: string): { titulo: string; mensagem: 
   switch (evento) {
     case "customer_no_reply":
       return {
-        titulo: "{{nome}} está sem resposta há {{minutos_esperando}} min",
+        titulo: "{{nome}} está sem resposta há {{tempo_esperando}}",
         mensagem: "O cliente escreveu e ninguém respondeu ainda.",
       };
     case "window_expiring":
       return {
-        titulo: "A janela de {{nome}} fecha em {{minutos_restantes}} min",
+        titulo: "A janela de {{nome}} fecha em {{tempo_restante}}",
         mensagem: "Depois disso só dá para falar com ele por template aprovado.",
       };
     case "conversation_resolved":
@@ -56,7 +57,18 @@ export async function acaoNotificarEquipe(
 ): Promise<ResultadoSimples> {
   const tipo = "notificar_equipe";
   const cfg = acao.config ?? {};
-  const payload = job.payload ?? {};
+  // `tempo_esperando` e `tempo_restante`: os minutos do evento em horas e minutos ("20 h 46 min"),
+  // para o texto do aviso não sair "1246 min". Os campos numéricos continuam valendo nas condições.
+  const bruto = job.payload ?? {};
+  const payload: Record<string, any> = {
+    ...bruto,
+    ...(bruto.minutos_esperando != null
+      ? { tempo_esperando: duracaoCurta(bruto.minutos_esperando) }
+      : {}),
+    ...(bruto.minutos_restantes != null
+      ? { tempo_restante: duracaoCurta(bruto.minutos_restantes) }
+      : {}),
+  };
   const destino: DestinoDeAviso = (DESTINOS_DE_AVISO as readonly string[]).includes(cfg.destino)
     ? cfg.destino
     : "responsavel";

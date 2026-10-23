@@ -6,6 +6,7 @@ import {
   MessageSquare, Webhook, Bell, CheckCircle2, RotateCcw, Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { duracaoCurta } from '@/lib/duracao';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -236,7 +237,7 @@ function CartaoDaRegra({
           <h3 className="text-[13px] font-semibold leading-tight max-sm:break-words sm:truncate">{regra.name}</h3>
           <p className="text-[11px] text-muted-foreground">
             {EVENTOS.find((e) => e.valor === regra.trigger_event)?.rotulo ?? regra.trigger_event}
-            {regra.trigger_config?.minutos ? ` · ${regra.trigger_config.minutos} min` : ''}
+            {regra.trigger_config?.minutos ? ` · ${duracaoCurta(regra.trigger_config.minutos)}` : ''}
             {regra.priority !== 0 && ` · prioridade ${regra.priority}`}
           </p>
         </div>

@@ -550,6 +550,8 @@ function EditorDeAviso({
           onChange={(e) => onMudar({ mensagem: e.target.value })} />
         <p className="text-[11px] text-muted-foreground">
           Entre chaves duplas vira o dado do evento: {campos.map((c) => `{{${c}}}`).join('  ')}
+          {campos.includes('minutos_esperando') && '  {{tempo_esperando}} (ex.: 3 h 20 min)'}
+          {campos.includes('minutos_restantes') && '  {{tempo_restante}} (ex.: 20 h 46 min)'}
         </p>
       </div>
     </div>
