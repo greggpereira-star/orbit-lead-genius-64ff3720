@@ -26,6 +26,18 @@ export const EVENTOS = [
     ajuda: 'Alguém (ou outra automação) pôs uma etiqueta no lead. Use a condição "etiqueta é igual a …": maiúsculas não importam.',
   },
   {
+    valor: 'customer_no_reply',
+    rotulo: 'Cliente sem resposta',
+    ajuda: 'O cliente escreveu e ninguém da equipe respondeu depois de X minutos. Resposta pelo celular conta; mensagem automática não.',
+    minutos: true,
+  },
+  {
+    valor: 'window_expiring',
+    rotulo: 'Janela de 24h expirando',
+    ajuda: 'Faltam X minutos ou menos para fechar a janela de 24h de uma conversa em aberto.',
+    minutos: true,
+  },
+  {
     valor: 'whatsapp_message_received',
     rotulo: 'Mensagem recebida no WhatsApp',
     ajuda: 'O cliente escreveu. Só mensagens dele: respostas da equipe e histórico importado não contam.',
@@ -48,6 +60,8 @@ export const CAMPOS_POR_EVENTO: Record<string, string[]> = {
                  'utm_source', 'utm_medium', 'utm_campaign', 'landing_page'],
   stage_changed: ['etapa', 'score', 'temperatura', 'nome', 'email', 'telefone'],
   form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign'],
+  customer_no_reply: ['minutos_esperando', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
+  window_expiring: ['minutos_restantes', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
   tag_added: ['etiqueta', 'etapa', 'score', 'temperatura', 'origem', 'nome', 'email', 'telefone'],
   whatsapp_message_received: ['texto', 'primeira_mensagem', 'veio_de_anuncio', 'tipo_mensagem',
                               'nome', 'email', 'telefone', 'score', 'temperatura', 'origem'],
@@ -60,6 +74,7 @@ export const ACOES = [
   { valor: 'enviar_whatsapp', rotulo: 'Enviar texto no WhatsApp (janela de 24h aberta)' },
   { valor: 'enviar_template', rotulo: 'Enviar template do WhatsApp' },
   { valor: 'atribuir_conversa', rotulo: 'Atribuir conversa do WhatsApp' },
+  { valor: 'notificar_equipe', rotulo: 'Notificar equipe (aviso no sino)' },
   { valor: 'webhook', rotulo: 'Chamar webhook' },
 ] as const;
 
@@ -76,6 +91,24 @@ export function normalizarCondicoes(condicoes: Condicao[]): Condicao[] {
         ? { ...c, valor: c.valor.trim().toLowerCase() }
         : c,
     );
+}
+
+/** Os gatilhos por tempo precisam dos minutos; os outros não têm parâmetro. */
+export function precisaDeMinutos(evento: string): boolean {
+  return EVENTOS.some((e) => e.valor === evento && 'minutos' in e && e.minutos === true);
+}
+
+export const MINUTOS_MIN = 5;
+export const MINUTOS_MAX = 1380;
+
+/** `null` quando está bom; senão o texto do erro. O banco recusa o mesmo (CHECK), mas aqui avisa antes. */
+export function erroDosMinutos(minutos: unknown): string | null {
+  const n = Number(minutos);
+  if (minutos === '' || minutos == null || !Number.isInteger(n))
+    return 'Informe os minutos, em número inteiro.';
+  if (n < MINUTOS_MIN || n > MINUTOS_MAX)
+    return `Os minutos ficam entre ${MINUTOS_MIN} e ${MINUTOS_MAX}.`;
+  return null;
 }
 
 export interface Condicao {
@@ -98,6 +131,8 @@ export interface Regra {
   descricao: string | null;
   trigger_event: string;
   conditions: Condicao[];
+  /** Parâmetro do gatilho por tempo: `{ minutos: 30 }`. */
+  trigger_config?: { minutos?: number } | null;
   is_active: boolean;
   priority: number;
   created_at: string;
@@ -141,6 +176,8 @@ export const automationService = {
     descricao?: string;
     trigger_event: string;
     conditions: Condicao[];
+    /** Só os gatilhos por tempo levam parâmetro (minutos). */
+    minutos?: number | null;
     priority: number;
     is_active: boolean;
     acoes: Acao[];
@@ -153,6 +190,7 @@ export const automationService = {
       // Condição sem campo escolhido não é gravada: ela nunca casaria e ficaria
       // na tela parecendo que filtra algo.
       conditions: normalizarCondicoes(p.conditions),
+      trigger_config: precisaDeMinutos(p.trigger_event) ? { minutos: p.minutos ?? null } : {},
       priority: p.priority,
       is_active: p.is_active,
       updated_at: new Date().toISOString(),

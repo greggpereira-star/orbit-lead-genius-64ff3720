@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Zap, Plus, Pencil, Trash2, ArrowRight, Tag, MoveRight, UserCheck,
-  MessageSquare, Webhook,
+  MessageSquare, Webhook, Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -180,6 +180,7 @@ const ICONE_DA_ACAO: Record<string, typeof Tag> = {
   atribuir_responsavel: UserCheck,
   enviar_whatsapp: MessageSquare,
   webhook: Webhook,
+  notificar_equipe: Bell,
 };
 
 function CartaoDaRegra({
@@ -206,6 +207,12 @@ function CartaoDaRegra({
         return cfg.para ? `para ${cfg.para}` : 'para o lead';
       case 'webhook':
         return cfg.url || 'url não preenchida';
+      case 'notificar_equipe':
+        return cfg.destino === 'todos'
+          ? 'todos que atendem'
+          : cfg.destino === 'usuario'
+            ? (equipe.find((m) => m.userId === cfg.user_id)?.nome ?? 'ninguém escolhido')
+            : 'quem está com a conversa';
       default:
         return '';
     }
@@ -221,6 +228,7 @@ function CartaoDaRegra({
           <h3 className="truncate text-[13px] font-semibold leading-tight">{regra.name}</h3>
           <p className="text-[11px] text-muted-foreground">
             {EVENTOS.find((e) => e.valor === regra.trigger_event)?.rotulo ?? regra.trigger_event}
+            {regra.trigger_config?.minutos ? ` · ${regra.trigger_config.minutos} min` : ''}
             {regra.priority !== 0 && ` · prioridade ${regra.priority}`}
           </p>
         </div>

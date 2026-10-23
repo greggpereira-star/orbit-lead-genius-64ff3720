@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 import { executarAcoes, type ResultadoDeAcao } from '@/lib/automacao/executarAcoes';
 import { acaoAtribuirConversa, acaoEnviarWhatsApp, preencher } from '@/lib/automacao/acoesDeWhatsApp';
+import { acaoNotificarEquipe } from '@/lib/automacao/notificarEquipe';
 
 /**
  * Executa a fila de automação.
@@ -268,6 +269,9 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
 
       case 'atribuir_conversa':
         return acaoAtribuirConversa(admin, job, cfg);
+
+      case 'notificar_equipe':
+        return acaoNotificarEquipe(admin, job, acao);
 
       case 'webhook': {
         // O destino é entrada não confiável (configurado por membro) e o

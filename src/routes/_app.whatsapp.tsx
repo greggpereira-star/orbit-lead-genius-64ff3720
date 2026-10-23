@@ -676,16 +676,21 @@ function WhatsAppPage() {
   const buscar = useServerFn(obterEstadoDoWhatsAppOficial);
   const estado = useQuery({ queryKey: ["wa-oficial"], queryFn: () => buscar(), enabled: Boolean(company?.id) });
   const [verLegado, setVerLegado] = useState(false);
+  const conversaDaUrl = Route.useSearch().conversa;
 
   if (estado.isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
 
   const temOficial = (estado.data?.numeros ?? []).length > 0;
-  if (temOficial && company?.id) return <Atendimento companyId={company.id} userId={user?.id ?? null} papel={membership?.role ?? null} />;
+  if (temOficial && company?.id) return <Atendimento companyId={company.id} userId={user?.id ?? null} papel={membership?.role ?? null} conversaInicial={conversaDaUrl} />;
   // A configuração da Evolution só aparece para quem ainda a usa (ou pediu).
   if (estado.data?.evolutionConectada || verLegado) return <WhatsAppLegado />;
   return <ConectarPrimeiro onVerLegado={() => setVerLegado(true)} />;
 }
 
 export const Route = createFileRoute("/_app/whatsapp")({
+  // `?conversa=<id>`: o sino de avisos abre a conversa do aviso.
+  validateSearch: (s: Record<string, unknown>): { conversa?: string } => ({
+    conversa: typeof s.conversa === "string" && s.conversa ? s.conversa : undefined,
+  }),
   component: WhatsAppPage,
 });

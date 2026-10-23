@@ -1,5 +1,6 @@
  import * as React from 'react';
- import { Search, Bell, User, PanelLeft } from 'lucide-react';
+ import { Search, PanelLeft } from 'lucide-react';
+import { CentroDeAvisos } from '@/modules/avisos/CentroDeAvisos';
 import { useSidebar } from '@/components/ui/sidebar';
  import { Input } from '@/components/ui/input';
  import { Button } from '@/components/ui/button';
@@ -48,10 +49,7 @@ import { AlternadorDeTema } from "./AlternadorDeTema";
          </div>
        <div className="flex items-center gap-4">
         <AlternadorDeTema />
-         <Button variant="ghost" size="icon" className="relative">
-           <Bell className="h-5 w-5 text-muted-foreground" />
-           <span className="absolute top-2 right-2 h-2 w-2 bg-destructive rounded-full border-2 border-background" />
-         </Button>
+        <CentroDeAvisos />
          <DropdownMenu>
            <DropdownMenuTrigger asChild>
              <Button variant="ghost" className="flex items-center gap-2 p-1 pl-2">

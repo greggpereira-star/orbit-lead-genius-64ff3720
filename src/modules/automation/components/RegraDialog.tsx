@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  ACOES, CAMPOS_POR_EVENTO, EVENTOS, OPERADORES,
+  ACOES, CAMPOS_POR_EVENTO, EVENTOS, OPERADORES, erroDosMinutos, precisaDeMinutos, MINUTOS_MAX, MINUTOS_MIN,
   automationService, type Acao, type Condicao, type Regra,
 } from '../services/automationService';
 import type { Stage } from '@/modules/crm/services/stageService';
@@ -37,6 +37,7 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [evento, setEvento] = useState<string>('lead_created');
+  const [minutos, setMinutos] = useState<string>('30');
   const [prioridade, setPrioridade] = useState(0);
   const [ativa, setAtiva] = useState(true);
   const [condicoes, setCondicoes] = useState<Condicao[]>([]);
@@ -48,6 +49,7 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
     setNome(regra?.name ?? '');
     setDescricao(regra?.descricao ?? '');
     setEvento(regra?.trigger_event ?? 'lead_created');
+    setMinutos(String(regra?.trigger_config?.minutos ?? 30));
     setPrioridade(regra?.priority ?? 0);
     setAtiva(regra?.is_active ?? true);
     setCondicoes(regra?.conditions ?? []);
@@ -72,13 +74,18 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
   const salvar = async () => {
     if (!nome.trim()) return toast.error('Dê um nome à regra.');
     if (!acoes.some((a) => a.action_type)) return toast.error('Uma regra sem ação não faz nada. Adicione ao menos uma.');
+    if (precisaDeMinutos(evento)) {
+      const erro = erroDosMinutos(minutos);
+      if (erro) return toast.error(erro);
+    }
 
     setSalvando(true);
     try {
       await automationService.salvarRegra({
         id: regra?.id,
         companyId, name: nome, descricao, trigger_event: evento,
-        conditions: condicoes, priority: prioridade, is_active: ativa, acoes,
+        conditions: condicoes, minutos: precisaDeMinutos(evento) ? Number(minutos) : null,
+        priority: prioridade, is_active: ativa, acoes,
       });
       toast.success(regra ? 'Regra atualizada.' : 'Regra criada.');
       onSalvo();
@@ -135,6 +142,19 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
             <p className="text-[11px] text-muted-foreground">
               {EVENTOS.find((e) => e.valor === evento)?.ajuda}
             </p>
+            {precisaDeMinutos(evento) && (
+              <div className="flex items-center gap-2 pt-1">
+                <Label htmlFor="regra-minutos" className="text-xs font-semibold text-muted-foreground">
+                  {evento === 'window_expiring' ? 'Avisar quando faltarem' : 'Depois de'}
+                </Label>
+                <Input id="regra-minutos" type="number" inputMode="numeric" className="h-9 w-24"
+                  min={MINUTOS_MIN} max={MINUTOS_MAX} value={minutos}
+                  onChange={(e) => setMinutos(e.target.value)} />
+                <span className="text-xs text-muted-foreground">
+                  minutos ({MINUTOS_MIN} a {MINUTOS_MAX})
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Condições */}
@@ -323,6 +343,9 @@ function ConfigDaAcao({
     case 'enviar_template':
       return <EditorDeTemplate cfg={cfg} campos={campos} companyId={companyId} onMudar={set} />;
 
+    case 'notificar_equipe':
+      return <EditorDeAviso cfg={cfg} campos={campos} equipe={equipe} onMudar={set} />;
+
     case 'atribuir_conversa':
       return (
         <div className="space-y-1.5">
@@ -446,6 +469,57 @@ function EditorDeTemplate({
         </Label>
         <Input className="h-9" placeholder="27999998888 (opcional)"
           value={cfg.para ?? ''} onChange={(e) => onMudar({ para: e.target.value })} />
+      </div>
+    </div>
+  );
+}
+
+/** Aviso no sino da equipe: quem recebe, título e texto (com os dados do evento entre chaves duplas). */
+function EditorDeAviso({
+  cfg, campos, equipe, onMudar,
+}: {
+  cfg: Record<string, any>;
+  campos: string[];
+  equipe: MembroDaEquipe[];
+  onMudar: (patch: Record<string, any>) => void;
+}) {
+  const destino = cfg.destino ?? 'responsavel';
+  return (
+    <div className="space-y-2.5">
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">Quem recebe</Label>
+        <Select value={destino} onValueChange={(v) => onMudar({ destino: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="responsavel">Quem está com a conversa (sem responsável, todos)</SelectItem>
+            <SelectItem value="todos">Todos que atendem</SelectItem>
+            <SelectItem value="usuario">Uma pessoa específica</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {destino === 'usuario' && (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold text-muted-foreground">Pessoa</Label>
+          <Select value={cfg.user_id ?? ''} onValueChange={(v) => onMudar({ user_id: v })}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Escolha quem recebe" /></SelectTrigger>
+            <SelectContent>
+              {equipe.map((m) => <SelectItem key={m.userId} value={m.userId}>{m.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">Título (opcional)</Label>
+        <Input className="h-9" value={cfg.titulo ?? ''} placeholder="Deixe vazio para o texto padrão do gatilho"
+          onChange={(e) => onMudar({ titulo: e.target.value })} />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[11px] font-semibold text-muted-foreground">Texto (opcional)</Label>
+        <Textarea rows={2} value={cfg.mensagem ?? ''}
+          onChange={(e) => onMudar({ mensagem: e.target.value })} />
+        <p className="text-[11px] text-muted-foreground">
+          Entre chaves duplas vira o dado do evento: {campos.map((c) => `{{${c}}}`).join('  ')}
+        </p>
       </div>
     </div>
   );

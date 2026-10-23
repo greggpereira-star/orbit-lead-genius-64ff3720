@@ -95,9 +95,12 @@ export function Atendimento({
   companyId,
   userId,
   papel,
+  conversaInicial,
 }: {
   companyId: string;
   userId: string | null;
+  /** Conversa a abrir (vem de `?conversa=`: o sino de avisos aponta para ela). */
+  conversaInicial?: string;
   /** Papel na empresa. Desconhecido não restringe a tela: o servidor é quem decide. */
   papel?: string | null;
 }) {
@@ -189,7 +192,11 @@ export function Atendimento({
 
   const [filtro, setFiltro] = useState<Filtro | null>(null);
   const [busca, setBusca] = useState("");
-  const [ativaId, setAtivaId] = useState<string | null>(null);
+  const [ativaId, setAtivaId] = useState<string | null>(conversaInicial ?? null);
+  // Já na tela e clicando em outro aviso: a URL muda, o componente continua montado.
+  useEffect(() => {
+    if (conversaInicial) setAtivaId(conversaInicial);
+  }, [conversaInicial]);
   const [pesquisando, setPesquisando] = useState(false);
   const [termo, setTermo] = useState("");
   const [resultado, setResultado] = useState(0);
