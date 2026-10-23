@@ -21,3 +21,17 @@ export function verificarAssinaturaMeta(
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
+
+/**
+ * Segredos de app aceitos nos webhooks: o principal (`META_APP_SECRET`) e, opcionalmente, outros em
+ * `META_APP_SECRET_EXTRA` (separados por vírgula). Serve para o mesmo endereço atender mais de um app da Meta
+ * durante a migração (cada app assina com o próprio segredo). Vazio nunca conta.
+ */
+export function segredosDoApp(env: {
+  META_APP_SECRET?: string | undefined;
+  META_APP_SECRET_EXTRA?: string | undefined;
+}): string[] {
+  return [env.META_APP_SECRET, ...(env.META_APP_SECRET_EXTRA ?? "").split(",")]
+    .map((segredo) => (segredo ?? "").trim())
+    .filter((segredo) => segredo.length > 0);
+}

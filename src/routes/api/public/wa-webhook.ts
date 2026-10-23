@@ -36,8 +36,9 @@ export const Route = createFileRoute("/api/public/wa-webhook")({
       },
 
       POST: async ({ request }) => {
-        const segredo = process.env.META_APP_SECRET;
-        if (!segredo) return new Response("Not configured", { status: 503 });
+        const { segredosDoApp } = await import("@/lib/whatsapp/cloud/assinatura");
+        const segredos = segredosDoApp(process.env);
+        if (segredos.length === 0) return new Response("Not configured", { status: 503 });
 
         /* Teto de corpo ANTES de ler: a assinatura só pode ser conferida depois
            de ter o corpo inteiro, então sem teto qualquer anônimo faz o
@@ -51,9 +52,8 @@ export const Route = createFileRoute("/api/public/wa-webhook")({
           return new Response("Payload too large", { status: 413 });
         }
         const { verificarAssinaturaMeta } = await import("@/lib/whatsapp/cloud/assinatura");
-        if (
-          !verificarAssinaturaMeta(corpoCru, request.headers.get("x-hub-signature-256"), segredo)
-        ) {
+        const assinatura = request.headers.get("x-hub-signature-256");
+        if (!segredos.some((segredo) => verificarAssinaturaMeta(corpoCru, assinatura, segredo))) {
           return new Response("Invalid signature", { status: 401 });
         }
 

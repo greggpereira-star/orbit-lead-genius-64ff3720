@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verificarAssinaturaMeta } from "./assinatura";
+import { segredosDoApp, verificarAssinaturaMeta } from "./assinatura";
 import { cifrarToken, decifrarToken } from "./cifra";
 import { classificarErroMeta } from "./erros";
 import { JANELA_MS, estadoDaJanela, rotuloDaJanela } from "./janela";
@@ -30,6 +30,27 @@ describe("verificarAssinaturaMeta", () => {
   it("segredo vazio nunca confere — nem com assinatura calculada com ele", () => {
     expect(verificarAssinaturaMeta(corpo, assinar(corpo, ""), "")).toBe(false);
     expect(verificarAssinaturaMeta(corpo, assinar(corpo, ""), undefined)).toBe(false);
+  });
+});
+
+describe("segredosDoApp (mais de um app no mesmo webhook)", () => {
+  const corpo = '{"a":1}';
+  const assinarCom = (segredo: string) =>
+    `sha256=${createHmac("sha256", segredo).update(corpo, "utf8").digest("hex")}`;
+  const confere = (segredos: string[], assinadoCom: string) =>
+    segredos.some((s) => verificarAssinaturaMeta(corpo, assinarCom(assinadoCom), s));
+
+  it("junta o principal e os extras, sem vazios nem espaços", () => {
+    expect(segredosDoApp({ META_APP_SECRET: "a", META_APP_SECRET_EXTRA: " b , ,c" })).toEqual(["a", "b", "c"]);
+    expect(segredosDoApp({ META_APP_SECRET: "a" })).toEqual(["a"]);
+    expect(segredosDoApp({})).toEqual([]);
+    expect(segredosDoApp({ META_APP_SECRET: "", META_APP_SECRET_EXTRA: "" })).toEqual([]);
+  });
+  it("aceita o aviso assinado por qualquer um dos apps e recusa o de um terceiro", () => {
+    const segredos = segredosDoApp({ META_APP_SECRET: "antigo", META_APP_SECRET_EXTRA: "novo" });
+    expect(confere(segredos, "antigo")).toBe(true);
+    expect(confere(segredos, "novo")).toBe(true);
+    expect(confere(segredos, "intruso")).toBe(false);
   });
 });
 
