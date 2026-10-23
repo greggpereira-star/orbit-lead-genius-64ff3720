@@ -420,7 +420,7 @@ function Notas({
         />
         <Button
           size="sm"
-          className="h-9 px-4"
+          className="h-9 px-4 max-sm:h-11"
           disabled={somenteLeitura || salvando || !texto.trim()}
           onClick={() => void salvar()}
         >
@@ -445,7 +445,7 @@ function MencionarColega(props: {
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 gap-1.5 px-3"
+          className="h-9 gap-1.5 px-3 max-sm:h-11"
           disabled={props.desabilitado}
           aria-label="Mencionar colega"
         >

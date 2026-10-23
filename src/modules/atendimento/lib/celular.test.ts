@@ -53,4 +53,12 @@ describe("celular: texto e atalhos", () => {
     const p = ler("src/modules/automation/components/PainelDeAutomacao.tsx");
     expect(p).toContain("max-sm:break-words sm:truncate");
   });
+
+  it("Mencionar e Salvar nota passam de 40 px, e o interruptor ganha área de toque invisível", () => {
+    const painel = ler("src/modules/atendimento/components/PainelDoLead.tsx");
+    expect(painel).toContain('className="h-9 px-4 max-sm:h-11"');
+    expect(painel).toContain('className="h-9 gap-1.5 px-3 max-sm:h-11"');
+    // O desenho do interruptor não muda: a área extra é um pseudo-elemento transparente.
+    expect(ler("src/components/ui/switch.tsx")).toContain("max-sm:after:-inset-y-3");
+  });
 });
