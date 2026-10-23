@@ -241,6 +241,7 @@ function CartaoDaRegra({
           <p className="text-[11px] text-muted-foreground">
             {EVENTOS.find((e) => e.valor === regra.trigger_event)?.rotulo ?? regra.trigger_event}
             {regra.trigger_config?.minutos ? ` · ${duracaoCurta(regra.trigger_config.minutos)}` : ''}
+            {regra.trigger_config?.horario_comercial ? ' · só no expediente' : ''}
             {regra.priority !== 0 && ` · prioridade ${regra.priority}`}
           </p>
         </div>

@@ -30,6 +30,21 @@ export const EVENTOS = [
     rotulo: 'Cliente sem resposta',
     ajuda: 'O cliente escreveu e ninguém da equipe respondeu depois de X minutos. Resposta pelo celular conta; mensagem automática não.',
     minutos: true,
+    horarioComercial: true,
+  },
+  {
+    valor: 'customer_silent',
+    rotulo: 'Cliente sem nova mensagem',
+    ajuda: 'A última mensagem da conversa é nossa (atendente, celular ou automação) e o cliente não respondeu há X minutos. Serve para retomar a venda.',
+    minutos: true,
+    horarioComercial: true,
+  },
+  {
+    valor: 'conversation_pending',
+    rotulo: 'Conversa pendente',
+    ajuda: 'A conversa está marcada como pendente há X minutos: ninguém voltou a ela.',
+    minutos: true,
+    horarioComercial: true,
   },
   {
     valor: 'window_expiring',
@@ -70,6 +85,8 @@ export const CAMPOS_POR_EVENTO: Record<string, string[]> = {
                  'utm_source', 'utm_medium', 'utm_campaign', 'landing_page', 'dentro_do_horario'],
   stage_changed: ['etapa', 'score', 'temperatura', 'nome', 'email', 'telefone', 'dentro_do_horario'],
   form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign', 'dentro_do_horario'],
+  customer_silent: ['minutos_sem_mensagem', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
+  conversation_pending: ['minutos_pendente', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
   customer_no_reply: ['minutos_esperando', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
   window_expiring: ['minutos_restantes', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
   conversation_resolved: ['etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'responsavel_id', 'dentro_do_horario'],
@@ -114,6 +131,11 @@ export function precisaDeMinutos(evento: string): boolean {
   return EVENTOS.some((e) => e.valor === evento && 'minutos' in e && e.minutos === true);
 }
 
+/** A regra pode contar a espera só no horário de atendimento (Configurações → Horário de atendimento). */
+export function aceitaHorarioComercial(evento: string): boolean {
+  return EVENTOS.some((e) => e.valor === evento && 'horarioComercial' in e && e.horarioComercial === true);
+}
+
 export const MINUTOS_MIN = 5;
 export const MINUTOS_MAX = 1380;
 
@@ -148,7 +170,7 @@ export interface Regra {
   trigger_event: string;
   conditions: Condicao[];
   /** Parâmetro do gatilho por tempo: `{ minutos: 30 }`. */
-  trigger_config?: { minutos?: number } | null;
+  trigger_config?: { minutos?: number; horario_comercial?: boolean } | null;
   is_active: boolean;
   priority: number;
   created_at: string;
@@ -194,6 +216,8 @@ export const automationService = {
     conditions: Condicao[];
     /** Só os gatilhos por tempo levam parâmetro (minutos). */
     minutos?: number | null;
+    /** Conta a espera só dentro do horário de atendimento (padrão: horário corrido). */
+    horarioComercial?: boolean;
     priority: number;
     is_active: boolean;
     acoes: Acao[];
@@ -206,7 +230,14 @@ export const automationService = {
       // Condição sem campo escolhido não é gravada: ela nunca casaria e ficaria
       // na tela parecendo que filtra algo.
       conditions: normalizarCondicoes(p.conditions),
-      trigger_config: precisaDeMinutos(p.trigger_event) ? { minutos: p.minutos ?? null } : {},
+      trigger_config: precisaDeMinutos(p.trigger_event)
+        ? {
+            minutos: p.minutos ?? null,
+            ...(aceitaHorarioComercial(p.trigger_event) && p.horarioComercial
+              ? { horario_comercial: true }
+              : {}),
+          }
+        : {},
       priority: p.priority,
       is_active: p.is_active,
       updated_at: new Date().toISOString(),

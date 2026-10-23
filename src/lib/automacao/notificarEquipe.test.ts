@@ -194,4 +194,27 @@ describe("ação Notificar equipe", () => {
     );
     expect(gravadas[0].body).toBe("Espera: 1 h 35 min");
   });
+
+  it("texto padrão de 'sem nova mensagem' e 'pendente' em horas e minutos", async () => {
+    const { db, gravadas } = dbFalso({ equipe });
+    await acaoNotificarEquipe(
+      db,
+      job({
+        trigger_event: "customer_silent",
+        payload: { nome: "Ana", minutos_sem_mensagem: 200, responsavel_id: "u2" },
+      }),
+      { id: "a1", config: { destino: "responsavel" } },
+    );
+    expect(gravadas.at(-1)!.title).toBe("Ana não respondeu há 3 h 20 min");
+
+    await acaoNotificarEquipe(
+      db,
+      job({
+        trigger_event: "conversation_pending",
+        payload: { nome: "Ana", minutos_pendente: 45, responsavel_id: "u2" },
+      }),
+      { id: "a2", config: { destino: "responsavel" } },
+    );
+    expect(gravadas.at(-1)!.title).toBe("A conversa de Ana está pendente há 45 min");
+  });
 });

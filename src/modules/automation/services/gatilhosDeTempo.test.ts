@@ -10,6 +10,7 @@ import {
   EVENTOS,
   MINUTOS_MAX,
   MINUTOS_MIN,
+  aceitaHorarioComercial,
   erroDosMinutos,
   precisaDeMinutos,
 } from './automationService';
@@ -70,11 +71,12 @@ describe('gatilhos "ao resolver" e "ao atribuir"', () => {
   it('o CHECK do banco aceita os dois e preserva o dos minutos', () => {
     const sql = readFileSync('supabase/migrations/20261024140000_gatilhos_resolver_e_atribuir.sql', 'utf8');
     for (const e of ['conversation_resolved', 'conversation_assigned']) expect(sql).toContain(`'${e}'`);
+    // O CHECK vigente é o da migration mais nova: ela precisa listar TODOS os eventos da tela.
+    const vigente = readFileSync('supabase/migrations/20261025100000_gatilhos_de_espera.sql', 'utf8');
+    for (const e of EVENTOS.map((x) => x.valor)) expect(vigente, e).toContain(`'${e}'`);
     // Troca pelo NOME: a busca por definição derrubaria o CHECK dos minutos junto.
     expect(sql).toContain('DROP CONSTRAINT IF EXISTS automation_rules_trigger_event_check');
     expect(sql).not.toMatch(/ILIKE\s+'%trigger_event%'/);
-    // Todos os eventos já existentes continuam na lista nova.
-    for (const e of EVENTOS.map((x) => x.valor)) expect(sql).toContain(`'${e}'`);
   });
 });
 
@@ -105,6 +107,34 @@ describe('ações de conversa e horário de atendimento na tela', () => {
     expect((sql.match(/dentro_do_horario/g) ?? []).length).toBeGreaterThanOrEqual(5);
     expect(sql).toContain("v_conv.csat_requested_at IS NOT NULL");
     expect(sql).toContain('automacao_condicoes_passam(r.conditions, v_payload)');
+  });
+});
+
+describe('gatilhos de espera: pendente, sem nova mensagem e horário de atendimento', () => {
+  it('os dois novos pedem minutos e aceitam contar só o expediente', () => {
+    for (const e of ['customer_silent', 'conversation_pending', 'customer_no_reply']) {
+      expect(precisaDeMinutos(e), e).toBe(true);
+      expect(aceitaHorarioComercial(e), e).toBe(true);
+    }
+    // A janela de 24h é relógio da Meta: não faz sentido contar só o expediente.
+    expect(aceitaHorarioComercial('window_expiring')).toBe(false);
+    expect(aceitaHorarioComercial('lead_created')).toBe(false);
+  });
+
+  it('cada um entrega o campo de espera para condição', () => {
+    expect(CAMPOS_POR_EVENTO.customer_silent).toContain('minutos_sem_mensagem');
+    expect(CAMPOS_POR_EVENTO.conversation_pending).toContain('minutos_pendente');
+  });
+
+  it('o banco valida os minutos dos quatro e o "horario_comercial" verdadeiro/falso', () => {
+    const sql = readFileSync('supabase/migrations/20261025100000_gatilhos_de_espera.sql', 'utf8');
+    expect(sql).toContain('BETWEEN 5 AND 1380');
+    for (const e of ['customer_no_reply', 'window_expiring', 'conversation_pending', 'customer_silent'])
+      expect(sql, e).toContain(`'${e}'`);
+    expect(sql).toContain("IN ('true', 'false')");
+    // pelo NOME: a busca por definição derrubaria outro CHECK
+    expect(sql).toContain('DROP CONSTRAINT IF EXISTS automation_rules_minutos_check');
+    expect(sql).toContain('DROP CONSTRAINT IF EXISTS automation_rules_trigger_event_check');
   });
 });
 

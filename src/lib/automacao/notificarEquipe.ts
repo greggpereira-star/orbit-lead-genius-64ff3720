@@ -38,6 +38,16 @@ export function textoPadraoDoAviso(evento: string): { titulo: string; mensagem: 
         titulo: "A janela de {{nome}} fecha em {{tempo_restante}}",
         mensagem: "Depois disso só dá para falar com ele por template aprovado.",
       };
+    case "customer_silent":
+      return {
+        titulo: "{{nome}} não respondeu há {{tempo_sem_mensagem}}",
+        mensagem: "A última mensagem da conversa foi nossa. Vale retomar o contato.",
+      };
+    case "conversation_pending":
+      return {
+        titulo: "A conversa de {{nome}} está pendente há {{tempo_pendente}}",
+        mensagem: "Ninguém voltou a ela desde que foi marcada como pendente.",
+      };
     case "conversation_resolved":
       return { titulo: "Conversa com {{nome}} foi resolvida", mensagem: "" };
     case "conversation_assigned":
@@ -64,6 +74,12 @@ export async function acaoNotificarEquipe(
     ...bruto,
     ...(bruto.minutos_esperando != null
       ? { tempo_esperando: duracaoCurta(bruto.minutos_esperando) }
+      : {}),
+    ...(bruto.minutos_sem_mensagem != null
+      ? { tempo_sem_mensagem: duracaoCurta(bruto.minutos_sem_mensagem) }
+      : {}),
+    ...(bruto.minutos_pendente != null
+      ? { tempo_pendente: duracaoCurta(bruto.minutos_pendente) }
       : {}),
     ...(bruto.minutos_restantes != null
       ? { tempo_restante: duracaoCurta(bruto.minutos_restantes) }

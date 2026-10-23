@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  ACOES, CAMPOS_POR_EVENTO, EVENTOS, OPERADORES, erroDosMinutos, precisaDeMinutos, MINUTOS_MAX, MINUTOS_MIN,
+  ACOES, CAMPOS_POR_EVENTO, EVENTOS, OPERADORES, aceitaHorarioComercial, erroDosMinutos, precisaDeMinutos, MINUTOS_MAX, MINUTOS_MIN,
   automationService, type Acao, type Condicao, type Regra,
 } from '../services/automationService';
 import type { Stage } from '@/modules/crm/services/stageService';
@@ -38,6 +38,7 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
   const [descricao, setDescricao] = useState('');
   const [evento, setEvento] = useState<string>('lead_created');
   const [minutos, setMinutos] = useState<string>('30');
+  const [soExpediente, setSoExpediente] = useState(false);
   const [prioridade, setPrioridade] = useState(0);
   const [ativa, setAtiva] = useState(true);
   const [condicoes, setCondicoes] = useState<Condicao[]>([]);
@@ -50,6 +51,7 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
     setDescricao(regra?.descricao ?? '');
     setEvento(regra?.trigger_event ?? 'lead_created');
     setMinutos(String(regra?.trigger_config?.minutos ?? 30));
+    setSoExpediente(Boolean(regra?.trigger_config?.horario_comercial));
     setPrioridade(regra?.priority ?? 0);
     setAtiva(regra?.is_active ?? true);
     setCondicoes(regra?.conditions ?? []);
@@ -85,6 +87,7 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
         id: regra?.id,
         companyId, name: nome, descricao, trigger_event: evento,
         conditions: condicoes, minutos: precisaDeMinutos(evento) ? Number(minutos) : null,
+        horarioComercial: aceitaHorarioComercial(evento) && soExpediente,
         priority: prioridade, is_active: ativa, acoes,
       });
       toast.success(regra ? 'Regra atualizada.' : 'Regra criada.');
@@ -153,6 +156,20 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
                 <span className="text-xs text-muted-foreground">
                   minutos ({MINUTOS_MIN} a {MINUTOS_MAX})
                 </span>
+              </div>
+            )}
+            {aceitaHorarioComercial(evento) && (
+              <div className="flex items-start gap-2 pt-1.5">
+                <Switch id="regra-expediente" checked={soExpediente} onCheckedChange={setSoExpediente} />
+                <div>
+                  <Label htmlFor="regra-expediente" className="text-xs font-semibold text-muted-foreground">
+                    Contar só o horário de atendimento
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Noites, fins de semana e feriados não entram na contagem (Configurações → Horário de
+                    atendimento). Desligado, conta em horário corrido. Sem horário configurado, não muda nada.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -555,6 +572,8 @@ function EditorDeAviso({
           Entre chaves duplas vira o dado do evento: {campos.map((c) => `{{${c}}}`).join('  ')}
           {campos.includes('minutos_esperando') && '  {{tempo_esperando}} (ex.: 3 h 20 min)'}
           {campos.includes('minutos_restantes') && '  {{tempo_restante}} (ex.: 20 h 46 min)'}
+          {campos.includes('minutos_sem_mensagem') && '  {{tempo_sem_mensagem}} (ex.: 3 h)'}
+          {campos.includes('minutos_pendente') && '  {{tempo_pendente}} (ex.: 45 min)'}
         </p>
       </div>
     </div>
