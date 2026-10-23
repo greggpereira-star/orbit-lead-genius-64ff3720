@@ -95,3 +95,12 @@ describe("opções dos filtros", () => {
     expect(etapasDaLista([])).toEqual([]);
   });
 });
+
+describe("filtro que perde a opção", () => {
+  it("a tela desfaz o filtro quando a etiqueta ou a etapa some das conversas", async () => {
+    const { readFileSync } = await import("node:fs");
+    const fonte = readFileSync("src/modules/atendimento/components/Atendimento.tsx", "utf8");
+    expect(fonte).toContain("setFiltroEtiqueta(null)");
+    expect(fonte).toContain("setFiltroEtapa(null)");
+  });
+});

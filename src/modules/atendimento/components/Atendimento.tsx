@@ -223,6 +223,14 @@ export function Atendimento({
   const [filtroEtapa, setFiltroEtapa] = useState<string | null>(null);
   const etiquetas = useMemo(() => etiquetasDaLista(lista), [lista]);
   const etapas = useMemo(() => etapasDaLista(lista), [lista]);
+  // Se a etiqueta (ou etapa) filtrada some das conversas (alguém a removeu), o seletor sumiria
+  // junto e a lista ficaria vazia sem como limpar o filtro: ele se desfaz sozinho.
+  useEffect(() => {
+    if (conversas.isLoading) return;
+    if (filtroEtiqueta && !etiquetas.some((t) => t.toLowerCase() === filtroEtiqueta.toLowerCase()))
+      setFiltroEtiqueta(null);
+    if (filtroEtapa && !etapas.some((e) => e.id === filtroEtapa)) setFiltroEtapa(null);
+  }, [conversas.isLoading, etiquetas, etapas, filtroEtiqueta, filtroEtapa]);
   const visiveis = useMemo(
     () =>
       filtrarConversas(lista, {
