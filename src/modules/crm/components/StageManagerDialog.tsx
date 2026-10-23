@@ -170,7 +170,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             dentro, 72rem deixavam 9,5rem para o seletor — e o rótulo mais
             longo precisa de 15. */}
         <DialogContent className="flex max-h-[92dvh] max-w-[84rem] flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b px-8 py-6 text-left">
+          <DialogHeader className="shrink-0 border-b px-5 py-4 text-left sm:px-8 sm:py-6">
             <div className="flex items-start gap-3">
               {/* O ícone não é enfeite: ele é o mesmo funil do Kanban, e dá
                   ao diálogo a identidade da tela de onde ele veio. */}
@@ -179,7 +179,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
               </span>
               <div className="min-w-0">
                 <DialogTitle className="text-lg">Etapas do funil</DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="sr-only sm:not-sr-only">
                   Arraste para reordenar. A etapa de entrada é onde o lead cai quando a
                   integração não escolhe outra.
                 </DialogDescription>
@@ -192,7 +192,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             onValueChange={setAba}
             className="flex min-h-0 flex-1 flex-col gap-0"
           >
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-8 pb-1 pt-5">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 px-5 pb-1 pt-4 sm:px-8 sm:pt-5">
             <TabsList className="shrink-0 self-start">
               <TabsTrigger value="etapas">Etapas</TabsTrigger>
               {/* Separado porque são duas perguntas diferentes: "quais são os
@@ -207,7 +207,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             {/* Resumo do funil, só onde ele descreve o que está na tela. Nas
                 outras abas seria um número solto sem nada para explicá-lo. */}
             {aba === 'conversoes' && (
-              <dl className="flex items-stretch divide-x divide-border/70 rounded-xl bg-muted/60 py-1">
+              <dl className="hidden items-stretch divide-x divide-border/70 rounded-xl bg-muted/60 py-1 sm:flex">
                 <Resumo numero={resumo.etapas} titulo="etapas" legenda="no funil" />
                 <Resumo numero={resumo.eventos} titulo="eventos" legenda="mapeados" />
                 <Resumo
@@ -218,7 +218,7 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
               </dl>
             )}
             </div>
-            <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-8 py-5">
+            <TabsContent value="etapas" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5 sm:px-8">
 
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="stages">
@@ -368,14 +368,14 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
             </TabsContent>
             {/* Sem overflow aqui: a tabela de conversões tem rodapé fixo e
                 cuida da própria rolagem. */}
-            <TabsContent value="conversoes" className="sup-tonal mt-4 flex min-h-0 flex-1 flex-col px-8 pt-5">
+            <TabsContent value="conversoes" className="sup-tonal mt-3 flex min-h-0 flex-1 flex-col px-5 pt-4 sm:mt-4 sm:px-8 sm:pt-5">
               <ConversionSettingsTable
                 companyId={companyId}
                 onClose={() => onOpenChange(false)}
                 onSujoChange={setConversoesSujas}
               />
             </TabsContent>
-            <TabsContent value="perdas" className="min-h-0 flex-1 overflow-y-auto px-8 py-5">
+            <TabsContent value="perdas" className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-8">
               <LossReasonsManager companyId={companyId} />
             </TabsContent>
           </Tabs>

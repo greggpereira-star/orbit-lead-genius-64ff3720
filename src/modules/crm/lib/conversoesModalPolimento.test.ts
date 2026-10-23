@@ -55,7 +55,8 @@ describe("diálogo de etapas — não perde alteração em silêncio", () => {
     expect(dialogo).toContain("!aberto\n      && conversoesSujas");
   });
   it("os três números viram uma faixa só (sem três cartões iguais)", () => {
-    expect(dialogo).toContain('<dl className="flex items-stretch');
+    expect(dialogo).toContain('<dl className="hidden items-stretch');
+    expect(dialogo).toContain("sm:flex");
     expect(dialogo).not.toContain("icone={<Layers");
   });
 });

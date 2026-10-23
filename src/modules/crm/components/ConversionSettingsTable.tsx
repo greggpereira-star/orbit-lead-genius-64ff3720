@@ -361,7 +361,7 @@ export function ConversionSettingsTable({
                   campos ficavam sem título e "Digite o nome" não dizia de qual etiqueta era.
                   `items-end` e quebra de linha permitida: um título comprido não pode cortar. */}
               <div
-                className={`sticky top-0 z-10 hidden items-end gap-x-4 bg-[var(--superficie-tonal)] px-5 pb-2.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:grid ${grade}`}
+                className={`sticky top-0 z-10 hidden items-end gap-x-4 bg-[var(--superficie-tonal)] px-5 pb-3 pt-1 text-[11px] shadow-[0_8px_8px_-8px_rgb(15_23_42/0.10)] font-semibold uppercase tracking-wide text-muted-foreground lg:grid ${grade}`}
               >
                 <span>Etapa do funil</span>
                 <span>O que significa</span>
@@ -416,13 +416,18 @@ export function ConversionSettingsTable({
 
         {/* Barra de ações. Fixa no rodapé porque a decisão de gravar é sobre o
             conjunto inteiro, e ela não pode sumir enquanto se rola a lista. */}
-        <div className="-mx-8 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t bg-background px-8 py-4">
-          <Button type="button" variant="outline" onClick={sugerir} disabled={gravar.isPending}>
+        <div className="-mx-5 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t bg-background px-5 py-3 sm:-mx-8 sm:px-8 sm:py-4">
+          {/* No celular a barra tem uma fileira só: "Sugerir" vira ícone (o atalho grande no topo da
+              lista cobre quem está começando do zero). */}
+          <Button
+            type="button" variant="outline" onClick={sugerir} disabled={gravar.isPending}
+            aria-label="Sugerir pelo funil"
+          >
             <RotateCcw className="h-4 w-4" />
-            <span className="ml-2">Sugerir pelo funil</span>
+            <span className="ml-2 hidden sm:inline">Sugerir pelo funil</span>
           </Button>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1.5">
             {temErro ? (
               <span className="flex items-center gap-1.5 text-sm text-destructive" role="alert">
                 <AlertTriangle className="h-4 w-4" />
@@ -495,7 +500,7 @@ function FaixaDeEnsaio({
 }: { ligado: boolean; ocupado: boolean; aoTrocar: (v: boolean) => void }) {
   return (
     <div
-      className={`flex items-center justify-between gap-5 rounded-2xl border px-5 py-4 ${
+      className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3.5 sm:gap-5 sm:px-5 sm:py-4 ${
         ligado
           ? 'border-[var(--aviso-borda)] bg-[var(--aviso-suave)]'
           : 'border-[var(--sucesso-borda)] bg-[var(--sucesso-suave)]'
@@ -507,7 +512,12 @@ function FaixaDeEnsaio({
           : <Radio className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sucesso)]" />}
         <div className="space-y-1 text-sm">
           <p className="font-medium">{ligado ? 'Modo de ensaio ligado' : 'Enviando de verdade'}</p>
-          <p className="max-w-[60ch] text-muted-foreground">
+          {/* Duas versões do texto: no celular só o que decide ("nada sai"), porque a faixa inteira
+              chegava a sete linhas e empurrava a lista para fora da tela. */}
+          <p className="max-w-[60ch] text-muted-foreground sm:hidden">
+            {ligado ? 'Nada é enviado à Meta nem ao Google.' : 'Conversões reais entram na campanha.'}
+          </p>
+          <p className="hidden max-w-[60ch] text-muted-foreground sm:block">
             {ligado
               ? 'As etapas montam o evento e registram o que teria sido enviado, mas nada chega na Meta nem no Google. A etiqueta no WhatsApp continua sendo aplicada.'
               : 'Cada etapa configurada manda conversão real, e isso entra na otimização da campanha.'}
@@ -551,7 +561,7 @@ function LinhaDaEtapa({
 
   return (
     <li
-      className={`grid gap-x-4 gap-y-3.5 rounded-2xl bg-[var(--superficie-cartao)] p-5 shadow-[var(--elevacao-1)] transition-shadow lg:items-start ${grade} ${
+      className={`grid gap-x-4 gap-y-3.5 rounded-2xl bg-[var(--superficie-cartao)] p-4 shadow-[var(--elevacao-1)] transition-shadow sm:p-5 lg:items-start ${grade} ${
         alterada ? 'ring-1 ring-[var(--selecao-anel)]' : ''
       }`}
     >
