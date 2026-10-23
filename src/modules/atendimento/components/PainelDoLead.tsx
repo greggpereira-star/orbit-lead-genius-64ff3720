@@ -229,6 +229,12 @@ export function PainelDoLead({
           {conversa.contact?.profile_name && (
             <Linha rotulo="Nome no WhatsApp" valor={conversa.contact.profile_name} />
           )}
+          {conversa.csat_score != null && (
+            <Linha
+              rotulo="Avaliação do atendimento"
+              valor={`${"★".repeat(conversa.csat_score)}${"☆".repeat(5 - conversa.csat_score)} (${conversa.csat_score}/5)`}
+            />
+          )}
         </Secao>
 
         <Secao

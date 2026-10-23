@@ -166,6 +166,13 @@ export function RegraDialog({ aberto, onFechar, companyId, regra, etapas, equipe
                 <Plus className="h-3.5 w-3.5" /> Adicionar
               </Button>
             </div>
+            {condicoes.some((c) => c.campo === 'dentro_do_horario') && (
+              <p className="text-[11px] text-muted-foreground">
+                <b>dentro_do_horario</b>: use <b>false</b> para agir fora do horário de atendimento e{' '}
+                <b>true</b> para agir dentro dele. O horário se configura em Configurações → Horário de
+                atendimento; sem horário configurado, vale sempre <b>true</b>.
+              </p>
+            )}
             {condicoes.length === 0 ? (
               <p className="rounded-xl bg-[var(--poco)] px-3.5 py-3 text-[13px] text-muted-foreground">
                 Sem condição: a regra vale para todo evento desse tipo.
@@ -342,6 +349,30 @@ function ConfigDaAcao({
 
     case 'enviar_template':
       return <EditorDeTemplate cfg={cfg} campos={campos} companyId={companyId} onMudar={set} />;
+
+    case 'resolver_conversa':
+    case 'reabrir_conversa':
+      return (
+        <p className="text-[11px] text-muted-foreground">
+          {acao.action_type === 'resolver_conversa'
+            ? 'Marca a conversa do evento como resolvida. Se já estiver resolvida, não faz nada. Só vale em eventos que têm conversa (mensagem, sem resposta, janela, resolvida, atribuída).'
+            : 'Reabre a conversa do evento se ela estiver resolvida. Só vale em eventos que têm conversa.'}
+        </p>
+      );
+
+    case 'avaliar_atendimento':
+      return (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] font-semibold text-muted-foreground">Mensagem (opcional)</Label>
+          <Textarea rows={2} value={cfg.mensagem ?? ''}
+            placeholder="Como foi o seu atendimento? Responda com uma nota de 1 (ruim) a 5 (ótimo)."
+            onChange={(e) => set({ mensagem: e.target.value })} />
+          <p className="text-[11px] text-muted-foreground">
+            Vai como texto simples, dentro da janela de 24h. O cliente responde só o número (1 a 5); a
+            nota aparece no painel da conversa. Vale a primeira resposta, em até 48 h.
+          </p>
+        </div>
+      );
 
     case 'notificar_equipe':
       return <EditorDeAviso cfg={cfg} campos={campos} equipe={equipe} onMudar={set} />;

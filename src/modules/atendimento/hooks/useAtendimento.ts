@@ -60,7 +60,7 @@ export function useConversas(companyId: string | undefined) {
       const { data, error } = await wa()
         .from("wa_conversations")
         .select(
-          "id,status,assigned_to,department_id,last_message_at,last_message_preview,last_inbound_at,unread_agent,lead_id,origin,contact:wa_contacts(wa_id,profile_name,opted_out_at),lead:leads(id,name,email,stage_id,stage:stages(name,color,kind),tags:lead_tags(tag_name)),numero:wa_phone_numbers(receive_only)",
+          "id,status,assigned_to,department_id,last_message_at,last_message_preview,last_inbound_at,unread_agent,lead_id,origin,csat_score,contact:wa_contacts(wa_id,profile_name,opted_out_at),lead:leads(id,name,email,stage_id,stage:stages(name,color,kind),tags:lead_tags(tag_name)),numero:wa_phone_numbers(receive_only)",
         )
         .eq("company_id", companyId)
         .order("last_message_at", { ascending: false, nullsFirst: false })

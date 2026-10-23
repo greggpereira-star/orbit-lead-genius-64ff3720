@@ -67,16 +67,16 @@ export const OPERADORES = [
 /** Os campos que cada evento entrega. Fora desta lista a condição nunca casa. */
 export const CAMPOS_POR_EVENTO: Record<string, string[]> = {
   lead_created: ['score', 'temperatura', 'origem', 'nome', 'email', 'telefone',
-                 'utm_source', 'utm_medium', 'utm_campaign', 'landing_page'],
-  stage_changed: ['etapa', 'score', 'temperatura', 'nome', 'email', 'telefone'],
-  form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign'],
-  customer_no_reply: ['minutos_esperando', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
-  window_expiring: ['minutos_restantes', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
-  conversation_resolved: ['etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'responsavel_id'],
-  conversation_assigned: ['responsavel_id', 'responsavel_anterior_id', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone'],
-  tag_added: ['etiqueta', 'etapa', 'score', 'temperatura', 'origem', 'nome', 'email', 'telefone'],
+                 'utm_source', 'utm_medium', 'utm_campaign', 'landing_page', 'dentro_do_horario'],
+  stage_changed: ['etapa', 'score', 'temperatura', 'nome', 'email', 'telefone', 'dentro_do_horario'],
+  form_abandoned: ['formulario', 'passo', 'score', 'temperatura', 'utm_source', 'utm_campaign', 'dentro_do_horario'],
+  customer_no_reply: ['minutos_esperando', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
+  window_expiring: ['minutos_restantes', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
+  conversation_resolved: ['etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'responsavel_id', 'dentro_do_horario'],
+  conversation_assigned: ['responsavel_id', 'responsavel_anterior_id', 'etapa', 'score', 'temperatura', 'origem', 'veio_de_anuncio', 'nome', 'email', 'telefone', 'dentro_do_horario'],
+  tag_added: ['etiqueta', 'etapa', 'score', 'temperatura', 'origem', 'nome', 'email', 'telefone', 'dentro_do_horario'],
   whatsapp_message_received: ['texto', 'primeira_mensagem', 'veio_de_anuncio', 'tipo_mensagem',
-                              'nome', 'email', 'telefone', 'score', 'temperatura', 'origem'],
+                              'nome', 'email', 'telefone', 'score', 'temperatura', 'origem', 'dentro_do_horario'],
 };
 
 export const ACOES = [
@@ -87,6 +87,9 @@ export const ACOES = [
   { valor: 'enviar_template', rotulo: 'Enviar template do WhatsApp' },
   { valor: 'atribuir_conversa', rotulo: 'Atribuir conversa do WhatsApp' },
   { valor: 'notificar_equipe', rotulo: 'Notificar equipe (aviso no sino)' },
+  { valor: 'resolver_conversa', rotulo: 'Resolver a conversa' },
+  { valor: 'reabrir_conversa', rotulo: 'Reabrir a conversa' },
+  { valor: 'avaliar_atendimento', rotulo: 'Pedir avaliação do atendimento (nota de 1 a 5)' },
   { valor: 'webhook', rotulo: 'Chamar webhook' },
 ] as const;
 

@@ -3,6 +3,11 @@ import { autorizarCron, respostaDeRecusa } from '@/lib/cron.server';
 import { executarAcoes, type ResultadoDeAcao } from '@/lib/automacao/executarAcoes';
 import { acaoAtribuirConversa, acaoEnviarWhatsApp, preencher } from '@/lib/automacao/acoesDeWhatsApp';
 import { acaoNotificarEquipe } from '@/lib/automacao/notificarEquipe';
+import {
+  acaoAvaliarAtendimento,
+  acaoReabrirConversa,
+  acaoResolverConversa,
+} from '@/lib/automacao/acoesDeConversa';
 
 /**
  * Executa a fila de automação.
@@ -272,6 +277,15 @@ async function executar(admin: any, job: Job, acao: Acao): Promise<Resultado> {
 
       case 'notificar_equipe':
         return acaoNotificarEquipe(admin, job, acao);
+
+      case 'resolver_conversa':
+        return acaoResolverConversa(admin, job);
+
+      case 'reabrir_conversa':
+        return acaoReabrirConversa(admin, job);
+
+      case 'avaliar_atendimento':
+        return acaoAvaliarAtendimento(admin, job, cfg);
 
       case 'webhook': {
         // O destino é entrada não confiável (configurado por membro) e o

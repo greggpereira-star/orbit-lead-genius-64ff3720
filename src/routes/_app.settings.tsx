@@ -13,6 +13,7 @@ import {
   Sparkles,
   Rocket,
   Plug,
+  Clock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -29,6 +30,7 @@ const settingsNav = [
   { title: "Respostas rápidas", icon: Sparkles, to: "/settings/quick-replies" },
   { title: "Conexões", icon: Plug, to: "/settings/conexoes" },
   { title: "WhatsApp oficial", icon: MessageCircle, to: "/settings/whatsapp" },
+  { title: "Horário de atendimento", icon: Clock, to: "/settings/horarios" },
   { title: "Automations", icon: Zap, to: "/settings/automations" },
   { title: "Distribuição de Leads", icon: Users, to: "/settings/routing" },
   { title: "Security", icon: Shield, to: "/settings/security" },

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Zap, Plus, Pencil, Trash2, ArrowRight, Tag, MoveRight, UserCheck,
-  MessageSquare, Webhook, Bell,
+  MessageSquare, Webhook, Bell, CheckCircle2, RotateCcw, Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -181,6 +181,9 @@ const ICONE_DA_ACAO: Record<string, typeof Tag> = {
   enviar_whatsapp: MessageSquare,
   webhook: Webhook,
   notificar_equipe: Bell,
+  resolver_conversa: CheckCircle2,
+  reabrir_conversa: RotateCcw,
+  avaliar_atendimento: Star,
 };
 
 function CartaoDaRegra({
@@ -207,6 +210,11 @@ function CartaoDaRegra({
         return cfg.para ? `para ${cfg.para}` : 'para o lead';
       case 'webhook':
         return cfg.url || 'url não preenchida';
+      case 'resolver_conversa':
+      case 'reabrir_conversa':
+        return 'conversa do evento';
+      case 'avaliar_atendimento':
+        return cfg.mensagem ? 'texto da regra' : 'texto padrão';
       case 'notificar_equipe':
         return cfg.destino === 'todos'
           ? 'todos que atendem'

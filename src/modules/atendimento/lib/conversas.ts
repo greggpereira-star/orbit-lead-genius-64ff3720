@@ -26,6 +26,8 @@ export interface ConversaDaLista {
   unread_agent: number;
   lead_id: string | null;
   origin: Record<string, unknown> | null;
+  /** Nota de 1 a 5 que o cliente deu ao atendimento (pesquisa por WhatsApp); `null` se não houve. */
+  csat_score?: number | null;
   contact: { wa_id: string; profile_name: string | null; opted_out_at: string | null } | null;
   lead: {
     id: string;

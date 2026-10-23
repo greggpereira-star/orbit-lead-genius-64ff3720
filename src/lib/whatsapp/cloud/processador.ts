@@ -17,6 +17,7 @@ import { mesmaPessoa } from "../../../modules/crm/lib/identidadeDoLead";
 import { variantesDoNumero } from "../numero";
 import type { EventoWa, Referral } from "./payload";
 import { pedeParaParar, pedeParaVoltar } from "./optout";
+import { notaDeAvaliacao, VALIDADE_DA_PESQUISA_MS } from "./avaliacao";
 import { reativarContato } from "./reativacao";
 import { baixarEGuardarMidia, type DbComArmazenamento } from "./armazenamento";
 import { extrairMidia } from "./midia";
@@ -176,6 +177,18 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
           clique: referralParaClique(e.referral),
           messageTimestamp: Math.floor(new Date(e.ts).getTime() / 1000),
         });
+      }
+
+      // Resposta à pesquisa de satisfação: só a PRIMEIRA nota, em até 48 h do pedido. O filtro está
+      // no UPDATE (pesquisa em aberto + dentro do prazo), então um "5" qualquer fora disso não grava.
+      const nota = notaDeAvaliacao(e.body);
+      if (nota !== null) {
+        await tabela(db, "wa_conversations")
+          .update({ csat_score: nota, csat_at: new Date().toISOString() })
+          .eq("id", linha.out_conversa)
+          .eq("company_id", linha.out_empresa)
+          .is("csat_score", null)
+          .gte("csat_requested_at", new Date(Date.now() - VALIDADE_DA_PESQUISA_MS).toISOString());
       }
 
       if (pedeParaParar(e.body)) {

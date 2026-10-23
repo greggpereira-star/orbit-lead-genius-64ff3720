@@ -77,3 +77,32 @@ describe('gatilhos "ao resolver" e "ao atribuir"', () => {
     for (const e of EVENTOS.map((x) => x.valor)) expect(sql).toContain(`'${e}'`);
   });
 });
+
+describe('ações de conversa e horário de atendimento na tela', () => {
+  it('as três ações novas estão na lista, e o banco as aceita', () => {
+    const sql = readFileSync('supabase/migrations/20261024160000_acoes_de_conversa_e_horario.sql', 'utf8');
+    for (const a of ['resolver_conversa', 'reabrir_conversa', 'avaliar_atendimento']) {
+      expect(ACOES.some((x) => x.valor === a), a).toBe(true);
+      expect(sql).toContain(`'${a}'`);
+    }
+    // As anteriores continuam permitidas: trocar o CHECK não pode tirar ação que já existia.
+    for (const a of ACOES.map((x) => x.valor)) expect(sql).toContain(`'${a}'`);
+  });
+
+  it('todo evento oferece dentro_do_horario como condição, sem ser o campo padrão', () => {
+    for (const e of EVENTOS) {
+      const campos = CAMPOS_POR_EVENTO[e.valor];
+      expect(campos, e.valor).toContain('dentro_do_horario');
+      expect(campos[0], e.valor).not.toBe('dentro_do_horario');
+    }
+  });
+
+  it('o banco calcula o campo em todos os caminhos de enfileirar', () => {
+    const sql = readFileSync('supabase/migrations/20261024160000_acoes_de_conversa_e_horario.sql', 'utf8');
+    // central (enfileirar_automacao) + os dois payloads da varredura por tempo
+    expect((sql.match(/dentro_do_horario/g) ?? []).length).toBeGreaterThanOrEqual(5);
+    expect(sql).toContain("v_conv.csat_requested_at IS NOT NULL");
+    expect(sql).toContain('automacao_condicoes_passam(r.conditions, v_payload)');
+  });
+});
+
