@@ -851,6 +851,9 @@ export function KanbanBoard({
         onOpenChange={(o) => !o && setDetailLead(null)}
         originLabel={originLabel}
         onStatusChange={() => qc.invalidateQueries({ queryKey: ['leads'] })}
+        onLeadUpdated={(updated) =>
+          setDetailLead((prev) => (prev && prev.id === updated.id ? updated : prev))
+        }
       />
 
       {perguntandoMotivo && (

@@ -5,7 +5,7 @@
  * tirar o usuário da lista. Duas colunas: identidade e ações à esquerda
  * (sempre visíveis), conteúdo em abas à direita.
  */
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Clock,
@@ -106,7 +106,7 @@ import {
   deleteLead,
   type EditableLeadFields,
 } from "../services/leadService";
-import { listStages, moveLeadToStage, type Stage } from "../services/stageService";
+import { lerEtapaDoLead, listStages, moveLeadToStage, type Stage } from "../services/stageService";
 import { LossReasonDialog } from "@/modules/crm/components/LossReasonDialog";
 import { LossReasonPanel } from "@/modules/crm/components/LossReasonPanel";
 import { OwnerPicker } from "@/modules/crm/components/OwnerPicker";
@@ -191,6 +191,13 @@ function StagePicker({ lead, onChanged }: { lead: LeadRow; onChanged: (status: s
   const [currentId, setCurrentId] = useState<string | null>(
     (lead as { stage_id?: string | null }).stage_id ?? null,
   );
+
+  // O lead pode mudar de etapa por fora deste seletor (etiqueta do CRM, automação): quando a
+  // etapa do lead recebido muda, o seletor acompanha em vez de ficar com a leitura de quando abriu.
+  const etapaDoLead = (lead as { stage_id?: string | null }).stage_id ?? null;
+  useEffect(() => {
+    setCurrentId(etapaDoLead);
+  }, [etapaDoLead]);
 
   const stagesQuery = useQuery({
     queryKey: ["stages", lead.company_id],
@@ -878,7 +885,16 @@ function AttachmentsTab({ leadId, companyId }: { leadId: string; companyId: stri
 }
 
 /** Etiquetas com sugestão das já usadas, pra não virar "Investidor" e "investidor". */
-function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
+function TagsTab({
+  leadId,
+  companyId,
+  aoAdicionar,
+}: {
+  leadId: string;
+  companyId: string;
+  /** A etiqueta pode mover o lead de etapa (feito no banco): quem abriu a ficha relê o lead. */
+  aoAdicionar?: () => void;
+}) {
   const qc = useQueryClient();
   const [input, setInput] = useState("");
 
@@ -898,9 +914,10 @@ function TagsTab({ leadId, companyId }: { leadId: string; companyId: string }) {
       qc.invalidateQueries({ queryKey: ["lead-tags", leadId] });
       qc.invalidateQueries({ queryKey: ["company-tags", companyId] });
       // A etiqueta pode mover o lead de etapa (etiqueta do CRM → etapa, feito no banco): recarrega
-      // o lead e o kanban para o card aparecer na coluna nova.
-      qc.invalidateQueries({ queryKey: ["lead-detail", leadId] });
+      // a lista, o kanban e o caminho no funil, e avisa a ficha para reler a etapa do lead.
       qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["caminho-do-lead", leadId] });
+      aoAdicionar?.();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -1098,6 +1115,15 @@ export function LeadDetailDialog({
     queryFn: () => listLeadAttachments(leadId),
     enabled: Boolean(lead) && open,
   });
+  /* Relê só o que uma etiqueta pode mudar (etapa e status) e devolve ao pai, que guarda o lead em
+     memória: sem isso o cabeçalho continuava com a etapa de quando a ficha abriu. */
+  const relerEtapaDoLead = async () => {
+    if (!lead) return;
+    const data = await lerEtapaDoLead(lead.id);
+    const atual = lead as { stage_id?: string | null; status?: string };
+    if (data && (data.stage_id !== (atual.stage_id ?? null) || data.status !== atual.status))
+      onLeadUpdated?.({ ...lead, ...data } as LeadRow);
+  };
   const noteCount = notesCountQuery.data?.length ?? null;
   const attachmentCount = attachmentsCountQuery.data?.length ?? null;
 
@@ -2001,7 +2027,11 @@ export function LeadDetailDialog({
                       titulo="Etiquetas"
                       descricao="Para organizar e segmentar"
                     >
-                      <TagsTab leadId={lead.id} companyId={lead.company_id} />
+                      <TagsTab
+                        leadId={lead.id}
+                        companyId={lead.company_id}
+                        aoAdicionar={() => void relerEtapaDoLead()}
+                      />
                     </CartaoFicha>
                   </div>
                 </div>

@@ -303,9 +303,9 @@ export function ConversionSettingsTable({
                   <span className="truncate">Evento na Meta</span>
                   <Dica texto="O nome exato que a Meta recebe. É por ele que você escolhe a meta de otimização no Gerenciador de Anúncios." />
                 </span>
-                <span className="truncate">Etiqueta no WhatsApp</span>
-                <span className="flex items-center gap-1 truncate">
-                  <span className="truncate">Etiqueta no CRM</span>
+                <span className="leading-tight">Etiqueta no WhatsApp</span>
+                <span className="flex items-end gap-1">
+                  <span className="leading-tight">Etiqueta no CRM</span>
                   <Dica texto="Aplicar esta etiqueta no lead (pela tela do lead, por uma automação ou pelo formulário) move o lead para esta etapa, e a conversão sai da mudança de etapa. Só avança: etiqueta de etapa anterior não faz o lead voltar." />
                 </span>
                 <span className="flex items-center gap-1">

@@ -367,3 +367,22 @@ export async function deleteStage(stageId: string, moveLeadsToStageId: string): 
   const { error } = await (supabase as any).from('stages').delete().eq('id', stageId);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * A etapa (e o status) de um lead lidas AGORA do banco. A ficha do lead recebe o lead por prop e
+ * guarda a etapa de quando abriu; uma etiqueta do CRM ou uma automação pode mudá-la por fora.
+ */
+export async function lerEtapaDoLead(leadId: string): Promise<{
+  stage_id: string | null;
+  status: string;
+  stage_entered_at: string | null;
+  updated_at: string | null;
+} | null> {
+  const { data, error } = await (supabase as any)
+    .from('leads')
+    .select('stage_id, status, stage_entered_at, updated_at')
+    .eq('id', leadId)
+    .maybeSingle();
+  if (error) return null;
+  return data ?? null;
+}
