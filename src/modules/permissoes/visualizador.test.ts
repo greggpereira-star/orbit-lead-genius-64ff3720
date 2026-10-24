@@ -15,8 +15,9 @@ describe("visualizador só lê (migration)", () => {
   });
 
   it("só dono, administrador e atendente passam", () => {
-    expect(m).toContain("m.role IN ('owner', 'admin', 'member')");
-    expect(m).not.toMatch(/'viewer'\s*\)/);
+    const sql = m.replace(/--.*$/gm, "");
+    expect(sql).toContain("m.role IN ('owner', 'admin', 'member')");
+    expect(sql).not.toContain("viewer");
   });
 
   it("cobre as tabelas de dados e configuração e deixa de fora as que o app grava ao navegar", () => {
