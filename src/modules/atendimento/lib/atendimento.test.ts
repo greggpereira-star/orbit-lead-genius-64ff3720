@@ -270,7 +270,7 @@ describe("server functions do atendimento", () => {
       const corpo = fonte.slice(fonte.indexOf(`export const ${nome}`));
       const proxima = corpo.indexOf("export const ", 10);
       const trecho = proxima === -1 ? corpo : corpo.slice(0, proxima);
-      expect(trecho, nome).toContain("conferirConversa(admin, companyId, data.conversaId)");
+      expect(trecho, nome).toContain("conferirConversa(admin, companyId, data.conversaId, context.userId)");
     }
   });
 
@@ -326,7 +326,7 @@ describe("menu da conversa (interligação)", () => {
 
   it("marcar como não lida confere papel e empresa no servidor, sem apagar o que já era não lido", () => {
     expect(fn).toContain("empresaParaAtender(admin, context.userId)");
-    expect(fn).toContain("conferirConversa(admin, companyId, data.conversaId)");
+    expect(fn).toContain("conferirConversa(admin, companyId, data.conversaId, context.userId)");
     expect(fn).toContain('.eq("unread_agent", 0)');
   });
 
@@ -374,7 +374,7 @@ describe("seguir e menções (servidor)", () => {
   it("seguir confere papel e empresa e nunca grava por outra pessoa", () => {
     const f = corpo("seguirConversaWhatsApp");
     expect(f).toContain("empresaParaAtender(admin, context.userId)");
-    expect(f).toContain("conferirConversa(admin, companyId, data.conversaId)");
+    expect(f).toContain("conferirConversa(admin, companyId, data.conversaId, context.userId)");
     expect(f).toContain('.eq("user_id", context.userId)');
     expect(f).not.toContain("data.userId");
   });

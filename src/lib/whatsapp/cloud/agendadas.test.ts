@@ -128,7 +128,7 @@ describe("integração no sistema", () => {
   it("agendar confere papel, empresa, horário e teto por conversa", () => {
     const g = f("agendarMensagemWhatsApp");
     expect(g).toContain("empresaParaAtender(admin, context.userId)");
-    expect(g).toContain("conferirConversa(admin, companyId, data.conversaId)");
+    expect(g).toContain("conferirConversa(admin, companyId, data.conversaId, context.userId)");
     expect(g).toContain("validarHorario(data.enviarEm)");
     expect(g).toContain("LIMITES_DO_AGENDAMENTO.pendentesPorConversa");
   });

@@ -22,14 +22,21 @@ import {
 } from "@/lib/whatsapp/papeis";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/** Lança se a conversa não for da empresa do usuário. */
-async function conferirConversa(admin: any, companyId: string, conversaId: string) {
+/**
+ * Lança se a conversa não for da empresa do usuário — ou se, no modo "só as
+ * minhas", ela não for visível para ele. Nos dois casos a mensagem é a mesma:
+ * não confirma que o id existe.
+ */
+async function conferirConversa(admin: any, companyId: string, conversaId: string, userId: string) {
   const { data } = await admin
     .from("wa_conversations")
     .select("id, company_id, status, assigned_to")
     .eq("id", conversaId)
     .maybeSingle();
   if (!data || data.company_id !== companyId) throw new Error("Conversa não encontrada.");
+  const { podeVerConversa } = await import("@/lib/whatsapp/visibilidade");
+  if (!(await podeVerConversa(admin, { companyId, userId, conversaId, assignedTo: data.assigned_to })))
+    throw new Error("Conversa não encontrada.");
   return data as { id: string; company_id: string; status: string; assigned_to: string | null };
 }
 
@@ -54,7 +61,7 @@ export const enviarMensagemWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    const conv = await conferirConversa(admin, companyId, data.conversaId);
+    const conv = await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     const { enviarTextoNaConversa } = await import("@/lib/whatsapp/cloud/envio");
     const r = await enviarTextoNaConversa(admin, {
@@ -91,7 +98,7 @@ export const enviarTemplateWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    const conv = await conferirConversa(admin, companyId, data.conversaId);
+    const conv = await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     const valores: Record<number, string> = {};
     for (const [k, v] of Object.entries(data.valores)) valores[Number(k)] = v;
@@ -123,7 +130,7 @@ export const atribuirConversaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     // O destino precisa ser membro DESTA empresa e poder atender (ver `validarResponsavel`).
     const destino = await validarResponsavel(admin, companyId, data.userId);
@@ -150,7 +157,7 @@ export const alterarStatusConversaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { error } = await admin
       .from("wa_conversations")
       .update({ status: data.status })
@@ -201,11 +208,17 @@ export const obterMidiaWhatsApp = createServerFn({ method: "GET" })
 
     const { data: m } = await admin
       .from("wa_messages")
-      .select("company_id, media_id")
+      .select("company_id, media_id, conversation_id")
       .eq("id", data.mensagemId)
       .maybeSingle();
     // Mensagem de outra empresa é "inexistente": não confirma que o id existe.
     if (!m || m.company_id !== companyId || !m.media_id) {
+      return { ok: false as const, estado: "inexistente", texto: "Mídia não encontrada." };
+    }
+    // Conversa que o usuário não enxerga (modo "só as minhas") também é "inexistente".
+    try {
+      await conferirConversa(admin, companyId, m.conversation_id, context.userId);
+    } catch {
       return { ok: false as const, estado: "inexistente", texto: "Mídia não encontrada." };
     }
 
@@ -237,7 +250,7 @@ export const prepararUploadDeMidiaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     const { classificarArquivoParaEnvio, caminhoDeSaida } =
       await import("@/lib/whatsapp/cloud/midia");
@@ -275,7 +288,7 @@ export const enviarMidiaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    const conv = await conferirConversa(admin, companyId, data.conversaId);
+    const conv = await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     // O caminho vem do navegador: só vale se for da empresa DA SESSÃO.
     const { caminhoEhDaEmpresa } = await import("@/lib/whatsapp/cloud/midia");
@@ -323,6 +336,7 @@ export const criarLeadDaConversaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { criarLeadDaConversa } = await import("@/lib/whatsapp/cloud/leadDaConversa");
     return criarLeadDaConversa(admin, {
       companyId,
@@ -343,6 +357,7 @@ export const vincularConversaAoLeadWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { vincularConversaAoLead } = await import("@/lib/whatsapp/cloud/leadDaConversa");
     return vincularConversaAoLead(admin, {
       companyId,
@@ -367,7 +382,7 @@ export const reativarContatoWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAdministrar(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     const { data: conv } = await admin
       .from("wa_conversations")
@@ -410,7 +425,7 @@ export const criarNotaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { data: nota, error } = await admin
       .from("wa_notes")
       .insert({
@@ -613,7 +628,7 @@ export const marcarConversaComoLidaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { error } = await admin
       .from("wa_conversations")
       .update({ unread_agent: 0 })
@@ -634,7 +649,7 @@ export const marcarConversaComoNaoLidaWhatsApp = createServerFn({ method: "POST"
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { error } = await admin
       .from("wa_conversations")
       .update({ unread_agent: 1 })
@@ -657,7 +672,7 @@ export const seguirConversaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     if (data.seguir) {
       await seguir(admin, companyId, data.conversaId, context.userId);
     } else {
@@ -679,7 +694,7 @@ export const marcarMencoesComoLidasWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
     const { error } = await admin
       .from("wa_mentions")
       .update({ read_at: new Date().toISOString() })
@@ -708,7 +723,7 @@ export const agendarMensagemWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     const { validarHorario, LIMITES_DO_AGENDAMENTO } =
       await import("@/lib/whatsapp/cloud/agendadas");
@@ -748,7 +763,15 @@ export const cancelarMensagemAgendadaWhatsApp = createServerFn({ method: "POST" 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    // Só cancela o que ainda não saiu, e só da própria empresa.
+    // Só cancela o que ainda não saiu, e só da própria empresa — e de conversa que o usuário vê.
+    const { data: agendada } = await admin
+      .from("wa_scheduled_messages")
+      .select("conversation_id")
+      .eq("id", data.id)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (agendada?.conversation_id)
+      await conferirConversa(admin, companyId, agendada.conversation_id, context.userId);
     const { data: linhas, error } = await admin
       .from("wa_scheduled_messages")
       .update({ status: "canceled", finished_at: new Date().toISOString() })
@@ -774,7 +797,7 @@ export const exportarConversaWhatsApp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
-    await conferirConversa(admin, companyId, data.conversaId);
+    await conferirConversa(admin, companyId, data.conversaId, context.userId);
 
     const { data: msgs, error } = await admin
       .from("wa_messages")
@@ -809,4 +832,35 @@ export const exportarConversaWhatsApp = createServerFn({ method: "POST" })
       total: (msgs ?? []).length,
       truncado: (msgs ?? []).length >= TETO_DA_EXPORTACAO,
     };
+  });
+
+// ---------------------------------------------------------------------------
+// Visibilidade das conversas ("atendente vê só as dele")
+// ---------------------------------------------------------------------------
+/**
+ * Só dono/administrador muda. Ligar o modo restrito vale na hora: a lista e o
+ * tempo real do atendente passam a respeitar a regra (RLS) e as server functions
+ * também. Não há linha de histórico — `updated_by` guarda só quem mexeu por último.
+ */
+export const salvarVisibilidadeWhatsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ modo: z.enum(["todas", "so_minhas"]), verFila: z.boolean() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const companyId = await empresaParaAdministrar(admin, context.userId);
+    const { error } = await admin.from("wa_visibilidade").upsert(
+      {
+        company_id: companyId,
+        modo: data.modo,
+        ver_fila: data.verFila,
+        updated_at: new Date().toISOString(),
+        updated_by: context.userId,
+      },
+      { onConflict: "company_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });

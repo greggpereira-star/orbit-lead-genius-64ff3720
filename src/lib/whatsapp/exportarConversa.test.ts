@@ -104,7 +104,7 @@ describe("exportar (servidor e menu)", () => {
 
   it("confere papel e empresa e filtra as mensagens pela empresa", () => {
     expect(f).toContain("empresaParaAtender(admin, context.userId)");
-    expect(f).toContain("conferirConversa(admin, companyId, data.conversaId)");
+    expect(f).toContain("conferirConversa(admin, companyId, data.conversaId, context.userId)");
     expect(f).toContain('.eq("company_id", companyId)');
   });
 
