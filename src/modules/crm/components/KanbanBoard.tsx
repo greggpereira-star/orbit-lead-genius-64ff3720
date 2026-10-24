@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/core/auth/hooks/useAuth';
+import { usePodeExcluirLeads } from '@/modules/permissoes/usePermissoes';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -175,6 +176,7 @@ export function KanbanBoard({
   leadingColumn,
 }: Props) {
   const { company } = useAuth();
+  const podeExcluir = usePodeExcluirLeads();
   const qc = useQueryClient();
   const companyId = company?.id ?? '';
   const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
@@ -804,16 +806,18 @@ export function KanbanBoard({
             <Button variant="ghost" size="sm" className="rounded-full" onClick={onExitSelection}>
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="rounded-full"
-              disabled={visibleSelected.length === 0}
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Excluir selecionados
-            </Button>
+            {podeExcluir && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-full"
+                disabled={visibleSelected.length === 0}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir selecionados
+              </Button>
+            )}
           </div>
         </div>
       )}

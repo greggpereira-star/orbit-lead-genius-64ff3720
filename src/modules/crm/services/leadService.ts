@@ -387,6 +387,9 @@ export async function updateLead(input: {
   return data as LeadRow;
 }
 
+export const SEM_PERMISSAO_PARA_EXCLUIR =
+  'Você não tem permissão para excluir leads. Peça a um administrador.';
+
 /**
  * Apaga o lead de vez.
  *
@@ -414,18 +417,22 @@ export async function deleteLeads(input: { leadIds: string[]; companyId: string 
   /* O banco PRIMEIRO. Antes os arquivos eram removidos antes do DELETE: se o
      DELETE falhasse (permissão, rede), os leads ficavam de pé sem os anexos —
      perda sem volta. Arquivo órfão no bucket é o mal menor. */
-  const { error } = await supabase
+  const { data: apagados, error } = await supabase
     .from('leads')
     .delete()
     .in('id', input.leadIds)
-    .eq('company_id', input.companyId);
+    .eq('company_id', input.companyId)
+    .select('id');
 
   if (error) throw new Error(error.message);
+  // O RLS que barra o DELETE não devolve erro, só zero linhas: sem esta conferência a tela
+  // dava "excluído" e os anexos do Storage eram apagados de leads que continuaram existindo.
+  if (!apagados?.length) throw new Error(SEM_PERMISSAO_PARA_EXCLUIR);
 
   if (paths.length) {
     await supabase.storage.from('lead-attachments').remove(paths).catch(() => {});
   }
-  return input.leadIds.length;
+  return apagados.length;
 }
 
 export async function deleteLead(input: { leadId: string; companyId: string }): Promise<void> {
@@ -438,13 +445,15 @@ export async function deleteLead(input: { leadId: string; companyId: string }): 
     .map((f: { storage_path?: string | null }) => f.storage_path)
     .filter(Boolean) as string[];
 
-  const { error } = await supabase
+  const { data: apagados, error } = await supabase
     .from('leads')
     .delete()
     .eq('id', input.leadId)
-    .eq('company_id', input.companyId);
+    .eq('company_id', input.companyId)
+    .select('id');
 
   if (error) throw new Error(error.message);
+  if (!apagados?.length) throw new Error(SEM_PERMISSAO_PARA_EXCLUIR);
 
   if (paths.length) {
     // Depois do DELETE, e sem travar: arquivo órfão no bucket é menos grave do

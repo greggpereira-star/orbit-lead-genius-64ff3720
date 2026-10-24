@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { DadosDoTitular } from "./DadosDoTitular";
 
 import { useAuth } from "@/core/auth/hooks/useAuth";
+import { usePodeExcluirLeads } from "@/modules/permissoes/usePermissoes";
 import { Input } from "@/components/ui/input";
 import { EtiquetasDoLead } from "./EtiquetasDoLead";
 import { EtapaDoLead } from "./EtapaDoLead";
@@ -886,6 +887,7 @@ export function LeadDetailDialog({
   onLeadUpdated,
 }: Props) {
   const qc = useQueryClient();
+  const podeExcluir = usePodeExcluirLeads();
   const [tab, setTab] = useState("visao-geral");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -1138,16 +1140,18 @@ export function LeadDetailDialog({
               {/* Excluir mora aqui, e não no card do pipeline: a ficha abre dos
                   dois lugares, então um comando só cobre a tabela e o board sem
                   encher o card de botão. */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                title="Excluir lead"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Excluir lead</span>
-              </Button>
+              {podeExcluir && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                  title="Excluir lead"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Excluir lead</span>
+                </Button>
+              )}
               {wa && (
                 <Button asChild size="sm" className="h-9">
                   <a href={wa} target="_blank" rel="noopener noreferrer">

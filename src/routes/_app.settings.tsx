@@ -16,6 +16,7 @@ import {
   Clock,
   SlidersHorizontal,
   EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -35,6 +36,7 @@ const settingsNav = [
   { title: "Horário de atendimento", icon: Clock, to: "/settings/horarios" },
   { title: "Campos personalizados", icon: SlidersHorizontal, to: "/settings/campos" },
   { title: "Quem vê as conversas", icon: EyeOff, to: "/settings/visibilidade" },
+  { title: "Permissões da equipe", icon: ShieldCheck, to: "/settings/permissoes" },
   { title: "Automations", icon: Zap, to: "/settings/automations" },
   { title: "Distribuição de Leads", icon: Users, to: "/settings/routing" },
   { title: "Security", icon: Shield, to: "/settings/security" },

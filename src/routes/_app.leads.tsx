@@ -53,6 +53,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/core/auth/hooks/useAuth';
+import { usePodeExcluirLeads } from '@/modules/permissoes/usePermissoes';
 import {
   createLead,
   LeadDuplicadoError,
@@ -141,6 +142,7 @@ function loadVisibleColumns(): string[] {
 
 function LeadsPage() {
   const { company, user } = useAuth();
+  const podeExcluir = usePodeExcluirLeads();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -522,15 +524,17 @@ function LeadsPage() {
             <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
               Limpar seleção
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="gap-2"
-              onClick={() => setConfirmBulkDelete(true)}
-            >
-              <Trash2 className="h-4 w-4" />
-              Excluir selecionados
-            </Button>
+            {podeExcluir && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-2"
+                onClick={() => setConfirmBulkDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir selecionados
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -582,7 +586,7 @@ function LeadsPage() {
                       prev.includes(lead.id) ? prev.filter((id) => id !== lead.id) : [...prev, lead.id],
                     )
                   }
-                  onDelete={() => setLeadToDelete(lead)}
+                  onDelete={podeExcluir ? () => setLeadToDelete(lead) : undefined}
                   onOpen={() => setDetailLead(lead)}
                 />
               ))
@@ -689,7 +693,8 @@ function LeadTableRow({
   stages: Stage[];
   selected: boolean;
   onToggleSelect: () => void;
-  onDelete: () => void;
+  /** Ausente quando a pessoa não pode excluir leads: o item nem aparece. */
+  onDelete?: () => void;
   onOpen: () => void;
 }) {
   const stage = stages.find(
@@ -822,13 +827,15 @@ function LeadTableRow({
             {/* Era "Arquivar", que gravava status='archived' e sumia com o
                 lead sem nenhuma tela pra encontrá-lo de volta — um beco sem
                 saída. Virou exclusão de verdade, com confirmação. */}
-            <DropdownMenuItem
-              onClick={onDelete}
-              className="gap-2 text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-              Excluir
-            </DropdownMenuItem>
+            {onDelete && (
+              <DropdownMenuItem
+                onClick={onDelete}
+                className="gap-2 text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
