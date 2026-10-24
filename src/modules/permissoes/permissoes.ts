@@ -19,3 +19,6 @@ export function podeExcluirLeads(papel: string | null | undefined, p: Permissoes
   if (papel === "owner" || papel === "admin") return true;
   return papel === "member" && p.membrosExcluemLeads;
 }
+
+/** Visualizador só lê: o banco barra a escrita; a tela não deve oferecê-la. */
+export const somenteLeitura = (papel: string | null | undefined): boolean => papel === "viewer";

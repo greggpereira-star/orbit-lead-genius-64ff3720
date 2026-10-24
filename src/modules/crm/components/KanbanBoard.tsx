@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/core/auth/hooks/useAuth';
-import { usePodeExcluirLeads } from '@/modules/permissoes/usePermissoes';
+import { usePodeExcluirLeads, useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -177,6 +177,7 @@ export function KanbanBoard({
 }: Props) {
   const { company } = useAuth();
   const podeExcluir = usePodeExcluirLeads();
+  const leitura = useSomenteLeitura();
   const qc = useQueryClient();
   const companyId = company?.id ?? '';
   const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
@@ -421,7 +422,7 @@ export function KanbanBoard({
   const onDragEnd = (result: DropResult) => {
     arrastando.current = false;
     const { destination, source, draggableId } = result;
-    if (!destination) return;
+    if (leitura || !destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) {
       return;
     }
@@ -608,7 +609,7 @@ export function KanbanBoard({
                           key={lead.id}
                           draggableId={lead.id}
                           index={index}
-                          isDragDisabled={selecting}
+                          isDragDisabled={selecting || leitura}
                         >
                           {(dragProvided, dragSnapshot) => (
                             <article

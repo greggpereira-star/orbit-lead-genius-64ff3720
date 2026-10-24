@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getRuntimeConfig } from '../config/runtime-config';
+import { fetchComErroDePermissao } from '@/lib/erroDePermissao';
 
 export class SafeSupabaseClientFactory {
   private static instance: SupabaseClient | null = null;
@@ -19,6 +20,7 @@ export class SafeSupabaseClientFactory {
         flowType: 'pkce',
       },
       global: {
+        fetch: fetchComErroDePermissao(),
         headers: { 
           'x-client-info': 'leadflow-enterprise-singleton',
         },

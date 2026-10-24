@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import {
   normalizarPermissoes,
   podeExcluirLeads,
+  somenteLeitura,
   PERMISSOES_PADRAO,
   type PermissoesDaEmpresa,
 } from "./permissoes";
@@ -36,4 +37,10 @@ export function usePodeExcluirLeads(): boolean {
   const { membership } = useAuth();
   const p = usePermissoesDaEmpresa();
   return podeExcluirLeads(membership?.role, p);
+}
+
+/** Verdadeiro só quando o papel é conhecido e é visualizador (carregando não esconde nada). */
+export function useSomenteLeitura(): boolean {
+  const { membership } = useAuth();
+  return somenteLeitura(membership?.role);
 }

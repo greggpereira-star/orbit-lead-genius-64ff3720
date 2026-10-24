@@ -54,3 +54,31 @@ describe("exclusão: ligação nas telas e no serviço", () => {
     expect(m).toContain("DEFAULT false");
   });
 });
+
+import { somenteLeitura } from "./permissoes";
+
+describe("interface do visualizador", () => {
+  it("só o visualizador é somente leitura; papel desconhecido não esconde nada", () => {
+    expect(somenteLeitura("viewer")).toBe(true);
+    for (const p of ["owner", "admin", "member", undefined, null, ""]) expect(somenteLeitura(p as any)).toBe(false);
+  });
+  it("layout avisa, e lista, kanban e ficha deixam de oferecer a edição", () => {
+    expect(ler("src/components/layout/AppLayout.tsx")).toContain("somenteLeitura(membership?.role)");
+    expect(ler("src/routes/_app.leads.tsx")).toContain("useSomenteLeitura()");
+    const k = ler("src/modules/crm/components/KanbanBoard.tsx");
+    expect(k).toContain("isDragDisabled={selecting || leitura}");
+    expect(k).toContain("if (leitura || !destination) return;");
+    const d = ler("src/modules/crm/components/LeadDetailDialog.tsx");
+    expect((d.match(/onSave=\{leitura \? undefined/g) ?? []).length).toBe(4);
+  });
+  it("o cliente do banco traduz o erro de permissão", () => {
+    expect(ler("src/core/infrastructure/supabase-factory.ts")).toContain("fetch: fetchComErroDePermissao()");
+  });
+  it("audit_logs: migration sem UPDATE/DELETE para o navegador e leitura só de administrador", () => {
+    const sql = ler("supabase/migrations/20261027100000_audit_logs_so_acrescenta.sql").replace(/--.*$/gm, "");
+    expect(sql).toContain("eh_admin_da_empresa(company_id)");
+    expect(sql).toContain("user_id = auth.uid()");
+    expect(sql).toContain("GRANT SELECT, INSERT ON public.audit_logs TO authenticated");
+    expect(sql).not.toMatch(/GRANT[^;]*(UPDATE|DELETE)[^;]*TO authenticated/);
+  });
+});

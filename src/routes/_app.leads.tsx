@@ -53,7 +53,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/core/auth/hooks/useAuth';
-import { usePodeExcluirLeads } from '@/modules/permissoes/usePermissoes';
+import { usePodeExcluirLeads, useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import {
   createLead,
   LeadDuplicadoError,
@@ -143,6 +143,7 @@ function loadVisibleColumns(): string[] {
 function LeadsPage() {
   const { company, user } = useAuth();
   const podeExcluir = usePodeExcluirLeads();
+  const leitura = useSomenteLeitura();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -345,13 +346,15 @@ function LeadsPage() {
             Exportar CSV
           </Button>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="h-10 gap-2 font-bold">
-                <Plus className="h-4 w-4" />
-                Novo lead
-              </Button>
-            </DialogTrigger>
+          <Dialog open={isDialogOpen && !leitura} onOpenChange={setIsDialogOpen}>
+            {!leitura && (
+              <DialogTrigger asChild>
+                <Button className="h-10 gap-2 font-bold">
+                  <Plus className="h-4 w-4" />
+                  Novo lead
+                </Button>
+              </DialogTrigger>
+            )}
           <DialogContent className="sm:max-w-[560px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl font-bold">

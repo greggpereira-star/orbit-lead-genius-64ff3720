@@ -50,7 +50,7 @@ import { toast } from "sonner";
 import { DadosDoTitular } from "./DadosDoTitular";
 
 import { useAuth } from "@/core/auth/hooks/useAuth";
-import { usePodeExcluirLeads } from "@/modules/permissoes/usePermissoes";
+import { usePodeExcluirLeads, useSomenteLeitura } from "@/modules/permissoes/usePermissoes";
 import { Input } from "@/components/ui/input";
 import { EtiquetasDoLead } from "./EtiquetasDoLead";
 import { EtapaDoLead } from "./EtapaDoLead";
@@ -888,6 +888,7 @@ export function LeadDetailDialog({
 }: Props) {
   const qc = useQueryClient();
   const podeExcluir = usePodeExcluirLeads();
+  const leitura = useSomenteLeitura();
   const [tab, setTab] = useState("visao-geral");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -1086,12 +1087,13 @@ export function LeadDetailDialog({
                   ) : (
                     <button
                       type="button"
+                      disabled={leitura}
                       onClick={() => {
                         setNameDraft(name);
                         setEditingName(true);
                       }}
-                      title="Clique para editar o nome"
-                      className="-mx-1 truncate rounded px-1 text-left text-lg font-semibold leading-tight hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      title={leitura ? undefined : "Clique para editar o nome"}
+                      className="-mx-1 truncate rounded px-1 text-left text-lg font-semibold leading-tight hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:bg-transparent"
                     >
                       {name}
                     </button>
@@ -1535,7 +1537,7 @@ export function LeadDetailDialog({
                           value={lead.phone}
                           emphasis
                           placeholder="Sem telefone"
-                          onSave={(phone) => editMutation.mutate({ phone })}
+                          onSave={leitura ? undefined : (phone) => editMutation.mutate({ phone })}
                           action={
                             lead.phone
                               ? {
@@ -1551,7 +1553,7 @@ export function LeadDetailDialog({
                           label="E-mail"
                           value={lead.email}
                           placeholder="Sem e-mail"
-                          onSave={(email) => editMutation.mutate({ email })}
+                          onSave={leitura ? undefined : (email) => editMutation.mutate({ email })}
                           action={
                             lead.email
                               ? {
@@ -1567,7 +1569,7 @@ export function LeadDetailDialog({
                           label={city?.inferred ? "Cidade (pelo DDD)" : "Cidade"}
                           value={city?.label ?? null}
                           placeholder="Sem cidade"
-                          onSave={(cityName) => editMutation.mutate({ city: cityName })}
+                          onSave={leitura ? undefined : (cityName) => editMutation.mutate({ city: cityName })}
                         />
                         <Field
                           icon={<CircleDollarSign className="h-4 w-4" />}
@@ -1586,7 +1588,7 @@ export function LeadDetailDialog({
                           })()}
                           placeholder="Sem valor"
                           emphasis
-                          onSave={(texto) => salvarValor(texto)}
+                          onSave={leitura ? undefined : (texto) => salvarValor(texto)}
                         />
                       </div>
                     </CartaoFicha>

@@ -10,6 +10,7 @@ import { tracker } from '@/core/tracking/tracker';
 import { Button } from '@/components/ui/button';
 import { RefreshCcw, LogOut, ShieldAlert, Loader2 } from 'lucide-react';
 import { logger } from '@/core/observability/logger';
+import { somenteLeitura } from '@/modules/permissoes/permissoes';
 
 export function AppLayout() {
    const { state, company, membership, user, logout, refreshContext, error, traceId } = useAuth();
@@ -175,6 +176,15 @@ export function AppLayout() {
             `h-full` numa página passa a significar o que parece significar. */}
         <SidebarInset className="relative z-0 flex h-dvh flex-col overflow-hidden pointer-events-auto">
           {!telaCheia && <Topbar />}
+          {somenteLeitura(membership?.role) && (
+            <div
+              role="status"
+              className="border-b bg-muted/60 px-4 py-1.5 text-center text-xs text-muted-foreground"
+            >
+              Acesso somente leitura: você pode consultar tudo, mas não alterar. Para editar, peça a
+              um administrador.
+            </div>
+          )}
           <main className="sup-tonal flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-6">
             {/* A medida de 80rem serve texto, não um board de sete colunas de
                 20rem — num monitor grande ela escondia três etapas sem motivo.
