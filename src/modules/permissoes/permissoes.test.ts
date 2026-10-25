@@ -13,16 +13,16 @@ describe("permissão de excluir lead", () => {
   it("dono e administrador sempre; visualizador nunca", () => {
     expect(podeExcluirLeads("owner", PERMISSOES_PADRAO)).toBe(true);
     expect(podeExcluirLeads("admin", PERMISSOES_PADRAO)).toBe(true);
-    expect(podeExcluirLeads("viewer", { membrosExcluemLeads: true })).toBe(false);
-    expect(podeExcluirLeads(undefined, { membrosExcluemLeads: true })).toBe(false);
+    expect(podeExcluirLeads("viewer", { membrosExcluemLeads: true, membrosExportam: false })).toBe(false);
+    expect(podeExcluirLeads(undefined, { membrosExcluemLeads: true, membrosExportam: false })).toBe(false);
   });
   it("membro exclui quando a empresa libera", () => {
-    expect(podeExcluirLeads("member", { membrosExcluemLeads: true })).toBe(true);
+    expect(podeExcluirLeads("member", { membrosExcluemLeads: true, membrosExportam: false })).toBe(true);
   });
   it("valor estranho do banco cai no padrão", () => {
     expect(normalizarPermissoes(null)).toEqual(PERMISSOES_PADRAO);
     expect(normalizarPermissoes({ membros_excluem_leads: "sim" })).toEqual(PERMISSOES_PADRAO);
-    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ membrosExcluemLeads: true });
+    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ membrosExcluemLeads: true, membrosExportam: false });
   });
 });
 
@@ -80,5 +80,43 @@ describe("interface do visualizador", () => {
     expect(sql).toContain("user_id = auth.uid()");
     expect(sql).toContain("GRANT SELECT, INSERT ON public.audit_logs TO authenticated");
     expect(sql).not.toMatch(/GRANT[^;]*(UPDATE|DELETE)[^;]*TO authenticated/);
+  });
+});
+
+import { podeExportar } from "./permissoes";
+
+describe("permissão de exportar", () => {
+  const liberado = { membrosExcluemLeads: false, membrosExportam: true };
+  it("o padrão é restrito: atendente não exporta", () => {
+    expect(PERMISSOES_PADRAO.membrosExportam).toBe(false);
+    expect(podeExportar("member", PERMISSOES_PADRAO)).toBe(false);
+  });
+  it("dono e administrador sempre; visualizador nunca; atendente quando liberado", () => {
+    expect(podeExportar("owner", PERMISSOES_PADRAO)).toBe(true);
+    expect(podeExportar("admin", PERMISSOES_PADRAO)).toBe(true);
+    expect(podeExportar("viewer", liberado)).toBe(false);
+    expect(podeExportar(undefined, liberado)).toBe(false);
+    expect(podeExportar("member", liberado)).toBe(true);
+  });
+  it("as permissões são independentes", () => {
+    expect(normalizarPermissoes({ membros_exportam: true })).toEqual({ membrosExcluemLeads: false, membrosExportam: true });
+    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ membrosExcluemLeads: true, membrosExportam: false });
+    expect(normalizarPermissoes({ membros_exportam: "sim" }).membrosExportam).toBe(false);
+  });
+  it("os cinco pontos de exportação respeitam a regra; o do servidor é barrado de verdade", () => {
+    for (const f of [
+      "src/routes/_app.leads.tsx",
+      "src/modules/capture/components/events/FormSubmissionsPanel.tsx",
+      "src/routes/_app.quizzes_.$id.responses.tsx",
+      "src/routes/_app.quizzes_.$id.performance.tsx",
+      "src/modules/atendimento/components/Atendimento.tsx",
+    ])
+      expect(ler(f), f).toContain("usePodeExportar()");
+    const fn = ler("src/lib/whatsapp-atendimento.functions.ts");
+    const ini = fn.indexOf("export const exportarConversaWhatsApp");
+    const corpo = fn.slice(ini, fn.indexOf("\nexport const ", ini + 1) < 0 ? undefined : fn.indexOf("\nexport const ", ini + 1));
+    expect(corpo).toContain("podeExportarNaEmpresa(");
+    expect(corpo.indexOf("podeExportarNaEmpresa(")).toBeLessThan(corpo.indexOf('.from("wa_messages")'));
+    expect(ler("supabase/migrations/20261027140000_permissao_exportar.sql")).toContain("membros_exportam boolean NOT NULL DEFAULT false");
   });
 });

@@ -53,7 +53,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/core/auth/hooks/useAuth';
-import { usePodeExcluirLeads, useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
+import { usePodeExcluirLeads, usePodeExportar, useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import {
   createLead,
   LeadDuplicadoError,
@@ -144,6 +144,7 @@ function LeadsPage() {
   const { company, user } = useAuth();
   const podeExcluir = usePodeExcluirLeads();
   const leitura = useSomenteLeitura();
+  const podeExportarDados = usePodeExportar();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -337,6 +338,7 @@ function LeadsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {podeExportarDados && (
           <Button 
             variant="outline" 
             className="h-10 gap-2 font-bold"
@@ -345,6 +347,7 @@ function LeadsPage() {
             <Download className="h-4 w-4" />
             Exportar CSV
           </Button>
+          )}
 
           <Dialog open={isDialogOpen && !leitura} onOpenChange={setIsDialogOpen}>
             {!leitura && (

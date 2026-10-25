@@ -798,6 +798,9 @@ export const exportarConversaWhatsApp = createServerFn({ method: "POST" })
     const admin = supabaseAdmin as any;
     const companyId = await empresaParaAtender(admin, context.userId);
     await conferirConversa(admin, companyId, data.conversaId, context.userId);
+    const { podeExportarNaEmpresa, SEM_PERMISSAO_PARA_EXPORTAR } = await import("@/lib/permissoes.servidor");
+    if (!(await podeExportarNaEmpresa(admin, companyId, context.userId)))
+      throw new Error(SEM_PERMISSAO_PARA_EXPORTAR);
 
     const { data: msgs, error } = await admin
       .from("wa_messages")

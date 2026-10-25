@@ -26,13 +26,18 @@ function PermissoesPage() {
   const atual = usePermissoesDaEmpresa();
 
   const [excluem, setExcluem] = useState(false);
+  const [exportam, setExportam] = useState(false);
   useEffect(() => {
-    if (!atual.carregando) setExcluem(atual.membrosExcluemLeads);
-  }, [atual.carregando, atual.membrosExcluemLeads]);
+    if (atual.carregando) return;
+    setExcluem(atual.membrosExcluemLeads);
+    setExportam(atual.membrosExportam);
+  }, [atual.carregando, atual.membrosExcluemLeads, atual.membrosExportam]);
 
-  const mudou = !atual.carregando && excluem !== atual.membrosExcluemLeads;
+  const mudou =
+    !atual.carregando &&
+    (excluem !== atual.membrosExcluemLeads || exportam !== atual.membrosExportam);
   const salvar = useMutation({
-    mutationFn: () => salvarFn({ data: { membrosExcluemLeads: excluem } }),
+    mutationFn: () => salvarFn({ data: { membrosExcluemLeads: excluem, membrosExportam: exportam } }),
     onSuccess: () => {
       toast.success("Permissões salvas.");
       void qc.invalidateQueries({ queryKey: chavePermissoes(companyId) });
@@ -63,7 +68,7 @@ function PermissoesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Leads</CardTitle>
+          <CardTitle className="text-base">Leads e dados</CardTitle>
           <CardDescription>Vale na hora para todos os atendentes da empresa.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -81,6 +86,26 @@ function PermissoesPage() {
               id="perm-excluir-leads"
               checked={excluem}
               onCheckedChange={setExcluem}
+              disabled={!podeEditar}
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+            <div>
+              <Label htmlFor="perm-exportar" className="text-sm font-medium">
+                Atendentes podem exportar dados (CSV)
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Leads, respostas de formulários e quiz, e conversas do WhatsApp. Desligado, só dono e
+                administrador veem os botões de exportar. Nas telas de leads, formulários e quiz isto
+                tira o botão, mas não impede quem já consulta o banco por conta própria; a
+                exportação de conversa do WhatsApp é barrada no servidor.
+              </p>
+            </div>
+            <Switch
+              id="perm-exportar"
+              checked={exportam}
+              onCheckedChange={setExportam}
               disabled={!podeEditar}
             />
           </div>

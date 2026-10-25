@@ -1,3 +1,4 @@
+import { usePodeExportar } from "@/modules/permissoes/usePermissoes";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -40,6 +41,7 @@ const COR_DA_TEMPERATURA: Record<string, string> = {
 
 function QuizResponsesPage() {
   const { id } = useParams({ from: "/_app/quizzes_/$id/responses" });
+  const podeExportarDados = usePodeExportar();
   const [quiz, setQuiz] = useState<QuizFunnel | null>(null);
   const [linhas, setLinhas] = useState<Resposta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,6 +133,7 @@ function QuizResponsesPage() {
           <h1 className="text-sm font-bold leading-none">{quiz?.name ?? "Quiz"}</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">Respostas</p>
         </div>
+        {podeExportarDados && (
         <Button
           size="sm"
           variant="outline"
@@ -141,6 +144,7 @@ function QuizResponsesPage() {
           <Download className="h-4 w-4" />
           {exportando ? "Exportando…" : "CSV"}
         </Button>
+        )}
       </header>
 
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5">

@@ -1,3 +1,4 @@
+import { usePodeExportar } from '@/modules/permissoes/usePermissoes';
 import { createFileRoute, Link, useParams } from '@tanstack/react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ type AbTestStats = Awaited<ReturnType<typeof quizService.getAbTestStats>>;
 function QuizPerformancePage() {
   const { id } = useParams({ from: '/_app/quizzes_/$id/performance' });
   const { company, user } = useAuth();
+  const podeExportarDados = usePodeExportar();
   const [days, setDays] = useState(30);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [subs, setSubs] = useState<Submission[]>([]);
@@ -202,9 +204,11 @@ function QuizPerformancePage() {
               {d}d
             </Button>
           ))}
+          {podeExportarDados && (
           <Button size="sm" variant="outline" onClick={() => void exportCsv()} disabled={exportando} className="gap-2">
             <Download className="h-4 w-4" /> {exportando ? 'Exportando…' : 'CSV'}
           </Button>
+          )}
           <Button
             size="sm"
             variant="outline"

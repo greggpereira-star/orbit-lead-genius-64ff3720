@@ -1,3 +1,4 @@
+import { usePodeExportar } from '@/modules/permissoes/usePermissoes';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileDown, Search, Loader2, Inbox } from 'lucide-react';
@@ -21,6 +22,7 @@ const POR_PAGINA = 50;
  * depois, `toast.success('Exportação concluída')` sem gerar arquivo nenhum.
  */
 export function FormSubmissionsPanel({ formId, formName }: { formId: string; formName?: string }) {
+  const podeExportarDados = usePodeExportar();
   const [busca, setBusca] = useState('');
   const [buscaAplicada, setBuscaAplicada] = useState('');
   const [pagina, setPagina] = useState(0);
@@ -85,11 +87,13 @@ export function FormSubmissionsPanel({ formId, formName }: { formId: string; for
               : 'Nenhuma resposta ainda'}
           </p>
         </div>
+        {podeExportarDados && (
         <Button variant="outline" size="sm" className="gap-2"
           onClick={exportar} disabled={exportando || total === 0}>
           {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
           Exportar CSV
         </Button>
+        )}
       </div>
 
       <div className="relative">

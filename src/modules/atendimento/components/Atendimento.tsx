@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePodeExportar } from "@/modules/permissoes/usePermissoes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
@@ -300,6 +301,7 @@ export function Atendimento({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const podeExportarDados = usePodeExportar();
   const exportarFn = useServerFn(exportarConversaWhatsApp);
   const aoExportar = useMutation({
     mutationFn: (conversaId: string) => exportarFn({ data: { conversaId } }),
@@ -538,7 +540,7 @@ export function Atendimento({
                             status: ativa.status === "pending" ? "open" : "pending",
                           })
                         }
-                        onExportar={() => aoExportar.mutate(ativa.id)}
+                        onExportar={podeExportarDados ? () => aoExportar.mutate(ativa.id) : undefined}
                         onAgendar={() => setAgendando(true)}
                         onPesquisar={() => setPesquisando(true)}
                         onInformacoes={alternarPainel}

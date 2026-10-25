@@ -6,18 +6,31 @@
  * que vale de verdade — esta serve para a tela não oferecer o que o banco vai
  * recusar.
  */
-export type PermissoesDaEmpresa = { membrosExcluemLeads: boolean };
+export type PermissoesDaEmpresa = { membrosExcluemLeads: boolean; membrosExportam: boolean };
 
-export const PERMISSOES_PADRAO: PermissoesDaEmpresa = { membrosExcluemLeads: false };
+export const PERMISSOES_PADRAO: PermissoesDaEmpresa = { membrosExcluemLeads: false, membrosExportam: false };
 
 export function normalizarPermissoes(raw: unknown): PermissoesDaEmpresa {
-  const r = (raw ?? {}) as { membros_excluem_leads?: unknown; membrosExcluemLeads?: unknown };
-  return { membrosExcluemLeads: (r.membros_excluem_leads ?? r.membrosExcluemLeads) === true };
+  const r = (raw ?? {}) as {
+    membros_excluem_leads?: unknown;
+    membrosExcluemLeads?: unknown;
+    membros_exportam?: unknown;
+    membrosExportam?: unknown;
+  };
+  return {
+    membrosExcluemLeads: (r.membros_excluem_leads ?? r.membrosExcluemLeads) === true,
+    membrosExportam: (r.membros_exportam ?? r.membrosExportam) === true,
+  };
 }
 
 export function podeExcluirLeads(papel: string | null | undefined, p: PermissoesDaEmpresa): boolean {
   if (papel === "owner" || papel === "admin") return true;
   return papel === "member" && p.membrosExcluemLeads;
+}
+
+export function podeExportar(papel: string | null | undefined, p: PermissoesDaEmpresa): boolean {
+  if (papel === "owner" || papel === "admin") return true;
+  return papel === "member" && p.membrosExportam;
 }
 
 /** Visualizador só lê: o banco barra a escrita; a tela não deve oferecê-la. */

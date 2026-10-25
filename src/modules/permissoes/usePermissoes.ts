@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import {
   normalizarPermissoes,
   podeExcluirLeads,
+  podeExportar,
   somenteLeitura,
   PERMISSOES_PADRAO,
   type PermissoesDaEmpresa,
@@ -23,7 +24,7 @@ export function usePermissoesDaEmpresa(): PermissoesDaEmpresa & { carregando: bo
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("company_permissoes")
-        .select("membros_excluem_leads")
+        .select("membros_excluem_leads,membros_exportam")
         .eq("company_id", companyId)
         .maybeSingle();
       if (error) throw new Error(error.message);
@@ -37,6 +38,12 @@ export function usePodeExcluirLeads(): boolean {
   const { membership } = useAuth();
   const p = usePermissoesDaEmpresa();
   return podeExcluirLeads(membership?.role, p);
+}
+
+export function usePodeExportar(): boolean {
+  const { membership } = useAuth();
+  const p = usePermissoesDaEmpresa();
+  return podeExportar(membership?.role, p);
 }
 
 /** Verdadeiro só quando o papel é conhecido e é visualizador (carregando não esconde nada). */
