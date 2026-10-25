@@ -5,6 +5,8 @@ import {
   normalizarPermissoes,
   podeExcluirLeads,
   podeExportar,
+  podeGerenciar,
+  type TipoDeEstrutura,
   somenteLeitura,
   PERMISSOES_PADRAO,
   type PermissoesDaEmpresa,
@@ -24,7 +26,9 @@ export function usePermissoesDaEmpresa(): PermissoesDaEmpresa & { carregando: bo
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("company_permissoes")
-        .select("membros_excluem_leads,membros_exportam")
+        .select(
+          "membros_excluem_leads,membros_exportam,membros_gerenciam_etapas,membros_criam_etiquetas,membros_criam_campos",
+        )
         .eq("company_id", companyId)
         .maybeSingle();
       if (error) throw new Error(error.message);
@@ -44,6 +48,12 @@ export function usePodeExportar(): boolean {
   const { membership } = useAuth();
   const p = usePermissoesDaEmpresa();
   return podeExportar(membership?.role, p);
+}
+
+export function usePodeGerenciar(tipo: TipoDeEstrutura): boolean {
+  const { membership } = useAuth();
+  const p = usePermissoesDaEmpresa();
+  return podeGerenciar(membership?.role, p, tipo);
 }
 
 /** Verdadeiro só quando o papel é conhecido e é visualizador (carregando não esconde nada). */

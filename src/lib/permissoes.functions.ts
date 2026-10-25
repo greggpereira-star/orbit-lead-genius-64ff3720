@@ -10,7 +10,13 @@ import { empresaParaAdministrar } from "@/lib/whatsapp/papeis";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const salvarPermissoesDaEmpresa = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => z.object({ membrosExcluemLeads: z.boolean(), membrosExportam: z.boolean() }).parse(raw))
+  .inputValidator((raw: unknown) => z.object({
+      membrosExcluemLeads: z.boolean(),
+      membrosExportam: z.boolean(),
+      membrosGerenciamEtapas: z.boolean(),
+      membrosCriamEtiquetas: z.boolean(),
+      membrosCriamCampos: z.boolean(),
+    }).parse(raw))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
@@ -20,6 +26,9 @@ export const salvarPermissoesDaEmpresa = createServerFn({ method: "POST" })
         company_id: companyId,
         membros_excluem_leads: data.membrosExcluemLeads,
         membros_exportam: data.membrosExportam,
+        membros_gerenciam_etapas: data.membrosGerenciamEtapas,
+        membros_criam_etiquetas: data.membrosCriamEtiquetas,
+        membros_criam_campos: data.membrosCriamCampos,
         updated_at: new Date().toISOString(),
         updated_by: context.userId,
       },

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { usePodeGerenciar } from "@/modules/permissoes/usePermissoes";
 import {
   addLeadTag,
   listCompanyTagNames,
@@ -36,6 +37,7 @@ export function EtiquetasDoLead({
   aoAlterar?: () => void;
 }) {
   const qc = useQueryClient();
+  const podeCriar = usePodeGerenciar("etiquetas");
   const [input, setInput] = useState("");
 
   const tagsQuery = useQuery({
@@ -65,7 +67,13 @@ export function EtiquetasDoLead({
       qc.invalidateQueries({ queryKey: ["company-tags", companyId] });
       recarregar();
     },
-    onError: (e: Error) => toast.error(e.message),
+    // Sem a permissão de criar, só a etiqueta que a empresa já usa passa: o banco recusa a nova.
+    onError: (e: Error) =>
+      toast.error(
+        !podeCriar
+          ? "Você só pode usar etiquetas que a empresa já tem. Peça a um administrador para criar uma nova."
+          : e.message,
+      ),
   });
 
   const removeMutation = useMutation({
@@ -93,7 +101,13 @@ export function EtiquetasDoLead({
                 addMutation.mutate(input);
               }
             }}
-            placeholder={compacto ? "Nova etiqueta" : "Ex: Investidor, Primeira compra, Urgente"}
+            placeholder={
+              !podeCriar
+                ? "Escolha uma etiqueta existente"
+                : compacto
+                  ? "Nova etiqueta"
+                  : "Ex: Investidor, Primeira compra, Urgente"
+            }
             className="h-9 text-sm max-sm:h-11"
             aria-label="Nova etiqueta"
           />

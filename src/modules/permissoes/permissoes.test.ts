@@ -13,16 +13,16 @@ describe("permissão de excluir lead", () => {
   it("dono e administrador sempre; visualizador nunca", () => {
     expect(podeExcluirLeads("owner", PERMISSOES_PADRAO)).toBe(true);
     expect(podeExcluirLeads("admin", PERMISSOES_PADRAO)).toBe(true);
-    expect(podeExcluirLeads("viewer", { membrosExcluemLeads: true, membrosExportam: false })).toBe(false);
-    expect(podeExcluirLeads(undefined, { membrosExcluemLeads: true, membrosExportam: false })).toBe(false);
+    expect(podeExcluirLeads("viewer", { ...PERMISSOES_PADRAO, membrosExcluemLeads: true })).toBe(false);
+    expect(podeExcluirLeads(undefined, { ...PERMISSOES_PADRAO, membrosExcluemLeads: true })).toBe(false);
   });
   it("membro exclui quando a empresa libera", () => {
-    expect(podeExcluirLeads("member", { membrosExcluemLeads: true, membrosExportam: false })).toBe(true);
+    expect(podeExcluirLeads("member", { ...PERMISSOES_PADRAO, membrosExcluemLeads: true })).toBe(true);
   });
   it("valor estranho do banco cai no padrão", () => {
     expect(normalizarPermissoes(null)).toEqual(PERMISSOES_PADRAO);
     expect(normalizarPermissoes({ membros_excluem_leads: "sim" })).toEqual(PERMISSOES_PADRAO);
-    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ membrosExcluemLeads: true, membrosExportam: false });
+    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ ...PERMISSOES_PADRAO, membrosExcluemLeads: true });
   });
 });
 
@@ -86,7 +86,7 @@ describe("interface do visualizador", () => {
 import { podeExportar } from "./permissoes";
 
 describe("permissão de exportar", () => {
-  const liberado = { membrosExcluemLeads: false, membrosExportam: true };
+  const liberado = { ...PERMISSOES_PADRAO, membrosExportam: true };
   it("o padrão é restrito: atendente não exporta", () => {
     expect(PERMISSOES_PADRAO.membrosExportam).toBe(false);
     expect(podeExportar("member", PERMISSOES_PADRAO)).toBe(false);
@@ -99,8 +99,8 @@ describe("permissão de exportar", () => {
     expect(podeExportar("member", liberado)).toBe(true);
   });
   it("as permissões são independentes", () => {
-    expect(normalizarPermissoes({ membros_exportam: true })).toEqual({ membrosExcluemLeads: false, membrosExportam: true });
-    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ membrosExcluemLeads: true, membrosExportam: false });
+    expect(normalizarPermissoes({ membros_exportam: true })).toEqual({ ...PERMISSOES_PADRAO, membrosExportam: true });
+    expect(normalizarPermissoes({ membros_excluem_leads: true })).toEqual({ ...PERMISSOES_PADRAO, membrosExcluemLeads: true });
     expect(normalizarPermissoes({ membros_exportam: "sim" }).membrosExportam).toBe(false);
   });
   it("os cinco pontos de exportação respeitam a regra; o do servidor é barrado de verdade", () => {
@@ -118,5 +118,47 @@ describe("permissão de exportar", () => {
     expect(corpo).toContain("podeExportarNaEmpresa(");
     expect(corpo.indexOf("podeExportarNaEmpresa(")).toBeLessThan(corpo.indexOf('.from("wa_messages")'));
     expect(ler("supabase/migrations/20261027140000_permissao_exportar.sql")).toContain("membros_exportam boolean NOT NULL DEFAULT false");
+  });
+});
+
+import { podeGerenciar } from "./permissoes";
+
+describe("permissões de estrutura (etapas, etiquetas, campos)", () => {
+  const todas = { ...PERMISSOES_PADRAO, membrosGerenciamEtapas: true, membrosCriamEtiquetas: true, membrosCriamCampos: true };
+  const nenhuma = { ...PERMISSOES_PADRAO, membrosGerenciamEtapas: false, membrosCriamEtiquetas: false, membrosCriamCampos: false };
+  it("padrões: etapas e campos fechados, etiqueta aberta", () => {
+    expect(podeGerenciar("member", PERMISSOES_PADRAO, "etapas")).toBe(false);
+    expect(podeGerenciar("member", PERMISSOES_PADRAO, "campos")).toBe(false);
+    expect(podeGerenciar("member", PERMISSOES_PADRAO, "etiquetas")).toBe(true);
+  });
+  it("dono e administrador sempre; visualizador nunca, mesmo com tudo liberado", () => {
+    for (const t of ["etapas", "etiquetas", "campos"] as const) {
+      expect(podeGerenciar("owner", nenhuma, t)).toBe(true);
+      expect(podeGerenciar("admin", nenhuma, t)).toBe(true);
+      expect(podeGerenciar("viewer", todas, t)).toBe(false);
+      expect(podeGerenciar(undefined, todas, t)).toBe(false);
+      expect(podeGerenciar("member", todas, t)).toBe(true);
+      expect(podeGerenciar("member", nenhuma, t)).toBe(false);
+    }
+  });
+  it("só um false explícito desliga a etiqueta; as outras só ligam com true explícito", () => {
+    expect(normalizarPermissoes(null).membrosCriamEtiquetas).toBe(true);
+    expect(normalizarPermissoes({}).membrosCriamEtiquetas).toBe(true);
+    expect(normalizarPermissoes({ membros_criam_etiquetas: false }).membrosCriamEtiquetas).toBe(false);
+    expect(normalizarPermissoes({ membros_gerenciam_etapas: "sim" }).membrosGerenciamEtapas).toBe(false);
+    expect(normalizarPermissoes({ membros_criam_campos: true }).membrosCriamCampos).toBe(true);
+  });
+  it("telas e banco ligados à regra", () => {
+    expect(ler("src/routes/_app.pipeline.tsx")).toContain("usePodeGerenciar('etapas')");
+    expect(ler("src/routes/_app.settings.campos.tsx")).toContain('usePodeGerenciar("campos")');
+    expect(ler("src/modules/crm/components/EtiquetasDoLead.tsx")).toContain('usePodeGerenciar("etiquetas")');
+    const sql = ler("supabase/migrations/20261027200000_permissoes_de_estrutura.sql").replace(/--.*$/gm, "");
+    expect(sql).toContain('DROP POLICY IF EXISTS "Stages access"');
+    expect(sql).toContain("membros_criam_etiquetas boolean NOT NULL DEFAULT true");
+    expect(sql).toContain("membros_gerenciam_etapas boolean NOT NULL DEFAULT false");
+    expect(sql).toContain("membros_criam_campos boolean NOT NULL DEFAULT false");
+    expect(sql).toContain("AS RESTRICTIVE FOR INSERT TO authenticated");
+    for (const t of ["lead_tags", "form_tag_rules", "conversion_mapping", "meta_lead_import_jobs", "quiz_submissions"])
+      expect(sql, t).toContain(t);
   });
 });

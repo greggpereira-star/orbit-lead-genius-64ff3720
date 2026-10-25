@@ -14,6 +14,7 @@ import { CheckSquare, Search, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { KanbanBoard } from '@/modules/crm/components/KanbanBoard';
 import { StageManagerDialog } from '@/modules/crm/components/StageManagerDialog';
+import { usePodeGerenciar } from '@/modules/permissoes/usePermissoes';
 import { ErrorBoundary } from '@/components/error/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ function PipelinePage() {
   const companyId = company?.id ?? '';
   const [search, setSearch] = useState('');
   const [managing, setManaging] = useState(false);
+  const podeEtapas = usePodeGerenciar('etapas');
   const [selecting, setSelecting] = useState(false);
   const [origin, setOrigin] = useState('');
 
@@ -111,10 +113,12 @@ function PipelinePage() {
             <CheckSquare className="mr-2 h-4 w-4" />
             {selecting ? 'Sair da seleção' : 'Selecionar'}
           </Button>
-          <Button variant="outline" className="h-9" onClick={() => setManaging(true)}>
-            <SlidersHorizontal className="mr-2 h-4 w-4" />
-            Gerenciar etapas
-          </Button>
+          {podeEtapas && (
+            <Button variant="outline" className="h-9" onClick={() => setManaging(true)}>
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Gerenciar etapas
+            </Button>
+          )}
         </div>
       </header>
 

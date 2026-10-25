@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/core/auth/hooks/useAuth";
+import { usePodeGerenciar } from "@/modules/permissoes/usePermissoes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,9 +40,9 @@ export const Route = createFileRoute("/_app/settings/campos")({
 });
 
 function CamposPage() {
-  const { company, membership } = useAuth();
+  const { company } = useAuth();
   const companyId = company?.id;
-  const podeEditar = membership?.role === "owner" || membership?.role === "admin";
+  const podeEditar = usePodeGerenciar("campos");
   const qc = useQueryClient();
 
   const campos = useQuery({

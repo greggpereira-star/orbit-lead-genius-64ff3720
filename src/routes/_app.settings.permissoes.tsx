@@ -27,17 +27,42 @@ function PermissoesPage() {
 
   const [excluem, setExcluem] = useState(false);
   const [exportam, setExportam] = useState(false);
+  const [etapas, setEtapas] = useState(false);
+  const [etiquetas, setEtiquetas] = useState(true);
+  const [campos, setCampos] = useState(false);
   useEffect(() => {
     if (atual.carregando) return;
     setExcluem(atual.membrosExcluemLeads);
     setExportam(atual.membrosExportam);
-  }, [atual.carregando, atual.membrosExcluemLeads, atual.membrosExportam]);
+    setEtapas(atual.membrosGerenciamEtapas);
+    setEtiquetas(atual.membrosCriamEtiquetas);
+    setCampos(atual.membrosCriamCampos);
+  }, [
+    atual.carregando,
+    atual.membrosExcluemLeads,
+    atual.membrosExportam,
+    atual.membrosGerenciamEtapas,
+    atual.membrosCriamEtiquetas,
+    atual.membrosCriamCampos,
+  ]);
 
   const mudou =
     !atual.carregando &&
-    (excluem !== atual.membrosExcluemLeads || exportam !== atual.membrosExportam);
+    (excluem !== atual.membrosExcluemLeads ||
+      exportam !== atual.membrosExportam ||
+      etapas !== atual.membrosGerenciamEtapas ||
+      etiquetas !== atual.membrosCriamEtiquetas ||
+      campos !== atual.membrosCriamCampos);
   const salvar = useMutation({
-    mutationFn: () => salvarFn({ data: { membrosExcluemLeads: excluem, membrosExportam: exportam } }),
+    mutationFn: () => salvarFn({
+        data: {
+          membrosExcluemLeads: excluem,
+          membrosExportam: exportam,
+          membrosGerenciamEtapas: etapas,
+          membrosCriamEtiquetas: etiquetas,
+          membrosCriamCampos: campos,
+        },
+      }),
     onSuccess: () => {
       toast.success("Permissões salvas.");
       void qc.invalidateQueries({ queryKey: chavePermissoes(companyId) });
@@ -68,7 +93,7 @@ function PermissoesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Leads e dados</CardTitle>
+          <CardTitle className="text-base">Leads, funil e dados</CardTitle>
           <CardDescription>Vale na hora para todos os atendentes da empresa.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -106,6 +131,60 @@ function PermissoesPage() {
               id="perm-exportar"
               checked={exportam}
               onCheckedChange={setExportam}
+              disabled={!podeEditar}
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+            <div>
+              <Label htmlFor="perm-etapas" className="text-sm font-medium">
+                Atendentes podem criar, reordenar e apagar etapas do funil
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Mexer nas etapas muda o funil de todo mundo. Desligado, só dono e administrador veem
+                "Gerenciar etapas" no Pipeline.
+              </p>
+            </div>
+            <Switch
+              id="perm-etapas"
+              checked={etapas}
+              onCheckedChange={setEtapas}
+              disabled={!podeEditar}
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+            <div>
+              <Label htmlFor="perm-etiquetas" className="text-sm font-medium">
+                Atendentes podem criar etiquetas novas
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Etiqueta pode mover o lead de etapa e gerar conversão. Desligado, o atendente ainda
+                aplica as etiquetas que a empresa já usa, mas não inventa uma nova.
+              </p>
+            </div>
+            <Switch
+              id="perm-etiquetas"
+              checked={etiquetas}
+              onCheckedChange={setEtiquetas}
+              disabled={!podeEditar}
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+            <div>
+              <Label htmlFor="perm-campos" className="text-sm font-medium">
+                Atendentes podem criar e editar campos personalizados
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Define quais campos existem em todo lead. Desligado (como já era), só dono e
+                administrador mexem nas definições; o atendente continua preenchendo os valores.
+              </p>
+            </div>
+            <Switch
+              id="perm-campos"
+              checked={campos}
+              onCheckedChange={setCampos}
               disabled={!podeEditar}
             />
           </div>

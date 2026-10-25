@@ -11,6 +11,8 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
+// O painel não monta o AuthProvider: a permissão de criar etiqueta entra pronta (liberada).
+vi.mock("@/modules/permissoes/usePermissoes", () => ({ usePodeGerenciar: () => true }));
 vi.mock("@/lib/whatsapp-cloud.functions", () => ({
   conectarNumeroManualWhatsApp: async () => ({}),
 }));
