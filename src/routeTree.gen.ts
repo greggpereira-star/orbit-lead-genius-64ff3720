@@ -39,6 +39,7 @@ import { Route as AuthRegisterRouteImport } from './routes/_auth.register'
 import { Route as AuthResetPasswordRouteImport } from './routes/_auth.reset-password'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth.verify-email'
 import { Route as ChatEmbedCompanyIdRouteImport } from './routes/chat-embed.$companyId'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as EmbedFormIdRouteImport } from './routes/embed-form.$id'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as IrSlugRouteImport } from './routes/ir.$slug'
@@ -51,6 +52,7 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppSettingsCamposRouteImport } from './routes/_app.settings.campos'
 import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
+import { Route as AppSettingsEquipeRouteImport } from './routes/_app.settings.equipe'
 import { Route as AppSettingsHorariosRouteImport } from './routes/_app.settings.horarios'
 import { Route as AppSettingsInstallRouteImport } from './routes/_app.settings.install'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app.settings.integrations'
@@ -237,6 +239,11 @@ const ChatEmbedCompanyIdRoute = ChatEmbedCompanyIdRouteImport.update({
   path: '/chat-embed/$companyId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmbedFormIdRoute = EmbedFormIdRouteImport.update({
   id: '/embed-form/$id',
   path: '/embed-form/$id',
@@ -295,6 +302,11 @@ const AppSettingsChatRoute = AppSettingsChatRouteImport.update({
 const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   id: '/company',
   path: '/company',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsEquipeRoute = AppSettingsEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsHorariosRoute = AppSettingsHorariosRouteImport.update({
@@ -523,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/ir/$slug': typeof IrSlugRoute
@@ -534,6 +547,7 @@ export interface FileRoutesByFullPath {
   '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/equipe': typeof AppSettingsEquipeRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
   '/settings/install': typeof AppSettingsInstallRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
@@ -601,6 +615,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof AuthResetPasswordRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/ir/$slug': typeof IrSlugRoute
@@ -612,6 +627,7 @@ export interface FileRoutesByTo {
   '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/equipe': typeof AppSettingsEquipeRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
   '/settings/install': typeof AppSettingsInstallRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
@@ -683,6 +699,7 @@ export interface FileRoutesById {
   '/_auth/reset-password': typeof AuthResetPasswordRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/chat-embed/$companyId': typeof ChatEmbedCompanyIdRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/embed-form/$id': typeof EmbedFormIdRoute
   '/f/$slug': typeof FSlugRoute
   '/ir/$slug': typeof IrSlugRoute
@@ -694,6 +711,7 @@ export interface FileRoutesById {
   '/_app/settings/campos': typeof AppSettingsCamposRoute
   '/_app/settings/chat': typeof AppSettingsChatRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
+  '/_app/settings/equipe': typeof AppSettingsEquipeRoute
   '/_app/settings/horarios': typeof AppSettingsHorariosRoute
   '/_app/settings/install': typeof AppSettingsInstallRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
@@ -764,6 +782,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/chat-embed/$companyId'
+    | '/convite/$token'
     | '/embed-form/$id'
     | '/f/$slug'
     | '/ir/$slug'
@@ -775,6 +794,7 @@ export interface FileRouteTypes {
     | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/equipe'
     | '/settings/horarios'
     | '/settings/install'
     | '/settings/integrations'
@@ -842,6 +862,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/chat-embed/$companyId'
+    | '/convite/$token'
     | '/embed-form/$id'
     | '/f/$slug'
     | '/ir/$slug'
@@ -853,6 +874,7 @@ export interface FileRouteTypes {
     | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/equipe'
     | '/settings/horarios'
     | '/settings/install'
     | '/settings/integrations'
@@ -923,6 +945,7 @@ export interface FileRouteTypes {
     | '/_auth/reset-password'
     | '/_auth/verify-email'
     | '/chat-embed/$companyId'
+    | '/convite/$token'
     | '/embed-form/$id'
     | '/f/$slug'
     | '/ir/$slug'
@@ -934,6 +957,7 @@ export interface FileRouteTypes {
     | '/_app/settings/campos'
     | '/_app/settings/chat'
     | '/_app/settings/company'
+    | '/_app/settings/equipe'
     | '/_app/settings/horarios'
     | '/_app/settings/install'
     | '/_app/settings/integrations'
@@ -986,6 +1010,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ChatEmbedCompanyIdRoute: typeof ChatEmbedCompanyIdRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   EmbedFormIdRoute: typeof EmbedFormIdRoute
   FSlugRoute: typeof FSlugRoute
   IrSlugRoute: typeof IrSlugRoute
@@ -1219,6 +1244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatEmbedCompanyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/embed-form/$id': {
       id: '/embed-form/$id'
       path: '/embed-form/$id'
@@ -1301,6 +1333,13 @@ declare module '@tanstack/react-router' {
       path: '/company'
       fullPath: '/settings/company'
       preLoaderRoute: typeof AppSettingsCompanyRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/equipe': {
+      id: '/_app/settings/equipe'
+      path: '/equipe'
+      fullPath: '/settings/equipe'
+      preLoaderRoute: typeof AppSettingsEquipeRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/horarios': {
@@ -1594,6 +1633,7 @@ interface AppSettingsRouteChildren {
   AppSettingsCamposRoute: typeof AppSettingsCamposRoute
   AppSettingsChatRoute: typeof AppSettingsChatRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppSettingsEquipeRoute: typeof AppSettingsEquipeRoute
   AppSettingsHorariosRoute: typeof AppSettingsHorariosRoute
   AppSettingsInstallRoute: typeof AppSettingsInstallRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
@@ -1615,6 +1655,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsCamposRoute: AppSettingsCamposRoute,
   AppSettingsChatRoute: AppSettingsChatRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppSettingsEquipeRoute: AppSettingsEquipeRoute,
   AppSettingsHorariosRoute: AppSettingsHorariosRoute,
   AppSettingsInstallRoute: AppSettingsInstallRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
@@ -1721,6 +1762,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ChatEmbedCompanyIdRoute: ChatEmbedCompanyIdRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   EmbedFormIdRoute: EmbedFormIdRoute,
   FSlugRoute: FSlugRoute,
   IrSlugRoute: IrSlugRoute,
