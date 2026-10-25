@@ -8,6 +8,7 @@
  * noções voltarem a divergir como divergiram antes (106 leads com `stage_id`
  * NULL e um pipeline vazio).
  */
+import { MENSAGEM_SEM_PERMISSAO } from '@/lib/erroDePermissao';
 import { supabase } from '@/integrations/supabase/client';
 
 export type StageKind = 'open' | 'won' | 'lost';
@@ -151,7 +152,7 @@ export async function moveLeadToStage(input: MoveLeadInput): Promise<void> {
 
   const virouPerdido = stage.kind === 'lost';
 
-  const { error } = await (supabase as any)
+  const { data: moved, error } = await (supabase as any)
     .from('leads')
     .update({
       stage_id: input.stageId,
@@ -164,9 +165,13 @@ export async function moveLeadToStage(input: MoveLeadInput): Promise<void> {
       loss_reason_id: virouPerdido ? (input.lossReasonId ?? null) : null,
       lost_notes: virouPerdido ? (input.lostNotes?.trim() || null) : null,
     })
-    .eq('id', input.leadId);
+    .eq('id', input.leadId)
+    .select('id');
 
   if (error) throw new Error(error.message);
+  // O RLS que barra o UPDATE não dá erro: devolve zero linhas. Sem esta conferência a tela dizia
+  // "movido" e ainda gravava o evento na linha do tempo de um lead que não mudou.
+  if (!moved?.length) throw new Error(MENSAGEM_SEM_PERMISSAO);
 
   const from = input.fromStageName ?? 'Sem etapa';
   const to = input.toStageName ?? stage.name;

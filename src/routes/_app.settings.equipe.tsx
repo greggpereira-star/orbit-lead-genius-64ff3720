@@ -53,7 +53,7 @@ function EquipePage() {
   const papelFn = useServerFn(alterarPapelDoMembro);
   const removerFn = useServerFn(removerMembro);
 
-  const chave = ["equipe", companyId];
+  const chave = ["equipe-gestao", companyId];
   const equipe = useQuery({
     queryKey: chave,
     enabled: Boolean(companyId) && souAdmin,

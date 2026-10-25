@@ -9,6 +9,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { lgpdService } from '@/modules/audit/services/lgpdService';
+import { usePodeExcluirLeads, usePodeExportar } from '@/modules/permissoes/usePermissoes';
 
 /**
  * Direitos do titular, na ficha do lead.
@@ -27,6 +28,8 @@ export function DadosDoTitular({
   onEliminado?: () => void;
 }) {
   const [baixando, setBaixando] = useState(false);
+  const podeExcluir = usePodeExcluirLeads();
+  const podeExportarDados = usePodeExportar();
   const [confirmando, setConfirmando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [motivo, setMotivo] = useState('');
@@ -66,18 +69,27 @@ export function DadosDoTitular({
           que o tratamento anterior ao pedido era lícito.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={baixar} disabled={baixando}>
-            {baixando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            Baixar todos os dados
-          </Button>
-          <Button
-            variant="outline" size="sm"
-            className="gap-2 text-[var(--destructive)] hover:text-[var(--destructive)]"
-            onClick={() => setConfirmando(true)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Eliminar dados
-          </Button>
+          {podeExportarDados && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={baixar} disabled={baixando}>
+              {baixando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              Baixar todos os dados
+            </Button>
+          )}
+          {podeExcluir && (
+            <Button
+              variant="outline" size="sm"
+              className="gap-2 text-[var(--destructive)] hover:text-[var(--destructive)]"
+              onClick={() => setConfirmando(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Eliminar dados
+            </Button>
+          )}
+          {!podeExportarDados && !podeExcluir && (
+            <p className="text-xs text-muted-foreground">
+              Peça a um administrador para atender pedidos de acesso ou eliminação.
+            </p>
+          )}
         </div>
       </div>
 

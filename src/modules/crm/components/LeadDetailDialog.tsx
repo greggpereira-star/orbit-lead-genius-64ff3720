@@ -185,8 +185,10 @@ function avatarTone(_seed: string): string {
 
 /** Etapa editável na própria pill: o seletor é compartilhado com o painel da conversa. */
 function StagePicker({ lead, onChanged }: { lead: LeadRow; onChanged: (status: string) => void }) {
+  const leitura = useSomenteLeitura();
   return (
     <EtapaDoLead
+      somenteLeitura={leitura}
       leadId={lead.id}
       companyId={lead.company_id}
       leadName={lead.name}
@@ -423,6 +425,7 @@ function NotesTab({
 }) {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const leitura = useSomenteLeitura();
   const [body, setBody] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -552,7 +555,8 @@ function NotesTab({
             onChange={(e) => setBody(e.target.value)}
             onFocus={() => setExpanded(true)}
             rows={expanded ? 3 : 1}
-            placeholder="Adicionar uma anotação…"
+            disabled={leitura}
+            placeholder={leitura ? "Somente leitura" : "Adicionar uma anotação…"}
             className="resize-none border-0 bg-transparent p-1 text-sm shadow-none focus-visible:ring-0"
             aria-label="Nova anotação"
           />
@@ -788,7 +792,8 @@ function TagsTab({
   /** A etiqueta pode mover o lead de etapa (feito no banco): quem abriu a ficha relê o lead. */
   aoAdicionar?: () => void;
 }) {
-  return <EtiquetasDoLead leadId={leadId} companyId={companyId} aoAlterar={aoAdicionar} />;
+  const leitura = useSomenteLeitura();
+  return <EtiquetasDoLead leadId={leadId} companyId={companyId} somenteLeitura={leitura} aoAlterar={aoAdicionar} />;
 }
 
 const TRACKING_FIELDS: { key: keyof LeadRow; label: string }[] = [
@@ -1823,7 +1828,7 @@ export function LeadDetailDialog({
                       titulo="Campos personalizados"
                       descricao="Definidos pela sua empresa"
                     >
-                      <CamposDoLead leadId={lead.id} companyId={lead.company_id} />
+                      <CamposDoLead leadId={lead.id} companyId={lead.company_id} somenteLeitura={leitura} />
                     </CartaoFicha>
 
                     <CartaoFicha

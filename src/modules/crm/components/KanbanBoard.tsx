@@ -688,7 +688,7 @@ export function KanbanBoard({
                                 {/* Mover sem arrastar. Fica antes do WhatsApp
                                     porque é ação sobre o funil, e some no modo
                                     seleção, onde todo clique marca o card. */}
-                                {!selecting && stages.length > 1 && (
+                                {!selecting && !leitura && stages.length > 1 && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button

@@ -1,3 +1,4 @@
+import { useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CalendarPlus, Check, Loader2, RefreshCw } from 'lucide-react';
@@ -39,6 +40,7 @@ export function NextActions({
   semMoldura?: boolean;
 }) {
   const qc = useQueryClient();
+  const leitura = useSomenteLeitura();
   const { user } = useAuth();
 
   const notas = useQuery({
@@ -90,6 +92,7 @@ export function NextActions({
               <button
                 type="button"
                 onClick={() => concluir.mutate({ id: n.id, done: true })}
+                disabled={leitura}
                 aria-label={`Marcar "${n.body}" como feito`}
                 className="group/caixa mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded border bg-background transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
@@ -106,6 +109,7 @@ export function NextActions({
         </ul>
       )}
 
+      {!leitura && (
       <div className="space-y-1.5">
         <Acao
           icone={<CalendarPlus className="h-4 w-4" />}
@@ -122,6 +126,7 @@ export function NextActions({
           aoClicar={() => criar.mutate({ body: 'Tentar retomada com oferta diferente.', dias: 30 })}
         />
       </div>
+      )}
     </section>
   );
 }

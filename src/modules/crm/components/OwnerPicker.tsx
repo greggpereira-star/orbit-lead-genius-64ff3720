@@ -1,3 +1,4 @@
+import { useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, Loader2, UserPlus, UserRound, X } from 'lucide-react';
@@ -37,6 +38,7 @@ export function OwnerPicker({
   compacto?: boolean;
 }) {
   const qc = useQueryClient();
+  const leitura = useSomenteLeitura();
 
   const equipe = useQuery({
     queryKey: ['equipe', companyId],
@@ -74,7 +76,7 @@ export function OwnerPicker({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              disabled={atribuir.isPending}
+              disabled={atribuir.isPending || leitura}
               className="-mx-1 flex w-full items-center gap-2 rounded px-1 py-0.5 text-left hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {atribuir.isPending ? (

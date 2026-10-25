@@ -14,7 +14,7 @@ import { CheckSquare, Search, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { KanbanBoard } from '@/modules/crm/components/KanbanBoard';
 import { StageManagerDialog } from '@/modules/crm/components/StageManagerDialog';
-import { usePodeGerenciar } from '@/modules/permissoes/usePermissoes';
+import { usePodeExcluirLeads, usePodeGerenciar, useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import { ErrorBoundary } from '@/components/error/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,8 @@ function PipelinePage() {
   const [search, setSearch] = useState('');
   const [managing, setManaging] = useState(false);
   const podeEtapas = usePodeGerenciar('etapas');
+  const leitura = useSomenteLeitura();
+  const podeExcluirLeads = usePodeExcluirLeads();
   const [selecting, setSelecting] = useState(false);
   const [origin, setOrigin] = useState('');
 
@@ -70,7 +72,7 @@ function PipelinePage() {
             {selecting
               ? 'Clique nos cards que você quer excluir.'
               : total > 0
-                ? `${total} ${total === 1 ? 'lead' : 'leads'} no funil. Arraste para mudar de etapa.`
+                ? `${total} ${total === 1 ? 'lead' : 'leads'} no funil.${leitura ? '' : ' Arraste para mudar de etapa.'}`
                 : 'Arraste os leads entre as etapas do seu funil.'}
           </p>
         </div>
@@ -104,15 +106,17 @@ function PipelinePage() {
               className="h-9 w-56 pl-9"
             />
           </div>
-          <Button
-            variant={selecting ? 'secondary' : 'outline'}
-            className="h-9"
-            aria-pressed={selecting}
-            onClick={() => setSelecting((v) => !v)}
-          >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            {selecting ? 'Sair da seleção' : 'Selecionar'}
-          </Button>
+          {podeExcluirLeads && (
+            <Button
+              variant={selecting ? 'secondary' : 'outline'}
+              className="h-9"
+              aria-pressed={selecting}
+              onClick={() => setSelecting((v) => !v)}
+            >
+              <CheckSquare className="mr-2 h-4 w-4" />
+              {selecting ? 'Sair da seleção' : 'Selecionar'}
+            </Button>
+          )}
           {podeEtapas && (
             <Button variant="outline" className="h-9" onClick={() => setManaging(true)}>
               <SlidersHorizontal className="mr-2 h-4 w-4" />

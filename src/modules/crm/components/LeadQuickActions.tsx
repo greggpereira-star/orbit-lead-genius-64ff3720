@@ -4,6 +4,7 @@ import { CalendarPlus, CheckSquare, Mail, MessageCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/core/auth/hooks/useAuth';
+import { useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import { createLeadNote } from '@/modules/crm/services/leadNotesService';
 
 /**
@@ -25,6 +26,7 @@ export function LeadQuickActions({
 }) {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const leitura = useSomenteLeitura();
 
   const agendar = useMutation({
     mutationFn: (v: { body: string; dias: number }) => {
@@ -91,25 +93,29 @@ export function LeadQuickActions({
         </Button>
       )}
 
-      <Button
-        variant="outline"
-        className={estilo}
-        disabled={agendar.isPending}
-        onClick={() => agendar.mutate({ body: 'Reunião a combinar com o lead.', dias: 2 })}
-      >
-        <CalendarPlus className="h-4 w-4 shrink-0" />
-        <span className="ml-2 truncate">Agendar reunião</span>
-      </Button>
+      {!leitura && (
+        <Button
+          variant="outline"
+          className={estilo}
+          disabled={agendar.isPending}
+          onClick={() => agendar.mutate({ body: 'Reunião a combinar com o lead.', dias: 2 })}
+        >
+          <CalendarPlus className="h-4 w-4 shrink-0" />
+          <span className="ml-2 truncate">Agendar reunião</span>
+        </Button>
+      )}
 
-      <Button
-        variant="outline"
-        className={estilo}
-        disabled={agendar.isPending}
-        onClick={() => agendar.mutate({ body: 'Tarefa de acompanhamento.', dias: 1 })}
-      >
-        <CheckSquare className="h-4 w-4 shrink-0" />
-        <span className="ml-2 truncate">Criar tarefa</span>
-      </Button>
+      {!leitura && (
+        <Button
+          variant="outline"
+          className={estilo}
+          disabled={agendar.isPending}
+          onClick={() => agendar.mutate({ body: 'Tarefa de acompanhamento.', dias: 1 })}
+        >
+          <CheckSquare className="h-4 w-4 shrink-0" />
+          <span className="ml-2 truncate">Criar tarefa</span>
+        </Button>
+      )}
     </div>
   );
 }

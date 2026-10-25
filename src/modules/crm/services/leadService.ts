@@ -1,3 +1,4 @@
+import { MENSAGEM_SEM_PERMISSAO } from '@/lib/erroDePermissao';
 import { supabase } from '@/lib/supabase';
 import type { Database, Json } from '@/integrations/supabase/types';
 
@@ -612,9 +613,12 @@ export async function atribuirResponsavel(
   leadId: string,
   userId: string | null,
 ): Promise<void> {
-  const { error } = await (supabase as any)
+  const { data: atualizados, error } = await (supabase as any)
     .from('leads')
     .update({ assigned_to: userId, updated_at: new Date().toISOString() })
-    .eq('id', leadId);
+    .eq('id', leadId)
+    .select('id');
   if (error) throw new Error(error.message);
+  // Zero linhas = o RLS filtrou o UPDATE (sem permissão); não pode parecer que atribuiu.
+  if (!atualizados?.length) throw new Error(MENSAGEM_SEM_PERMISSAO);
 }
