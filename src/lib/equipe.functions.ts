@@ -43,6 +43,14 @@ async function registrar(
     .then(() => undefined, () => undefined);
 }
 
+/** Teto de e-mails de convite por empresa e por hora: o envio nunca vira canal de spam. */
+export const LIMITE_DE_EMAILS_POR_HORA = 20;
+
+/** Endereço público do app, usado no link do e-mail. Vem do servidor, nunca do navegador. */
+const enderecoDoApp = () => (process.env.SITE_URL?.trim().replace(/\/$/, "") || "https://altleadflow.com.br");
+
+export type SituacaoDoEmail = "nao_pedido" | "enviado" | "nao_configurado" | "limite" | "falhou";
+
 const hashDoToken = async (token: string) => {
   const { createHash } = await import("node:crypto");
   return createHash("sha256").update(token).digest("hex");
@@ -76,9 +84,11 @@ export const listarEquipe = createServerFn({ method: "GET" })
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
 
+    const { envioDeEmailConfigurado } = await import("@/lib/email/resend.server");
     return {
       euId: context.userId as string,
       meuPapel: role as string,
+      emailConfigurado: envioDeEmailConfigurado(),
       membros: ((vinculos ?? []) as Array<{ user_id: string; role: string; created_at: string }>).map((v) => ({
         userId: v.user_id,
         papel: String(v.role),
@@ -95,7 +105,13 @@ export const listarEquipe = createServerFn({ method: "GET" })
 export const criarConvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) =>
-    z.object({ email: z.string().max(254), papel: z.enum(["admin", "member", "viewer"]) }).parse(raw),
+    z
+      .object({
+        email: z.string().max(254),
+        papel: z.enum(["admin", "member", "viewer"]),
+        enviarEmail: z.boolean().optional(),
+      })
+      .parse(raw),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -154,8 +170,60 @@ export const criarConvite = createServerFn({ method: "POST" })
       entityId: criado.id,
       changes: { email, papel: data.papel },
     });
+
+    // Envio opcional por e-mail. O convite já existe: se o envio falhar, o link continua valendo e a
+    // tela o mostra para copiar. O código secreto vai só na mensagem, nunca para log nem auditoria.
+    let situacaoDoEmail: SituacaoDoEmail = "nao_pedido";
+    if (data.enviarEmail) {
+      const { envioDeEmailConfigurado, enviarEmail } = await import("@/lib/email/resend.server");
+      if (!envioDeEmailConfigurado()) {
+        situacaoDoEmail = "nao_configurado";
+      } else {
+        const desde = new Date(Date.now() - 3_600_000).toISOString();
+        const { count } = await admin
+          .from("audit_logs")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .eq("action", "convite_enviado_por_email")
+          .gte("created_at", desde);
+        if ((count ?? 0) >= LIMITE_DE_EMAILS_POR_HORA) {
+          situacaoDoEmail = "limite";
+        } else {
+          const [{ data: empresa }, { data: eu }] = await Promise.all([
+            admin.from("companies").select("name").eq("id", companyId).maybeSingle(),
+            admin.from("profiles").select("full_name, email").eq("id", context.userId).maybeSingle(),
+          ]);
+          const { montarEmailDeConvite } = await import("@/lib/email/conviteDeEquipe");
+          const msg = montarEmailDeConvite({
+            empresa: String(empresa?.name ?? ""),
+            papel: data.papel,
+            convidadoPor: String(eu?.full_name || eu?.email || ""),
+            link: `${enderecoDoApp()}/convite/${token}`,
+            expiraEm: criado.expires_at,
+          });
+          const r = await enviarEmail({ para: email, assunto: msg.assunto, html: msg.html, texto: msg.texto });
+          situacaoDoEmail = r.ok ? "enviado" : "falhou";
+          if (r.ok) {
+            await registrar(admin, {
+              companyId,
+              userId: context.userId,
+              action: "convite_enviado_por_email",
+              entityId: criado.id,
+              changes: { email },
+            });
+          }
+        }
+      }
+    }
     // O código sai só aqui, uma vez: depois só existe o hash.
-    return { id: criado.id as string, token, expiraEm: criado.expires_at as string, email, papel: data.papel };
+    return {
+      id: criado.id as string,
+      token,
+      expiraEm: criado.expires_at as string,
+      email,
+      papel: data.papel,
+      situacaoDoEmail,
+    };
   });
 
 export const revogarConvite = createServerFn({ method: "POST" })

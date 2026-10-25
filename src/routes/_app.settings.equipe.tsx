@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Copy, Loader2, Trash2, UserPlus, Users } from "lucide-react";
+import { Check, Copy, Loader2, Mail, RotateCw, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import {
@@ -64,17 +64,28 @@ function EquipePage() {
   const [convidando, setConvidando] = useState(false);
   const [email, setEmail] = useState("");
   const [papel, setPapel] = useState<PapelConvidavel>("member");
-  const [link, setLink] = useState<{ url: string; email: string } | null>(null);
+  const [link, setLink] = useState<{ url: string; email: string; situacaoDoEmail: string } | null>(null);
+  const [revisando, setRevisando] = useState(false);
+  const [enviarPorEmail, setEnviarPorEmail] = useState(true);
   const [copiado, setCopiado] = useState(false);
   const [aRemover, setARemover] = useState<{ userId: string; nome: string } | null>(null);
 
   const meuPapel = equipe.data?.meuPapel ?? membership?.role ?? "viewer";
+  const emailConfigurado = equipe.data?.emailConfigurado ?? false;
+  const mandarEmail = emailConfigurado && enviarPorEmail;
   const posso = papeisQueEuPossoConceder(meuPapel);
 
   const criar = useMutation({
-    mutationFn: () => criarFn({ data: { email, papel } }),
+    mutationFn: (v?: { email: string; papel: PapelConvidavel }) =>
+      criarFn({ data: { email: v?.email ?? email, papel: v?.papel ?? papel, enviarEmail: mandarEmail } }),
     onSuccess: (r) => {
-      setLink({ url: `${window.location.origin}/convite/${r.token}`, email: r.email });
+      setConvidando(true);
+      setRevisando(false);
+      setLink({
+        url: `${window.location.origin}/convite/${r.token}`,
+        email: r.email,
+        situacaoDoEmail: r.situacaoDoEmail,
+      });
       setEmail("");
       recarregar();
     },
@@ -121,6 +132,7 @@ function EquipePage() {
     setLink(null);
     setEmail("");
     setCopiado(false);
+    setRevisando(false);
   };
 
   if (!companyId) return <div className="text-sm text-muted-foreground">Carregando…</div>;
@@ -233,9 +245,23 @@ function EquipePage() {
                     {rotulo(c.papel)} · {dias > 0 ? `vence em ${dias} dia${dias === 1 ? "" : "s"}` : "vencido"}
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => revogar.mutate(c.id)} disabled={revogar.isPending}>
-                  Revogar
-                </Button>
+                <div className="flex items-center gap-2">
+                  {posso.includes(c.papel as PapelConvidavel) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      title="Cria um convite novo (o anterior deixa de valer) e mostra o link"
+                      onClick={() => criar.mutate({ email: c.email, papel: c.papel as PapelConvidavel })}
+                      disabled={criar.isPending}
+                    >
+                      <RotateCw className="h-3.5 w-3.5" /> Reenviar
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => revogar.mutate(c.id)} disabled={revogar.isPending}>
+                    Revogar
+                  </Button>
+                </div>
               </div>
             );
           })}
@@ -245,21 +271,46 @@ function EquipePage() {
       <Dialog open={convidando} onOpenChange={(o) => (o ? setConvidando(true) : fechar())}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{link ? "Convite criado" : "Convidar pessoa"}</DialogTitle>
+            <DialogTitle>{link ? "Convite criado" : revisando ? "Confirme o e-mail" : "Convidar pessoa"}</DialogTitle>
             <DialogDescription>
               {link
-                ? `Envie este link para ${link.email}. Ele aparece só agora e vale por 7 dias.`
-                : "A pessoa se cadastra com este e-mail e já entra na empresa com o papel escolhido."}
+                ? link.situacaoDoEmail === "enviado"
+                  ? `Enviamos o convite para ${link.email}. O link abaixo aparece só agora, caso você queira mandar também por outro canal.`
+                  : `Envie este link para ${link.email}. Ele aparece só agora e vale por 7 dias.`
+                : revisando
+                  ? "O convite só funciona com este endereço exato. Um erro de digitação, como .com no lugar de .com.br, cria um convite que ninguém consegue usar."
+                  : "A pessoa se cadastra com este e-mail e já entra na empresa com o papel escolhido."}
             </DialogDescription>
           </DialogHeader>
 
           {link ? (
             <div className="space-y-3">
+              {link.situacaoDoEmail !== "nao_pedido" && (
+                <p
+                  role="status"
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    link.situacaoDoEmail === "enviado" ? "bg-muted/40 text-foreground" : "border-amber-300 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  {link.situacaoDoEmail === "enviado" && `E-mail enviado para ${link.email}. Peça para olhar também o spam.`}
+                  {link.situacaoDoEmail === "nao_configurado" && "O envio por e-mail ainda não está configurado neste servidor. Copie o link e mande por outro canal."}
+                  {link.situacaoDoEmail === "limite" && "Limite de e-mails por hora atingido. Copie o link e mande por outro canal."}
+                  {link.situacaoDoEmail === "falhou" && "Não consegui enviar o e-mail agora. O convite está criado: copie o link e mande por outro canal."}
+                </p>
+              )}
               <Input readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} aria-label="Link do convite" />
               <Button onClick={copiar} className="w-full gap-2">
                 {copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copiado ? "Copiado" : "Copiar link"}
               </Button>
+            </div>
+          ) : revisando ? (
+            <div className="space-y-3">
+              <p className="break-all rounded-lg border bg-muted/40 px-3 py-3 text-center text-lg font-semibold">{email.trim().toLowerCase()}</p>
+              <p className="text-center text-sm text-muted-foreground">
+                Papel: <b>{rotulo(papel)}</b>
+                {mandarEmail ? " · o convite será enviado por e-mail" : " · você receberá o link para repassar"}
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -288,6 +339,25 @@ function EquipePage() {
                   </SelectContent>
                 </Select>
               </div>
+              <label className={`flex items-start gap-2 text-sm ${emailConfigurado ? "" : "opacity-60"}`}>
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={mandarEmail}
+                  disabled={!emailConfigurado}
+                  onChange={(e) => setEnviarPorEmail(e.target.checked)}
+                />
+                <span>
+                  <span className="flex items-center gap-1 font-medium">
+                    <Mail className="h-3.5 w-3.5" /> Enviar o convite por e-mail
+                  </span>
+                  <span className="block text-muted-foreground">
+                    {emailConfigurado
+                      ? "A pessoa recebe uma mensagem com o link. Você também verá o link para copiar."
+                      : "O envio por e-mail ainda não está configurado neste servidor: você receberá o link para repassar."}
+                  </span>
+                </span>
+              </label>
             </div>
           )}
 
@@ -296,10 +366,19 @@ function EquipePage() {
               <Button variant="outline" onClick={fechar}>
                 Fechar
               </Button>
+            ) : revisando ? (
+              <>
+                <Button variant="outline" onClick={() => setRevisando(false)} disabled={criar.isPending}>
+                  Voltar e corrigir
+                </Button>
+                <Button onClick={() => criar.mutate(undefined)} disabled={criar.isPending}>
+                  {criar.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {mandarEmail ? "Confirmar e enviar" : "Confirmar e criar"}
+                </Button>
+              </>
             ) : (
-              <Button onClick={() => criar.mutate()} disabled={!email.trim() || criar.isPending}>
-                {criar.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Criar convite
+              <Button onClick={() => setRevisando(true)} disabled={!email.trim()}>
+                Revisar
               </Button>
             )}
           </DialogFooter>
