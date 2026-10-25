@@ -1405,6 +1405,7 @@ export function LeadDetailDialog({
                             leadId={lead.id}
                             companyId={lead.company_id}
                             responsavelAtual={lead.assigned_to ?? null}
+                            aoAtribuir={(userId) => onLeadUpdated?.({ ...lead, assigned_to: userId } as LeadRow)}
                             compacto
                           />
                         </PropFicha>
@@ -1618,6 +1619,7 @@ export function LeadDetailDialog({
                         leadId={lead.id}
                         companyId={lead.company_id}
                         responsavelAtual={lead.assigned_to ?? null}
+                        aoAtribuir={(userId) => onLeadUpdated?.({ ...lead, assigned_to: userId } as LeadRow)}
                       />
                     </CartaoFicha>
 

@@ -29,13 +29,18 @@ function iniciais(nome: string): string {
  * que precisa convidar à ação.
  */
 export function OwnerPicker({
-  leadId, companyId, responsavelAtual, compacto,
+  leadId, companyId, responsavelAtual, compacto, aoAtribuir,
 }: {
   leadId: string;
   companyId: string;
   responsavelAtual: string | null;
   /** Dentro de uma linha que já traz o rótulo "Responsável" à esquerda. */
   compacto?: boolean;
+  /**
+   * Depois de gravar. Quem guarda o lead em memória (a ficha aberta) atualiza o responsável aqui:
+   * invalidar a lista não basta, porque a ficha mostra o retrato que recebeu ao abrir.
+   */
+  aoAtribuir?: (userId: string | null) => void;
 }) {
   const qc = useQueryClient();
   const leitura = useSomenteLeitura();
@@ -50,6 +55,7 @@ export function OwnerPicker({
   const atribuir = useMutation({
     mutationFn: (userId: string | null) => atribuirResponsavel(leadId, userId),
     onSuccess: (_, userId) => {
+      aoAtribuir?.(userId);
       qc.invalidateQueries({ queryKey: ['leads'] });
       const nome = equipe.data?.find((m) => m.userId === userId)?.nome;
       toast.success(userId ? `Responsável: ${nome}` : 'Lead sem responsável');
