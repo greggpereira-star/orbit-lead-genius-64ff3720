@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { sendMetaCapiEvent, type CapiEventName } from '@/lib/meta-capi.server';
 import { sanitizarCustomData } from '@/lib/customDataPublico';
+import { conferirCaptura, type CapturaRecente } from '@/lib/conferirCapturaDoEvento';
 
 /**
  * Espelho server-side dos eventos do Pixel.
@@ -74,6 +75,51 @@ async function resolveCompanyId(body: Payload): Promise<string | null> {
   return null;
 }
 
+/**
+ * MODO OBSERVAÇÃO. Depois de um tempo (a captura grava em paralelo ao disparo do evento),
+ * confere se existe um lead real naquele funil e registra no log quando não existe.
+ * Não barra nada: serve para medir quantas conversões "sem captura" aparecem antes de
+ * decidir bloquear.
+ */
+const ESPERA_DA_CONFERENCIA_MS = 10_000;
+
+function observarCaptura(companyId: string, body: Payload, eventName: CapiEventName): void {
+  void (async () => {
+    try {
+      await new Promise((r) => setTimeout(r, ESPERA_DA_CONFERENCIA_MS));
+      const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+      const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      // `quiz_id` existe no banco, mas falta nos tipos gerados de `leads`.
+      type Filtravel = { eq: (c: string, v: string) => Filtravel; gte: (c: string, v: string) => Filtravel; limit: (n: number) => Filtravel } & PromiseLike<{ data: unknown; error: unknown }>;
+      let q = (supabaseAdmin.from('leads').select('event_id,email,phone') as unknown as Filtravel)
+        .eq('company_id', companyId)
+        .gte('updated_at', desde)
+        .limit(500);
+      if (body.quizId) q = q.eq('quiz_id', body.quizId);
+      else if (body.formId) q = q.eq('metadata->>form_id', body.formId);
+      const { data, error } = await q;
+      if (error) throw error;
+      const resultado = conferirCaptura(
+        { eventId: body.eventId!, email: body.email, phone: body.phone },
+        (data ?? []) as CapturaRecente[],
+      );
+      if (resultado === 'sem_captura') {
+        console.warn(JSON.stringify({
+          scope: 'pixel-event', msg: 'conversao_sem_captura_observada',
+          event: eventName, company_id: companyId,
+          funil: body.quizId ? 'quiz' : 'form', funil_id: body.quizId ?? body.formId,
+          tem_contato: Boolean(body.email || body.phone),
+        }));
+      }
+    } catch (err) {
+      console.error(JSON.stringify({
+        scope: 'pixel-event', msg: 'observacao_falhou',
+        erro: err instanceof Error ? err.message : String(err),
+      }));
+    }
+  })();
+}
+
 export const Route = createFileRoute('/api/public/pixel-event')({
   server: {
     handlers: {
@@ -97,6 +143,10 @@ export const Route = createFileRoute('/api/public/pixel-event')({
           request.headers.get('cf-connecting-ip') ??
           request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
           null;
+
+        if (eventName === 'Lead' || eventName === 'CompleteRegistration') {
+          observarCaptura(companyId, body, eventName);
+        }
 
         const result = await sendMetaCapiEvent({
           companyId,
