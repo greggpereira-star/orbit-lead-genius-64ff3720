@@ -52,12 +52,18 @@ import {
  * o canal à mão ou cria uma regra por mensagem ("vim pelo Instagram"). Atribuição
  * nunca troca uma prova de anúncio.
  */
+const LIMITE_INICIAL = 50;
+/** Teto da função do banco (`leads_nao_rastreados` limita a 200). */
+const LIMITE_MAXIMO = 200;
+
 /** `dias` vem da página (período único). */
 export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dias: string }) {
   const { membership } = useAuth();
   const souAdmin = membership?.role === "owner" || membership?.role === "admin";
   const podeEditar = membership?.role !== "viewer";
   const [regras, setRegras] = useState(false);
+  // A lista de não rastreados começa em 50 e cresce de 50 em 50 até o teto do banco (200).
+  const [limite, setLimite] = useState(LIMITE_INICIAL);
   const qc = useQueryClient();
   const recarregar = () => {
     void qc.invalidateQueries({ queryKey: ["origem-dos-leads"] });
@@ -72,9 +78,11 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
   const resumo = useMemo(() => fatiasDeCanal(canais.data ?? []), [canais.data]);
 
   const orfaos = useQuery({
-    queryKey: ["leads-nao-rastreados", companyId, dias],
-    queryFn: () => leadsNaoRastreados(companyId, Number(dias), 50),
+    queryKey: ["leads-nao-rastreados", companyId, dias, limite],
+    queryFn: () => leadsNaoRastreados(companyId, Number(dias), limite),
     enabled: Boolean(companyId) && resumo.naoRastreados > 0,
+    // Mantém a lista na tela enquanto carrega mais, em vez de piscar o carregando.
+    placeholderData: (anterior) => anterior,
   });
 
   const atribuir = useMutation({
@@ -92,7 +100,7 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle as="h2" className="flex items-center gap-2">
               <Compass className="h-4 w-4 text-primary" />
               Origem por canal
             </CardTitle>
@@ -102,7 +110,12 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
           </div>
           <div className="flex items-center gap-2">
             {podeEditar && (
-              <Button variant="outline" size="sm" onClick={() => setRegras(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-11 md:h-8"
+                onClick={() => setRegras(true)}
+              >
                 <Settings2 className="mr-1 h-4 w-4" /> Regras por mensagem
               </Button>
             )}
@@ -131,7 +144,7 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
                   <div className="flex items-center justify-between gap-3">
                     <span className={alerta ? "flex items-center gap-1 font-medium" : ""}>
                       {alerta && (
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+                        <AlertTriangle className="h-3.5 w-3.5 text-[var(--aviso)]" aria-hidden />
                       )}
                       {rotuloDoCanal(f.canal)}
                     </span>
@@ -144,7 +157,7 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
                   </div>
                   <div className="mt-1 h-1.5 rounded bg-muted">
                     <div
-                      className={`h-1.5 rounded ${alerta ? "bg-amber-500" : "bg-primary"}`}
+                      className={`h-1.5 rounded ${alerta ? "bg-[var(--aviso)]" : "bg-primary"}`}
                       style={{ width: `${Math.max(2, f.percentual)}%` }}
                     />
                   </div>
@@ -186,7 +199,7 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
                         disabled={atribuir.isPending}
                       >
                         <SelectTrigger
-                          className="h-8 w-48"
+                          className="h-11 w-48 md:h-8"
                           aria-label={`Definir origem de ${l.name ?? "lead"}`}
                         >
                           <SelectValue placeholder="Definir origem…" />
@@ -203,6 +216,34 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
                   </li>
                 ))}
               </ul>
+            )}
+            {(orfaos.data?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  Mostrando {orfaos.data?.length} de {resumo.naoRastreados}.
+                  {limite >= LIMITE_MAXIMO && resumo.naoRastreados > (orfaos.data?.length ?? 0) && (
+                    <>
+                      {" "}
+                      São os {LIMITE_MAXIMO} mais recentes; escolha um período menor para ver os
+                      demais.
+                    </>
+                  )}
+                </span>
+                {limite < LIMITE_MAXIMO && resumo.naoRastreados > (orfaos.data?.length ?? 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-11 md:h-8"
+                    disabled={orfaos.isFetching}
+                    onClick={() => setLimite((l) => Math.min(LIMITE_MAXIMO, l + LIMITE_INICIAL))}
+                  >
+                    {orfaos.isFetching && (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden />
+                    )}{" "}
+                    Mostrar mais
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}

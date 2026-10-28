@@ -30,14 +30,19 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("font-bold leading-none tracking-tight text-foreground", className)}
-      {...props}
-    />
-  ),
+/**
+ * `as` troca o elemento (div por padrão): título de card que abre uma seção da página
+ * deve ser um cabeçalho, para quem navega por leitor de tela poder pular entre seções.
+ */
+const CardTitle = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { as?: "div" | "h2" | "h3" }
+>(({ className, as: Tag = "div", ...props }, ref) =>
+  React.createElement(Tag, {
+    ref,
+    className: cn("font-bold leading-none tracking-tight text-foreground", className),
+    ...props,
+  }),
 );
 CardTitle.displayName = "CardTitle";
 

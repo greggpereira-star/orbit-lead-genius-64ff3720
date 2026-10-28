@@ -59,13 +59,13 @@ describe("erro de consulta não pode parecer 'sem dados'", () => {
 
 describe("textos e números que não enganam", () => {
   it("'Conversas' virou 'Leads' (são leads de formulário de anúncio)", () => {
-    expect(anuncios).not.toContain(">Conversas<");
-    expect(anuncios).toContain(">Leads<");
+    expect(anuncios).not.toMatch(/Conversas/);
+    expect(anuncios).toMatch(/cabecalho\(["']leads["'], ["']Leads["']\)/);
   });
   it("ROAS é de VENDAS, e o valor de lead qualificado se chama o que é", () => {
     expect(anuncios).toContain("ROAS (vendas ÷ gasto)");
     expect(anuncios).toContain("Não é receita");
-    expect(anuncios).toContain(">Pipeline<");
+    expect(anuncios).toMatch(/>\s*Pipeline\s*</);
     expect(anuncios).not.toContain("Retorno (ROAS)");
   });
   it("a tile de valor mostra vendas GANHAS, separadas do que está em negociação", () => {

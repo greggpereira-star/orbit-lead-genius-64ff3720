@@ -101,7 +101,7 @@ export function FunilDoPeriodo({
                   )}
                   <Link
                     to="/pipeline"
-                    className="inline-block text-sm font-medium underline underline-offset-4"
+                    className="inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4 md:min-h-0"
                   >
                     Abrir o Pipeline
                   </Link>

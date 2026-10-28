@@ -73,7 +73,7 @@ export function GastoDoAnuncio({ onAtualizou }: { onAtualizou: () => void }) {
   );
 
   const reconectar = e.podeConfigurar ? (
-    <Button asChild size="sm" variant="outline">
+    <Button asChild size="sm" variant="outline" className="h-11 md:h-8">
       <Link to="/integrations/meta">Reconectar Facebook</Link>
     </Button>
   ) : null;
@@ -143,7 +143,7 @@ export function GastoDoAnuncio({ onAtualizou }: { onAtualizou: () => void }) {
         {falhou && <span className="text-destructive"> · última importação falhou: {e.ultimoDetalhe}</span>}
       </span>
       {e.podeConfigurar && (
-        <Button size="sm" variant="ghost" disabled={sincronizando.isPending} onClick={() => sincronizando.mutate()}>
+        <Button size="sm" variant="ghost" className="h-11 md:h-8" disabled={sincronizando.isPending} onClick={() => sincronizando.mutate()}>
           {sincronizando.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
           Atualizar gasto
         </Button>

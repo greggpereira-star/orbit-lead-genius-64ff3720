@@ -131,7 +131,7 @@ function AnalyticsPage() {
           </p>
         </div>
         <Select value={dias} onValueChange={mudarPeriodo}>
-          <SelectTrigger className="h-9 w-40" aria-label="Período de todos os números desta página">
+          <SelectTrigger className="h-11 w-40 md:h-9" aria-label="Período de todos os números desta página">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

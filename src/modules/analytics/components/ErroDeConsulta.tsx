@@ -29,7 +29,13 @@ export function ErroDeConsulta({
         <span className="font-medium text-foreground">{titulo}</span> A consulta falhou; isso não
         quer dizer que não houve leads.
       </p>
-      <Button size="sm" variant="outline" disabled={tentando} onClick={aoTentar}>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-11 md:h-8"
+        disabled={tentando}
+        onClick={aoTentar}
+      >
         {tentando && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Tentar de novo
       </Button>
     </div>

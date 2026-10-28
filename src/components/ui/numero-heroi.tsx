@@ -37,7 +37,7 @@ export function NumeroHeroi({
   return (
     <div className={cn('min-w-0', className)}>
       {rotulo && (
-        <div className="flex items-center gap-1.5 text-[11px] leading-snug text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs leading-snug text-muted-foreground">
           {rotulo}
         </div>
       )}
@@ -56,7 +56,7 @@ export function NumeroHeroi({
           </span>
         )}
       </div>
-      {nota && <div className="mt-1 text-[11px] leading-snug text-muted-foreground">{nota}</div>}
+      {nota && <div className="mt-1 text-xs leading-snug text-muted-foreground">{nota}</div>}
     </div>
   );
 }
