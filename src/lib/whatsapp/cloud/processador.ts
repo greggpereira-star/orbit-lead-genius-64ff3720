@@ -13,7 +13,7 @@
  */
 
 import { registrarCliqueDeAnuncio } from "../../ctwa.server";
-import { mesmaPessoa } from "../../../modules/crm/lib/identidadeDoLead";
+import { mesmaPessoa, padraoDeBuscaDoFim } from "../../../modules/crm/lib/identidadeDoLead";
 import { variantesDoNumero } from "../numero";
 import type { EventoWa, Referral } from "./payload";
 import { pedeParaParar, pedeParaVoltar } from "./optout";
@@ -84,9 +84,9 @@ async function ligarContatoAoLead(
   const { data: candidatos } = await tabela(db, "leads")
     .select("id, phone, email")
     .eq("company_id", empresaId)
-    .ilike("phone", `%${waId.slice(-8)}%`)
+    .ilike("phone", padraoDeBuscaDoFim(waId) ?? `%${waId}%`)
     .order("created_at", { ascending: true })
-    .limit(10);
+    .limit(25);
 
   const variantes = variantesDoNumero(waId);
   const achado = (
@@ -177,6 +177,17 @@ export async function processarEvento(db: DbWa, e: EventoWa): Promise<Resultado>
           clique: referralParaClique(e.referral),
           messageTimestamp: Math.floor(new Date(e.ts).getTime() / 1000),
         });
+      }
+
+      // Origem por mensagem: lead sem prova de anúncio que escreve "vim pelo Instagram"
+      // recebe o canal da regra da empresa. Melhor esforço — a classificação nunca pode
+      // impedir a mensagem de ser processada, e o banco só atua em lead ainda não rastreado.
+      if (leadId && !e.referral) {
+        try {
+          await db.rpc("aplicar_regras_de_origem_ao_lead", { p_lead_id: leadId });
+        } catch {
+          /* classificar é acessório */
+        }
       }
 
       // Resposta à pesquisa de satisfação: só a PRIMEIRA nota, em até 48 h do pedido. O filtro está

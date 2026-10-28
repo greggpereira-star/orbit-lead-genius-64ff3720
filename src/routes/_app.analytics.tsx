@@ -20,6 +20,7 @@ import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenceCard';
+import { OrigemDosLeadsCard } from '@/modules/analytics/components/OrigemDosLeadsCard';
 
 interface Fatia { nome: string; valor: number }
 interface Resumo {
@@ -128,6 +129,8 @@ function AnalyticsPage() {
       </div>
 
       <AdIntelligenceCard companyId={companyId} />
+
+      <OrigemDosLeadsCard companyId={companyId} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

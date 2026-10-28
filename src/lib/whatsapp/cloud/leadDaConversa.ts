@@ -12,7 +12,7 @@
  */
 import {
   acharDuplicado,
-  finalDoTelefone,
+  padraoDeBuscaDoFim,
   mesmaPessoa,
   normalizarEmail,
 } from "@/modules/crm/lib/identidadeDoLead";
@@ -104,10 +104,10 @@ async function acharDuplicadoDoTelefone(
   waId: string,
   email: string | null,
 ) {
-  const fim = finalDoTelefone(waId);
+  const padrao = padraoDeBuscaDoFim(waId);
   const filtros: string[] = [];
   if (email) filtros.push(`email.ilike.${email}`);
-  if (fim) filtros.push(`phone.like.%${fim}`);
+  if (padrao) filtros.push(`phone.like.${padrao}`);
   if (filtros.length === 0) return null;
 
   const { data, error } = await tabela(db, "leads")
@@ -216,6 +216,15 @@ export async function criarLeadDaConversa(
     metadata: { source: "whatsapp_inbox", conversation_id: conv.id },
   });
   await ligar(db, conv, contato, lead.id as string);
+  // Sem anúncio na conversa, o lead nasce "WhatsApp" sem prova de origem: se a primeira
+  // mensagem casar com uma regra da empresa ("vim pelo Instagram"), já nasce classificado.
+  if (!anuncio) {
+    try {
+      await db.rpc("aplicar_regras_de_origem_ao_lead", { p_lead_id: lead.id });
+    } catch {
+      /* classificar é acessório: nunca barra a criação */
+    }
+  }
   return { ok: true, leadId: lead.id as string, jaLigado: false };
 }
 

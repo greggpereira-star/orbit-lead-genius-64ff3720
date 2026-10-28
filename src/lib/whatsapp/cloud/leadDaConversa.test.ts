@@ -257,3 +257,48 @@ describe("vincularConversaAoLead", () => {
     });
   });
 });
+
+describe("origem por mensagem ao criar o lead", () => {
+  const regra = (ops: Array<{ tabela: string; op: string }>) =>
+    ops.filter((o) => o.tabela === "rpc" && o.op === "aplicar_regras_de_origem_ao_lead");
+
+  it("lead sem anúncio é entregue às regras de origem, com o id do lead criado", async () => {
+    const { db, ops } = criarBanco({
+      wa_conversations: { select: conversa() },
+      wa_contacts: { select: contato },
+      leads: { select: [], insert: { id: "lead1" } },
+    });
+    await criarLeadDaConversa(db, base);
+    const chamadas = regra(ops) as unknown as Array<{ args: Array<{ p_lead_id: string }> }>;
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0].args[0]).toEqual({ p_lead_id: "lead1" });
+  });
+
+  it("conversa de anúncio não passa pelas regras (a origem já é comprovada)", async () => {
+    const { db, ops } = criarBanco({
+      wa_conversations: { select: conversa({ origin: { source_id: "AD9" } }) },
+      wa_contacts: { select: contato },
+      leads: { select: [], insert: { id: "lead1" } },
+    });
+    await criarLeadDaConversa(db, base);
+    expect(regra(ops)).toHaveLength(0);
+  });
+
+  it("falha ao aplicar as regras NUNCA impede a criação do lead", async () => {
+    const { db } = criarBanco({
+      wa_conversations: { select: conversa() },
+      wa_contacts: { select: contato },
+      leads: { select: [], insert: { id: "lead1" } },
+    });
+    const original = db.rpc.bind(db);
+    (db as unknown as { rpc: unknown }).rpc = (fn: string, args: unknown) => {
+      if (fn === "aplicar_regras_de_origem_ao_lead") throw new Error("banco fora");
+      return original(fn as never, args as never);
+    };
+    expect(await criarLeadDaConversa(db, base)).toEqual({
+      ok: true,
+      leadId: "lead1",
+      jaLigado: false,
+    });
+  });
+});
