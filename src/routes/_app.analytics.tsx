@@ -23,11 +23,13 @@ import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenceCard';
+import { NotaDoComparativo } from '@/modules/analytics/components/NotaDoComparativo';
 import { ErroDeConsulta } from '@/modules/analytics/components/ErroDeConsulta';
 import { FunilDoPeriodo } from '@/modules/analytics/components/FunilDoPeriodo';
 import { OrigemDosLeadsCard } from '@/modules/analytics/components/OrigemDosLeadsCard';
 import { TempoDeRespostaCard } from '@/modules/analytics/components/TempoDeRespostaCard';
 import { fatiasDeCanal } from '@/modules/analytics/lib/canais';
+import { variacaoEmPontos, variacaoPercentual } from '@/modules/analytics/lib/comparativo';
 import { analisarFunil } from '@/modules/analytics/lib/funil';
 import { analisarResposta } from '@/modules/analytics/lib/resposta';
 import {
@@ -38,6 +40,7 @@ import {
   periodoParaUrl,
   type PeriodoNaUrl,
 } from '@/modules/analytics/lib/periodo';
+import { comparativoDoPeriodo } from '@/modules/analytics/services/comparativoService';
 import { funilDoPeriodo } from '@/modules/analytics/services/funilService';
 import { origemDosLeads } from '@/modules/analytics/services/origemService';
 import { tempoDeResposta } from '@/modules/analytics/services/respostaService';
@@ -95,6 +98,12 @@ function AnalyticsPage() {
     enabled: Boolean(companyId),
   });
 
+  const comparativo = useQuery({
+    queryKey: ['comparativo-do-periodo', companyId, dias],
+    queryFn: () => comparativoDoPeriodo(companyId, Number(dias)),
+    enabled: Boolean(companyId),
+  });
+
   const analiseDeResposta = useMemo(
     () => (resposta.data ? analisarResposta(resposta.data) : null),
     [resposta.data],
@@ -109,26 +118,60 @@ function AnalyticsPage() {
 
   const r = resumo.data;
   const taxa =
-    r && r.qualificados !== null && r.leads > 0 ? `${((r.qualificados / r.leads) * 100).toFixed(1)}%` : '—';
+    r && r.qualificados !== null && r.leads > 0
+      ? `${((r.qualificados / r.leads) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+      : '—';
 
   const vendasGanhas = analise ? dinheiro(analise.vendas.valor) : '—';
   const notaDeVendas = analise
     ? `${analise.vendas.quantidade} ${analise.vendas.quantidade === 1 ? 'venda' : 'vendas'} · ${dinheiro(analise.emNegociacao.valor)} em negociação`
     : undefined;
 
+  // Comparação com o período anterior: só quando a janela anterior está completa.
+  const cmp = comparativo.data?.disponivel ? comparativo.data : null;
+  const contra = (variacao: string | null, antes: string) => (
+    <span className="block">
+      {variacao ?? 'sem base'} · antes: {antes}
+    </span>
+  );
+  const pct = (v: number | null) =>
+    v === null ? '—' : `${(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+  const deltaLeads = cmp && contra(variacaoPercentual(cmp.atual.leads, cmp.anterior.leads), String(cmp.anterior.leads));
+  const deltaQualificados =
+    cmp && cmp.atual.qualificados !== null && cmp.anterior.qualificados !== null
+      ? contra(variacaoPercentual(cmp.atual.qualificados, cmp.anterior.qualificados), String(cmp.anterior.qualificados))
+      : null;
+  const deltaTaxa = cmp && contra(variacaoEmPontos(cmp.atual.taxa, cmp.anterior.taxa), pct(cmp.anterior.taxa));
+  const deltaVendas = cmp && contra(variacaoPercentual(cmp.atual.valorGanho, cmp.anterior.valorGanho), dinheiro(cmp.anterior.valorGanho));
+  const deltaOrigem =
+    cmp && contra(variacaoEmPontos(cmp.atual.origemIdentificada, cmp.anterior.origemIdentificada), pct(cmp.anterior.origemIdentificada));
+
   const indicadores = [
-    { titulo: 'Leads', valor: r ? String(r.leads) : '—', icone: Users },
-    { titulo: 'Qualificados', valor: r?.qualificados === null ? '—' : String(r?.qualificados ?? '—'), icone: Target },
-    { titulo: 'Taxa de qualificação', valor: taxa, icone: TrendingUp },
-    { titulo: 'Vendas ganhas', valor: vendasGanhas, nota: notaDeVendas, icone: DollarSign },
-    { titulo: 'Origem identificada', valor: origemIdentificada, icone: Radar },
+    { titulo: 'Leads', valor: r ? String(r.leads) : '—', nota: deltaLeads || undefined, icone: Users },
+    { titulo: 'Qualificados', valor: r?.qualificados === null ? '—' : String(r?.qualificados ?? '—'), nota: deltaQualificados || undefined, icone: Target },
+    { titulo: 'Taxa de qualificação', valor: taxa, nota: deltaTaxa || undefined, icone: TrendingUp },
+    {
+      titulo: 'Vendas ganhas',
+      valor: vendasGanhas,
+      nota: notaDeVendas ? (
+        <>
+          <span className="block">{notaDeVendas}</span>
+          {deltaVendas}
+        </>
+      ) : (
+        deltaVendas || undefined
+      ),
+      icone: DollarSign,
+    },
+    { titulo: 'Origem identificada', valor: origemIdentificada, nota: deltaOrigem || undefined, icone: Radar },
   ];
 
-  const falhou = resumo.isError || origem.isError;
-  const tentando = resumo.isFetching || origem.isFetching;
+  const falhou = resumo.isError || origem.isError || comparativo.isError;
+  const tentando = resumo.isFetching || origem.isFetching || comparativo.isFetching;
   const tentarDeNovo = () => {
     if (resumo.isError) void resumo.refetch();
     if (origem.isError) void origem.refetch();
+    if (comparativo.isError) void comparativo.refetch();
   };
 
   const atualizadoEm = resumo.dataUpdatedAt
@@ -197,6 +240,8 @@ function AnalyticsPage() {
           </Card>
         ))}
       </div>
+
+      <NotaDoComparativo comparativo={comparativo.data} dias={dias} />
 
       <FunilDoPeriodo
         analise={analise}
