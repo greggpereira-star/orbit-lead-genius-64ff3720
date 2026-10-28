@@ -48,3 +48,22 @@ describe('régua de qualificado', () => {
     expect(m).toMatch(/RAISE EXCEPTION 'relatorio_anuncios/);
   });
 });
+
+describe('etapa de qualificação explícita', () => {
+  const m = readFileSync('supabase/migrations/20261031300000_etapa_de_qualificacao.sql', 'utf8');
+  const servico = readFileSync('src/modules/crm/services/stageService.ts', 'utf8');
+
+  it('só uma etapa por empresa e só dono/administrador troca', () => {
+    expect(m).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS stages_um_corte_por_empresa[\s\S]*WHERE is_qualified_cut/);
+    expect(m).toMatch(/eh_admin_da_empresa\(p_company_id\)/);
+    expect(m).toMatch(/REVOKE ALL ON FUNCTION public\.definir_etapa_de_qualificacao\(uuid, uuid\) FROM PUBLIC, anon/);
+  });
+  it('a marca vale antes da regra antiga nas duas funções, e a migration aborta sem a âncora', () => {
+    expect(m).toMatch(/ARRAY\['relatorio_anuncios', 'resumo_analytics'\]/);
+    expect(m).toMatch(/q\.is_qualified_cut\), min\(s\.order_index\)/);
+    expect(m).toMatch(/RAISE EXCEPTION '%: trecho da régua não encontrado/);
+  });
+  it('a tela troca a marca pela função do banco, não por escritas soltas', () => {
+    expect(servico).toMatch(/rpc\('definir_etapa_de_qualificacao'/);
+  });
+});

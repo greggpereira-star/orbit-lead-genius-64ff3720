@@ -21,6 +21,8 @@ export interface Stage {
   order_index: number;
   kind: StageKind;
   is_entry: boolean;
+  /** Etapa a partir da qual o lead conta como qualificado nos relatórios. */
+  is_qualified_cut: boolean;
 }
 
 /** Espaço entre dois cards vizinhos na ordenação da coluna. */
@@ -41,7 +43,7 @@ export const STAGE_COLORS = [
 export async function listStages(companyId: string): Promise<Stage[]> {
   const { data, error } = await (supabase as any)
     .from('stages')
-    .select('id, company_id, name, color, order_index, kind, is_entry')
+    .select('id, company_id, name, color, order_index, kind, is_entry, is_qualified_cut')
     .eq('company_id', companyId)
     .order('order_index');
 
@@ -265,7 +267,7 @@ export async function createStage(
       // recém-criado não teria onde receber lead.
       is_entry: existing.length === 0,
     })
-    .select('id, company_id, name, color, order_index, kind, is_entry')
+    .select('id, company_id, name, color, order_index, kind, is_entry, is_qualified_cut')
     .single();
 
   if (error) throw new Error(error.message);
@@ -322,6 +324,21 @@ export async function setEntryStage(companyId: string, stageId: string): Promise
     }
     throw new Error(set.error.message);
   }
+}
+
+/**
+ * Marca a etapa de qualificação (ou remove, com `null`).
+ *
+ * Vai por função do banco, e não por duas escritas como `setEntryStage`: o
+ * índice único parcial exige trocar a marca numa transação só, e a função
+ * confere que quem pede é dono ou administrador.
+ */
+export async function setQualificationStage(companyId: string, stageId: string | null): Promise<void> {
+  const { error } = await (supabase as any).rpc('definir_etapa_de_qualificacao', {
+    p_company_id: companyId,
+    p_stage_id: stageId,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function reorderStages(orderedIds: string[]): Promise<void> {

@@ -14,7 +14,7 @@ import { listConversionMappings } from '@/modules/crm/services/conversionMapping
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
-import { GripVertical, Plus, Trash2, Loader2, Flag, Check, Filter } from 'lucide-react';
+import { GripVertical, Plus, Trash2, Loader2, Flag, Check, Filter, Target } from 'lucide-react';
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -30,7 +30,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  listStages, createStage, updateStage, reorderStages, deleteStage, setEntryStage,
+  listStages, createStage, updateStage, reorderStages, deleteStage, setEntryStage, setQualificationStage,
   type Stage, type StageKind,
 } from '../services/stageService';
 
@@ -123,6 +123,17 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
     onSuccess: () => {
       invalidate();
       toast.success('Etapa de entrada definida');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const qualificationMutation = useMutation({
+    mutationFn: (id: string | null) => setQualificationStage(companyId, id),
+    onSuccess: (_d, id) => {
+      invalidate();
+      // Os relatórios calculam "qualificado" a partir desta marca.
+      qc.invalidateQueries({ queryKey: ['relatorio-anuncios'] });
+      toast.success(id ? 'Etapa de qualificação definida' : 'Etapa de qualificação removida');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -307,6 +318,25 @@ export function StageManagerDialog({ companyId, open, onOpenChange }: Props) {
                             {stage.is_entry ? <Check className="h-4 w-4" /> : <Flag className="h-4 w-4" />}
                             <span className="sr-only">
                               {stage.is_entry ? 'É a etapa de entrada' : 'Definir como etapa de entrada'}
+                            </span>
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${
+                              stage.is_qualified_cut ? 'text-primary' : 'text-muted-foreground/50'
+                            }`}
+                            title={
+                              stage.is_qualified_cut
+                                ? 'Etapa de qualificação (clique para remover)'
+                                : 'Definir como etapa de qualificação: daqui em diante o lead conta como qualificado nos relatórios'
+                            }
+                            onClick={() => qualificationMutation.mutate(stage.is_qualified_cut ? null : stage.id)}
+                          >
+                            <Target className="h-4 w-4" />
+                            <span className="sr-only">
+                              {stage.is_qualified_cut ? 'Remover etapa de qualificação' : 'Definir como etapa de qualificação'}
                             </span>
                           </Button>
 
