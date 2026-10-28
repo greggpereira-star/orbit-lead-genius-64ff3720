@@ -52,6 +52,7 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppSettingsCamposRouteImport } from './routes/_app.settings.campos'
 import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
+import { Route as AppSettingsDesenvolvedoresRouteImport } from './routes/_app.settings.desenvolvedores'
 import { Route as AppSettingsEnviosRouteImport } from './routes/_app.settings.envios'
 import { Route as AppSettingsEquipeRouteImport } from './routes/_app.settings.equipe'
 import { Route as AppSettingsHorariosRouteImport } from './routes/_app.settings.horarios'
@@ -93,6 +94,10 @@ import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/ap
 import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/api/public/cron/meta-reprocess-failed'
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 import { Route as ApiPublicCronWaWebhookSweepRouteImport } from './routes/api/public/cron/wa-webhook-sweep'
+import { Route as ApiPublicCronWebhookDispatchRouteImport } from './routes/api/public/cron/webhook-dispatch'
+import { Route as ApiPublicV1LeadsRouteImport } from './routes/api/public/v1/leads'
+import { Route as ApiPublicV1StagesRouteImport } from './routes/api/public/v1/stages'
+import { Route as ApiPublicV1LeadsIdRouteImport } from './routes/api/public/v1/leads.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -307,6 +312,12 @@ const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   path: '/company',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsDesenvolvedoresRoute =
+  AppSettingsDesenvolvedoresRouteImport.update({
+    id: '/desenvolvedores',
+    path: '/desenvolvedores',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
 const AppSettingsEnviosRoute = AppSettingsEnviosRouteImport.update({
   id: '/envios',
   path: '/envios',
@@ -524,6 +535,27 @@ const ApiPublicCronWaWebhookSweepRoute =
     path: '/api/public/cron/wa-webhook-sweep',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronWebhookDispatchRoute =
+  ApiPublicCronWebhookDispatchRouteImport.update({
+    id: '/api/public/cron/webhook-dispatch',
+    path: '/api/public/cron/webhook-dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicV1LeadsRoute = ApiPublicV1LeadsRouteImport.update({
+  id: '/api/public/v1/leads',
+  path: '/api/public/v1/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1StagesRoute = ApiPublicV1StagesRouteImport.update({
+  id: '/api/public/v1/stages',
+  path: '/api/public/v1/stages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1LeadsIdRoute = ApiPublicV1LeadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiPublicV1LeadsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -566,6 +598,7 @@ export interface FileRoutesByFullPath {
   '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/desenvolvedores': typeof AppSettingsDesenvolvedoresRoute
   '/settings/envios': typeof AppSettingsEnviosRoute
   '/settings/equipe': typeof AppSettingsEquipeRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
@@ -607,7 +640,11 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
+  '/api/public/cron/webhook-dispatch': typeof ApiPublicCronWebhookDispatchRoute
+  '/api/public/v1/leads': typeof ApiPublicV1LeadsRouteWithChildren
+  '/api/public/v1/stages': typeof ApiPublicV1StagesRoute
   '/settings/conexoes/': typeof AppSettingsConexoesIndexRoute
+  '/api/public/v1/leads/$id': typeof ApiPublicV1LeadsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -649,6 +686,7 @@ export interface FileRoutesByTo {
   '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/desenvolvedores': typeof AppSettingsDesenvolvedoresRoute
   '/settings/envios': typeof AppSettingsEnviosRoute
   '/settings/equipe': typeof AppSettingsEquipeRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
@@ -690,7 +728,11 @@ export interface FileRoutesByTo {
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
+  '/api/public/cron/webhook-dispatch': typeof ApiPublicCronWebhookDispatchRoute
+  '/api/public/v1/leads': typeof ApiPublicV1LeadsRouteWithChildren
+  '/api/public/v1/stages': typeof ApiPublicV1StagesRoute
   '/settings/conexoes': typeof AppSettingsConexoesIndexRoute
+  '/api/public/v1/leads/$id': typeof ApiPublicV1LeadsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -736,6 +778,7 @@ export interface FileRoutesById {
   '/_app/settings/campos': typeof AppSettingsCamposRoute
   '/_app/settings/chat': typeof AppSettingsChatRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
+  '/_app/settings/desenvolvedores': typeof AppSettingsDesenvolvedoresRoute
   '/_app/settings/envios': typeof AppSettingsEnviosRoute
   '/_app/settings/equipe': typeof AppSettingsEquipeRoute
   '/_app/settings/horarios': typeof AppSettingsHorariosRoute
@@ -777,7 +820,11 @@ export interface FileRoutesById {
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
+  '/api/public/cron/webhook-dispatch': typeof ApiPublicCronWebhookDispatchRoute
+  '/api/public/v1/leads': typeof ApiPublicV1LeadsRouteWithChildren
+  '/api/public/v1/stages': typeof ApiPublicV1StagesRoute
   '/_app/settings/conexoes/': typeof AppSettingsConexoesIndexRoute
+  '/api/public/v1/leads/$id': typeof ApiPublicV1LeadsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -822,6 +869,7 @@ export interface FileRouteTypes {
     | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/desenvolvedores'
     | '/settings/envios'
     | '/settings/equipe'
     | '/settings/horarios'
@@ -863,7 +911,11 @@ export interface FileRouteTypes {
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
+    | '/api/public/cron/webhook-dispatch'
+    | '/api/public/v1/leads'
+    | '/api/public/v1/stages'
     | '/settings/conexoes/'
+    | '/api/public/v1/leads/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -905,6 +957,7 @@ export interface FileRouteTypes {
     | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/desenvolvedores'
     | '/settings/envios'
     | '/settings/equipe'
     | '/settings/horarios'
@@ -946,7 +999,11 @@ export interface FileRouteTypes {
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
+    | '/api/public/cron/webhook-dispatch'
+    | '/api/public/v1/leads'
+    | '/api/public/v1/stages'
     | '/settings/conexoes'
+    | '/api/public/v1/leads/$id'
   id:
     | '__root__'
     | '/'
@@ -991,6 +1048,7 @@ export interface FileRouteTypes {
     | '/_app/settings/campos'
     | '/_app/settings/chat'
     | '/_app/settings/company'
+    | '/_app/settings/desenvolvedores'
     | '/_app/settings/envios'
     | '/_app/settings/equipe'
     | '/_app/settings/horarios'
@@ -1032,7 +1090,11 @@ export interface FileRouteTypes {
     | '/api/public/cron/meta-reprocess-failed'
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
+    | '/api/public/cron/webhook-dispatch'
+    | '/api/public/v1/leads'
+    | '/api/public/v1/stages'
     | '/_app/settings/conexoes/'
+    | '/api/public/v1/leads/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1068,6 +1130,9 @@ export interface RootRouteChildren {
   ApiPublicCronMetaReprocessFailedRoute: typeof ApiPublicCronMetaReprocessFailedRoute
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
   ApiPublicCronWaWebhookSweepRoute: typeof ApiPublicCronWaWebhookSweepRoute
+  ApiPublicCronWebhookDispatchRoute: typeof ApiPublicCronWebhookDispatchRoute
+  ApiPublicV1LeadsRoute: typeof ApiPublicV1LeadsRouteWithChildren
+  ApiPublicV1StagesRoute: typeof ApiPublicV1StagesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1373,6 +1438,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsCompanyRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/desenvolvedores': {
+      id: '/_app/settings/desenvolvedores'
+      path: '/desenvolvedores'
+      fullPath: '/settings/desenvolvedores'
+      preLoaderRoute: typeof AppSettingsDesenvolvedoresRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/envios': {
       id: '/_app/settings/envios'
       path: '/envios'
@@ -1660,6 +1732,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronWaWebhookSweepRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/webhook-dispatch': {
+      id: '/api/public/cron/webhook-dispatch'
+      path: '/api/public/cron/webhook-dispatch'
+      fullPath: '/api/public/cron/webhook-dispatch'
+      preLoaderRoute: typeof ApiPublicCronWebhookDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/leads': {
+      id: '/api/public/v1/leads'
+      path: '/api/public/v1/leads'
+      fullPath: '/api/public/v1/leads'
+      preLoaderRoute: typeof ApiPublicV1LeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/stages': {
+      id: '/api/public/v1/stages'
+      path: '/api/public/v1/stages'
+      fullPath: '/api/public/v1/stages'
+      preLoaderRoute: typeof ApiPublicV1StagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/leads/$id': {
+      id: '/api/public/v1/leads/$id'
+      path: '/$id'
+      fullPath: '/api/public/v1/leads/$id'
+      preLoaderRoute: typeof ApiPublicV1LeadsIdRouteImport
+      parentRoute: typeof ApiPublicV1LeadsRoute
+    }
   }
 }
 
@@ -1692,6 +1792,7 @@ interface AppSettingsRouteChildren {
   AppSettingsCamposRoute: typeof AppSettingsCamposRoute
   AppSettingsChatRoute: typeof AppSettingsChatRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppSettingsDesenvolvedoresRoute: typeof AppSettingsDesenvolvedoresRoute
   AppSettingsEnviosRoute: typeof AppSettingsEnviosRoute
   AppSettingsEquipeRoute: typeof AppSettingsEquipeRoute
   AppSettingsHorariosRoute: typeof AppSettingsHorariosRoute
@@ -1716,6 +1817,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsCamposRoute: AppSettingsCamposRoute,
   AppSettingsChatRoute: AppSettingsChatRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppSettingsDesenvolvedoresRoute: AppSettingsDesenvolvedoresRoute,
   AppSettingsEnviosRoute: AppSettingsEnviosRoute,
   AppSettingsEquipeRoute: AppSettingsEquipeRoute,
   AppSettingsHorariosRoute: AppSettingsHorariosRoute,
@@ -1813,6 +1915,17 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface ApiPublicV1LeadsRouteChildren {
+  ApiPublicV1LeadsIdRoute: typeof ApiPublicV1LeadsIdRoute
+}
+
+const ApiPublicV1LeadsRouteChildren: ApiPublicV1LeadsRouteChildren = {
+  ApiPublicV1LeadsIdRoute: ApiPublicV1LeadsIdRoute,
+}
+
+const ApiPublicV1LeadsRouteWithChildren =
+  ApiPublicV1LeadsRoute._addFileChildren(ApiPublicV1LeadsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
@@ -1846,6 +1959,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronMetaReprocessFailedRoute: ApiPublicCronMetaReprocessFailedRoute,
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
   ApiPublicCronWaWebhookSweepRoute: ApiPublicCronWaWebhookSweepRoute,
+  ApiPublicCronWebhookDispatchRoute: ApiPublicCronWebhookDispatchRoute,
+  ApiPublicV1LeadsRoute: ApiPublicV1LeadsRouteWithChildren,
+  ApiPublicV1StagesRoute: ApiPublicV1StagesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

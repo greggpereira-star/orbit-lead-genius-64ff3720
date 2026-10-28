@@ -13,7 +13,7 @@
  */
 
 /** Deriva o status igual ao board faz, senão os dois caminhos divergem. */
-function statusDaEtapa(
+export function statusDaEtapa(
   etapa: { id: string; kind: string | null },
   todas: Array<{ id: string; kind: string | null }>,
 ): string {

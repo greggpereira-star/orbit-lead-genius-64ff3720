@@ -144,7 +144,7 @@ export const salvarValorDaVenda = createServerFn({ method: 'POST' })
  * Fora das server functions porque as duas precisam dela — a que dispara na
  * mudança de etapa e a que dispara ao gravar o valor depois do fechamento.
  */
-async function despacharConversaoVenda(
+export async function despacharConversaoVenda(
   leadId: string,
 ): Promise<{ status: string; detalhe: string | null }> {
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');

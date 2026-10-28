@@ -16,8 +16,8 @@ Estatísticas por link (cliques conversas vendas),Rastreamento,should,yes,no,
 Tipos de link (site anúncio orgânico),Rastreamento,could,yes,no,
 Parâmetros de URL TikTok Ads,Rastreamento,could,yes,no,
 Integração Typeform,Captura,could,yes,no,
-API pública com chave,Integrações,should,yes,no,contrato próprio; chave só em hash; limite de taxa
-Webhooks de saída assinados (HMAC),Integrações,should,yes,no,integration_webhooks existe vazio
+API pública com chave,Integrações,should,yes,yes,/api/public/v1 (leads e etapas); chave só em hash; 120/min por chave; Idempotency-Key; docs/api-publica.md; travada pelo plano
+Webhooks de saída assinados (HMAC),Integrações,should,yes,yes,lead.created e lead.stage_changed; HMAC-SHA256 com timestamp; 6 tentativas; segredo cifrado; travado pelo plano
 Webhook de entrada para mudar etapa (helpdesks),Integrações,could,yes,no,só se houver cliente usando outro sistema
 Frase-gatilho/palavra-chave sobre a conversa,Automação,should,yes,partial,hoje só etiqueta→etapa
 Classificação por IA da conversa,IA,should,yes,no,sem LLM no código; modules/ai é simulado; decisão de produto aberta

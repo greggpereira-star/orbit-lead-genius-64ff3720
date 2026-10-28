@@ -20,6 +20,7 @@ import {
   EyeOff,
   ShieldCheck,
   UserPlus,
+  KeyRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -42,6 +43,7 @@ const settingsNav = [
   { title: "Equipe", icon: UserPlus, to: "/settings/equipe" },
   { title: "Permissões da equipe", icon: ShieldCheck, to: "/settings/permissoes" },
   { title: "Plano e recursos", icon: BadgeCheck, to: "/settings/plano" },
+  { title: "API e webhooks", icon: KeyRound, to: "/settings/desenvolvedores" },
   { title: "Histórico de envios", icon: Send, to: "/settings/envios" },
   { title: "Automations", icon: Zap, to: "/settings/automations" },
   { title: "Distribuição de Leads", icon: Users, to: "/settings/routing" },
