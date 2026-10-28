@@ -463,4 +463,98 @@ export const MODELOS_DE_QUIZ: ModeloDeQuiz[] = [
         ["Abertura", "Para quem", "Critério", "Faixa", "Prazo", "Análise", "Captura", "Resultado"],
       ),
   },
+  {
+    slug: "mentoria-presencial-estetica",
+    name: "Mentoria presencial — estética avançada (Dra. Taciane)",
+    niche: "mentoria",
+    emoji: "💉",
+    presetId: "minimal-light",
+    description:
+      "Qualifica profissionais de estética para a mentoria presencial de toxina e preenchimento, com triagem de registro profissional.",
+    build: () =>
+      montar(
+        "minimal-light",
+        [
+          abertura(
+            "Conheça a mentoria presencial da Dra. Taciane",
+            "Até 2 participantes, prática supervisionada e 12 meses de suporte. Seis perguntas para indicar a modalidade certa para você.",
+            "Começar",
+          ),
+          pergunta("Qual técnica você deseja aperfeiçoar?", [
+            ["Toxina Botulínica", 8, "INTERESSE_TOXINA"],
+            ["Preenchimento Facial", 8, "INTERESSE_PREENCHIMENTO"],
+            ["As duas técnicas", 20, "INTERESSE_DUPLA"],
+          ]),
+          pergunta("Qual é a sua formação?", [
+            ["Biomedicina", 0],
+            ["Farmácia", 0],
+            ["Enfermagem", 0],
+            ["Odontologia", 0],
+            ["Fisioterapia", 0],
+            ["Outra", 0],
+          ]),
+          pergunta("Qual é a sua situação na estética?", [
+            ["Estou começando", 0],
+            ["Já fiz cursos", 0],
+            ["Já atuo na área", 0],
+          ]),
+          pergunta(
+            "Você possui registro ativo no conselho da sua profissão?",
+            [
+              ["Sim", 20, "HABILITACAO_A_VERIFICAR"],
+              ["Em andamento", 0, "PRATICA_PENDENTE"],
+              ["Ainda não", 0, "PRATICA_PENDENTE"],
+            ],
+            "É uma triagem. A verificação é feita depois, em ambiente seguro.",
+          ),
+          pergunta("Você consegue participar presencialmente em Linhares/ES?", [
+            ["Sim, na próxima turma", 20, "DATA_PROXIMA_TURMA"],
+            ["Preciso de outra data", 0, "DATA_FUTURA"],
+            ["Ainda estou avaliando", 0],
+          ]),
+          pergunta(
+            "O investimento é de R$ 3.000 por técnica ou R$ 5.000 pelas duas.",
+            [
+              ["Quero conhecer as condições", 15, "CONDICAO_COMERCIAL"],
+              ["Quero entender melhor antes", 0],
+            ],
+            "As condições de pagamento são apresentadas pela equipe.",
+          ),
+          {
+            id: id("dep"),
+            type: "image",
+            title: "Quem já fez a mentoria",
+            mediaUrl: "/depoimentos/mentoria-taciane.png",
+            ctaLabel: "Continuar",
+          },
+          analise("Organizando suas respostas…", [
+            "Lendo suas respostas",
+            "Verificando a modalidade indicada",
+            "Preparando as próximas datas",
+          ]),
+          captura(
+            "Para quem enviamos as informações?",
+            "Nossa equipe confere seu perfil profissional e apresenta datas e condições.",
+            "Enviar e ver próximos passos",
+          ),
+          resultado(
+            "Recebemos seu interesse",
+            "A equipe da Dra. Taciane vai conferir seu perfil e apresentar as condições para a modalidade escolhida. A solicitação não constitui reserva de vaga. A mentoria não concede habilitação profissional: a participação em atividades práticas depende da formação, da habilitação e dos requisitos aplicáveis. Datas e condições a confirmar.",
+          ),
+        ],
+        [
+          "Abertura",
+          "Técnica",
+          "Formação",
+          "Situação",
+          "Registro profissional",
+          "Presencial",
+          "Investimento",
+          "Depoimentos",
+          "Análise",
+          "Captura",
+          "Resultado",
+        ],
+      ),
+  },
 ];
