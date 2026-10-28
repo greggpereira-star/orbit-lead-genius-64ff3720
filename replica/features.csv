@@ -1,0 +1,37 @@
+feature,area,priority,original,clone,notes
+Lead com campos personalizados tags e valor,CRM,must,yes,yes,deal_value custom_fields lead_tags já existem
+Kanban por etapa com filtros,CRM,must,yes,yes,pipeline
+Caixa de entrada WhatsApp completa,Atendimento,must,no,yes,Leaper só lê; nós à frente
+Formulários e quiz com pontuação,Captura,must,yes,yes,mais rico que o original
+Permissões convites e auditoria,Conta,must,yes,yes,feito em out/2026
+Etapa dispara evento Meta/Google com valor,Mídia,must,yes,yes,stage_conversion_mappings
+Atribuição campanha conjunto anúncio,Rastreamento,must,yes,yes,meta_ad_attribution ctwa
+Relatório por anúncio (qualificados valor dias),Relatórios,must,yes,yes,relatorio_anuncios
+Link de redirecionamento com código curto,Rastreamento,must,yes,partial,redirect_links sem estatísticas nem tipos
+Histórico de envios de conversão com reenvio na UI,Mídia,must,yes,no,dados em conversion_dispatches sem tela
+Gasto CPL e ROAS por anúncio (Ads Insights),Mídia,must,yes,no,nenhum código lê gasto
+Origem por mensagem/código sem clique,Rastreamento,should,yes,no,recupera lead sem clique
+Painel de leads não rastreados e taxonomia de origem,Rastreamento,should,yes,no,origem hoje é texto livre
+Estatísticas por link (cliques conversas vendas),Rastreamento,should,yes,no,
+Tipos de link (site anúncio orgânico),Rastreamento,could,yes,no,
+Parâmetros de URL TikTok Ads,Rastreamento,could,yes,no,
+Integração Typeform,Captura,could,yes,no,
+API pública com chave,Integrações,should,yes,no,contrato próprio; chave só em hash; limite de taxa
+Webhooks de saída assinados (HMAC),Integrações,should,yes,no,integration_webhooks existe vazio
+Webhook de entrada para mudar etapa (helpdesks),Integrações,could,yes,no,só se houver cliente usando outro sistema
+Frase-gatilho/palavra-chave sobre a conversa,Automação,should,yes,partial,hoje só etiqueta→etapa
+Classificação por IA da conversa,IA,should,yes,no,sem LLM no código; modules/ai é simulado; decisão de produto aberta
+Modos de autonomia da IA e limite de confiança,IA,should,yes,no,depende do item anterior
+Justificativa e resumo gravados por mudança de etapa,IA,should,yes,no,depende da IA
+Confirmação da sugestão pelo WhatsApp do responsável,IA,could,yes,no,
+Auditoria de atendimento no WhatsApp (1ª resposta sem resposta),Relatórios,should,no,no,a Leaper admite que não tem; oportunidade
+Dashboard exportável em PDF,Relatórios,could,yes,no,
+Exportação CSV de leads,Relatórios,must,yes,yes,csvSeguro
+Relatórios por API (resumo por etapa por origem),Integrações,could,yes,no,
+Conexão WhatsApp por QR e Cloud API,Atendimento,must,yes,yes,Evolution e Cloud
+Conexão WhatsApp Coexistence,Atendimento,could,yes,partial,há 14 arquivos citando; não conferido se funcional
+Painel multi-conta para agência,Conta,could,yes,partial,várias empresas por usuário; sem painel consolidado
+Plano de preço por número de WhatsApp,Negócio,skip,yes,no,decisão comercial; não é recurso
+Programa de parceiros e Academy,Negócio,skip,yes,no,não clonável
+Implementação assistida,Negócio,skip,yes,no,serviço; não é recurso
+Integrações homologadas Kommo RD ChatGuru Polichat,Integrações,skip,yes,no,dependem de acordo e acesso dos parceiros

@@ -52,6 +52,7 @@ import { Route as AppSettingsAutomationsRouteImport } from './routes/_app.settin
 import { Route as AppSettingsCamposRouteImport } from './routes/_app.settings.campos'
 import { Route as AppSettingsChatRouteImport } from './routes/_app.settings.chat'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app.settings.company'
+import { Route as AppSettingsEnviosRouteImport } from './routes/_app.settings.envios'
 import { Route as AppSettingsEquipeRouteImport } from './routes/_app.settings.equipe'
 import { Route as AppSettingsHorariosRouteImport } from './routes/_app.settings.horarios'
 import { Route as AppSettingsInstallRouteImport } from './routes/_app.settings.install'
@@ -304,6 +305,11 @@ const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
   path: '/company',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsEnviosRoute = AppSettingsEnviosRouteImport.update({
+  id: '/envios',
+  path: '/envios',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsEquipeRoute = AppSettingsEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -547,6 +553,7 @@ export interface FileRoutesByFullPath {
   '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/envios': typeof AppSettingsEnviosRoute
   '/settings/equipe': typeof AppSettingsEquipeRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
   '/settings/install': typeof AppSettingsInstallRoute
@@ -627,6 +634,7 @@ export interface FileRoutesByTo {
   '/settings/campos': typeof AppSettingsCamposRoute
   '/settings/chat': typeof AppSettingsChatRoute
   '/settings/company': typeof AppSettingsCompanyRoute
+  '/settings/envios': typeof AppSettingsEnviosRoute
   '/settings/equipe': typeof AppSettingsEquipeRoute
   '/settings/horarios': typeof AppSettingsHorariosRoute
   '/settings/install': typeof AppSettingsInstallRoute
@@ -711,6 +719,7 @@ export interface FileRoutesById {
   '/_app/settings/campos': typeof AppSettingsCamposRoute
   '/_app/settings/chat': typeof AppSettingsChatRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
+  '/_app/settings/envios': typeof AppSettingsEnviosRoute
   '/_app/settings/equipe': typeof AppSettingsEquipeRoute
   '/_app/settings/horarios': typeof AppSettingsHorariosRoute
   '/_app/settings/install': typeof AppSettingsInstallRoute
@@ -794,6 +803,7 @@ export interface FileRouteTypes {
     | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/envios'
     | '/settings/equipe'
     | '/settings/horarios'
     | '/settings/install'
@@ -874,6 +884,7 @@ export interface FileRouteTypes {
     | '/settings/campos'
     | '/settings/chat'
     | '/settings/company'
+    | '/settings/envios'
     | '/settings/equipe'
     | '/settings/horarios'
     | '/settings/install'
@@ -957,6 +968,7 @@ export interface FileRouteTypes {
     | '/_app/settings/campos'
     | '/_app/settings/chat'
     | '/_app/settings/company'
+    | '/_app/settings/envios'
     | '/_app/settings/equipe'
     | '/_app/settings/horarios'
     | '/_app/settings/install'
@@ -1335,6 +1347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsCompanyRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/envios': {
+      id: '/_app/settings/envios'
+      path: '/envios'
+      fullPath: '/settings/envios'
+      preLoaderRoute: typeof AppSettingsEnviosRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/equipe': {
       id: '/_app/settings/equipe'
       path: '/equipe'
@@ -1633,6 +1652,7 @@ interface AppSettingsRouteChildren {
   AppSettingsCamposRoute: typeof AppSettingsCamposRoute
   AppSettingsChatRoute: typeof AppSettingsChatRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppSettingsEnviosRoute: typeof AppSettingsEnviosRoute
   AppSettingsEquipeRoute: typeof AppSettingsEquipeRoute
   AppSettingsHorariosRoute: typeof AppSettingsHorariosRoute
   AppSettingsInstallRoute: typeof AppSettingsInstallRoute
@@ -1655,6 +1675,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsCamposRoute: AppSettingsCamposRoute,
   AppSettingsChatRoute: AppSettingsChatRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppSettingsEnviosRoute: AppSettingsEnviosRoute,
   AppSettingsEquipeRoute: AppSettingsEquipeRoute,
   AppSettingsHorariosRoute: AppSettingsHorariosRoute,
   AppSettingsInstallRoute: AppSettingsInstallRoute,
