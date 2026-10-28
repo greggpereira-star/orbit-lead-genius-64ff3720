@@ -40,3 +40,11 @@ describe('gasto por anúncio — segurança', () => {
     expect(cron).toMatch(/autorizarCron\(request\)/);
   });
 });
+
+describe('régua de qualificado', () => {
+  const m = readFileSync('supabase/migrations/20261031200000_perdido_nao_qualifica.sql', 'utf8');
+  it('lead perdido não conta como qualificado e a migration aborta sem a âncora', () => {
+    expect(m).toMatch(/st\.kind <> ''lost''/);
+    expect(m).toMatch(/RAISE EXCEPTION 'relatorio_anuncios/);
+  });
+});

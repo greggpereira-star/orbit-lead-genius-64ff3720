@@ -6,6 +6,39 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
+import { podeAdministrar, podeAtender } from '@/lib/whatsapp/papeis';
+
+/**
+ * Confere que o usuário pertence à empresa e tem o papel exigido.
+ *
+ * O middleware só prova que há uma sessão válida; não diz de quem são os dados.
+ * Estas funções usam a chave de serviço (ignora RLS), então sem esta conferência
+ * qualquer usuário logado podia mexer na empresa de outro bastando informar o id.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function exigirPapel(
+  admin: any,
+  userId: string,
+  companyId: string,
+  quem: 'administrar' | 'atender',
+): Promise<void> {
+  const { data } = await admin
+    .from('memberships')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('company_id', companyId)
+    .maybeSingle();
+  const papel = String(data?.role ?? '');
+  const ok = quem === 'administrar' ? podeAdministrar(papel) : podeAtender(papel);
+  if (!ok) throw new Error('Sem permissão para esta empresa.');
+}
+
+/** Empresa de um lead, para conferir o acesso antes de agir sobre ele. */
+async function empresaDoLead(admin: any, leadId: string): Promise<string> {
+  const { data } = await admin.from('leads').select('company_id').eq('id', leadId).maybeSingle();
+  if (!data?.company_id) throw new Error('Sem permissão para esta empresa.');
+  return data.company_id as string;
+}
 
 /** Guarda a escolha de conversão feita no wizard. */
 export const salvarConversaoGoogle = createServerFn({ method: 'POST' })
@@ -23,8 +56,9 @@ export const salvarConversaoGoogle = createServerFn({ method: 'POST' })
       })
       .parse(raw),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    await exigirPapel(supabaseAdmin, context.userId, data.companyId, 'administrar');
     const { data: atual } = await supabaseAdmin
       .from('integrations')
       .select('config')
@@ -80,8 +114,9 @@ export const salvarValorDaVenda = createServerFn({ method: 'POST' })
       })
       .parse(raw),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    await exigirPapel(supabaseAdmin, context.userId, await empresaDoLead(supabaseAdmin, data.leadId), 'atender');
 
     const { error } = await supabaseAdmin
       .from('leads')
@@ -175,4 +210,8 @@ async function despacharConversaoVenda(
 export const enviarConversaoVenda = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => z.object({ leadId: z.string().uuid() }).parse(raw))
-  .handler(async ({ data }) => despacharConversaoVenda(data.leadId));
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    await exigirPapel(supabaseAdmin, context.userId, await empresaDoLead(supabaseAdmin, data.leadId), 'atender');
+    return despacharConversaoVenda(data.leadId);
+  });
