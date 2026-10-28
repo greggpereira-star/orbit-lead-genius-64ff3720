@@ -9,6 +9,8 @@ import {
   marcarNomesRepetidos,
   totaisDeCusto,
 } from "@/modules/analytics/services/adIntelligenceService";
+import { BotaoExportarCsv } from "@/modules/analytics/components/BotaoExportarCsv";
+import { csvDeAnuncios } from "@/modules/analytics/lib/exportacao";
 import { GastoDoAnuncio } from "@/modules/analytics/components/GastoDoAnuncio";
 import { ErroDeConsulta } from "@/modules/analytics/components/ErroDeConsulta";
 import {
@@ -105,6 +107,13 @@ export function AdIntelligenceCard({ companyId, dias }: { companyId: string; dia
               qualificada.
             </CardDescription>
           </div>
+          <BotaoExportarCsv
+            secao="anuncios"
+            dias={dias}
+            desabilitado={linhas.length === 0}
+            motivoDesabilitado="Nenhum anúncio no período."
+            gerar={() => csvDeAnuncios(linhas)}
+          />
         </div>
       </CardHeader>
 

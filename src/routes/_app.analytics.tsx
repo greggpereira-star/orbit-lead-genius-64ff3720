@@ -23,12 +23,14 @@ import { NumeroHeroi } from '@/components/ui/numero-heroi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenceCard';
+import { BotaoExportarCsv } from '@/modules/analytics/components/BotaoExportarCsv';
 import { NotaDoComparativo } from '@/modules/analytics/components/NotaDoComparativo';
 import { ErroDeConsulta } from '@/modules/analytics/components/ErroDeConsulta';
 import { FunilDoPeriodo } from '@/modules/analytics/components/FunilDoPeriodo';
 import { OrigemDosLeadsCard } from '@/modules/analytics/components/OrigemDosLeadsCard';
 import { TempoDeRespostaCard } from '@/modules/analytics/components/TempoDeRespostaCard';
 import { fatiasDeCanal } from '@/modules/analytics/lib/canais';
+import { csvDoResumo } from '@/modules/analytics/lib/exportacao';
 import { variacaoEmPontos, variacaoPercentual } from '@/modules/analytics/lib/comparativo';
 import { analisarFunil } from '@/modules/analytics/lib/funil';
 import { analisarResposta } from '@/modules/analytics/lib/resposta';
@@ -187,18 +189,39 @@ function AnalyticsPage() {
             {atualizadoEm ? `Atualizado às ${atualizadoEm}` : 'Carregando…'} · leads criados {fraseDoPeriodo(dias)}
           </p>
         </div>
-        <Select value={dias} onValueChange={mudarPeriodo}>
-          <SelectTrigger className="h-11 w-40 md:h-9" aria-label="Período de todos os números desta página">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIODOS.map((p) => (
-              <SelectItem key={p.valor} value={p.valor}>
-                {p.rotulo}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <BotaoExportarCsv
+            secao="resumo"
+            dias={dias}
+            desabilitado={!r}
+            motivoDesabilitado="Os números ainda estão carregando."
+            gerar={() =>
+              csvDoResumo({
+                dias,
+                leads: r?.leads ?? null,
+                qualificados: r?.qualificados ?? null,
+                taxa: r && r.qualificados !== null && r.leads > 0 ? r.qualificados / r.leads : null,
+                vendasValor: analise ? analise.vendas.valor : null,
+                vendasQuantidade: analise ? analise.vendas.quantidade : null,
+                origemIdentificada:
+                  canais && canais.total > 0 ? (canais.total - canais.naoRastreados) / canais.total : null,
+                comparativo: comparativo.data,
+              })
+            }
+          />
+          <Select value={dias} onValueChange={mudarPeriodo}>
+            <SelectTrigger className="h-11 w-40 md:h-9" aria-label="Período de todos os números desta página">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIODOS.map((p) => (
+                <SelectItem key={p.valor} value={p.valor}>
+                  {p.rotulo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {resumo.isLoading && (
@@ -249,6 +272,7 @@ function AnalyticsPage() {
         erro={funil.isError}
         aoTentar={() => void funil.refetch()}
         tentando={funil.isFetching}
+        dias={dias}
       />
 
       <TempoDeRespostaCard

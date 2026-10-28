@@ -3,6 +3,8 @@ import { AlertCircle, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { BotaoExportarCsv } from "@/modules/analytics/components/BotaoExportarCsv";
+import { csvDoFunil } from "@/modules/analytics/lib/exportacao";
 import { ErroDeConsulta } from "@/modules/analytics/components/ErroDeConsulta";
 import type { AnaliseDoFunil } from "@/modules/analytics/lib/funil";
 
@@ -31,20 +33,33 @@ export function FunilDoPeriodo({
   erro,
   aoTentar,
   tentando,
+  dias,
 }: {
   analise: AnaliseDoFunil | null;
   carregando: boolean;
   erro: boolean;
   aoTentar: () => void;
   tentando: boolean;
+  dias: string;
 }) {
   const media = analise?.parados ? tempo(analise.parados.horasMedias) : null;
 
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-base font-bold leading-none tracking-tight">Funil</h2>
-        <CardDescription>Onde os leads do período estão agora.</CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <h2 className="text-base font-bold leading-none tracking-tight">Funil</h2>
+            <CardDescription>Onde os leads do período estão agora.</CardDescription>
+          </div>
+          <BotaoExportarCsv
+            secao="funil"
+            dias={dias}
+            desabilitado={!analise || analise.total === 0}
+            motivoDesabilitado="Nenhum lead no período."
+            gerar={() => csvDoFunil(analise?.linhas ?? [])}
+          />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {erro && (

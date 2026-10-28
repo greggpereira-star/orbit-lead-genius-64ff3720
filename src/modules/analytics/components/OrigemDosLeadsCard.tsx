@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
+import { BotaoExportarCsv } from "@/modules/analytics/components/BotaoExportarCsv";
+import { csvDeCanais } from "@/modules/analytics/lib/exportacao";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -108,7 +110,14 @@ export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dia
               De onde vieram os leads do período e quantos ainda não têm origem comprovada.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <BotaoExportarCsv
+              secao="canais"
+              dias={dias}
+              desabilitado={resumo.fatias.length === 0}
+              motivoDesabilitado="Nenhum lead no período."
+              gerar={() => csvDeCanais(resumo.fatias)}
+            />
             {podeEditar && (
               <Button
                 variant="outline"
