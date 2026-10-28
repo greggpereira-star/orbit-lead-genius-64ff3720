@@ -51,7 +51,11 @@ export interface LinhaDeCusto extends LinhaAnuncio {
   moeda: string | null;
   custo_por_lead: number | null;
   custo_por_qualificado: number | null;
+  /** ROAS = valor das VENDAS ganhas do anúncio ÷ gasto. Não é o valor do pipeline. */
   roas: number | null;
+  /** Leads do período hoje em etapa de ganho, e o valor deles. */
+  vendas: number;
+  valor_ganho: number;
 }
 
 export async function relatorioDeCusto(companyId: string, dias = 90): Promise<LinhaDeCusto[]> {
@@ -77,6 +81,8 @@ export async function relatorioDeCusto(companyId: string, dias = 90): Promise<Li
     custo_por_lead: n(r.custo_por_lead),
     custo_por_qualificado: n(r.custo_por_qualificado),
     roas: n(r.roas),
+    vendas: Number(r.vendas ?? 0),
+    valor_ganho: Number(r.valor_ganho ?? 0),
   }));
 }
 
@@ -84,7 +90,11 @@ export interface TotaisDeCusto {
   gasto: number;
   leads: number;
   qualificados: number;
+  /** Valor dos leads QUALIFICADOS (pipeline). Não entra no ROAS. */
   valor: number;
+  /** Vendas ganhas e o valor delas — a base do ROAS. */
+  vendas: number;
+  valorGanho: number;
   /** Gasto total / todos os leads do período, inclusive os sem anúncio identificado. */
   custoPorLeadGeral: number | null;
   custoPorQualificadoGeral: number | null;
@@ -108,14 +118,19 @@ export function totaisDeCusto(linhas: LinhaDeCusto[]): TotaisDeCusto | null {
   const leads = linhas.reduce((a, l) => a + l.conversas, 0);
   const qualificados = linhas.reduce((a, l) => a + l.qualificados, 0);
   const valor = linhas.reduce((a, l) => a + l.valor_total, 0);
+  const vendas = linhas.reduce((a, l) => a + l.vendas, 0);
+  const valorGanho = linhas.reduce((a, l) => a + l.valor_ganho, 0);
   return {
     gasto,
     leads,
     qualificados,
     valor,
+    vendas,
+    valorGanho,
     custoPorLeadGeral: leads > 0 ? gasto / leads : null,
     custoPorQualificadoGeral: qualificados > 0 ? gasto / qualificados : null,
-    roasGeral: gasto > 0 && valor > 0 ? valor / gasto : null,
+    // Retorno é VENDA: valor das vendas ganhas ÷ gasto. Valor de lead qualificado é pipeline.
+    roasGeral: gasto > 0 && valorGanho > 0 ? valorGanho / gasto : null,
     gastoSemLead: comGasto.filter((l) => l.conversas === 0).reduce((a, l) => a + (l.gasto ?? 0), 0),
   };
 }

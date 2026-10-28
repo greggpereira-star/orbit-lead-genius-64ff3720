@@ -7,9 +7,12 @@
  *
  * Painel com número falso é pior que painel vazio: o vazio faz perguntar, o
  * falso faz decidir. Aqui tudo vem do banco, e o que não dá para calcular
- * aparece como "—" com o motivo, em vez de um zero que mente.
+ * aparece como "—" com o motivo, em vez de um zero que mente. Consulta que FALHA
+ * também não pode parecer "sem dados": mostra erro, com a opção de tentar de novo.
+ *
+ * O período é UM só, na URL (`?dias=7`), e vale para a página inteira.
  */
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Target, TrendingUp, DollarSign, Radar, Loader2, AlertCircle } from 'lucide-react';
@@ -17,21 +20,30 @@ import { Users, Target, TrendingUp, DollarSign, Radar, Loader2, AlertCircle } fr
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { NumeroHeroi } from '@/components/ui/numero-heroi';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenceCard';
+import { ErroDeConsulta } from '@/modules/analytics/components/ErroDeConsulta';
+import { FunilDoPeriodo } from '@/modules/analytics/components/FunilDoPeriodo';
 import { OrigemDosLeadsCard } from '@/modules/analytics/components/OrigemDosLeadsCard';
+import { fatiasDeCanal } from '@/modules/analytics/lib/canais';
+import { analisarFunil } from '@/modules/analytics/lib/funil';
+import {
+  PERIODOS,
+  fraseDoPeriodo,
+  normalizarPeriodo,
+  periodoDaUrl,
+  periodoParaUrl,
+  type PeriodoNaUrl,
+} from '@/modules/analytics/lib/periodo';
+import { funilDoPeriodo } from '@/modules/analytics/services/funilService';
+import { origemDosLeads } from '@/modules/analytics/services/origemService';
 
-interface Fatia { nome: string; valor: number }
 interface Resumo {
   leads: number;
   /** `null` quando nenhuma etapa foi marcada como conversão. */
   qualificados: number | null;
-  valor_total: number;
-  com_identificador: number;
   tem_regua: boolean;
-  por_origem: Fatia[];
-  funil: Fatia[];
 }
 
 async function carregarResumo(companyId: string, dias: number): Promise<Resumo> {
@@ -44,10 +56,16 @@ async function carregarResumo(companyId: string, dias: number): Promise<Resumo> 
   return data as Resumo;
 }
 
+const dinheiro = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
 function AnalyticsPage() {
   const { company } = useAuth();
   const companyId = company?.id ?? '';
-  const [dias, setDias] = useState('30');
+  const dias = periodoDaUrl(Route.useSearch().dias);
+  const navigate = Route.useNavigate();
+  const mudarPeriodo = (v: string) =>
+    void navigate({ search: { dias: periodoParaUrl(normalizarPeriodo(v)) }, replace: true });
 
   const resumo = useQuery({
     queryKey: ['resumo-analytics', companyId, dias],
@@ -55,24 +73,53 @@ function AnalyticsPage() {
     enabled: Boolean(companyId),
   });
 
-  const r = resumo.data;
-  const dinheiro = (v: number) =>
-    v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  // Mesma consulta do card "Origem por canal" (chave idêntica): a tile e o card nunca divergem.
+  const origem = useQuery({
+    queryKey: ['origem-dos-leads', companyId, dias],
+    queryFn: () => origemDosLeads(companyId, Number(dias)),
+    enabled: Boolean(companyId),
+  });
 
-  const taxa =
-    r && r.qualificados !== null && r.leads > 0
-      ? `${((r.qualificados / r.leads) * 100).toFixed(1)}%`
+  const funil = useQuery({
+    queryKey: ['funil-do-periodo', companyId, dias],
+    queryFn: () => funilDoPeriodo(companyId, Number(dias)),
+    enabled: Boolean(companyId),
+  });
+
+  const analise = useMemo(() => (funil.data ? analisarFunil(funil.data) : null), [funil.data]);
+  const canais = origem.data ? fatiasDeCanal(origem.data) : null;
+  const origemIdentificada =
+    canais && canais.total > 0
+      ? `${(((canais.total - canais.naoRastreados) / canais.total) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
       : '—';
+
+  const r = resumo.data;
+  const taxa =
+    r && r.qualificados !== null && r.leads > 0 ? `${((r.qualificados / r.leads) * 100).toFixed(1)}%` : '—';
+
+  const vendasGanhas = analise ? dinheiro(analise.vendas.valor) : '—';
+  const notaDeVendas = analise
+    ? `${analise.vendas.quantidade} ${analise.vendas.quantidade === 1 ? 'venda' : 'vendas'} · ${dinheiro(analise.emNegociacao.valor)} em negociação`
+    : undefined;
 
   const indicadores = [
     { titulo: 'Leads', valor: r ? String(r.leads) : '—', icone: Users },
     { titulo: 'Qualificados', valor: r?.qualificados === null ? '—' : String(r?.qualificados ?? '—'), icone: Target },
     { titulo: 'Taxa de qualificação', valor: taxa, icone: TrendingUp },
-    { titulo: 'Valor em negócios', valor: r ? dinheiro(r.valor_total) : '—', icone: DollarSign },
-    { titulo: 'Com origem rastreada', valor: r ? String(r.com_identificador) : '—', icone: Radar },
+    { titulo: 'Vendas ganhas', valor: vendasGanhas, nota: notaDeVendas, icone: DollarSign },
+    { titulo: 'Origem identificada', valor: origemIdentificada, icone: Radar },
   ];
 
-  const maiorFunil = Math.max(1, ...(r?.funil ?? []).map((f) => f.valor));
+  const falhou = resumo.isError || origem.isError;
+  const tentando = resumo.isFetching || origem.isFetching;
+  const tentarDeNovo = () => {
+    if (resumo.isError) void resumo.refetch();
+    if (origem.isError) void origem.refetch();
+  };
+
+  const atualizadoEm = resumo.dataUpdatedAt
+    ? new Date(resumo.dataUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -80,106 +127,82 @@ function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Analytics</h1>
           <p className="text-sm text-muted-foreground">
-            Todos os números vêm do seu banco. Nada aqui é exemplo.
+            {atualizadoEm ? `Atualizado às ${atualizadoEm}` : 'Carregando…'} · leads criados {fraseDoPeriodo(dias)}
           </p>
         </div>
-        <Select value={dias} onValueChange={setDias}>
-          <SelectTrigger className="h-9 w-40" aria-label="Período">
+        <Select value={dias} onValueChange={mudarPeriodo}>
+          <SelectTrigger className="h-9 w-40" aria-label="Período de todos os números desta página">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="7">Últimos 7 dias</SelectItem>
-            <SelectItem value="30">Últimos 30 dias</SelectItem>
-            <SelectItem value="90">Últimos 90 dias</SelectItem>
-            <SelectItem value="365">Último ano</SelectItem>
+            {PERIODOS.map((p) => (
+              <SelectItem key={p.valor} value={p.valor}>
+                {p.rotulo}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       {resumo.isLoading && (
-        <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+        <div role="status" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
         </div>
       )}
+
+      {falhou && <ErroDeConsulta aoTentar={tentarDeNovo} tentando={tentando} />}
 
       {/* O aviso vem ANTES dos números. Ver "Qualificados —" sem explicação faz
           a pessoa achar que o sistema está quebrado, quando falta configurar. */}
       {r && !r.tem_regua && (
         <div className="flex items-start gap-2.5 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-3 text-sm">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" aria-hidden />
           <p className="text-muted-foreground">
-            Nenhuma etapa do funil foi marcada como conversão, então não dá para medir
-            qualificação. Configure em{' '}
+            Nenhuma etapa do funil foi marcada como conversão, então não dá para medir qualificação. Configure em{' '}
             <span className="font-medium text-foreground">Pipeline → Gerenciar etapas</span>.
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {indicadores.map((i) => (
-          <Card key={i.titulo}>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+        {indicadores.map((i, posicao) => (
+          // Com 5 tiles, a última ocuparia meia linha sozinha no celular: ela fecha a linha.
+          <Card key={i.titulo} className={posicao === indicadores.length - 1 ? 'col-span-2 xl:col-span-1' : undefined}>
             <CardContent className="p-5">
               <NumeroHeroi
-                rotulo={<><i.icone className="h-3.5 w-3.5" />{i.titulo}</>}
+                rotulo={
+                  <>
+                    <i.icone className="h-3.5 w-3.5" aria-hidden />
+                    {i.titulo}
+                  </>
+                }
                 valor={i.valor}
+                nota={i.nota}
               />
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <AdIntelligenceCard companyId={companyId} />
+      <FunilDoPeriodo
+        analise={analise}
+        carregando={funil.isLoading}
+        erro={funil.isError}
+        aoTentar={() => void funil.refetch()}
+        tentando={funil.isFetching}
+      />
 
-      <OrigemDosLeadsCard companyId={companyId} />
+      <AdIntelligenceCard companyId={companyId} dias={dias} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Funil</CardTitle>
-            <CardDescription>Onde os leads do período estão agora.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {(r?.funil ?? []).map((f) => (
-              <div key={f.nome} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>{f.nome}</span>
-                  <span className="tabular-nums text-muted-foreground">{f.valor}</span>
-                </div>
-                {/* Barra proporcional à maior etapa, não ao total: com tudo numa
-                    coluna só, dividir pelo total daria 100% e nenhuma informação. */}
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full bg-primary" style={{ width: `${(f.valor / maiorFunil) * 100}%` }} />
-                </div>
-              </div>
-            ))}
-            {!r?.funil?.length && !resumo.isLoading && (
-              <p className="text-sm text-muted-foreground">Nenhuma etapa configurada.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Origem dos leads</CardTitle>
-            <CardDescription>De onde vieram no período.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {(r?.por_origem ?? []).map((o) => (
-              <div key={o.nome} className="flex justify-between text-sm">
-                <span className="capitalize">{o.nome}</span>
-                <span className="tabular-nums font-medium">{o.valor}</span>
-              </div>
-            ))}
-            {!r?.por_origem?.length && !resumo.isLoading && (
-              <p className="text-sm text-muted-foreground">Nenhum lead no período.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <OrigemDosLeadsCard companyId={companyId} dias={dias} />
     </div>
   );
 }
 
 export const Route = createFileRoute('/_app/analytics')({
+  // Entrada opcional: links sem `?dias` (menu, paleta de comandos) continuam válidos e caem no padrão.
+  validateSearch: (busca: { dias?: unknown }): { dias?: PeriodoNaUrl } => ({
+    dias: periodoParaUrl(normalizarPeriodo(busca.dias)),
+  }),
   component: AnalyticsPage,
 });

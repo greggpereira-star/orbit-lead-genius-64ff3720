@@ -28,6 +28,12 @@ export function NumeroHeroi({
   tamanho?: 'medio' | 'grande';
   className?: string;
 }) {
+  // Valor em dinheiro com 5 dígitos ("R$ 125.000") não cabia no card estreito e era
+  // cortado em "R$ 1…", sem aviso: o número mais importante da tela lido pela metade.
+  // Agora o tamanho cai um degrau quando o texto é longo, e o valor inteiro fica no
+  // `title`. O `truncate` continua como último recurso, nunca como primeira resposta.
+  const texto = typeof valor === 'string' || typeof valor === 'number' ? String(valor) : undefined;
+  const longo = (texto?.length ?? 0) > 9;
   return (
     <div className={cn('min-w-0', className)}>
       {rotulo && (
@@ -38,10 +44,12 @@ export function NumeroHeroi({
       <div
         className={cn(
           'mt-1 flex items-baseline gap-1.5 font-semibold tabular-nums tracking-[-0.025em]',
-          tamanho === 'grande' ? 'text-[32px] leading-[1.1]' : 'text-[26px] leading-[1.15]',
+          tamanho === 'grande'
+            ? longo ? 'text-[26px] leading-[1.1]' : 'text-[32px] leading-[1.1]'
+            : longo ? 'text-[20px] leading-[1.15]' : 'text-[26px] leading-[1.15]',
         )}
       >
-        <span className="truncate">{valor}</span>
+        <span className="truncate" title={texto}>{valor}</span>
         {acessorio && (
           <span className="shrink-0 text-[0.55em] font-medium text-muted-foreground">
             {acessorio}

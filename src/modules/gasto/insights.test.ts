@@ -48,7 +48,7 @@ describe('totaisDeCusto', () => {
   const linha = (o: Partial<LinhaDeCusto>): LinhaDeCusto => ({
     ad_id: 'x', ad_name: 'x', campanha: 'c', rede: 'meta', conversas: 0, qualificados: 0, taxa_qualificacao: null,
     valor_total: 0, dias_ate_qualificar: null, gasto: null, impressoes: null, cliques: null, moeda: null,
-    custo_por_lead: null, custo_por_qualificado: null, roas: null, ...o,
+    custo_por_lead: null, custo_por_qualificado: null, roas: null, vendas: 0, valor_ganho: 0, ...o,
   });
 
   it('é nulo sem nenhum gasto importado — não diz que custou zero', () => {
@@ -57,12 +57,19 @@ describe('totaisDeCusto', () => {
 
   it('o custo geral divide pelo total de leads, inclusive os sem anúncio', () => {
     const t = totaisDeCusto([
-      linha({ gasto: 100, conversas: 4, qualificados: 2, valor_total: 300 }),
+      linha({ gasto: 100, conversas: 4, qualificados: 2, valor_total: 900, vendas: 1, valor_ganho: 300 }),
       linha({ ad_id: '(sem anúncio)', conversas: 6 }),
     ])!;
     expect(t.custoPorLeadGeral).toBe(10);
     expect(t.custoPorQualificadoGeral).toBe(50);
-    expect(t.roasGeral).toBe(3);
+    expect(t.roasGeral).toBe(3); // 300 de VENDA ÷ 100 de gasto; os 900 de pipeline não entram
+    expect(t.valor).toBe(900);
+    expect(t.vendas).toBe(1);
+  });
+
+  it('valor de lead qualificado sem nenhuma venda NÃO vira ROAS', () => {
+    const t = totaisDeCusto([linha({ gasto: 100, conversas: 4, qualificados: 2, valor_total: 900 })])!;
+    expect(t.roasGeral).toBeNull();
   });
 
   it('soma o gasto de anúncio que não trouxe lead', () => {

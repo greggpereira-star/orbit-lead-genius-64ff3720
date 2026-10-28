@@ -67,7 +67,7 @@ export function GastoDoAnuncio({ onAtualizou }: { onAtualizou: () => void }) {
   const aviso = (texto: string, acao?: React.ReactNode) => (
     <div className="mb-3 flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-3 text-sm">
       <AlertCircle className="h-4 w-4 shrink-0 text-[var(--aviso)]" />
-      <p className="min-w-0 flex-1 text-muted-foreground">{texto}</p>
+      <p className="min-w-[12rem] flex-1 text-muted-foreground">{texto}</p>
       {acao}
     </div>
   );

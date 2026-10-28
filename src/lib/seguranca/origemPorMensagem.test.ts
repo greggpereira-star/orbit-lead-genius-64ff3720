@@ -68,3 +68,16 @@ describe("banco", () => {
     expect(sql).not.toMatch(/mensagens_iniciais_do_lead\(uuid\) TO authenticated/);
   });
 });
+
+describe("página de Analytics", () => {
+  const pagina = readFileSync("src/routes/_app.analytics.tsx", "utf8");
+  it("a tile de origem usa a MESMA consulta do card por canal (não conta cliques de WhatsApp)", () => {
+    expect(pagina).toContain("queryFn: () => origemDosLeads(companyId, Number(dias))");
+    expect(pagina).toContain("Origem identificada");
+    expect(pagina).not.toContain("com_identificador");
+  });
+  it("o painel antigo de origem em texto livre saiu", () => {
+    expect(pagina).not.toContain("por_origem");
+    expect(pagina).not.toContain("De onde vieram no período.");
+  });
+});

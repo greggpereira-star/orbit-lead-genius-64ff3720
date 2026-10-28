@@ -52,11 +52,11 @@ import {
  * o canal à mão ou cria uma regra por mensagem ("vim pelo Instagram"). Atribuição
  * nunca troca uma prova de anúncio.
  */
-export function OrigemDosLeadsCard({ companyId }: { companyId: string }) {
+/** `dias` vem da página (período único). */
+export function OrigemDosLeadsCard({ companyId, dias }: { companyId: string; dias: string }) {
   const { membership } = useAuth();
   const souAdmin = membership?.role === "owner" || membership?.role === "admin";
   const podeEditar = membership?.role !== "viewer";
-  const [dias, setDias] = useState("30");
   const [regras, setRegras] = useState(false);
   const qc = useQueryClient();
   const recarregar = () => {
@@ -106,17 +106,6 @@ export function OrigemDosLeadsCard({ companyId }: { companyId: string }) {
                 <Settings2 className="mr-1 h-4 w-4" /> Regras por mensagem
               </Button>
             )}
-            <Select value={dias} onValueChange={setDias}>
-              <SelectTrigger className="h-9 w-36" aria-label="Período da origem">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 dias</SelectItem>
-                <SelectItem value="30">30 dias</SelectItem>
-                <SelectItem value="90">90 dias</SelectItem>
-                <SelectItem value="365">1 ano</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
       </CardHeader>

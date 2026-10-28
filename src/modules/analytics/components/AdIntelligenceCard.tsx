@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, AlertCircle, Loader2 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { relatorioDeCusto, marcarNomesRepetidos, totaisDeCusto } from '@/modules/analytics/services/adIntelligenceService';
 import { GastoDoAnuncio } from '@/modules/analytics/components/GastoDoAnuncio';
+import { ErroDeConsulta } from '@/modules/analytics/components/ErroDeConsulta';
 
 /**
  * Qual anúncio traz lead que QUALIFICA.
@@ -14,8 +14,8 @@ import { GastoDoAnuncio } from '@/modules/analytics/components/GastoDoAnuncio';
  * costuma ser o que atrai curioso. Esta tabela põe os dois números lado a lado
  * para a decisão de verba sair do segundo, e não do primeiro.
  */
-export function AdIntelligenceCard({ companyId }: { companyId: string }) {
-  const [dias, setDias] = useState('30');
+/** `dias` vem da página: um período só para todos os cards (antes cada card tinha o seu). */
+export function AdIntelligenceCard({ companyId, dias }: { companyId: string; dias: string }) {
   const qc = useQueryClient();
 
   const relatorio = useQuery({
@@ -27,6 +27,7 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
   const linhas = useMemo(() => marcarNomesRepetidos(relatorio.data ?? []), [relatorio.data]);
   const totais = useMemo(() => totaisDeCusto(relatorio.data ?? []), [relatorio.data]);
   const temGasto = totais !== null;
+  const temVenda = linhas.some((l) => l.vendas > 0);
   const semRegua = linhas.length > 0 && linhas.every((l) => l.taxa_qualificacao === null);
 
   const dinheiro = (v: number) =>
@@ -45,20 +46,9 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
               Qualidade por anúncio
             </CardTitle>
             <CardDescription>
-              Quantos viraram conversa e quantos chegaram na etapa que você considera qualificada.
+              Quantos leads cada anúncio trouxe e quantos chegaram na etapa que você considera qualificada.
             </CardDescription>
           </div>
-          <Select value={dias} onValueChange={setDias}>
-            <SelectTrigger className="h-9 w-36" aria-label="Período do relatório">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Últimos 7 dias</SelectItem>
-              <SelectItem value="30">Últimos 30 dias</SelectItem>
-              <SelectItem value="90">Últimos 90 dias</SelectItem>
-              <SelectItem value="365">Último ano</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </CardHeader>
 
@@ -71,7 +61,7 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
               ['Investido', dinheiro(totais.gasto)],
               ['Custo por lead', totais.custoPorLeadGeral === null ? '—' : dinheiroFino(totais.custoPorLeadGeral)],
               ['Custo por qualificado', totais.custoPorQualificadoGeral === null ? '—' : dinheiroFino(totais.custoPorQualificadoGeral)],
-              ['Retorno (ROAS)', totais.roasGeral === null ? '—' : `${totais.roasGeral.toFixed(2).replace('.', ',')}x`],
+              ['ROAS (vendas ÷ gasto)', totais.roasGeral === null ? '—' : `${totais.roasGeral.toFixed(2).replace('.', ',')}x`],
             ].map(([rotulo, valor]) => (
               <div key={rotulo} className="rounded-lg border p-3">
                 <div className="text-xs text-muted-foreground">{rotulo}</div>
@@ -100,13 +90,21 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
           </div>
         )}
 
+        {relatorio.isError && (
+          <ErroDeConsulta
+            titulo="Não foi possível carregar o relatório de anúncios."
+            aoTentar={() => void relatorio.refetch()}
+            tentando={relatorio.isFetching}
+          />
+        )}
+
         {relatorio.isLoading && (
-          <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+          <div role="status" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
           </div>
         )}
 
-        {!relatorio.isLoading && linhas.length === 0 && (
+        {!relatorio.isLoading && !relatorio.isError && linhas.length === 0 && (
           <p className="py-6 text-sm text-muted-foreground">Nenhum lead de anúncio no período.</p>
         )}
 
@@ -115,14 +113,15 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="pb-2 pr-3 font-medium">Anúncio</th>
-                  {temGasto && <th className="pb-2 pr-3 text-right font-medium">Gasto</th>}
-                  <th className="pb-2 pr-3 text-right font-medium">Conversas</th>
-                  {temGasto && <th className="pb-2 pr-3 text-right font-medium">Custo/lead</th>}
-                  <th className="pb-2 pr-3 text-right font-medium">Qualificados</th>
-                  {temGasto && <th className="pb-2 pr-3 text-right font-medium">Custo/qualif.</th>}
-                  <th className="pb-2 pr-3 text-right font-medium">Taxa</th>
-                  <th className="pb-2 text-right font-medium">Valor</th>
+                  <th className="min-w-[10rem] pb-2 pr-3 font-medium">Anúncio</th>
+                  {temGasto && <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Gasto</th>}
+                  <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Leads</th>
+                  {temGasto && <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Custo/lead</th>}
+                  <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Qualificados</th>
+                  {temGasto && <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Custo/qualif.</th>}
+                  <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Taxa</th>
+                  {temVenda && <th className="whitespace-nowrap pb-2 pr-3 text-right font-medium">Vendas</th>}
+                  <th className="whitespace-nowrap pb-2 text-right font-medium" title="Valor dos leads que chegaram à etapa qualificada (pipeline). Não é receita: a receita está em Vendas.">Pipeline</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,6 +156,11 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
                     <td className="py-2.5 pr-3 text-right tabular-nums">
                       {l.taxa_qualificacao === null ? '—' : `${l.taxa_qualificacao}%`}
                     </td>
+                    {temVenda && (
+                      <td className="py-2.5 pr-3 text-right tabular-nums">
+                        {l.vendas > 0 ? `${l.vendas} · ${l.valor_ganho > 0 ? dinheiro(l.valor_ganho) : 'sem valor'}` : '—'}
+                      </td>
+                    )}
                     <td className="py-2.5 text-right tabular-nums">
                       {l.valor_total > 0 ? dinheiro(l.valor_total) : '—'}
                     </td>
