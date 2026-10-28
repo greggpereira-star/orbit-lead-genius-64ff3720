@@ -26,7 +26,7 @@ describe('estatísticas dos links', () => {
     expect(servico).toMatch(/rpc\('estatisticas_dos_links'/);
   });
   it('robôs são redirecionados mas não gravam clique', () => {
-    expect(rota).toMatch(/ehRobo\(/);
+    expect(rota).toMatch(/visitanteEhRobo\(/);
     expect(rota).toMatch(/if \(!robo\)/);
   });
 });

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ehRobo } from "@/lib/robos";
+import { visitanteEhRobo } from "@/lib/robos.functions";
 
 /**
  * Redirect de anúncio → WhatsApp, com código curto.
@@ -46,13 +46,8 @@ export const Route = createFileRoute("/ir/$slug")({
 
     // Verificadores de anúncio e prévias de link abrem o endereço antes de
     // qualquer pessoa. Seguem o redirect, mas não viram clique.
-    let robo = false;
-    try {
-      const { getRequest } = await import("@tanstack/react-start/server");
-      robo = ehRobo(getRequest()?.headers.get("user-agent"));
-    } catch {
-      // Sem acesso ao pedido (navegação do lado do cliente): trata como pessoa.
-    }
+    // Falha na checagem conta como pessoa: melhor um clique a mais que um lead perdido.
+    const robo = await visitanteEhRobo().catch(() => false);
 
     // Best-effort: se o banco falhar, o visitante ainda tem que chegar no
     // WhatsApp. Perder atribuição é ruim; perder o lead é pior.
