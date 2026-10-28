@@ -26,8 +26,10 @@ import { AdIntelligenceCard } from '@/modules/analytics/components/AdIntelligenc
 import { ErroDeConsulta } from '@/modules/analytics/components/ErroDeConsulta';
 import { FunilDoPeriodo } from '@/modules/analytics/components/FunilDoPeriodo';
 import { OrigemDosLeadsCard } from '@/modules/analytics/components/OrigemDosLeadsCard';
+import { TempoDeRespostaCard } from '@/modules/analytics/components/TempoDeRespostaCard';
 import { fatiasDeCanal } from '@/modules/analytics/lib/canais';
 import { analisarFunil } from '@/modules/analytics/lib/funil';
+import { analisarResposta } from '@/modules/analytics/lib/resposta';
 import {
   PERIODOS,
   fraseDoPeriodo,
@@ -38,6 +40,7 @@ import {
 } from '@/modules/analytics/lib/periodo';
 import { funilDoPeriodo } from '@/modules/analytics/services/funilService';
 import { origemDosLeads } from '@/modules/analytics/services/origemService';
+import { tempoDeResposta } from '@/modules/analytics/services/respostaService';
 
 interface Resumo {
   leads: number;
@@ -85,6 +88,17 @@ function AnalyticsPage() {
     queryFn: () => funilDoPeriodo(companyId, Number(dias)),
     enabled: Boolean(companyId),
   });
+
+  const resposta = useQuery({
+    queryKey: ['tempo-de-resposta', companyId, dias],
+    queryFn: () => tempoDeResposta(companyId, Number(dias)),
+    enabled: Boolean(companyId),
+  });
+
+  const analiseDeResposta = useMemo(
+    () => (resposta.data ? analisarResposta(resposta.data) : null),
+    [resposta.data],
+  );
 
   const analise = useMemo(() => (funil.data ? analisarFunil(funil.data) : null), [funil.data]);
   const canais = origem.data ? fatiasDeCanal(origem.data) : null;
@@ -190,6 +204,14 @@ function AnalyticsPage() {
         erro={funil.isError}
         aoTentar={() => void funil.refetch()}
         tentando={funil.isFetching}
+      />
+
+      <TempoDeRespostaCard
+        analise={analiseDeResposta}
+        carregando={resposta.isLoading}
+        erro={resposta.isError}
+        aoTentar={() => void resposta.refetch()}
+        tentando={resposta.isFetching}
       />
 
       <AdIntelligenceCard companyId={companyId} dias={dias} />
