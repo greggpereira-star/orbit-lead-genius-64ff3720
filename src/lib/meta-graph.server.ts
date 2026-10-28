@@ -121,10 +121,27 @@ export interface MetaPage {
 }
 
 export async function listUserPages(accessToken: string): Promise<MetaPage[]> {
-  const res = await request<{ data: MetaPage[]; paging?: { next?: string } }>("/me/accounts", {
-    query: { access_token: accessToken, fields: "id,name,access_token,category,tasks", limit: "100" },
-  });
-  return res.data ?? [];
+  const paginas: MetaPage[] = [];
+  let depois: string | undefined;
+  // Quem cuida de muitos clientes passa de 100 páginas; sem seguir o cursor as seguintes sumiam
+  // da lista de escolha. Teto de 10 páginas de resultado, como na lista de contas de anúncio.
+  for (let pagina = 0; pagina < 10; pagina++) {
+    const res = await request<{
+      data?: MetaPage[];
+      paging?: { cursors?: { after?: string }; next?: string };
+    }>("/me/accounts", {
+      query: {
+        access_token: accessToken,
+        fields: "id,name,access_token,category,tasks",
+        limit: "100",
+        after: depois,
+      },
+    });
+    paginas.push(...(res.data ?? []));
+    depois = res.paging?.next ? res.paging.cursors?.after : undefined;
+    if (!depois) break;
+  }
+  return paginas;
 }
 
 export async function subscribePageToLeadgen(pageId: string, pageAccessToken: string) {

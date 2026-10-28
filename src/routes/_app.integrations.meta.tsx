@@ -29,6 +29,7 @@ import {
   reprocessarLeadsFalhados
 } from "@/lib/meta-forms.functions";
 import { useAuth } from "@/core/auth/hooks/useAuth";
+import { EscolherPaginasMeta } from "@/modules/integrations/components/EscolherPaginasMeta";
 import { StageSelect } from "@/modules/crm/components/StageSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -162,6 +163,8 @@ function MetaIntegrationsPage() {
   const { company } = useAuth();
 
 
+  const [escolhendoPaginas, setEscolhendoPaginas] = useState(false);
+  const [pediuEscolha, setPediuEscolha] = useState(false);
   const [drawerForm, setDrawerForm] = useState<MetaFormForMapping | null>(null);
   const [importOptions, setImportOptions] = useState<Record<string, ImportOptions>>({});
   const [pageFilter, setPageFilter] = useState<string>("all");
@@ -398,6 +401,14 @@ function MetaIntegrationsPage() {
 
   const connection = data?.connection as ConnectionRow | null;
   const pages = (data?.pages ?? []) as PageRow[];
+
+  // Conectou e ainda não escolheu nenhuma página: pede a escolha uma vez, em vez de deixar a tela vazia.
+  useEffect(() => {
+    if (!isLoading && connection && connection.status !== "revoked" && pages.length === 0 && !pediuEscolha) {
+      setPediuEscolha(true);
+      setEscolhendoPaginas(true);
+    }
+  }, [isLoading, connection, pages.length, pediuEscolha]);
   const events = (data?.recentEvents ?? []) as EventRow[];
   const jobs = (jobsQuery.data?.jobs ?? []) as ImportJobRow[];
 
@@ -500,6 +511,14 @@ function MetaIntegrationsPage() {
             <span className="text-muted-foreground">Conta:</span>
             <span className="font-medium">{connection.meta_user_name}</span>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEscolhendoPaginas(true)}
+              className="h-8"
+            >
+              Escolher páginas
+            </Button>
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => disstartMutation.mutate()}
@@ -516,6 +535,12 @@ function MetaIntegrationsPage() {
           </div>
         )}
       </motion.div>
+
+      <EscolherPaginasMeta
+        aberto={escolhendoPaginas}
+        aoMudar={setEscolhendoPaginas}
+        obrigatorio={pages.length === 0}
+      />
 
       {/* A tela dizia "Ativo" com o token morto havia treze dias. Enquanto a
           conexão estiver revogada isto fica no topo, antes de qualquer número,
@@ -576,8 +601,11 @@ function MetaIntegrationsPage() {
               de log (eventos recentes / histórico de importações). */}
           <section className="rounded-xl border bg-card divide-y overflow-hidden">
             {pages.length === 0 ? (
-              <div className="p-6 text-sm text-muted-foreground">
-                Nenhuma página do Facebook encontrada nesta conta.
+              <div className="flex flex-wrap items-center justify-between gap-3 p-6 text-sm text-muted-foreground">
+                <span>Nenhuma página escolhida para esta empresa.</span>
+                <Button size="sm" onClick={() => setEscolhendoPaginas(true)}>
+                  Escolher páginas
+                </Button>
               </div>
             ) : (
               pages.map((p) => {

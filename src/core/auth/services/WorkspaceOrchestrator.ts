@@ -200,6 +200,12 @@
         p_user_id: userId
       });
 
+      // Só cria "na mão" se a função NÃO existe (PGRST202). Qualquer outro erro (permissão, rede,
+      // trava) devolvia aqui uma segunda empresa para quem já tinha a primeira em criação.
+      if (compError && compError.code !== 'PGRST202') {
+        throw new Error(`Company recovery failed: ${compError.message}`);
+      }
+
       if (compError) {
         logger.warn('RPC get_or_create_company missing, falling back to manual creation');
         const { data, error } = await this.client
@@ -228,7 +234,8 @@
         .select()
         .single();
 
-      if (memError && !memError.message.includes('unique_user_company_membership')) {
+      // 23505 = o vínculo já existe (a função do banco já o cria): é o resultado esperado, não erro.
+      if (memError && memError.code !== '23505' && !memError.message.includes('unique_user_company_membership')) {
         throw new Error(`Membership recovery failed: ${memError.message}`);
       }
 

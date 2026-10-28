@@ -34,7 +34,11 @@ function CallbackPage() {
     complete({ data: { code, state } })
       .then((res) => {
         setStatus("success");
-        setMessage(`Conectado como ${res.userName}. ${res.pageCount} página(s) importada(s).`);
+        setMessage(
+          res.pageCount > 0
+            ? `Conectado como ${res.userName}. As ${res.pageCount} página(s) já escolhidas seguem valendo.`
+            : `Conectado como ${res.userName}. Agora escolha quais páginas são desta empresa.`,
+        );
         setTimeout(() => navigate({ to: "/integrations/meta" }), 1500);
       })
       .catch((err: Error) => {

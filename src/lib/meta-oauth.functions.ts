@@ -4,7 +4,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { podeAdministrar } from "@/lib/whatsapp/papeis";
+import { planejarSelecao } from "@/lib/meta-paginas";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const META_API_VERSION = "v25.0";
 const META_OAUTH_DIALOG = `https://www.facebook.com/${META_API_VERSION}/dialog/oauth`;
 const DEFAULT_PUBLIC_ORIGIN = "https://altleadflow.com.br";
@@ -226,21 +229,36 @@ export const completeMetaOAuth = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!conn) throw new Error("Conexão não encontrada após upsert.");
 
-    for (const p of pages) {
-      await supabaseAdmin.from("meta_lead_pages").upsert(
-        {
-          company_id: companyId,
+    // NÃO grava as páginas que a Meta devolveu. O login traz todas as páginas que esta pessoa já
+    // liberou ao app, de todos os clientes, e gravá-las aqui era o que misturava uma empresa com a
+    // outra. A empresa só passa a ter uma página quando alguém a escolhe (`saveMetaPages`).
+    // As que a empresa já tinha escolhido só renovam o token, para a reconexão não quebrá-las.
+    const { data: atuais } = await supabaseAdmin
+      .from("meta_lead_pages")
+      .select("page_id")
+      .eq("company_id", companyId);
+    const jaEscolhidas = new Set((atuais ?? []).map((r: { page_id: string }) => r.page_id));
+    for (const p of pages.filter((x) => jaEscolhidas.has(x.id))) {
+      await supabaseAdmin
+        .from("meta_lead_pages")
+        .update({
           connection_id: conn.id,
-          page_id: p.id,
           page_name: p.name,
           page_access_token: p.access_token,
           category: p.category ?? null,
-        },
-        { onConflict: "company_id,page_id" },
-      );
+        })
+        .eq("company_id", companyId)
+        .eq("page_id", p.id);
     }
 
-    return { ok: true, pageCount: pages.length, userName: me.name };
+    return {
+      ok: true,
+      userName: me.name,
+      /** Quantas páginas a empresa tem escolhidas; zero = falta escolher. */
+      pageCount: jaEscolhidas.size,
+      /** Quantas a conta da Meta oferece. */
+      disponiveis: pages.length,
+    };
   });
 
 // --------- LIST CONNECTION STATE ---------
@@ -289,6 +307,212 @@ export const getMetaConnection = createServerFn({ method: "GET" })
       pages: pagesRes.data ?? [],
       recentEvents: eventsRes.data ?? [],
     };
+  });
+
+// --------- ESCOLHER AS PÁGINAS DA EMPRESA ---------
+
+export interface PaginaCandidata {
+  page_id: string;
+  nome: string;
+  categoria: string | null;
+  /** Já é desta empresa. */
+  selecionada: boolean;
+  /** Já pertence a OUTRA empresa: não pode ser escolhida aqui. */
+  deOutraEmpresa: boolean;
+}
+
+/**
+ * A empresa do usuário no Meta, resolvida do MESMO jeito que as demais funções deste arquivo
+ * (primeiro vínculo, sem ordem), para a tela e a escolha de páginas mirarem sempre a mesma empresa.
+ * Não usa `papelNaEmpresa`: ele ordena, e quem tem dois vínculos (cadastro duplicado) cairia em
+ * outra empresa que a das conexões já gravadas.
+ */
+async function empresaEPapel(admin: any, userId: string): Promise<{ companyId: string; role: string }> {
+  const { data: mem } = await admin
+    .from("memberships")
+    .select("company_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (!mem?.company_id) throw new Error("Usuário sem empresa vinculada.");
+  const { data: papel } = await admin
+    .from("memberships")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("company_id", mem.company_id)
+    .limit(1)
+    .maybeSingle();
+  return { companyId: mem.company_id as string, role: String(papel?.role ?? "viewer") };
+}
+
+async function conexaoDaEmpresa(admin: any, companyId: string) {
+  const { data } = await admin
+    .from("meta_lead_connections")
+    .select("id, access_token, status")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (!data?.access_token || data.status === "revoked") {
+    throw new Error("Conecte o Facebook antes de escolher as páginas.");
+  }
+  return data as { id: string; access_token: string; status: string };
+}
+
+async function paginasDaMeta(admin: any, companyId: string, accessToken: string) {
+  const { listUserPages } = await import("@/lib/meta-graph.server");
+  const { tokenMorreu, motivoDaRevogacao, marcarConexaoRevogada } = await import(
+    "@/lib/meta-token-state.server"
+  );
+  try {
+    return await listUserPages(accessToken);
+  } catch (err) {
+    if (tokenMorreu(err)) {
+      await marcarConexaoRevogada(admin, companyId, err);
+      throw new Error(`${motivoDaRevogacao(err)} Reconecte a integração Meta.`);
+    }
+    throw new Error(err instanceof Error ? err.message : "Falha ao consultar a Meta.");
+  }
+}
+
+/**
+ * As páginas que a conta do Facebook enxerga, para a pessoa marcar quais são DESTA empresa.
+ * Nunca devolve token. Página que já é de outra empresa vem marcada e não pode ser escolhida;
+ * o nome da outra empresa não aparece.
+ */
+export const listMetaPageCandidates = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PaginaCandidata[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const { companyId, role } = await empresaEPapel(admin, context.userId);
+    if (!podeAdministrar(role)) throw new Error("Apenas dono ou administrador escolhe as páginas.");
+
+    const conexao = await conexaoDaEmpresa(admin, companyId);
+    const daMeta = await paginasDaMeta(admin, companyId, conexao.access_token);
+    const ids = daMeta.map((p) => p.id);
+
+    const { data: registradas } = ids.length
+      ? await admin.from("meta_lead_pages").select("page_id, company_id").in("page_id", ids)
+      : { data: [] };
+    const minhas = new Set<string>();
+    const alheias = new Set<string>();
+    for (const r of (registradas ?? []) as Array<{ page_id: string; company_id: string }>) {
+      (r.company_id === companyId ? minhas : alheias).add(r.page_id);
+    }
+
+    return daMeta
+      .map((p) => ({
+        page_id: p.id,
+        nome: p.name,
+        categoria: p.category ?? null,
+        selecionada: minhas.has(p.id),
+        deOutraEmpresa: alheias.has(p.id) && !minhas.has(p.id),
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  });
+
+/**
+ * Grava a escolha: SÓ as páginas marcadas ficam com a empresa. As que ela tinha e foram
+ * desmarcadas saem (e o recebimento automático delas é desligado, quando estava ligado). A lista
+ * da Meta é consultada de novo aqui: o navegador não decide o que a conexão enxerga.
+ */
+export const saveMetaPages = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ pageIds: z.array(z.string().regex(/^\d+$/)).max(200) }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+    const { companyId, role } = await empresaEPapel(admin, context.userId);
+    if (!podeAdministrar(role)) throw new Error("Apenas dono ou administrador escolhe as páginas.");
+
+    const conexao = await conexaoDaEmpresa(admin, companyId);
+    const daMeta = await paginasDaMeta(admin, companyId, conexao.access_token);
+
+    const { data: registradas } = await admin
+      .from("meta_lead_pages")
+      .select("page_id, company_id, subscribed, page_access_token")
+      .in("page_id", [...new Set([...daMeta.map((p: { id: string }) => p.id), ...data.pageIds])]);
+    const linhas = (registradas ?? []) as Array<{
+      page_id: string;
+      company_id: string;
+      subscribed: boolean;
+      page_access_token: string;
+    }>;
+    // Páginas da empresa que a Meta já não lista também precisam poder ser removidas.
+    const { data: todasDaEmpresa } = await admin
+      .from("meta_lead_pages")
+      .select("page_id, subscribed, page_access_token")
+      .eq("company_id", companyId);
+    const daEmpresa = (todasDaEmpresa ?? []) as Array<{
+      page_id: string;
+      subscribed: boolean;
+      page_access_token: string;
+    }>;
+
+    const plano = planejarSelecao({
+      disponiveis: daMeta,
+      daEmpresa: daEmpresa.map((r) => r.page_id),
+      deOutrasEmpresas: linhas.filter((r) => r.company_id !== companyId).map((r) => r.page_id),
+      escolhidas: data.pageIds,
+    });
+    if (plano.indisponiveis.length > 0) {
+      throw new Error("Uma das páginas escolhidas não está disponível para esta conexão. Atualize a lista.");
+    }
+    if (plano.deOutraEmpresa.length > 0) {
+      throw new Error("Uma das páginas escolhidas já está vinculada a outra empresa.");
+    }
+
+    const { unsubscribePageFromLeadgen } = await import("@/lib/meta-graph.server");
+    for (const id of plano.remover) {
+      const antiga = daEmpresa.find((r) => r.page_id === id);
+      if (antiga?.subscribed) {
+        // Melhor esforço: se a Meta recusar, a página sai da empresa do mesmo jeito.
+        await unsubscribePageFromLeadgen(id, antiga.page_access_token).catch(() => undefined);
+      }
+      await admin.from("meta_lead_pages").delete().eq("company_id", companyId).eq("page_id", id);
+      // Os formulários ficam (com mapeamento e histórico), mas inativos: sem a página,
+      // nenhum lead novo deles tem como entrar.
+      await admin
+        .from("meta_lead_forms")
+        .update({ is_active: false })
+        .eq("company_id", companyId)
+        .eq("page_id", id);
+    }
+
+    for (const id of [...plano.adicionar, ...plano.manter]) {
+      const p = daMeta.find((x: { id: string }) => x.id === id)!;
+      const { error } = await admin.from("meta_lead_pages").upsert(
+        {
+          company_id: companyId,
+          connection_id: conexao.id,
+          page_id: p.id,
+          page_name: p.name,
+          page_access_token: p.access_token,
+          category: p.category ?? null,
+        },
+        { onConflict: "company_id,page_id" },
+      );
+      if (error) {
+        // Índice único em page_id: outra empresa pegou a página no meio do caminho.
+        if (error.code === "23505") throw new Error("Uma das páginas escolhidas já está vinculada a outra empresa.");
+        throw new Error(`Erro ao salvar a página: ${error.message}`);
+      }
+    }
+
+    await admin
+      .from("audit_logs")
+      .insert({
+        company_id: companyId,
+        user_id: context.userId,
+        action: "paginas_meta_escolhidas",
+        entity_type: "meta_lead_pages",
+        entity_id: companyId,
+        changes: { adicionadas: plano.adicionar, removidas: plano.remover },
+      })
+      .then(() => undefined, () => undefined);
+
+    return { ok: true as const, adicionadas: plano.adicionar.length, removidas: plano.remover.length };
   });
 
 // --------- SUBSCRIBE PAGE ---------
