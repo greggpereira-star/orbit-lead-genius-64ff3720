@@ -18,6 +18,7 @@ const base: RespostaBruta = {
   medidos: 1,
   com_contato_registrado: 0,
   respondidos_manual: 0,
+  respondidos_retroativos: 0,
 };
 
 describe("formatarDuracao", () => {
@@ -65,11 +66,13 @@ describe("analisarResposta", () => {
       com_contato_registrado: 55,
       respondidos: 50,
       respondidos_manual: 45,
+      respondidos_retroativos: 12,
     });
     expect(a.cobertura).toBeCloseTo(0.6);
     expect(a.coberturaBaixa).toBe(false);
     expect(a.comConversa).toBe(10);
     expect(a.respondidosManual).toBe(45);
+    expect(a.respondidosRetroativos).toBe(12);
   });
   it("sem lead no período a cobertura é nula, não zero", () => {
     expect(analisarResposta({ ...base, leads_total: 0, com_conversa: 0, medidos: 0 }).cobertura).toBeNull();

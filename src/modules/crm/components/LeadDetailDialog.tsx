@@ -1505,6 +1505,7 @@ export function LeadDetailDialog({
                           companyId={lead.company_id}
                           email={lead.email}
                           whatsapp={wa}
+                          criadoEm={lead.created_at ?? null}
                         />
                         <NextActions leadId={lead.id} companyId={lead.company_id} semMoldura />
                       </div>
@@ -1605,6 +1606,7 @@ export function LeadDetailDialog({
                         companyId={lead.company_id}
                         email={lead.email}
                         whatsapp={wa}
+                        criadoEm={lead.created_at ?? null}
                       />
                     </CartaoFicha>
                   </div>

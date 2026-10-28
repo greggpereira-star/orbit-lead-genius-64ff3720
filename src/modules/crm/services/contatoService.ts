@@ -10,10 +10,13 @@ import type { CanalDeContato, ContatoRegistrado } from "../lib/contatos";
 export async function registrarContato(
   leadId: string,
   canal: CanalDeContato,
+  /** Quando o contato aconteceu. Sem valor, vale o horário do clique. */
+  quando?: Date | null,
 ): Promise<ContatoRegistrado & { repetido: boolean }> {
   const { data, error } = await (supabase as any).rpc("registrar_contato", {
     p_lead_id: leadId,
     p_canal: canal,
+    p_quando: quando ? quando.toISOString() : null,
   });
   if (error) throw new Error(error.message);
   const linha = (Array.isArray(data) ? data[0] : data) as
@@ -26,7 +29,7 @@ export async function registrarContato(
 export async function ultimoContato(leadId: string): Promise<ContatoRegistrado | null> {
   const { data, error } = await (supabase as any)
     .from("lead_contacts")
-    .select("id, canal, author_name, created_at")
+    .select("id, canal, author_name, created_at, contatado_em")
     .eq("lead_id", leadId)
     .order("created_at", { ascending: false })
     .limit(1)

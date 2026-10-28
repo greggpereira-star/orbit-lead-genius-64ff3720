@@ -25,6 +25,8 @@ export interface RespostaBruta {
   com_contato_registrado: number;
   /** Dos respondidos, quantos foram medidos pelo contato registrado (veio antes da resposta no WhatsApp). */
   respondidos_manual: number;
+  /** Dos medidos pelo registro, quantos tiveram horário informado à mão (registrado >5 min depois). */
+  respondidos_retroativos: number;
 }
 
 export interface AnaliseDeResposta {
@@ -34,6 +36,7 @@ export interface AnaliseDeResposta {
   medidos: number;
   comContatoRegistrado: number;
   respondidosManual: number;
+  respondidosRetroativos: number;
   /** Fração 0–1 dos leads do período que podem ser medidos. `null` sem lead. */
   cobertura: number | null;
   respondidos: number;
@@ -66,6 +69,7 @@ export function analisarResposta(b: RespostaBruta): AnaliseDeResposta {
     medidos,
     comContatoRegistrado: n(b.com_contato_registrado),
     respondidosManual: n(b.respondidos_manual),
+    respondidosRetroativos: n(b.respondidos_retroativos),
     cobertura,
     respondidos,
     medianaSegundos: talvez(b.mediana_segundos),

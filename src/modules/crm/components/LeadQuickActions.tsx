@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CalendarPlus, CheckSquare, ChevronDown, Mail, MessageCircle, PhoneCall } from 'lucide-react';
@@ -8,11 +9,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import { createLeadNote } from '@/modules/crm/services/leadNotesService';
+import { RegistrarContatoDialog } from '@/modules/crm/components/RegistrarContatoDialog';
 import { registrarContato, ultimoContato } from '@/modules/crm/services/contatoService';
 import {
   CANAIS_DE_CONTATO,
@@ -31,13 +34,16 @@ import {
  * regra de etapa de perda vive lá.
  */
 export function LeadQuickActions({
-  leadId, companyId, email, whatsapp,
+  leadId, companyId, email, whatsapp, criadoEm = null,
 }: {
   leadId: string;
   companyId: string;
   email: string | null;
   whatsapp: string | null;
+  /** Chegada do lead (ISO): o contato informado à mão não pode ser anterior. */
+  criadoEm?: string | null;
 }) {
+  const [informando, setInformando] = useState(false);
   const qc = useQueryClient();
   const { user } = useAuth();
   const leitura = useSomenteLeitura();
@@ -69,8 +75,10 @@ export function LeadQuickActions({
   });
 
   const contatei = useMutation({
-    mutationFn: (canal: CanalDeContato) => registrarContato(leadId, canal),
+    mutationFn: (v: { canal: CanalDeContato; quando?: Date }) =>
+      registrarContato(leadId, v.canal, v.quando),
     onSuccess: (r) => {
+      setInformando(false);
       qc.invalidateQueries({ queryKey: ['lead-contacts', leadId] });
       qc.invalidateQueries({ queryKey: ['tempo-de-resposta'] });
       toast.success(
@@ -145,14 +153,25 @@ export function LeadQuickActions({
                 <DropdownMenuItem
                   key={c.valor}
                   className="min-h-11 md:min-h-0"
-                  onSelect={() => contatei.mutate(c.valor)}
+                  onSelect={() => contatei.mutate({ canal: c.valor })}
                 >
                   {c.rotulo}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="min-h-11 md:min-h-0" onSelect={() => setInformando(true)}>
+                Informar outro horário…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {/* O horário gravado é o do clique, não o do contato: registrar tarde aparece tarde. */}
+          <RegistrarContatoDialog
+            aberto={informando}
+            aoMudar={setInformando}
+            criadoEm={criadoEm}
+            pendente={contatei.isPending}
+            aoConfirmar={(canal, quando) => contatei.mutate({ canal, quando })}
+          />
+          {/* Sem horário informado vale o do clique: registrar tarde aparece tarde. */}
           <p className="px-0.5 text-xs text-muted-foreground">
             {ultimo.isError
               ? 'Não foi possível ler o último contato registrado.'
@@ -160,7 +179,7 @@ export function LeadQuickActions({
                 ? `Último registro: ${descreverUltimoContato(ultimo.data)}`
                 : ultimo.isLoading
                   ? ''
-                  : 'Nenhum contato registrado. Vale o horário do clique.'}
+                  : 'Nenhum contato registrado. Sem horário informado, vale o do clique.'}
           </p>
         </div>
       )}

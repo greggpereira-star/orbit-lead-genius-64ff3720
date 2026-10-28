@@ -152,8 +152,10 @@ export function TempoDeRespostaCard({
                 {analise.respondidosManual} dos {analise.respondidos}{" "}
                 {plural(analise.respondidos, "respondido", "respondidos")}{" "}
                 {plural(analise.respondidosManual, "foi medido", "foram medidos")} por contato
-                registrado à mão. Vale o horário do registro, que pode ser depois do
-                contato de fato; por isso o tempo real tende a ser igual ou menor.
+                registrado à mão
+                {analise.respondidosRetroativos > 0
+                  ? `; em ${analise.respondidosRetroativos} o horário foi informado depois de o contato acontecer, e vale o que a pessoa informou.`
+                  : ", no horário do clique."}
               </p>
             )}
 
