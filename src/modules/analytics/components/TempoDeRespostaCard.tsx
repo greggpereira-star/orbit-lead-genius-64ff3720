@@ -38,7 +38,7 @@ export function TempoDeRespostaCard({
       <CardHeader>
         <h2 className="text-base font-bold leading-none tracking-tight">Tempo de resposta</h2>
         <CardDescription>
-          Do momento em que o lead chega até a primeira mensagem de alguém da equipe no WhatsApp.
+          Do momento em que o lead chega até a primeira mensagem de alguém da equipe no WhatsApp ou o primeiro contato registrado no lead.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -60,22 +60,22 @@ export function TempoDeRespostaCard({
           <>
             <p className="text-sm">
               <span className="font-medium">
-                {analise.comConversa} de {analise.leadsTotal}{" "}
+                {analise.medidos} de {analise.leadsTotal}{" "}
                 {plural(analise.leadsTotal, "lead", "leads")} (
-                {percentual(analise.comConversa, analise.leadsTotal)}) têm conversa no WhatsApp
-                ligada
+                {percentual(analise.medidos, analise.leadsTotal)}) têm conversa no WhatsApp ligada
+                ou contato registrado
               </span>
               <span className="text-muted-foreground">
                 {" "}
                 — só esses podem ser medidos.
                 {analise.coberturaBaixa &&
-                  " Com tão pouca cobertura, o tempo abaixo não descreve o atendimento como um todo."}
+                  " Com tão pouca cobertura, o tempo abaixo não descreve o atendimento como um todo. Para medir mais, use “Registrar contato” na ficha do lead."}
               </span>
             </p>
 
             {analise.respondidos === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhum lead do período foi respondido por alguém da equipe no WhatsApp.
+                Nenhum lead do período foi respondido pela equipe (no WhatsApp ou por contato registrado).
               </p>
             ) : (
               <>
@@ -145,6 +145,16 @@ export function TempoDeRespostaCard({
                   </Link>
                 </div>
               </div>
+            )}
+
+            {analise.respondidosManual > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {analise.respondidosManual} dos {analise.respondidos}{" "}
+                {plural(analise.respondidos, "respondido", "respondidos")}{" "}
+                {plural(analise.respondidosManual, "foi medido", "foram medidos")} por contato
+                registrado à mão. Vale o horário do registro, que pode ser depois do
+                contato de fato; por isso o tempo real tende a ser igual ou menor.
+              </p>
             )}
 
             <p className="text-xs text-muted-foreground">

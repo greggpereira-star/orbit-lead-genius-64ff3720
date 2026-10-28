@@ -32,7 +32,7 @@ describe("o que o visualizador não vê", () => {
     expect(s).toContain("{podeExcluir && (");
   });
   it("ficha: ações rápidas, próximos passos, responsável, nota, etapa, etiquetas e campos", () => {
-    expect(ler("src/modules/crm/components/LeadQuickActions.tsx").match(/\{!leitura && \(/g)?.length).toBe(2);
+    expect(ler("src/modules/crm/components/LeadQuickActions.tsx").match(/\{!leitura && \(/g)?.length).toBe(3);
     const n = ler("src/modules/crm/components/NextActions.tsx");
     expect(n).toContain("{!leitura && (");
     expect(n).toContain("disabled={leitura}");

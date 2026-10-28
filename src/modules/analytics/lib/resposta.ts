@@ -3,9 +3,9 @@ import { AMOSTRA_MINIMA } from "./anuncios";
 /**
  * Leitura do tempo de primeira resposta.
  *
- * Só dá para medir o lead que tem conversa no WhatsApp ligada a ele. Por isso a
- * COBERTURA vem junto de qualquer mediana: "respondemos em 2 min" dito sobre 1 lead
- * de 179 não é um resultado da operação, é uma anedota.
+ * Só dá para medir o lead que tem conversa no WhatsApp ligada a ele OU contato registrado à
+ * mão (botão "Registrar contato"). Por isso a COBERTURA vem junto de qualquer mediana:
+ * "respondemos em 2 min" dito sobre 1 lead de 179 não é um resultado da operação, é uma anedota.
  */
 export interface RespostaBruta {
   leads_total: number;
@@ -20,12 +20,21 @@ export interface RespostaBruta {
   sem_resposta: number;
   esperando_agora: number;
   espera_mais_antiga_segundos: number | null;
+  /** Leads com conversa OU com contato registrado: a base de cobertura. */
+  medidos: number;
+  com_contato_registrado: number;
+  /** Dos respondidos, quantos foram medidos pelo contato registrado (veio antes da resposta no WhatsApp). */
+  respondidos_manual: number;
 }
 
 export interface AnaliseDeResposta {
   leadsTotal: number;
   comConversa: number;
-  /** Fração 0–1 dos leads do período que têm conversa. `null` sem lead. */
+  /** Leads com conversa ou com contato registrado: só esses podem ser medidos. */
+  medidos: number;
+  comContatoRegistrado: number;
+  respondidosManual: number;
+  /** Fração 0–1 dos leads do período que podem ser medidos. `null` sem lead. */
   cobertura: number | null;
   respondidos: number;
   medianaSegundos: number | null;
@@ -38,7 +47,7 @@ export interface AnaliseDeResposta {
   esperaMaisAntigaSegundos: number | null;
   /** Poucos respondidos: mediana e percentis balançam. Mesma régua da tabela de anúncios. */
   amostraPequena: boolean;
-  /** Menos da metade dos leads tem conversa: o número não descreve a operação toda. */
+  /** Menos da metade dos leads pode ser medida: o número não descreve a operação toda. */
   coberturaBaixa: boolean;
 }
 
@@ -48,11 +57,15 @@ const talvez = (v: unknown): number | null => (v === null || v === undefined ? n
 export function analisarResposta(b: RespostaBruta): AnaliseDeResposta {
   const leadsTotal = n(b.leads_total);
   const comConversa = n(b.com_conversa);
-  const cobertura = leadsTotal > 0 ? comConversa / leadsTotal : null;
+  const medidos = n(b.medidos);
+  const cobertura = leadsTotal > 0 ? medidos / leadsTotal : null;
   const respondidos = n(b.respondidos);
   return {
     leadsTotal,
     comConversa,
+    medidos,
+    comContatoRegistrado: n(b.com_contato_registrado),
+    respondidosManual: n(b.respondidos_manual),
     cobertura,
     respondidos,
     medianaSegundos: talvez(b.mediana_segundos),

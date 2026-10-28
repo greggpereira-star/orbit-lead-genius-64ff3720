@@ -1,11 +1,25 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { CalendarPlus, CheckSquare, Mail, MessageCircle } from 'lucide-react';
+import { CalendarPlus, CheckSquare, ChevronDown, Mail, MessageCircle, PhoneCall } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/core/auth/hooks/useAuth';
 import { useSomenteLeitura } from '@/modules/permissoes/usePermissoes';
 import { createLeadNote } from '@/modules/crm/services/leadNotesService';
+import { registrarContato, ultimoContato } from '@/modules/crm/services/contatoService';
+import {
+  CANAIS_DE_CONTATO,
+  descreverUltimoContato,
+  rotuloDoCanal,
+  type CanalDeContato,
+} from '@/modules/crm/lib/contatos';
 
 /**
  * O que dá para fazer agora com este lead.
@@ -46,6 +60,26 @@ export function LeadQuickActions({
       toast.success('Agendado nas anotações');
     },
     onError: (e: Error) => toast.error('Não deu para agendar', { description: e.message }),
+  });
+
+  const ultimo = useQuery({
+    queryKey: ['lead-contacts', leadId],
+    queryFn: () => ultimoContato(leadId),
+    staleTime: 30_000,
+  });
+
+  const contatei = useMutation({
+    mutationFn: (canal: CanalDeContato) => registrarContato(leadId, canal),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ['lead-contacts', leadId] });
+      qc.invalidateQueries({ queryKey: ['tempo-de-resposta'] });
+      toast.success(
+        r.repetido
+          ? 'Esse contato já estava registrado'
+          : `Contato registrado (${rotuloDoCanal(r.canal)})`,
+      );
+    },
+    onError: (e: Error) => toast.error('Não deu para registrar o contato', { description: e.message }),
   });
 
   /* Empilhados, não lado a lado. Na coluna de propriedades de 336px dois
@@ -91,6 +125,44 @@ export function LeadQuickActions({
           <MessageCircle className="h-4 w-4 shrink-0" />
           <span className="ml-2 truncate">Chamar no WhatsApp</span>
         </Button>
+      )}
+
+      {!leitura && (
+        <div className="grid gap-1.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className={estilo} disabled={contatei.isPending}>
+                <PhoneCall className="h-4 w-4 shrink-0" />
+                <span className="ml-2 truncate">Registrar contato</span>
+                <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-60" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Falei com este lead por…
+              </DropdownMenuLabel>
+              {CANAIS_DE_CONTATO.map((c) => (
+                <DropdownMenuItem
+                  key={c.valor}
+                  className="min-h-11 md:min-h-0"
+                  onSelect={() => contatei.mutate(c.valor)}
+                >
+                  {c.rotulo}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* O horário gravado é o do clique, não o do contato: registrar tarde aparece tarde. */}
+          <p className="px-0.5 text-xs text-muted-foreground">
+            {ultimo.isError
+              ? 'Não foi possível ler o último contato registrado.'
+              : ultimo.data
+                ? `Último registro: ${descreverUltimoContato(ultimo.data)}`
+                : ultimo.isLoading
+                  ? ''
+                  : 'Nenhum contato registrado. Vale o horário do clique.'}
+          </p>
+        </div>
       )}
 
       {!leitura && (

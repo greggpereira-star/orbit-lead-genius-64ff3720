@@ -15,6 +15,9 @@ const base: RespostaBruta = {
   sem_resposta: 0,
   esperando_agora: 1,
   espera_mais_antiga_segundos: 485756,
+  medidos: 1,
+  com_contato_registrado: 0,
+  respondidos_manual: 0,
 };
 
 describe("formatarDuracao", () => {
@@ -49,12 +52,27 @@ describe("analisarResposta", () => {
     expect(a.esperandoAgora).toBe(1);
   });
   it("cobertura alta e amostra grande não levantam aviso", () => {
-    const a = analisarResposta({ ...base, leads_total: 100, com_conversa: 80, respondidos: 60 });
+    const a = analisarResposta({ ...base, leads_total: 100, com_conversa: 80, medidos: 80, respondidos: 60 });
     expect(a.coberturaBaixa).toBe(false);
     expect(a.amostraPequena).toBe(false);
   });
+  it("a cobertura conta o lead com contato registrado, mesmo sem conversa", () => {
+    const a = analisarResposta({
+      ...base,
+      leads_total: 100,
+      com_conversa: 10,
+      medidos: 60,
+      com_contato_registrado: 55,
+      respondidos: 50,
+      respondidos_manual: 45,
+    });
+    expect(a.cobertura).toBeCloseTo(0.6);
+    expect(a.coberturaBaixa).toBe(false);
+    expect(a.comConversa).toBe(10);
+    expect(a.respondidosManual).toBe(45);
+  });
   it("sem lead no período a cobertura é nula, não zero", () => {
-    expect(analisarResposta({ ...base, leads_total: 0, com_conversa: 0 }).cobertura).toBeNull();
+    expect(analisarResposta({ ...base, leads_total: 0, com_conversa: 0, medidos: 0 }).cobertura).toBeNull();
   });
   it("converte texto numérico e nulos vindos do banco", () => {
     const a = analisarResposta({
