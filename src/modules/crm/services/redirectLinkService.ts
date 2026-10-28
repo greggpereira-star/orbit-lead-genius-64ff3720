@@ -20,6 +20,21 @@ export interface RedirectLink {
 
 export interface RedirectLinkComUso extends RedirectLink {
   cliques: number;
+  cliques_7d: number;
+  /** Cliques que viraram conversa (casados com um telefone pelo código). */
+  conversas: number;
+  /** Leads distintos: quem clicou duas vezes conta uma. */
+  leads: number;
+  qualificados: number;
+  vendas: number;
+  valor_vendas: number;
+  ultimo_clique: string | null;
+}
+
+export interface CliquePorOrigem {
+  utm_source: string;
+  utm_campaign: string;
+  cliques: number;
   conversas: number;
 }
 
@@ -38,7 +53,7 @@ export function gerarSlug(nome: string): string {
     .slice(0, 40);
 }
 
-export async function listRedirectLinks(companyId: string): Promise<RedirectLinkComUso[]> {
+export async function listRedirectLinks(companyId: string, dias = 30): Promise<RedirectLinkComUso[]> {
   const { data: links, error } = await (supabase as any)
     .from('redirect_links')
     .select('*')
@@ -49,24 +64,49 @@ export async function listRedirectLinks(companyId: string): Promise<RedirectLink
   const lista = (links ?? []) as RedirectLink[];
   if (!lista.length) return [];
 
-  // Contagem de uso numa consulta só. O número de cliques é a única prova de que
-  // o link está no ar e funcionando — sem ele a tela não diz se alguém clicou.
-  const { data: cliques } = await (supabase as any)
-    .from('whatsapp_ad_clicks')
-    .select('link_id, phone')
-    .in('link_id', lista.map((l) => l.id));
+  // O funil é calculado no banco: contar no navegador parava em 1.000 linhas e
+  // não tinha como seguir o clique até a etapa do lead.
+  const desde = new Date(Date.now() - dias * 86400000).toISOString();
+  const { data: stats, error: erroStats } = await (supabase as any).rpc('estatisticas_dos_links', {
+    p_company_id: companyId,
+    p_desde: desde,
+  });
+  if (erroStats) throw new Error(erroStats.message);
 
-  const porLink = new Map<string, { cliques: number; conversas: number }>();
-  for (const c of (cliques ?? []) as Array<{ link_id: string; phone: string | null }>) {
-    const atual = porLink.get(c.link_id) ?? { cliques: 0, conversas: 0 };
-    atual.cliques += 1;
-    // Clique com telefone virou conversa de verdade; sem telefone, a pessoa
-    // clicou e não mandou mensagem. A diferença entre os dois é o vazamento.
-    if (c.phone) atual.conversas += 1;
-    porLink.set(c.link_id, atual);
-  }
+  const n = (v: unknown) => Number(v ?? 0);
+  const porId = new Map<string, Record<string, unknown>>(
+    ((stats ?? []) as Array<Record<string, unknown>>).map((r) => [String(r.link_id), r]),
+  );
 
-  return lista.map((l) => ({ ...l, ...(porLink.get(l.id) ?? { cliques: 0, conversas: 0 }) }));
+  return lista.map((l) => {
+    const r = porId.get(l.id);
+    return {
+      ...l,
+      cliques: n(r?.cliques),
+      cliques_7d: n(r?.cliques_7d),
+      conversas: n(r?.conversas),
+      leads: n(r?.leads),
+      qualificados: n(r?.qualificados),
+      vendas: n(r?.vendas),
+      valor_vendas: n(r?.valor_vendas),
+      ultimo_clique: (r?.ultimo_clique as string | null) ?? null,
+    };
+  });
+}
+
+export async function cliquesPorOrigem(linkId: string, dias = 30): Promise<CliquePorOrigem[]> {
+  const desde = new Date(Date.now() - dias * 86400000).toISOString();
+  const { data, error } = await (supabase as any).rpc('cliques_do_link_por_origem', {
+    p_link_id: linkId,
+    p_desde: desde,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+    utm_source: String(r.utm_source),
+    utm_campaign: String(r.utm_campaign),
+    cliques: Number(r.cliques),
+    conversas: Number(r.conversas),
+  }));
 }
 
 export async function criarRedirectLink(input: {

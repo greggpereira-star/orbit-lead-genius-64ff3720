@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Link2, Copy, Check, Trash2, Loader2, Plus } from 'lucide-react';
+import { Link2, Copy, Check, Trash2, Loader2, Plus, ChevronDown } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  listRedirectLinks, criarRedirectLink, alternarRedirectLink, excluirRedirectLink, gerarSlug,
+  listRedirectLinks, criarRedirectLink, alternarRedirectLink, excluirRedirectLink, gerarSlug, cliquesPorOrigem,
+  type RedirectLinkComUso,
 } from '@/modules/crm/services/redirectLinkService';
 
 /**
@@ -28,9 +30,12 @@ export function RedirectLinksCard({ companyId }: { companyId: string }) {
   const [destino, setDestino] = useState('');
   const [copiado, setCopiado] = useState<string | null>(null);
 
+  const [dias, setDias] = useState('30');
+  const [aberto, setAberto] = useState<string | null>(null);
+
   const links = useQuery({
-    queryKey: ['redirect-links', companyId],
-    queryFn: () => listRedirectLinks(companyId),
+    queryKey: ['redirect-links', companyId, dias],
+    queryFn: () => listRedirectLinks(companyId, Number(dias)),
     enabled: Boolean(companyId),
   });
 
@@ -77,14 +82,28 @@ export function RedirectLinksCard({ companyId }: { companyId: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Link2 className="h-4 w-4 text-primary" />
-          Links de anúncio
-        </CardTitle>
-        <CardDescription>
-          Use no Google Ads, que não tem botão de WhatsApp. O link identifica de qual
-          campanha veio cada conversa.
-        </CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              Links de anúncio
+            </CardTitle>
+            <CardDescription>
+              Use no Google Ads, que não tem botão de WhatsApp. O link identifica de qual
+              campanha veio cada conversa.
+            </CardDescription>
+          </div>
+          <Select value={dias} onValueChange={setDias}>
+            <SelectTrigger className="h-9 w-36" aria-label="Período das estatísticas">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -120,15 +139,7 @@ export function RedirectLinksCard({ companyId }: { companyId: string }) {
               </Button>
             </div>
 
-            {/* Os dois números juntos, porque a diferença entre eles É a
-                informação: quem clicou e não mandou mensagem desistiu no meio. */}
-            <p className="mt-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{l.cliques}</span> clique(s) ·{' '}
-              <span className="font-medium text-foreground">{l.conversas}</span> viraram conversa
-              {l.cliques > 0 && l.conversas < l.cliques && (
-                <> · {l.cliques - l.conversas} abriram o WhatsApp e não enviaram</>
-              )}
-            </p>
+            <FunilDoLink l={l} dias={Number(dias)} aberto={aberto === l.id} onAlternar={() => setAberto(aberto === l.id ? null : l.id)} />
           </div>
         ))}
 
@@ -176,5 +187,105 @@ export function RedirectLinksCard({ companyId }: { companyId: string }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+const moeda = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+/**
+ * Do clique à venda, em uma linha.
+ *
+ * Cada degrau é um número separado porque a perda entre eles é a informação:
+ * clique que não vira conversa é problema da mensagem ou do WhatsApp; conversa
+ * que não qualifica é problema do público que o anúncio atrai.
+ */
+function FunilDoLink({ l, dias, aberto, onAlternar }: { l: RedirectLinkComUso; dias: number; aberto: boolean; onAlternar: () => void }) {
+  const origens = useQuery({
+    queryKey: ['redirect-link-origens', l.id, dias],
+    queryFn: () => cliquesPorOrigem(l.id, dias),
+    enabled: aberto,
+  });
+
+  const etapas: Array<[string, number]> = [
+    ['cliques', l.cliques],
+    ['conversas', l.conversas],
+    ['leads', l.leads],
+    ['qualificados', l.qualificados],
+    ['vendas', l.vendas],
+  ];
+
+  return (
+    <div className="mt-2">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {etapas.map(([rotulo, valor]) => (
+          <span key={rotulo}>
+            <span className="font-medium tabular-nums text-foreground">{valor}</span> {rotulo}
+          </span>
+        ))}
+        {l.valor_vendas > 0 && (
+          <span>
+            <span className="font-medium tabular-nums text-foreground">{moeda(l.valor_vendas)}</span> em vendas
+          </span>
+        )}
+      </div>
+
+      {l.cliques > 0 && l.conversas < l.cliques && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {l.cliques - l.conversas} {l.cliques - l.conversas === 1 ? 'pessoa abriu' : 'pessoas abriram'} o WhatsApp e não enviou a mensagem
+          {l.conversas > 0 ? '' : ' — confira se o número de destino está certo'}.
+        </p>
+      )}
+      {l.cliques === 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">Nenhum clique neste período.</p>
+      )}
+      {l.ultimo_clique && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Último clique em {new Date(l.ultimo_clique).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+          {l.cliques_7d > 0 && <> · {l.cliques_7d} nos últimos 7 dias</>}
+        </p>
+      )}
+
+      {l.cliques > 0 && (
+        <button
+          type="button"
+          onClick={onAlternar}
+          className="mt-1.5 flex items-center gap-1 text-xs text-primary hover:underline"
+          aria-expanded={aberto}
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${aberto ? 'rotate-180' : ''}`} />
+          {aberto ? 'Esconder' : 'Ver por campanha'}
+        </button>
+      )}
+
+      {aberto && (
+        <div className="mt-2 overflow-x-auto">
+          {origens.isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="pb-1 pr-3 font-medium">Origem</th>
+                  <th className="pb-1 pr-3 font-medium">Campanha</th>
+                  <th className="pb-1 pr-3 text-right font-medium">Cliques</th>
+                  <th className="pb-1 text-right font-medium">Conversas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(origens.data ?? []).map((o) => (
+                  <tr key={o.utm_source + o.utm_campaign} className="border-b last:border-0">
+                    <td className="py-1 pr-3">{o.utm_source}</td>
+                    <td className="py-1 pr-3">{o.utm_campaign}</td>
+                    <td className="py-1 pr-3 text-right tabular-nums">{o.cliques}</td>
+                    <td className="py-1 text-right tabular-nums">{o.conversas}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
