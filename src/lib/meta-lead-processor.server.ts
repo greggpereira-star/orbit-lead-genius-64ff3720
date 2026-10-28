@@ -5,6 +5,7 @@
  * writes to `leads` and triggers downstream deliveries.
  */
 import { createHmac } from "node:crypto";
+import { mesmaPessoa, padraoDeBuscaDoFim } from "../modules/crm/lib/identidadeDoLead";
 import { fetchLead, type MetaLead } from "./meta-graph.server";
 import { dispatchLeadWhatsApp } from "./whatsapp-automation.server";
 import { resolveAdAttribution } from "./meta-attribution.server";
@@ -25,18 +26,20 @@ async function findDuplicate(
   email: string | null,
 ): Promise<{ id: string; created_at: string } | null> {
   try {
-    const digits = phone ? String(phone).replace(/\D+/g, "").slice(-8) : null;
+    const padrao = padraoDeBuscaDoFim(phone);
 
-    if (digits && digits.length >= 8) {
-      const { data } = await admin
+    if (padrao) {
+      const { data: candidatos } = await admin
         .from("leads")
-        .select("id, created_at")
+        .select("id, created_at, phone")
         .eq("company_id", companyId)
-        .ilike("phone", `%${digits}%`)
+        .like("phone", padrao)
         .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (data?.id) return data;
+        .limit(25);
+      const achado = (candidatos ?? []).find((l: { phone: string | null }) =>
+        mesmaPessoa({ phone }, { phone: l.phone }),
+      );
+      if (achado?.id) return { id: achado.id, created_at: achado.created_at };
     }
 
     if (email) {

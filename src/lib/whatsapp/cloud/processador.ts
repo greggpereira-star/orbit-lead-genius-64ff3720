@@ -13,7 +13,7 @@
  */
 
 import { registrarCliqueDeAnuncio } from "../../ctwa.server";
-import { mesmaPessoa } from "../../../modules/crm/lib/identidadeDoLead";
+import { mesmaPessoa, padraoDeBuscaDoFim } from "../../../modules/crm/lib/identidadeDoLead";
 import { variantesDoNumero } from "../numero";
 import type { EventoWa, Referral } from "./payload";
 import { pedeParaParar, pedeParaVoltar } from "./optout";
@@ -84,9 +84,9 @@ async function ligarContatoAoLead(
   const { data: candidatos } = await tabela(db, "leads")
     .select("id, phone, email")
     .eq("company_id", empresaId)
-    .ilike("phone", `%${waId.slice(-8)}%`)
+    .ilike("phone", padraoDeBuscaDoFim(waId) ?? `%${waId}%`)
     .order("created_at", { ascending: true })
-    .limit(10);
+    .limit(25);
 
   const variantes = variantesDoNumero(waId);
   const achado = (

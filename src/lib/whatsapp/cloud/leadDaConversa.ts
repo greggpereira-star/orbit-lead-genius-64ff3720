@@ -12,7 +12,7 @@
  */
 import {
   acharDuplicado,
-  finalDoTelefone,
+  padraoDeBuscaDoFim,
   mesmaPessoa,
   normalizarEmail,
 } from "@/modules/crm/lib/identidadeDoLead";
@@ -104,10 +104,10 @@ async function acharDuplicadoDoTelefone(
   waId: string,
   email: string | null,
 ) {
-  const fim = finalDoTelefone(waId);
+  const padrao = padraoDeBuscaDoFim(waId);
   const filtros: string[] = [];
   if (email) filtros.push(`email.ilike.${email}`);
-  if (fim) filtros.push(`phone.like.%${fim}`);
+  if (padrao) filtros.push(`phone.like.${padrao}`);
   if (filtros.length === 0) return null;
 
   const { data, error } = await tabela(db, "leads")

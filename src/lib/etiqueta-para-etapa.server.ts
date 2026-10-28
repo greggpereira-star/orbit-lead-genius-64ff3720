@@ -12,6 +12,8 @@
  * `IS NOT DISTINCT FROM` e não enfileira nada. O laço morre na segunda volta.
  */
 
+import { mesmaPessoa, padraoDeBuscaDoFim } from "../modules/crm/lib/identidadeDoLead";
+
 /** Deriva o status igual ao board faz, senão os dois caminhos divergem. */
 export function statusDaEtapa(
   etapa: { id: string; kind: string | null },
@@ -72,14 +74,18 @@ export async function moverLeadPelaEtiqueta(
 
   // Casa pelos 8 últimos dígitos, mesma regra do resto do webhook: o nono dígito
   // do celular brasileiro aparece ou não conforme a origem do número.
-  const { data: lead } = await admin
+  // O banco guarda o telefone como foi digitado: a busca atravessa a máscara
+  // e `mesmaPessoa` confirma, para não mover o lead de outra pessoa.
+  const { data: candidatos } = await admin
     .from("leads")
-    .select("id, stage_id")
+    .select("id, stage_id, phone")
     .eq("company_id", entrada.companyId)
-    .ilike("phone", `%${telefone.slice(-8)}%`)
+    .like("phone", padraoDeBuscaDoFim(telefone) ?? `%${telefone}%`)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(25);
+  const lead = ((candidatos ?? []) as Array<{ id: string; stage_id: string | null; phone: string | null }>).find(
+    (l) => mesmaPessoa({ phone: telefone }, { phone: l.phone }),
+  );
 
   if (!lead?.id) return { movido: false, motivo: "nenhum lead com esse telefone" };
   if (lead.stage_id === mapa.stage_id) return { movido: false, motivo: "lead já está nessa etapa" };

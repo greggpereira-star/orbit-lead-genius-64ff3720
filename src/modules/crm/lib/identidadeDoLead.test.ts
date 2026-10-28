@@ -5,6 +5,7 @@ import {
   mesmaPessoa,
   normalizarEmail,
   normalizarTelefone,
+  padraoDeBuscaDoFim,
 } from "./identidadeDoLead";
 
 /**
@@ -113,5 +114,49 @@ describe("acharDuplicado", () => {
 
   it("não acha quem não está lá", () => {
     expect(acharDuplicado({ email: "novo@x.com", phone: "11911112222" }, existentes)).toBeNull();
+  });
+});
+
+/**
+ * Medido em produção em 28/10/2026: 643 leads, 6 com hífen e exatamente 6 em
+ * que `ilike '%<8 últimos dígitos>%'` falhava — "(27) 99999-0011" tem o hífen
+ * no meio dos 8 últimos ("99990011" não é substring). Resultado: mensagem
+ * inbound sem lead_id, clique de anúncio órfão e lead duplicado.
+ */
+describe("padraoDeBuscaDoFim — busca que atravessa a máscara", () => {
+  // Simula o LIKE do Postgres: `%` = qualquer sequência.
+  const like = (valor: string, padrao: string) =>
+    new RegExp(`^${padrao.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*")}$`, "s").test(valor);
+
+  it("o jeito antigo falha com hífen (reprodução do bug)", () => {
+    expect(like("(27) 99999-0011", `%${"5527999990011".slice(-8)}`)).toBe(false);
+  });
+
+  it.each([
+    "(27) 99999-0011",
+    "27 99999-0011",
+    "+5527999990011",
+    "5527999990011",
+    "27999990011",
+    "(27) 9 9999-0011",
+  ])("casa %s a partir do número do WhatsApp", (guardado) => {
+    const padrao = padraoDeBuscaDoFim("5527999990011")!;
+    expect(like(guardado, padrao)).toBe(true);
+  });
+
+  it("não casa número com final diferente", () => {
+    const padrao = padraoDeBuscaDoFim("5527999990011")!;
+    expect(like("(27) 99999-0012", padrao)).toBe(false);
+  });
+
+  it("devolve null com menos de 8 dígitos", () => {
+    expect(padraoDeBuscaDoFim("1234567")).toBeNull();
+    expect(padraoDeBuscaDoFim(null)).toBeNull();
+  });
+
+  it("a confirmação por mesmaPessoa ainda separa pessoas diferentes", () => {
+    // mesmo final de 8 dígitos, DDD diferente: a busca larga traz, a confirmação recusa
+    expect(mesmaPessoa({ phone: "5511999990011" }, { phone: "(27) 99999-0011" })).toBe(false);
+    expect(mesmaPessoa({ phone: "5527999990011" }, { phone: "(27) 99999-0011" })).toBe(true);
   });
 });

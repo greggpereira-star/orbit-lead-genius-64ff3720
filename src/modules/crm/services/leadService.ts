@@ -66,7 +66,7 @@ import { validarTelefone } from "@/modules/quiz/lib/telefone";
 import { validarEmail } from "@/modules/quiz/lib/email";
 import {
   acharDuplicado,
-  finalDoTelefone,
+  padraoDeBuscaDoFim,
   normalizarEmail,
 } from "@/modules/crm/lib/identidadeDoLead";
 
@@ -219,12 +219,12 @@ export async function acharLeadComMesmoContato(
   contato: { email?: string; phone?: string },
 ): Promise<Pick<LeadRow, "id" | "name" | "email" | "phone"> | null> {
   const email = normalizarEmail(contato.email);
-  const fim = finalDoTelefone(contato.phone);
-  if (!email && !fim) return null;
+  const padrao = padraoDeBuscaDoFim(contato.phone);
+  if (!email && !padrao) return null;
 
   const filtros: string[] = [];
   if (email) filtros.push(`email.ilike.${email}`);
-  if (fim) filtros.push(`phone.like.%${fim}`);
+  if (padrao) filtros.push(`phone.like.${padrao}`);
 
   const { data, error } = await supabase
     .from("leads")

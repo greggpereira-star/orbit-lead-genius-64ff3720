@@ -15,6 +15,7 @@ import { acharCliqueDeAnuncio, registrarCliqueDeAnuncio, casarCodigoDoRedirect }
 import { moverLeadPelaEtiqueta } from "@/lib/etiqueta-para-etapa.server";
 import { pedeParaParar } from "@/lib/whatsapp/cloud/optout";
 import { segredoConfere } from "@/lib/segredo.server";
+import { mesmaPessoa, padraoDeBuscaDoFim } from "@/modules/crm/lib/identidadeDoLead";
 
 function log(level: "info" | "warn" | "error", traceId: string, msg: string, extra?: Record<string, unknown>) {
   console.log(
@@ -182,14 +183,20 @@ export const Route = createFileRoute("/api/public/whatsapp-webhook")({
             let leadId: string | null = null;
             const variants = phoneVariants(phone);
             for (const v of variants) {
-              const { data: lead } = await admin
+              const padrao = padraoDeBuscaDoFim(v);
+              if (!padrao) continue;
+              // Busca larga atravessa a máscara ("(27) 99999-0011"); a
+              // confirmação por mesmaPessoa evita juntar pessoas diferentes.
+              const { data: candidatos } = await admin
                 .from("leads")
-                .select("id")
+                .select("id, phone")
                 .eq("company_id", companyId)
-                .ilike("phone", `%${v.slice(-8)}%`)
+                .like("phone", padrao)
                 .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                .limit(25);
+              const lead = (candidatos ?? []).find((l: { id: string; phone: string | null }) =>
+                mesmaPessoa({ phone: v }, { phone: l.phone }),
+              );
               if (lead?.id) {
                 leadId = lead.id;
                 break;

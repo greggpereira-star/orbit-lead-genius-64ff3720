@@ -56,7 +56,7 @@ describe("a deduplicação está ligada nos dois caminhos", () => {
     /* O telefone fica gravado como foi digitado, com máscara: procurar pela
        forma normalizada não acharia nada. Busca-se pelo fim do número e
        confirma-se com `mesmaPessoa`, já normalizado. */
-    expect(service).toContain("finalDoTelefone");
+    expect(service).toContain("padraoDeBuscaDoFim");
     expect(service).toContain("acharDuplicado");
   });
 

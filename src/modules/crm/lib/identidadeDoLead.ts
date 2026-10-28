@@ -55,6 +55,20 @@ export function finalDoTelefone(bruto: string | null | undefined): string | null
   return digitos.length >= 8 ? digitos.slice(-8) : null;
 }
 
+/**
+ * Padrão `like` que acha o telefone guardado COMO FOI DIGITADO.
+ *
+ * `%<8 dígitos>%` falha quando a máscara cai no meio deles: "(27) 99999-0011"
+ * não contém "99990011". Medido em produção em 28/10/2026: 6 de 643 leads.
+ * Aqui cada dígito vira `%d`, então hífen, espaço e parêntese no meio não
+ * atrapalham. A busca fica larga de propósito; quem chama confirma com
+ * `mesmaPessoa`, que compara normalizado.
+ */
+export function padraoDeBuscaDoFim(bruto: string | null | undefined): string | null {
+  const fim = finalDoTelefone(bruto);
+  return fim ? `%${fim.split("").join("%")}` : null;
+}
+
 export interface IdentidadeDeLead {
   email?: string | null;
   phone?: string | null;
