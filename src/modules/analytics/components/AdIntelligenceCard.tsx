@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, AlertCircle, Loader2 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { relatorioAnuncios, marcarNomesRepetidos } from '@/modules/analytics/services/adIntelligenceService';
+import { relatorioDeCusto, marcarNomesRepetidos, totaisDeCusto } from '@/modules/analytics/services/adIntelligenceService';
+import { GastoDoAnuncio } from '@/modules/analytics/components/GastoDoAnuncio';
 
 /**
  * Qual anúncio traz lead que QUALIFICA.
@@ -14,19 +15,25 @@ import { relatorioAnuncios, marcarNomesRepetidos } from '@/modules/analytics/ser
  * para a decisão de verba sair do segundo, e não do primeiro.
  */
 export function AdIntelligenceCard({ companyId }: { companyId: string }) {
-  const [dias, setDias] = useState('90');
+  const [dias, setDias] = useState('30');
+  const qc = useQueryClient();
 
   const relatorio = useQuery({
     queryKey: ['relatorio-anuncios', companyId, dias],
-    queryFn: () => relatorioAnuncios(companyId, Number(dias)),
+    queryFn: () => relatorioDeCusto(companyId, Number(dias)),
     enabled: Boolean(companyId),
   });
 
   const linhas = useMemo(() => marcarNomesRepetidos(relatorio.data ?? []), [relatorio.data]);
+  const totais = useMemo(() => totaisDeCusto(relatorio.data ?? []), [relatorio.data]);
+  const temGasto = totais !== null;
   const semRegua = linhas.length > 0 && linhas.every((l) => l.taxa_qualificacao === null);
 
   const dinheiro = (v: number) =>
     v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  // Custo unitário pede centavos: R$ 7 e R$ 7,80 por lead são decisões diferentes.
+  const dinheiroFino = (v: number) =>
+    v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <Card>
@@ -56,6 +63,29 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
       </CardHeader>
 
       <CardContent>
+        <GastoDoAnuncio onAtualizou={() => qc.invalidateQueries({ queryKey: ['relatorio-anuncios', companyId] })} />
+
+        {totais && (
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ['Investido', dinheiro(totais.gasto)],
+              ['Custo por lead', totais.custoPorLeadGeral === null ? '—' : dinheiroFino(totais.custoPorLeadGeral)],
+              ['Custo por qualificado', totais.custoPorQualificadoGeral === null ? '—' : dinheiroFino(totais.custoPorQualificadoGeral)],
+              ['Retorno (ROAS)', totais.roasGeral === null ? '—' : `${totais.roasGeral.toFixed(2).replace('.', ',')}x`],
+            ].map(([rotulo, valor]) => (
+              <div key={rotulo} className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">{rotulo}</div>
+                <div className="mt-0.5 text-lg font-semibold tabular-nums">{valor}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {totais && totais.gastoSemLead > 0 && (
+          <p className="mb-3 text-xs text-muted-foreground">
+            {dinheiro(totais.gastoSemLead)} foram gastos em anúncios que não trouxeram nenhum lead neste período.
+          </p>
+        )}
+
         {/* Sem régua a coluna de qualificação não tem como existir. Dizer isso,
             com o caminho para resolver, é melhor que uma tabela de zeros que
             parece dizer que nenhum anúncio presta. */}
@@ -86,8 +116,11 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
                   <th className="pb-2 pr-3 font-medium">Anúncio</th>
+                  {temGasto && <th className="pb-2 pr-3 text-right font-medium">Gasto</th>}
                   <th className="pb-2 pr-3 text-right font-medium">Conversas</th>
+                  {temGasto && <th className="pb-2 pr-3 text-right font-medium">Custo/lead</th>}
                   <th className="pb-2 pr-3 text-right font-medium">Qualificados</th>
+                  {temGasto && <th className="pb-2 pr-3 text-right font-medium">Custo/qualif.</th>}
                   <th className="pb-2 pr-3 text-right font-medium">Taxa</th>
                   <th className="pb-2 text-right font-medium">Valor</th>
                 </tr>
@@ -104,10 +137,23 @@ export function AdIntelligenceCard({ companyId }: { companyId: string }) {
                         {l.repetido && l.ad_id !== '(sem anúncio)' && <> · id {l.ad_id.slice(-6)}</>}
                       </div>
                     </td>
+                    {temGasto && (
+                      <td className="py-2.5 pr-3 text-right tabular-nums">{l.gasto === null ? '—' : dinheiro(l.gasto)}</td>
+                    )}
                     <td className="py-2.5 pr-3 text-right tabular-nums">{l.conversas}</td>
+                    {temGasto && (
+                      <td className="py-2.5 pr-3 text-right tabular-nums">
+                        {l.custo_por_lead === null ? '—' : dinheiroFino(l.custo_por_lead)}
+                      </td>
+                    )}
                     <td className="py-2.5 pr-3 text-right font-medium tabular-nums">
                       {l.taxa_qualificacao === null ? '—' : l.qualificados}
                     </td>
+                    {temGasto && (
+                      <td className="py-2.5 pr-3 text-right tabular-nums">
+                        {l.custo_por_qualificado === null ? '—' : dinheiroFino(l.custo_por_qualificado)}
+                      </td>
+                    )}
                     <td className="py-2.5 pr-3 text-right tabular-nums">
                       {l.taxa_qualificacao === null ? '—' : `${l.taxa_qualificacao}%`}
                     </td>

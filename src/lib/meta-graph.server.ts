@@ -287,3 +287,80 @@ export async function listFormLeads(params: ListFormLeadsParams): Promise<MetaLe
 
   return leads.slice(0, maxLeads);
 }
+
+export interface ContaDeAnuncio {
+  /** `act_123…` — o formato que a Graph exige nas chamadas. */
+  id: string;
+  name: string;
+  currency: string | null;
+  /** 1 = ativa. Outros valores: desativada, em análise, com pagamento pendente etc. */
+  account_status: number | null;
+}
+
+/** Contas de anúncio a que o token tem acesso. Exige `ads_read`. */
+export async function listarContasDeAnuncio(accessToken: string): Promise<ContaDeAnuncio[]> {
+  const contas: ContaDeAnuncio[] = [];
+  let depois: string | undefined;
+  // Teto de páginas: uma agência pode ter dezenas de contas, mas nunca milhares.
+  for (let pagina = 0; pagina < 10; pagina++) {
+    const res = await request<{
+      data?: Array<{ id: string; name?: string; currency?: string; account_status?: number }>;
+      paging?: { cursors?: { after?: string }; next?: string };
+    }>("/me/adaccounts", {
+      query: {
+        access_token: accessToken,
+        fields: "id,name,currency,account_status",
+        limit: "100",
+        after: depois,
+      },
+    });
+    for (const c of res.data ?? []) {
+      contas.push({
+        id: c.id,
+        name: c.name ?? c.id,
+        currency: c.currency ?? null,
+        account_status: c.account_status ?? null,
+      });
+    }
+    depois = res.paging?.next ? res.paging.cursors?.after : undefined;
+    if (!depois) break;
+  }
+  return contas;
+}
+
+/**
+ * Gasto diário por anúncio de uma conta, no intervalo `[desde, ate]`.
+ *
+ * `time_increment=1` devolve uma linha por anúncio por dia — o grão que a tabela
+ * guarda. A Meta só devolve linhas com entrega: dia sem impressão não aparece, e
+ * isso é correto (gasto zero não precisa de linha).
+ */
+export async function buscarGastoDiario(
+  contaId: string,
+  accessToken: string,
+  janela: { desde: string; ate: string },
+): Promise<Record<string, unknown>[]> {
+  const linhas: Record<string, unknown>[] = [];
+  let depois: string | undefined;
+  for (let pagina = 0; pagina < 200; pagina++) {
+    const res = await request<{
+      data?: Record<string, unknown>[];
+      paging?: { cursors?: { after?: string }; next?: string };
+    }>(`/${contaId.startsWith("act_") ? contaId : `act_${contaId}`}/insights`, {
+      query: {
+        access_token: accessToken,
+        level: "ad",
+        time_increment: "1",
+        time_range: JSON.stringify({ since: janela.desde, until: janela.ate }),
+        fields:
+          "ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,account_currency",
+        limit: "500",
+        after: depois,
+      },
+    });
+    linhas.push(...(res.data ?? []));
+    depois = res.paging?.next ? res.paging.cursors?.after : undefined;
+    if (!depois) break;
+  }
+  return linhas;
+}

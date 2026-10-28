@@ -86,6 +86,7 @@ import { Route as AppQuizzesIdResponsesRouteImport } from './routes/_app.quizzes
 import { Route as AppQuizzesIdResultsRouteImport } from './routes/_app.quizzes_.$id.results'
 import { Route as AppSettingsConexoesIndexRouteImport } from './routes/_app.settings.conexoes.index'
 import { Route as AppSettingsConexoesIdRouteImport } from './routes/_app.settings.conexoes.$id'
+import { Route as ApiPublicCronAdSpendSyncRouteImport } from './routes/api/public/cron/ad-spend-sync'
 import { Route as ApiPublicCronAutomationDispatchRouteImport } from './routes/api/public/cron/automation-dispatch'
 import { Route as ApiPublicCronConversionDispatchRouteImport } from './routes/api/public/cron/conversion-dispatch'
 import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/api/public/cron/meta-reprocess-failed'
@@ -482,6 +483,12 @@ const AppSettingsConexoesIdRoute = AppSettingsConexoesIdRouteImport.update({
   path: '/conexoes/$id',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const ApiPublicCronAdSpendSyncRoute =
+  ApiPublicCronAdSpendSyncRouteImport.update({
+    id: '/api/public/cron/ad-spend-sync',
+    path: '/api/public/cron/ad-spend-sync',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronAutomationDispatchRoute =
   ApiPublicCronAutomationDispatchRouteImport.update({
     id: '/api/public/cron/automation-dispatch',
@@ -587,6 +594,7 @@ export interface FileRoutesByFullPath {
   '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
   '/settings/conexoes/$id': typeof AppSettingsConexoesIdRoute
+  '/api/public/cron/ad-spend-sync': typeof ApiPublicCronAdSpendSyncRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
@@ -668,6 +676,7 @@ export interface FileRoutesByTo {
   '/quizzes/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/quizzes/$id/results': typeof AppQuizzesIdResultsRoute
   '/settings/conexoes/$id': typeof AppSettingsConexoesIdRoute
+  '/api/public/cron/ad-spend-sync': typeof ApiPublicCronAdSpendSyncRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
@@ -753,6 +762,7 @@ export interface FileRoutesById {
   '/_app/quizzes_/$id/responses': typeof AppQuizzesIdResponsesRoute
   '/_app/quizzes_/$id/results': typeof AppQuizzesIdResultsRoute
   '/_app/settings/conexoes/$id': typeof AppSettingsConexoesIdRoute
+  '/api/public/cron/ad-spend-sync': typeof ApiPublicCronAdSpendSyncRoute
   '/api/public/cron/automation-dispatch': typeof ApiPublicCronAutomationDispatchRoute
   '/api/public/cron/conversion-dispatch': typeof ApiPublicCronConversionDispatchRoute
   '/api/public/cron/meta-reprocess-failed': typeof ApiPublicCronMetaReprocessFailedRoute
@@ -837,6 +847,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/responses'
     | '/quizzes/$id/results'
     | '/settings/conexoes/$id'
+    | '/api/public/cron/ad-spend-sync'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
@@ -918,6 +929,7 @@ export interface FileRouteTypes {
     | '/quizzes/$id/responses'
     | '/quizzes/$id/results'
     | '/settings/conexoes/$id'
+    | '/api/public/cron/ad-spend-sync'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
@@ -1002,6 +1014,7 @@ export interface FileRouteTypes {
     | '/_app/quizzes_/$id/responses'
     | '/_app/quizzes_/$id/results'
     | '/_app/settings/conexoes/$id'
+    | '/api/public/cron/ad-spend-sync'
     | '/api/public/cron/automation-dispatch'
     | '/api/public/cron/conversion-dispatch'
     | '/api/public/cron/meta-reprocess-failed'
@@ -1037,6 +1050,7 @@ export interface RootRouteChildren {
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   FunctionsV1OauthCallbackRoute: typeof FunctionsV1OauthCallbackRoute
   IntegrationsMetaCallbackRoute: typeof IntegrationsMetaCallbackRoute
+  ApiPublicCronAdSpendSyncRoute: typeof ApiPublicCronAdSpendSyncRoute
   ApiPublicCronAutomationDispatchRoute: typeof ApiPublicCronAutomationDispatchRoute
   ApiPublicCronConversionDispatchRoute: typeof ApiPublicCronConversionDispatchRoute
   ApiPublicCronMetaReprocessFailedRoute: typeof ApiPublicCronMetaReprocessFailedRoute
@@ -1585,6 +1599,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsConexoesIdRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/api/public/cron/ad-spend-sync': {
+      id: '/api/public/cron/ad-spend-sync'
+      path: '/api/public/cron/ad-spend-sync'
+      fullPath: '/api/public/cron/ad-spend-sync'
+      preLoaderRoute: typeof ApiPublicCronAdSpendSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/automation-dispatch': {
       id: '/api/public/cron/automation-dispatch'
       path: '/api/public/cron/automation-dispatch'
@@ -1798,6 +1819,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   FunctionsV1OauthCallbackRoute: FunctionsV1OauthCallbackRoute,
   IntegrationsMetaCallbackRoute: IntegrationsMetaCallbackRoute,
+  ApiPublicCronAdSpendSyncRoute: ApiPublicCronAdSpendSyncRoute,
   ApiPublicCronAutomationDispatchRoute: ApiPublicCronAutomationDispatchRoute,
   ApiPublicCronConversionDispatchRoute: ApiPublicCronConversionDispatchRoute,
   ApiPublicCronMetaReprocessFailedRoute: ApiPublicCronMetaReprocessFailedRoute,
