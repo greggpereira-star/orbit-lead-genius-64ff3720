@@ -347,6 +347,18 @@ function PlayerRunner({
     });
   };
 
+  /* "Última etapa" é a última que ESTE visitante vê, não a última da lista.
+     Com dois resultados condicionais (um escondido por perfil), a tela que
+     ele alcança nunca é a de índice final: a gravação ao chegar não rodava e a
+     submissão só existia se a pessoa clicasse no botão — achado andando o
+     quiz da Mentoria no ensaio local (lead capturado, submissão ausente). */
+  const ehUltimaVisivel = (stepIdx: number, responses: Record<string, unknown>): boolean => {
+    for (let k = stepIdx + 1; k < steps.length; k += 1) {
+      if (stepHasVisibleBlocks(k, responses)) return false;
+    }
+    return true;
+  };
+
   const urgencyBar: UrgencyBarSettings = useMemo(
     () => ({ ...DEFAULT_URGENCY_BAR, ...(settings?.urgency_bar as Partial<UrgencyBarSettings> | undefined) }),
     [settings]
@@ -707,7 +719,7 @@ function PlayerRunner({
     /* Chegou na última etapa: grava agora. Se esta etapa tiver um bloco de
        resultado sem botão de avanço, não haverá um próximo clique — e esperar
        por ele é o que fazia o quiz perder todo mundo. */
-    if (idx >= steps.length - 1 && !preview) {
+    if (ehUltimaVisivel(idx, nextResponses) && !preview) {
       void finish(estadoFinal, false);
     }
   };
@@ -2544,15 +2556,57 @@ function BlockView({
       );
 
     case 'cta':
-    case 'result':
+    case 'result': {
+      /* O bloco Resultado guarda o texto em `resultTitle`/`resultBody` (é o que
+         o inspetor, a biblioteca e os modelos gravam), mas `heading` lê só
+         `title`/`subtitle`. Resultado: quem chegava à última etapa via uma tela
+         em branco com o botão — achado andando o quiz da Mentoria no ensaio
+         local. Cai em `heading` quando o autor usou título/subtítulo. */
+      const temTextoDeResultado = !block.title && !block.subtitle && (block.resultTitle || block.resultBody || block.resultBodyRich);
       return (
         <div className="text-center py-6 space-y-4">
-          {heading}
-          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
+          {temTextoDeResultado ? (
+            <div className="space-y-2.5 mb-7 pt-1">
+              {block.resultTitle && (
+                <RichText
+                  doc={undefined}
+                  fallback={block.resultTitle}
+                  scope={scope}
+                  className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
+                  style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
+                />
+              )}
+              {(block.resultBodyRich || block.resultBody) && (
+                <RichText
+                  doc={block.resultBodyRich}
+                  fallback={block.resultBody}
+                  scope={scope}
+                  className="quiz-rich text-[0.9375rem] leading-relaxed max-w-[42ch] mx-auto text-pretty"
+                  style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
+                />
+              )}
+            </div>
+          ) : (
+            heading
+          )}
+          {/* Com link (WhatsApp, checkout), o botão ABRE o link e fica nesta tela.
+              Antes ele sempre avançava: a pessoa caía numa segunda tela de
+              conclusão que repetia título e texto do resultado, e só nela o
+              link funcionava. A gravação já aconteceu ao chegar aqui. */}
+          <PrimaryBtn
+            design={design}
+            textStyle={btnText}
+            hidden={!terminal}
+            onClick={() => {
+              if (block.ctaUrl) window.open(block.ctaUrl, '_blank', 'noopener,noreferrer');
+              else onSubmit(true);
+            }}
+          >
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
         </div>
       );
+    }
 
     case 'argument':
       // Narração entre perguntas, não uma segunda pergunta. Antes usava o
