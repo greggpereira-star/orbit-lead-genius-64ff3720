@@ -17,14 +17,23 @@ import { useAuth } from "@/core/auth/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Loader2, Smartphone, QrCode, PowerOff, Send, CheckCircle2,
-  AlertCircle, MessageSquare, RefreshCw, Info,
+  Loader2,
+  Smartphone,
+  QrCode,
+  PowerOff,
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  MessageSquare,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getWhatsAppStatus,
   connectWhatsApp,
   refreshWhatsAppQr,
+  pairWhatsAppByCode,
   disconnectWhatsApp,
   saveWhatsAppSettings,
   sendWhatsAppTest,
@@ -38,10 +47,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 
 interface SettingsForm {
@@ -107,18 +124,22 @@ function hourLabel(hour: number): string {
 function WhatsAppLegado() {
   // Mesma origem que o resto do app usa para saber de qual empresa se trata.
   const { company } = useAuth();
-  const companyId = company?.id ?? '';
+  const companyId = company?.id ?? "";
 
   const qc = useQueryClient();
   const fetchStatus = useServerFn(getWhatsAppStatus);
   const connect = useServerFn(connectWhatsApp);
   const refreshQr = useServerFn(refreshWhatsAppQr);
+  const pairByCode = useServerFn(pairWhatsAppByCode);
   const disconnect = useServerFn(disconnectWhatsApp);
   const saveSettings = useServerFn(saveWhatsAppSettings);
   const sendTest = useServerFn(sendWhatsAppTest);
 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState<string | null>(null);
+  const [codigoOpen, setCodigoOpen] = useState(false);
+  const [telefoneDoCodigo, setTelefoneDoCodigo] = useState("");
+  const [codigo, setCodigo] = useState<string | null>(null);
   const [testPhone, setTestPhone] = useState("");
   const [form, setForm] = useState<SettingsForm | null>(null);
 
@@ -166,6 +187,12 @@ function WhatsAppLegado() {
       setQrOpen(true);
       qc.invalidateQueries({ queryKey: ["whatsapp-status"] });
     },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const codigoMutation = useMutation({
+    mutationFn: () => pairByCode({ data: { phone: telefoneDoCodigo } }),
+    onSuccess: (res) => setCodigo(res.pairingCode),
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -234,8 +261,10 @@ function WhatsAppLegado() {
         <div className="flex items-start gap-3 rounded-lg border border-[var(--aviso-borda)] bg-[var(--aviso-suave)] p-4 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--aviso)]" />
           <p>
-            O servidor ainda não tem as variáveis <code className="font-mono">EVOLUTION_API_URL</code> e{" "}
-            <code className="font-mono">EVOLUTION_API_KEY</code> configuradas. Sem elas, nenhuma mensagem é enviada.
+            O servidor ainda não tem as variáveis{" "}
+            <code className="font-mono">EVOLUTION_API_URL</code> e{" "}
+            <code className="font-mono">EVOLUTION_API_KEY</code> configuradas. Sem elas, nenhuma
+            mensagem é enviada.
           </p>
         </div>
       ) : !data?.reachable ? (
@@ -551,8 +580,8 @@ function WhatsAppLegado() {
                 )}
                 {form.min_interval_seconds > 0 ? (
                   <>
-                    , com <strong>{intervalLabel(form.min_interval_seconds)}</strong> de espera entre
-                    cada mensagem.
+                    , com <strong>{intervalLabel(form.min_interval_seconds)}</strong> de espera
+                    entre cada mensagem.
                   </>
                 ) : (
                   <>, sem espera entre as mensagens.</>
@@ -605,9 +634,15 @@ function WhatsAppLegado() {
                   <div className="flex items-center gap-3 text-xs">
                     <Badge
                       variant={
-                        m.status === "sent" ? "default" : m.status === "failed" ? "destructive" : "secondary"
+                        m.status === "sent"
+                          ? "default"
+                          : m.status === "failed"
+                            ? "destructive"
+                            : "secondary"
                       }
-                      className={m.status === "sent" ? "bg-[var(--sucesso)] hover:bg-[var(--sucesso)]" : ""}
+                      className={
+                        m.status === "sent" ? "bg-[var(--sucesso)] hover:bg-[var(--sucesso)]" : ""
+                      }
                     >
                       {STATUS_LABEL[m.status] ?? m.status}
                     </Badge>
@@ -657,8 +692,68 @@ function WhatsAppLegado() {
               ) : (
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
               )}
-              Gerar novo código
+              Gerar novo QR code
             </Button>
+
+            {/* Mesma opção do WhatsApp Web: "Conectar com número de telefone".
+                Serve quando o QR não pode ser lido — a pessoa está no próprio
+                celular, ou a tela é pequena demais. */}
+            <div className="w-full border-t pt-3">
+              {!codigoOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setCodigoOpen(true)}
+                  className="w-full text-center text-sm font-medium underline underline-offset-4"
+                >
+                  Não consegue ler o QR? Conectar com código
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="telefone-do-codigo" className="text-xs">
+                    Número do WhatsApp que vai conectar (com DDD)
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="telefone-do-codigo"
+                      inputMode="tel"
+                      placeholder="27 99999-9999"
+                      value={telefoneDoCodigo}
+                      onChange={(e) => setTelefoneDoCodigo(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-10"
+                      onClick={() => {
+                        setCodigo(null);
+                        codigoMutation.mutate();
+                      }}
+                      disabled={codigoMutation.isPending || telefoneDoCodigo.trim().length < 8}
+                    >
+                      {codigoMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Gerar"
+                      )}
+                    </Button>
+                  </div>
+                  {codigo && (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-center">
+                      <p
+                        className="font-mono text-2xl font-bold tracking-[0.25em]"
+                        aria-label="Código de pareamento"
+                      >
+                        {codigo}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        No celular: WhatsApp → Aparelhos conectados → Conectar aparelho →{" "}
+                        <strong>Conectar com número de telefone</strong>, e digite o código. Vale
+                        por poucos minutos.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -674,14 +769,26 @@ function WhatsAppLegado() {
 function WhatsAppPage() {
   const { company, user, membership } = useAuth();
   const buscar = useServerFn(obterEstadoDoWhatsAppOficial);
-  const estado = useQuery({ queryKey: ["wa-oficial"], queryFn: () => buscar(), enabled: Boolean(company?.id) });
+  const estado = useQuery({
+    queryKey: ["wa-oficial"],
+    queryFn: () => buscar(),
+    enabled: Boolean(company?.id),
+  });
   const [verLegado, setVerLegado] = useState(false);
   const conversaDaUrl = Route.useSearch().conversa;
 
   if (estado.isLoading) return <p className="p-6 text-sm text-muted-foreground">Carregando…</p>;
 
   const temOficial = (estado.data?.numeros ?? []).length > 0;
-  if (temOficial && company?.id) return <Atendimento companyId={company.id} userId={user?.id ?? null} papel={membership?.role ?? null} conversaInicial={conversaDaUrl} />;
+  if (temOficial && company?.id)
+    return (
+      <Atendimento
+        companyId={company.id}
+        userId={user?.id ?? null}
+        papel={membership?.role ?? null}
+        conversaInicial={conversaDaUrl}
+      />
+    );
   // A configuração da Evolution só aparece para quem ainda a usa (ou pediu).
   if (estado.data?.evolutionConectada || verLegado) return <WhatsAppLegado />;
   return <ConectarPrimeiro onVerLegado={() => setVerLegado(true)} />;

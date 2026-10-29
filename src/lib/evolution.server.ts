@@ -26,9 +26,16 @@ export function evolutionBaseUrl(): string {
  * conectar e receber um erro cru. Este ping separa as duas coisas e devolve
  * uma causa legível.
  */
-export async function pingEvolution(): Promise<{ reachable: boolean; error?: string; version?: string }> {
+export async function pingEvolution(): Promise<{
+  reachable: boolean;
+  error?: string;
+  version?: string;
+}> {
   if (!isEvolutionConfigured()) {
-    return { reachable: false, error: "EVOLUTION_API_URL / EVOLUTION_API_KEY não configuradas no servidor." };
+    return {
+      reachable: false,
+      error: "EVOLUTION_API_URL / EVOLUTION_API_KEY não configuradas no servidor.",
+    };
   }
 
   const controller = new AbortController();
@@ -70,11 +77,14 @@ export interface EvolutionResult<T> {
  * endereço, ou uma instância que não existe mais.
  */
 function explicarStatus(status: number, detalhe = ""): string {
-  if (status === 403 && /already in use/i.test(detalhe)) return "A Evolution ainda está liberando a conexão anterior desta empresa.";
+  if (status === 403 && /already in use/i.test(detalhe))
+    return "A Evolution ainda está liberando a conexão anterior desta empresa.";
   if (status === 401) return "A Evolution recusou a chave de acesso (EVOLUTION_API_KEY).";
-  if (status === 403) return "Alguma coisa entre o app e a Evolution bloqueou a chamada — confira se EVOLUTION_API_URL aponta para a Evolution e não para um proxy.";
+  if (status === 403)
+    return "Alguma coisa entre o app e a Evolution bloqueou a chamada — confira se EVOLUTION_API_URL aponta para a Evolution e não para um proxy.";
   if (status === 404) return "A instância não existe mais na Evolution.";
-  if (status === 502 || status === 503 || status === 504) return "A Evolution está fora do ar ou reiniciando.";
+  if (status === 502 || status === 503 || status === 504)
+    return "A Evolution está fora do ar ou reiniciando.";
   return "A Evolution recusou a chamada.";
 }
 
@@ -83,7 +93,10 @@ async function call<T>(
   init: { method?: string; body?: unknown } = {},
 ): Promise<EvolutionResult<T>> {
   if (!isEvolutionConfigured()) {
-    return { ok: false, error: "Evolution API não configurada (EVOLUTION_API_URL / EVOLUTION_API_KEY)." };
+    return {
+      ok: false,
+      error: "Evolution API não configurada (EVOLUTION_API_URL / EVOLUTION_API_KEY).",
+    };
   }
 
   const controller = new AbortController();
@@ -113,7 +126,8 @@ async function call<T>(
          `error` é só o nome do status ("Forbidden"). Ler `message` na raiz
          fazia todo 403 virar "Forbidden" puro — e foi assim que "nome já em
          uso" passou semanas parecendo um bloqueio de proxy. */
-      const aninhada = parsed && typeof parsed === "object" ? (parsed as any).response?.message : undefined;
+      const aninhada =
+        parsed && typeof parsed === "object" ? (parsed as any).response?.message : undefined;
       const detail =
         parsed && typeof parsed === "object"
           ? ((Array.isArray(aninhada) ? aninhada.join("; ") : aninhada) ??
@@ -145,13 +159,19 @@ async function call<T>(
         }),
       );
 
-      return { ok: false, error: `${explicarStatus(res.status, String(detail))} (Evolution ${res.status}: ${String(detail).slice(0, 200)})` };
+      return {
+        ok: false,
+        error: `${explicarStatus(res.status, String(detail))} (Evolution ${res.status}: ${String(detail).slice(0, 200)})`,
+      };
     }
 
     return { ok: true, data: parsed as T };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: message === "The operation was aborted." ? "Timeout na Evolution API." : message };
+    return {
+      ok: false,
+      error: message === "The operation was aborted." ? "Timeout na Evolution API." : message,
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -201,7 +221,11 @@ export async function createInstance(
      "Conectar número" apaga a anterior antes de criar, então caía nisso quase
      sempre que já havia tentado antes. Espera e repete, só para esse caso. */
   let res = await call<any>("/instance/create", { method: "POST", body });
-  for (let n = 1; n <= 6 && !res.ok && /ainda está liberando|already in use/i.test(res.error ?? ""); n++) {
+  for (
+    let n = 1;
+    n <= 6 && !res.ok && /ainda está liberando|already in use/i.test(res.error ?? "");
+    n++
+  ) {
     await new Promise((r) => setTimeout(r, 2000));
     res = await call<any>("/instance/create", { method: "POST", body });
   }
@@ -220,11 +244,31 @@ export async function createInstance(
 }
 
 /** Novo QR quando o anterior expira (a Evolution rotaciona a cada ~30s). */
-export async function getQrCode(instanceName: string): Promise<EvolutionResult<{ qrCodeBase64: string | null }>> {
+export async function getQrCode(
+  instanceName: string,
+): Promise<EvolutionResult<{ qrCodeBase64: string | null }>> {
   const res = await call<any>(`/instance/connect/${encodeURIComponent(instanceName)}`);
   if (!res.ok) return { ok: false, error: res.error };
   const d = res.data ?? {};
   return { ok: true, data: { qrCodeBase64: d.base64 ?? d.code ?? null } };
+}
+
+/**
+ * Código de pareamento de 8 caracteres, o equivalente a "Conectar com número de
+ * telefone" do WhatsApp Web. A Evolution v2 devolve `pairingCode` quando o
+ * `connect` recebe o número do aparelho que vai parear (DDI + DDD + número, só
+ * dígitos). Vale poucos minutos, e o QR da mesma instância segue válido.
+ */
+export async function getPairingCode(
+  instanceName: string,
+  numero: string,
+): Promise<EvolutionResult<{ pairingCode: string | null }>> {
+  const res = await call<any>(
+    `/instance/connect/${encodeURIComponent(instanceName)}?number=${encodeURIComponent(numero)}`,
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  const code = res.data?.pairingCode;
+  return { ok: true, data: { pairingCode: typeof code === "string" && code ? code : null } };
 }
 
 export interface InstanceState {
@@ -232,7 +276,9 @@ export interface InstanceState {
   connected: boolean;
 }
 
-export async function getInstanceState(instanceName: string): Promise<EvolutionResult<InstanceState>> {
+export async function getInstanceState(
+  instanceName: string,
+): Promise<EvolutionResult<InstanceState>> {
   const res = await call<any>(`/instance/connectionState/${encodeURIComponent(instanceName)}`);
   if (!res.ok) return { ok: false, error: res.error };
   const state = res.data?.instance?.state ?? res.data?.state ?? "unknown";
@@ -240,8 +286,12 @@ export async function getInstanceState(instanceName: string): Promise<EvolutionR
 }
 
 export async function deleteInstance(instanceName: string): Promise<EvolutionResult<unknown>> {
-  const logout = await call<unknown>(`/instance/logout/${encodeURIComponent(instanceName)}`, { method: "DELETE" });
-  const removed = await call<unknown>(`/instance/delete/${encodeURIComponent(instanceName)}`, { method: "DELETE" });
+  const logout = await call<unknown>(`/instance/logout/${encodeURIComponent(instanceName)}`, {
+    method: "DELETE",
+  });
+  const removed = await call<unknown>(`/instance/delete/${encodeURIComponent(instanceName)}`, {
+    method: "DELETE",
+  });
   // Logout costuma falhar quando já estava desconectado; o que importa é o delete.
   return removed.ok ? removed : logout;
 }
@@ -266,7 +316,6 @@ export async function sendText(
 
   return { ok: true, data: { messageId: res.data?.key?.id ?? null } };
 }
-
 
 /**
  * Reassina os eventos de uma instância que JÁ existe.
@@ -315,9 +364,9 @@ export async function listarEtiquetas(
   return {
     ok: true,
     data: (lista as Array<Record<string, unknown>>).map((l) => ({
-      id: String(l.id ?? l.labelId ?? ''),
-      name: String(l.name ?? ''),
-      color: (l.color as number | string | undefined),
+      id: String(l.id ?? l.labelId ?? ""),
+      name: String(l.name ?? ""),
+      color: l.color as number | string | undefined,
     })),
   };
 }

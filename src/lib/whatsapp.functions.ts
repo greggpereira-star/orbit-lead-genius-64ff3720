@@ -207,6 +207,40 @@ export const refreshWhatsAppQr = createServerFn({ method: "POST" })
   });
 
 // -------------------------------------------------------------
+// pairWhatsAppByCode — conectar com código, sem ler o QR
+// -------------------------------------------------------------
+
+export const pairWhatsAppByCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ phone: z.string().min(8) }).parse(raw))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
+    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
+
+    const { data: instance } = await (supabaseAdmin as any)
+      .from("whatsapp_instances")
+      .select("instance_name")
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (!nomeDaInstanciaConfere(companyId, instance?.instance_name)) {
+      throw new Error("Nenhuma conexão iniciada. Clique em Conectar número primeiro.");
+    }
+
+    const { toWhatsAppNumber } = await import("@/lib/whatsapp/numero");
+    const numero = toWhatsAppNumber(data.phone);
+    if (!numero) throw new Error("Número inválido. Use DDD + número, por exemplo 27 99999-9999.");
+
+    const res = await evolutionAdmin.getPairingCode(instanceNameFor(companyId), numero);
+    if (!res.ok) throw new Error(res.error ?? "Falha ao gerar o código.");
+    const code = res.data?.pairingCode ?? null;
+    if (!code)
+      throw new Error("A Evolution não devolveu um código. Tente de novo em alguns segundos.");
+    // 8 caracteres, exibidos em dois grupos de 4 — é como o WhatsApp mostra.
+    return { pairingCode: code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code };
+  });
+
+// -------------------------------------------------------------
 // disconnectWhatsApp
 // -------------------------------------------------------------
 
