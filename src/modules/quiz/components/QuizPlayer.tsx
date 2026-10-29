@@ -898,7 +898,10 @@ function PlayerRunner({
               fração passa a dividir a linha. O `gap-6` é o mesmo 24px que a
               conta de `larguraDoBloco` desconta. */}
           <div
-            className="mt-6 flex-1 flex flex-wrap content-start gap-6"
+            /* `content-center` quando o autor escolheu centralizar: este contêiner ocupa
+                toda a altura que sobra (flex-1), então o `justify-center` do pai não tinha
+                o que centralizar e o conteúdo ficava sempre colado no topo. */
+            className={`mt-6 flex-1 flex flex-wrap gap-6 ${design.verticalAlign === 'center' ? 'content-center' : 'content-start'}`}
             style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape }}
           >
             {done ? (
@@ -1698,7 +1701,7 @@ function OptionCard({
   return (
     <button
       {...comum}
-      className={`w-full flex items-center gap-3.5 text-left px-4 py-3.5 min-h-[3.5rem] border transition-all duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${
+      className={`w-full flex items-center gap-3.5 text-left px-4 py-3.5 min-h-[var(--quiz-element-size,3.5rem)] border transition-all duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2${
         disabled ? ' opacity-40 cursor-not-allowed' : ' hover:-translate-y-px active:translate-y-0 active:scale-[0.99]'
       }`}
       style={moldura}
