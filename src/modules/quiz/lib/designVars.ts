@@ -28,6 +28,12 @@ export function designVars(design: QuizDesign): CSSProperties {
     '--quiz-title': design.titleColor ?? d.text,
     '--quiz-title-size': `${d.titleSize ?? 28}px`,
     '--quiz-content-size': `${d.contentSize ?? 16}px`,
+    /* Os campos "tamanho do título/texto" valem como ESCALA sobre o tamanho que
+       cada bloco já tem, e não como tamanho absoluto: o padrão (28 e 16) dá 1 e
+       deixa todo quiz publicado exatamente como está — o título das perguntas
+       mede 22px, e não 28, então um valor absoluto o aumentaria sem ninguém pedir. */
+    '--quiz-title-scale': String((d.titleSize ?? 28) / 28),
+    '--quiz-content-scale': String((d.contentSize ?? 16) / 16),
     '--quiz-element-size': `${d.elementSize ?? 56}px`,
     '--quiz-radius': `${d.radius}px`,
     '--quiz-font-heading': d.fontHeading,

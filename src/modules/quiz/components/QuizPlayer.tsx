@@ -1712,7 +1712,7 @@ function OptionCard({
       ) : option.emoji ? (
         <span className="shrink-0">{option.emoji}</span>
       ) : null}
-      <span className="min-w-0 flex-1" style={textStyle}>{parseRichText(option.label)}</span>
+      <span className="min-w-0 flex-1 text-[length:calc(1em*var(--quiz-content-scale,1))]" style={textStyle}>{parseRichText(option.label)}</span>
     </button>
   );
 }
@@ -1965,7 +1965,7 @@ function BlockView({
           doc={block.titleRich}
           fallback={title}
           scope={scope}
-          className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
+          className="quiz-rich text-[length:calc(1.375rem*var(--quiz-title-scale,1))] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-[length:calc(1.875rem*var(--quiz-title-scale,1))] sm:leading-[1.15]"
           style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
         />
       )}
@@ -1974,7 +1974,7 @@ function BlockView({
           doc={block.subtitleRich}
           fallback={subtitle}
           scope={scope}
-          className="quiz-rich text-[0.9375rem] leading-relaxed max-w-[42ch] text-pretty"
+          className="quiz-rich text-[length:calc(0.9375rem*var(--quiz-content-scale,1))] leading-relaxed max-w-[42ch] text-pretty"
           style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
         />
       )}
@@ -2007,7 +2007,7 @@ function BlockView({
             doc={block.titleRich}
             fallback={title}
             scope={scope}
-            className="quiz-rich text-[1.75rem] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-4xl sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto"
+            className="quiz-rich text-[length:calc(1.75rem*var(--quiz-title-scale,1))] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-[length:calc(2.25rem*var(--quiz-title-scale,1))] sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto"
             style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
           />
           {(block.subtitleRich || subtitle) && (
@@ -2015,7 +2015,7 @@ function BlockView({
               doc={block.subtitleRich}
               fallback={subtitle}
               scope={scope}
-              className="quiz-rich text-[1.0625rem] leading-relaxed max-w-[38ch] mx-auto text-pretty"
+              className="quiz-rich text-[length:calc(1.0625rem*var(--quiz-content-scale,1))] leading-relaxed max-w-[38ch] mx-auto text-pretty"
               style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
             />
           )}
@@ -2488,7 +2488,7 @@ function BlockView({
           doc={block.titleRich}
           fallback={title}
           scope={scope}
-          className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
+          className="quiz-rich text-[length:calc(1.375rem*var(--quiz-title-scale,1))] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-[length:calc(1.875rem*var(--quiz-title-scale,1))] sm:leading-[1.15]"
           style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
         />
       );
@@ -2536,7 +2536,7 @@ function BlockView({
           doc={block.subtitleRich}
           fallback={subtitle}
           scope={scope}
-          className="quiz-rich text-[0.9375rem] leading-relaxed max-w-[42ch] text-pretty"
+          className="quiz-rich text-[length:calc(0.9375rem*var(--quiz-content-scale,1))] leading-relaxed max-w-[42ch] text-pretty"
           style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
         />
       );
@@ -2575,7 +2575,7 @@ function BlockView({
                   doc={undefined}
                   fallback={block.resultTitle}
                   scope={scope}
-                  className="quiz-rich text-[1.375rem] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-3xl sm:leading-[1.15]"
+                  className="quiz-rich text-[length:calc(1.375rem*var(--quiz-title-scale,1))] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-[length:calc(1.875rem*var(--quiz-title-scale,1))] sm:leading-[1.15]"
                   style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
                 />
               )}
