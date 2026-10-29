@@ -78,6 +78,7 @@ interface PageRow {
 interface FormRow {
   company_id: string;
   form_name: string;
+  is_active: boolean;
   field_mapping: Record<string, string> | null;
 }
 
@@ -153,7 +154,14 @@ export interface ProcessMetaLeadInput {
   createdTime?: string;
   hydratedLead?: MetaLead;
   rawPayload: unknown;
+  /**
+   * Importação manual de um formulário é uma ação explícita de quem está na tela:
+   * vale mesmo com o formulário desativado. O webhook e o reprocessamento não passam isto.
+   */
+  permitirFormularioInativo?: boolean;
 }
+
+export const MOTIVO_FORMULARIO_INATIVO = "Formulário desativado";
 
 export interface ProcessMetaLeadResult {
   status: "processed" | "skipped" | "failed";
@@ -195,10 +203,21 @@ export async function processMetaLeadEvent(
   if (input.formId) {
     const formRes = await admin
       .from("meta_lead_forms")
-      .select("company_id, form_name, field_mapping")
+      .select("company_id, form_name, field_mapping, is_active")
+      .eq("company_id", page.company_id)
       .eq("form_id", input.formId)
       .maybeSingle();
     const form = formRes.data as FormRow | null;
+    // Desativar o formulário na tela precisa valer: o lead não entra, mas o evento fica
+    // registrado como `skipped` (com o payload) para dar para recuperá-lo depois.
+    if (form && form.is_active === false && !input.permitirFormularioInativo) {
+      await recordEvent(admin, input, {
+        status: "skipped",
+        error_message: MOTIVO_FORMULARIO_INATIVO,
+        company_id: page.company_id,
+      });
+      return { status: "skipped", error: MOTIVO_FORMULARIO_INATIVO };
+    }
     if (form) {
       formName = form.form_name;
       fieldMapping = (form.field_mapping ?? {}) as Record<string, string>;

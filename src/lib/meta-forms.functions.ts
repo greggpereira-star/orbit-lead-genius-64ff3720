@@ -526,6 +526,7 @@ export const importMetaFormLeads = createServerFn({ method: "POST" })
           adId: lead.ad_id,
           createdTime: lead.created_time,
           hydratedLead: lead,
+          permitirFormularioInativo: true,
           rawPayload: {
             source: "manual_meta_import",
             job_id: job.id,
