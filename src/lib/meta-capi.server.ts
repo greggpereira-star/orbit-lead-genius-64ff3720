@@ -158,20 +158,35 @@ export async function sendMetaCapiEvent(input: MetaCapiInput): Promise<MetaCapiR
 
   const url = `https://graph.facebook.com/v19.0/${config.pixel_id}/events?access_token=${encodeURIComponent(config.access_token!)}`;
 
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body = (await res.json().catch(() => ({}))) as unknown;
-    if (!res.ok) {
-      return { ok: false, status: 'failed', httpStatus: res.status, response: body, error: `meta_http_${res.status}` };
+  /* A rota da VPS até graph.facebook.com perde conexão de forma intermitente
+     (medido em 29/10/2026: 3 de 10 conexões estouravam o timeout, e o Node
+     esperava 10 s por tentativa sem repetir). Sem repetição, o `Lead` ou o
+     `CompleteRegistration` daquele visitante simplesmente não saía do servidor.
+     Repetir é seguro: o `event_id` é o mesmo, e o Meta deduplica. Só erro de
+     rede, 429 e 5xx repetem; 4xx é erro do payload e repetir não ajuda. */
+  const TENTATIVAS = 3;
+  let ultimoErro = 'erro_desconhecido';
+  for (let n = 1; n <= TENTATIVAS; n++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(4000),
+      });
+      const body = (await res.json().catch(() => ({}))) as unknown;
+      if (res.ok) return { ok: true, status: 'sent', httpStatus: res.status, response: body };
+      const repetivel = res.status === 429 || res.status >= 500;
+      if (!repetivel || n === TENTATIVAS) {
+        return { ok: false, status: 'failed', httpStatus: res.status, response: body, error: `meta_http_${res.status}` };
+      }
+      ultimoErro = `meta_http_${res.status}`;
+    } catch (err) {
+      ultimoErro = err instanceof Error ? err.message : String(err);
     }
-    return { ok: true, status: 'sent', httpStatus: res.status, response: body };
-  } catch (err) {
-    return { ok: false, status: 'failed', error: err instanceof Error ? err.message : String(err) };
+    if (n < TENTATIVAS) await new Promise((r) => setTimeout(r, 300 * n));
   }
+  return { ok: false, status: 'failed', error: `${ultimoErro} (após ${TENTATIVAS} tentativas)` };
 }
 
 /**
