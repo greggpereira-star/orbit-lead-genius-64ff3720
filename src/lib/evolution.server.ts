@@ -69,7 +69,8 @@ export interface EvolutionResult<T> {
  * log; para quem está na tela, o que importa é se o problema é a chave, o
  * endereço, ou uma instância que não existe mais.
  */
-function explicarStatus(status: number): string {
+function explicarStatus(status: number, detalhe = ""): string {
+  if (status === 403 && /already in use/i.test(detalhe)) return "A Evolution ainda está liberando a conexão anterior desta empresa.";
   if (status === 401) return "A Evolution recusou a chave de acesso (EVOLUTION_API_KEY).";
   if (status === 403) return "Alguma coisa entre o app e a Evolution bloqueou a chamada — confira se EVOLUTION_API_URL aponta para a Evolution e não para um proxy.";
   if (status === 404) return "A instância não existe mais na Evolution.";
@@ -108,9 +109,17 @@ async function call<T>(
     }
 
     if (!res.ok) {
+      /* A Evolution v2 devolve a causa em `response.message` (lista), e o
+         `error` é só o nome do status ("Forbidden"). Ler `message` na raiz
+         fazia todo 403 virar "Forbidden" puro — e foi assim que "nome já em
+         uso" passou semanas parecendo um bloqueio de proxy. */
+      const aninhada = parsed && typeof parsed === "object" ? (parsed as any).response?.message : undefined;
       const detail =
         parsed && typeof parsed === "object"
-          ? ((parsed as any).message ?? (parsed as any).error ?? JSON.stringify(parsed))
+          ? ((Array.isArray(aninhada) ? aninhada.join("; ") : aninhada) ??
+            (parsed as any).message ??
+            (parsed as any).error ??
+            JSON.stringify(parsed))
           : String(parsed ?? "");
 
       // Registrar a falha é o ponto todo desta mudança.
@@ -136,7 +145,7 @@ async function call<T>(
         }),
       );
 
-      return { ok: false, error: `${explicarStatus(res.status)} (Evolution ${res.status}: ${String(detail).slice(0, 200)})` };
+      return { ok: false, error: `${explicarStatus(res.status, String(detail))} (Evolution ${res.status}: ${String(detail).slice(0, 200)})` };
     }
 
     return { ok: true, data: parsed as T };
@@ -186,7 +195,16 @@ export async function createInstance(
     };
   }
 
-  const res = await call<any>("/instance/create", { method: "POST", body });
+  /* Logo depois de apagar a instância, a Evolution ainda segura o nome por
+     alguns segundos e o `create` volta 403 "already in use" (reproduzido na VPS
+     em 29/10/2026: criar, apagar e criar de novo = 403). Quem clica em
+     "Conectar número" apaga a anterior antes de criar, então caía nisso quase
+     sempre que já havia tentado antes. Espera e repete, só para esse caso. */
+  let res = await call<any>("/instance/create", { method: "POST", body });
+  for (let n = 1; n <= 6 && !res.ok && /ainda está liberando|already in use/i.test(res.error ?? ""); n++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    res = await call<any>("/instance/create", { method: "POST", body });
+  }
   if (!res.ok) return { ok: false, error: res.error };
 
   const d = res.data ?? {};
