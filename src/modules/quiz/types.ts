@@ -490,6 +490,9 @@ export interface QuizDesign {
   progressLabel?: boolean;
   /** Imagem da abertura em tela cheia, com esmaecido para a cor de fundo. Ausente = cartão de sempre. */
   coverImage?: boolean;
+  /** Raio dos cantos da imagem da capa, em px. Acima de 0 a imagem vira um cartão com
+   *  margem nas laterais e sem esmaecido; ausente ou 0 = tela cheia com esmaecido. */
+  coverRadius?: number;
   /** Botão da abertura fixo na base da tela. Ausente = solto no fluxo. */
   stickyCta?: boolean;
   /** Cores que o usuário guardou, para reusar sem redigitar o hexadecimal. */

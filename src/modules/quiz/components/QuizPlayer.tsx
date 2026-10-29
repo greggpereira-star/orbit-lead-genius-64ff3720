@@ -2038,8 +2038,8 @@ function BlockView({
                esmaecido para a cor de fundo, então o título sobe sobre ela sem
                corte seco. O enquadramento prioriza o rosto (parte de cima da foto). */
             <div
-              className="relative -mx-4 -mt-8 overflow-hidden"
-              style={{ height: 'min(56vh, 420px)' }}
+              className={`relative -mt-8 overflow-hidden ${design.coverRadius ? '' : '-mx-4'}`}
+              style={{ height: 'min(56vh, 420px)', borderRadius: design.coverRadius || undefined }}
             >
               <img
                 src={block.imageUrl}
@@ -2047,10 +2047,14 @@ function BlockView({
                 className="h-full w-full object-cover"
                 style={{ objectPosition: 'center 14%' }}
               />
-              <div
-                className="absolute inset-x-0 bottom-0 h-2/5"
-                style={{ background: `linear-gradient(to bottom, transparent, ${design.background})` }}
-              />
+              {/* Com cantos arredondados a imagem é um cartão inteiro: o esmaecido
+                  apagaria justamente os cantos que se quer mostrar. */}
+              {!design.coverRadius && (
+                <div
+                  className="absolute inset-x-0 bottom-0 h-2/5"
+                  style={{ background: `linear-gradient(to bottom, transparent, ${design.background})` }}
+                />
+              )}
             </div>
           ) : (
             block.imageUrl && (
@@ -2065,7 +2069,7 @@ function BlockView({
             doc={block.titleRich}
             fallback={title}
             scope={scope}
-            className={`quiz-rich text-[length:calc(1.75rem*var(--quiz-title-scale,1))] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-[length:calc(2.25rem*var(--quiz-title-scale,1))] sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto ${block.imageUrl && design.coverImage ? 'relative -mt-12' : ''}`}
+            className={`quiz-rich text-[length:calc(1.75rem*var(--quiz-title-scale,1))] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-[length:calc(2.25rem*var(--quiz-title-scale,1))] sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto ${block.imageUrl && design.coverImage && !design.coverRadius ? 'relative -mt-12' : ''}`}
             style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
           />
           {(block.subtitleRich || subtitle) && (
