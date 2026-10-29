@@ -211,6 +211,10 @@ export interface QuizBlock {
   resultTitle?: string;
   resultBody?: string;
   resultBodyRich?: RichDoc;
+  /** Apresentação de quem conduz, num cartão sob o botão da tela de resultado. Só entra
+   *  quando `resultAboutBody` existe; o título é a linha pequena acima do texto. */
+  resultAboutTitle?: string;
+  resultAboutBody?: string;
   // Rich media (Phase 3)
   mediaUrl?: string;
   mediaProvider?: "youtube" | "vimeo" | "mp4" | "file";

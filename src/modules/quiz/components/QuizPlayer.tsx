@@ -2645,6 +2645,21 @@ function BlockView({
       const temTextoDeResultado = !block.title && !block.subtitle && (block.resultTitle || block.resultBody || block.resultBodyRich);
       return (
         <div className="text-center py-6 space-y-4">
+          {/* Foto da pessoa que conduz a mentoria: na última tela quem acabou de deixar o
+              telefone quer saber com quem vai falar. Mesmo cartão e mesmo raio da capa. */}
+          {block.imageUrl && design.coverImage && (
+            <div
+              className="relative mb-6 overflow-hidden"
+              style={{ height: 'min(44vh, 340px)', borderRadius: design.coverRadius || design.radius }}
+            >
+              <img
+                src={block.imageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ objectPosition: 'center 12%' }}
+              />
+            </div>
+          )}
           {temTextoDeResultado ? (
             <div className="space-y-2.5 mb-7 pt-1">
               {block.resultTitle && (
@@ -2684,6 +2699,27 @@ function BlockView({
           >
             {block.ctaLabel || 'Continuar'}
           </PrimaryBtn>
+          {block.resultAboutBody && (
+            <div
+              className="mt-8 px-5 py-6 text-left"
+              style={{ background: design.surface, borderRadius: design.coverRadius ? Math.min(design.coverRadius, 28) : design.radius }}
+            >
+              {block.resultAboutTitle && (
+                <p
+                  className="mb-2 text-xs font-medium uppercase tracking-[0.14em]"
+                  style={{ color: design.muted }}
+                >
+                  {block.resultAboutTitle}
+                </p>
+              )}
+              <p
+                className="text-[length:calc(0.9375rem*var(--quiz-content-scale,1))] leading-relaxed text-pretty"
+                style={{ color: design.text }}
+              >
+                {block.resultAboutBody}
+              </p>
+            </div>
+          )}
         </div>
       );
     }
