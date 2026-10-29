@@ -935,8 +935,11 @@ function PlayerRunner({
                 o que centralizar e o conteúdo ficava sempre colado no topo. */
             ref={areaDaEtapa}
             tabIndex={-1}
-            className={`mt-6 flex-1 flex flex-wrap gap-6 outline-none ${design.verticalAlign === 'center' ? 'content-center' : 'content-start'}`}
-            style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape }}
+            className={`mt-6 flex-1 flex flex-wrap gap-6 ${design.verticalAlign === 'center' ? 'content-center' : 'content-start'}`}
+            /* `outline: none` em linha: o foco aqui é programático (só para o leitor de
+               tela e o teclado não perderem a posição) e o contêiner não é um controle,
+               então o anel azul do navegador só atrapalharia. */
+            style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape, outline: 'none' }}
           >
             {done ? (
               <ResultView schema={schema} state={state} />
