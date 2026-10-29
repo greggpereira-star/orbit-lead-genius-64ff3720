@@ -48,6 +48,7 @@ const INTERNAL_KEYS = new Set([
      exatamente a qualificação que esse cartão existe para mostrar. */
   "session_id",
   "quiz_completed",
+  "quiz_tier_sent_at",
   "visitor_id",
   "company_name",
   "source",

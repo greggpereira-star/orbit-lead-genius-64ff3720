@@ -7,6 +7,8 @@
  */
 import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { respostasDoQuiz } from "@/modules/quiz/lib/respostasNaFicha";
+import { lerSchemaDoLeadQuiz } from "@/modules/quiz/services/respostasDoLead";
 import {
   Clock,
   Mail,
@@ -934,6 +936,22 @@ export function LeadDetailDialog({
     queryFn: () => listStages(lead?.company_id ?? ""),
     enabled: Boolean(lead?.company_id) && open,
   });
+  /* Respostas do quiz: o lead guarda ids ("m-tecnica-dupla"); o texto vem do desenho da
+     versão que ele respondeu. Ficha de lead que não veio de quiz não faz a consulta. */
+  const respostasCruas = (lead as { metadata?: Record<string, unknown> } | null)?.metadata
+    ?.responses as Record<string, unknown> | undefined;
+  const quizDoLead = (lead as { quiz_id?: string | null } | null)?.quiz_id ?? null;
+  const submissaoDoLead =
+    ((lead as { metadata?: Record<string, unknown> } | null)?.metadata?.submission_id as
+      | string
+      | undefined) ?? null;
+  const schemaDoQuiz = useQuery({
+    queryKey: ["lead-quiz-schema", quizDoLead, submissaoDoLead],
+    queryFn: () => lerSchemaDoLeadQuiz({ quizId: quizDoLead!, submissionId: submissaoDoLead }),
+    enabled: Boolean(quizDoLead && respostasCruas) && open,
+    staleTime: 5 * 60_000,
+  });
+  const respostasDoQuizDoLead = respostasDoQuiz(schemaDoQuiz.data ?? null, respostasCruas);
   const estaPerdido =
     (stagesDaFicha.data ?? []).find(
       (s) => s.id === (lead as { stage_id?: string | null } | null)?.stage_id,
@@ -1008,7 +1026,7 @@ export function LeadDetailDialog({
   const name = toTitleCase(getLeadDisplayName(lead)) || getLeadDisplayName(lead);
   const origin = getLeadOrigin(lead);
   const city = getLeadCity(lead);
-  const answers = getLeadAnswers(lead);
+  const answers = [...getLeadAnswers(lead), ...respostasDoQuizDoLead];
   const wa = whatsappLink(lead.phone);
   const created = formatDateTime(lead.created_at);
   const ago = relativeTime(lead.created_at);
