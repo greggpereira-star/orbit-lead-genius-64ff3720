@@ -133,6 +133,8 @@ export const BLOCK_FONTS = [
   "Playfair Display",
   "Fraunces",
   "Fredoka",
+  "Cormorant Garamond",
+  "Jost",
 ] as const;
 
 /** Há algo configurado? Serve pra não criar um <div> de embrulho à toa. */

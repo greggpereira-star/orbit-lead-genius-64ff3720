@@ -31,6 +31,8 @@ const FONTES = [
   "Montserrat",
   "Nunito",
   "Plus Jakarta Sans",
+  "Cormorant Garamond",
+  "Jost",
 ];
 
 /** Conta-gotas do navegador. Só Chromium expõe; onde não existe, o botão some. */

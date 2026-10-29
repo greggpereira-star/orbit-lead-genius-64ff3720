@@ -10,6 +10,7 @@ import { getButtonStyle } from '../lib/buttonStyles';
 import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
 import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
 import { designDaEtapa, varsDoBloco } from '../lib/temaDoBloco';
+import { rotuloDePergunta } from '../lib/rotuloDePergunta';
 import { lerProgresso, salvarProgresso, limparProgresso } from '../lib/progressoSalvo';
 import { origemDaVisita } from "../lib/origemDaVisita";
 import { escolherNome } from "../lib/nomeDoLead";
@@ -336,6 +337,18 @@ function PlayerRunner({
     [stepBlocks, state.responses, scope]
   );
   const isLastStep = state.currentStepIndex >= steps.length - 1;
+
+  /* Ao avançar, o foco ia para o <body>: quem usa teclado ou leitor de tela perdia
+     a posição e recomeçava do topo. Leva o foco para a área da etapa, sem rolar. */
+  const areaDaEtapa = useRef<HTMLDivElement>(null);
+  const primeiraEtapa = useRef(true);
+  useEffect(() => {
+    if (primeiraEtapa.current) {
+      primeiraEtapa.current = false;
+      return;
+    }
+    areaDaEtapa.current?.focus({ preventScroll: true });
+  }, [state.currentStepIndex]);
 
   const stepHasVisibleBlocks = (stepIdx: number, responses: Record<string, unknown>): boolean => {
     const s = steps[stepIdx];
@@ -887,12 +900,31 @@ function PlayerRunner({
               Voltar
             </button>
           )}
-          <ProgressBar
-            value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
-            current={done ? steps.length - 1 : state.currentStepIndex}
-            total={steps.length}
-            design={design}
-          />
+          {(() => {
+            const rotulo =
+              design.progressLabel && !done
+                ? rotuloDePergunta(steps, blocks, state.currentStepIndex, state.responses)
+                : null;
+            return (
+              rotulo && (
+                <p
+                  className="mb-2 text-center text-xs font-medium uppercase tracking-[0.14em]"
+                  style={{ color: design.muted }}
+                >
+                  Pergunta {rotulo.atual} de {rotulo.total}
+                </p>
+              )
+            );
+          })()}
+          {/* Com a capa em tela cheia, a barra some só na primeira etapa: a capa abre limpa. */}
+          {!(design.coverImage && !done && state.currentStepIndex === 0) && (
+            <ProgressBar
+              value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
+              current={done ? steps.length - 1 : state.currentStepIndex}
+              total={steps.length}
+              design={design}
+            />
+          )}
           {/* `flex-wrap` no lugar de `flex-col`: com todo bloco em 100% o
               resultado é idêntico ao empilhamento de antes, e quem escolhe uma
               fração passa a dividir a linha. O `gap-6` é o mesmo 24px que a
@@ -901,7 +933,9 @@ function PlayerRunner({
             /* `content-center` quando o autor escolheu centralizar: este contêiner ocupa
                 toda a altura que sobra (flex-1), então o `justify-center` do pai não tinha
                 o que centralizar e o conteúdo ficava sempre colado no topo. */
-            className={`mt-6 flex-1 flex flex-wrap gap-6 ${design.verticalAlign === 'center' ? 'content-center' : 'content-start'}`}
+            ref={areaDaEtapa}
+            tabIndex={-1}
+            className={`mt-6 flex-1 flex flex-wrap gap-6 outline-none ${design.verticalAlign === 'center' ? 'content-center' : 'content-start'}`}
             style={{ paddingTop: alturaFixa.topo, paddingBottom: alturaFixa.rodape }}
           >
             {done ? (
@@ -1965,7 +1999,7 @@ function BlockView({
           doc={block.titleRich}
           fallback={title}
           scope={scope}
-          className="quiz-rich text-[length:calc(1.375rem*var(--quiz-title-scale,1))] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-[length:calc(1.875rem*var(--quiz-title-scale,1))] sm:leading-[1.15]"
+          className={`quiz-rich text-[length:calc(1.375rem*var(--quiz-title-scale,1))] leading-[1.2] tracking-[-0.015em] font-bold text-balance sm:text-[length:calc(1.875rem*var(--quiz-title-scale,1))] sm:leading-[1.15] ${design.titleAlign === 'center' ? 'text-center' : ''}`}
           style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
         />
       )}
@@ -1974,7 +2008,7 @@ function BlockView({
           doc={block.subtitleRich}
           fallback={subtitle}
           scope={scope}
-          className="quiz-rich text-[length:calc(0.9375rem*var(--quiz-content-scale,1))] leading-relaxed max-w-[42ch] text-pretty"
+          className={`quiz-rich text-[length:calc(0.9375rem*var(--quiz-content-scale,1))] leading-relaxed max-w-[42ch] text-pretty ${design.titleAlign === 'center' ? 'text-center mx-auto' : ''}`}
           style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
         />
       )}
@@ -1996,18 +2030,39 @@ function BlockView({
     case 'intro':
       return (
         <div className="text-center py-8 space-y-6">
-          {block.imageUrl && (
-            <img
-              src={block.imageUrl}
-              alt={block.title || 'Imagem de destaque'}
-              className="mx-auto w-full max-h-72 object-cover rounded-xl"
-            />
+          {block.imageUrl && design.coverImage ? (
+            /* Capa em tela cheia: a imagem vai até as bordas da tela e termina num
+               esmaecido para a cor de fundo, então o título sobe sobre ela sem
+               corte seco. O enquadramento prioriza o rosto (parte de cima da foto). */
+            <div
+              className="relative -mx-4 -mt-8 overflow-hidden"
+              style={{ height: 'min(56vh, 420px)' }}
+            >
+              <img
+                src={block.imageUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ objectPosition: 'center 14%' }}
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 h-2/5"
+                style={{ background: `linear-gradient(to bottom, transparent, ${design.background})` }}
+              />
+            </div>
+          ) : (
+            block.imageUrl && (
+              <img
+                src={block.imageUrl}
+                alt={block.title || 'Imagem de destaque'}
+                className="mx-auto w-full max-h-72 object-cover rounded-xl"
+              />
+            )
           )}
           <RichText
             doc={block.titleRich}
             fallback={title}
             scope={scope}
-            className="quiz-rich text-[length:calc(1.75rem*var(--quiz-title-scale,1))] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-[length:calc(2.25rem*var(--quiz-title-scale,1))] sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto"
+            className={`quiz-rich text-[length:calc(1.75rem*var(--quiz-title-scale,1))] leading-[1.15] tracking-[-0.02em] font-bold text-balance sm:text-[length:calc(2.25rem*var(--quiz-title-scale,1))] sm:leading-[1.1] max-w-[18ch] sm:max-w-none mx-auto ${block.imageUrl && design.coverImage ? 'relative -mt-12' : ''}`}
             style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}
           />
           {(block.subtitleRich || subtitle) && (
@@ -2019,9 +2074,24 @@ function BlockView({
               style={resolveTextStyle(block, 'subtitle', { color: design.muted })}
             />
           )}
-          <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
-            {block.ctaLabel || 'Começar'}
-          </PrimaryBtn>
+          {/* Fixo na base: na capa o botão sai do alcance do polegar se o texto crescer. */}
+          {(() => {
+            const botao = (
+              <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
+                {block.ctaLabel || 'Começar'}
+              </PrimaryBtn>
+            );
+            // Sem o recurso ligado o botão segue direto no fluxo, como sempre foi.
+            if (!design.stickyCta) return botao;
+            return (
+              <div
+                className="sticky bottom-0 z-20 -mx-4 px-4 pb-4 pt-6"
+                style={{ background: `linear-gradient(to top, ${design.background} 65%, transparent)` }}
+              >
+                {botao}
+              </div>
+            );
+          })()}
         </div>
       );
 

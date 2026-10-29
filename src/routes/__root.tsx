@@ -130,7 +130,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         // Fontes de título usadas pelos temas do Alt Quiz (design-presets.ts) — carregadas
         // globalmente pra já estarem disponíveis tanto no link público do quiz quanto no
         // preview dentro do Builder, sem precisar de lógica por rota.
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@500;600;700&family=Fredoka:wght@500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@500;600;700&family=Fredoka:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600&display=swap",
       },
       {
         rel: "stylesheet",

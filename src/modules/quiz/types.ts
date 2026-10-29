@@ -484,6 +484,14 @@ export interface QuizDesign {
   verticalAlign?: "start" | "center" | "between";
   /** Largura máxima do conteúdo. */
   contentWidth?: number;
+  /** Alinhamento do título e do subtítulo das perguntas. Ausente = esquerda, como sempre. */
+  titleAlign?: "left" | "center";
+  /** Mostra "Pergunta x de y" acima da barra. Ausente = não mostra. */
+  progressLabel?: boolean;
+  /** Imagem da abertura em tela cheia, com esmaecido para a cor de fundo. Ausente = cartão de sempre. */
+  coverImage?: boolean;
+  /** Botão da abertura fixo na base da tela. Ausente = solto no fluxo. */
+  stickyCta?: boolean;
   /** Cores que o usuário guardou, para reusar sem redigitar o hexadecimal. */
   savedColors?: string[];
 }
