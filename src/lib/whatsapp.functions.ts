@@ -107,7 +107,10 @@ export const getWhatsAppStatus = createServerFn({ method: "GET" })
 
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((raw: unknown) =>
+    z.object({ phone: z.string().optional() }).optional().parse(raw),
+  )
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
     const {
@@ -123,6 +126,15 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
     const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
     const instanceName = instanceNameFor(companyId);
 
+    // Com telefone, a conexão sai por CÓDIGO (como "Conectar com número de
+    // telefone" do WhatsApp Web); sem ele, só por QR.
+    let numero: string | undefined;
+    if (data?.phone?.trim()) {
+      const { toWhatsAppNumber } = await import("@/lib/whatsapp/numero");
+      numero = toWhatsAppNumber(data.phone) ?? undefined;
+      if (!numero) throw new Error("Número inválido. Use DDD + número, por exemplo 27 99999-9999.");
+    }
+
     // Recriar do zero evita herdar uma sessão meio-conectada de uma tentativa
     // anterior — a Evolution não reemite QR de instância em estado ruim.
     await deleteInstance(instanceName);
@@ -137,7 +149,7 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
         ? `${base}/api/public/whatsapp-webhook?token=${encodeURIComponent(secret)}`
         : undefined;
 
-    const created = await createInstance(instanceName, webhookUrl);
+    const created = await createInstance(instanceName, webhookUrl, numero);
     if (!created.ok) {
       // Guarda a causa antes de subir o erro. Sem isto o motivo vivia só no
       // toast: bastava o usuário fechar a aba para a informação sumir, e a
@@ -177,7 +189,14 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
       .from("whatsapp_automation_settings")
       .upsert({ company_id: companyId, ...DEFAULT_SETTINGS }, { onConflict: "company_id" });
 
-    return { instanceName, qrCodeBase64: qr };
+    const bruto = created.data?.pairingCode ?? null;
+    if (numero && !bruto) {
+      throw new Error("A Evolution não devolveu um código. Confira o número e tente de novo.");
+    }
+    // 8 caracteres em dois grupos de 4, como o WhatsApp mostra.
+    const pairingCode =
+      bruto && bruto.length === 8 ? `${bruto.slice(0, 4)}-${bruto.slice(4)}` : bruto;
+    return { instanceName, qrCodeBase64: qr, pairingCode };
   });
 
 // -------------------------------------------------------------
@@ -204,40 +223,6 @@ export const refreshWhatsAppQr = createServerFn({ method: "POST" })
     const res = await getQrCode(instanceNameFor(companyId));
     if (!res.ok) throw new Error(res.error ?? "Falha ao gerar QR code.");
     return { qrCodeBase64: res.data?.qrCodeBase64 ?? null };
-  });
-
-// -------------------------------------------------------------
-// pairWhatsAppByCode — conectar com código, sem ler o QR
-// -------------------------------------------------------------
-
-export const pairWhatsAppByCode = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => z.object({ phone: z.string().min(8) }).parse(raw))
-  .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { evolutionAdmin } = await import("@/lib/whatsapp/evolution-provider");
-    const companyId = await empresaParaAdministrar(supabaseAdmin, context.userId);
-
-    const { data: instance } = await (supabaseAdmin as any)
-      .from("whatsapp_instances")
-      .select("instance_name")
-      .eq("company_id", companyId)
-      .maybeSingle();
-    if (!nomeDaInstanciaConfere(companyId, instance?.instance_name)) {
-      throw new Error("Nenhuma conexão iniciada. Clique em Conectar número primeiro.");
-    }
-
-    const { toWhatsAppNumber } = await import("@/lib/whatsapp/numero");
-    const numero = toWhatsAppNumber(data.phone);
-    if (!numero) throw new Error("Número inválido. Use DDD + número, por exemplo 27 99999-9999.");
-
-    const res = await evolutionAdmin.getPairingCode(instanceNameFor(companyId), numero);
-    if (!res.ok) throw new Error(res.error ?? "Falha ao gerar o código.");
-    const code = res.data?.pairingCode ?? null;
-    if (!code)
-      throw new Error("A Evolution não devolveu um código. Tente de novo em alguns segundos.");
-    // 8 caracteres, exibidos em dois grupos de 4 — é como o WhatsApp mostra.
-    return { pairingCode: code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code };
   });
 
 // -------------------------------------------------------------

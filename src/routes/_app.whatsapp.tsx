@@ -33,7 +33,6 @@ import {
   getWhatsAppStatus,
   connectWhatsApp,
   refreshWhatsAppQr,
-  pairWhatsAppByCode,
   disconnectWhatsApp,
   saveWhatsAppSettings,
   sendWhatsAppTest,
@@ -130,7 +129,6 @@ function WhatsAppLegado() {
   const fetchStatus = useServerFn(getWhatsAppStatus);
   const connect = useServerFn(connectWhatsApp);
   const refreshQr = useServerFn(refreshWhatsAppQr);
-  const pairByCode = useServerFn(pairWhatsAppByCode);
   const disconnect = useServerFn(disconnectWhatsApp);
   const saveSettings = useServerFn(saveWhatsAppSettings);
   const sendTest = useServerFn(sendWhatsAppTest);
@@ -191,8 +189,13 @@ function WhatsAppLegado() {
   });
 
   const codigoMutation = useMutation({
-    mutationFn: () => pairByCode({ data: { phone: telefoneDoCodigo } }),
-    onSuccess: (res) => setCodigo(res.pairingCode),
+    // Recria a conexão com o número: só assim a Evolution gera o código. O QR
+    // anterior deixa de valer, então o novo já vem junto na resposta.
+    mutationFn: () => connect({ data: { phone: telefoneDoCodigo } }),
+    onSuccess: (res) => {
+      setCodigo(res.pairingCode);
+      setQrImage(res.qrCodeBase64);
+    },
     onError: (err: Error) => toast.error(err.message),
   });
 

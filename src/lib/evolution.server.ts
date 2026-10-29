@@ -196,12 +196,19 @@ export interface CreateInstanceResult {
 export async function createInstance(
   instanceName: string,
   webhookUrl?: string,
+  /** DDI + DDD + número. Só com ele a Evolution gera o código de pareamento. */
+  numero?: string,
 ): Promise<EvolutionResult<CreateInstanceResult>> {
   const body: Record<string, unknown> = {
     instanceName,
     qrcode: true,
     integration: "WHATSAPP-BAILEYS",
   };
+  /* O código de pareamento (a alternativa ao QR) só nasce se a instância for
+     CRIADA com o número: criada sem ele, `connect?number=` devolve
+     `pairingCode: null` mesmo com número válido (medido na VPS em 29/10/2026).
+     Criada com ele, a resposta já traz o código e o QR junto. */
+  if (numero) body.number = numero;
 
   if (webhookUrl) {
     body.webhook = {
@@ -251,24 +258,6 @@ export async function getQrCode(
   if (!res.ok) return { ok: false, error: res.error };
   const d = res.data ?? {};
   return { ok: true, data: { qrCodeBase64: d.base64 ?? d.code ?? null } };
-}
-
-/**
- * Código de pareamento de 8 caracteres, o equivalente a "Conectar com número de
- * telefone" do WhatsApp Web. A Evolution v2 devolve `pairingCode` quando o
- * `connect` recebe o número do aparelho que vai parear (DDI + DDD + número, só
- * dígitos). Vale poucos minutos, e o QR da mesma instância segue válido.
- */
-export async function getPairingCode(
-  instanceName: string,
-  numero: string,
-): Promise<EvolutionResult<{ pairingCode: string | null }>> {
-  const res = await call<any>(
-    `/instance/connect/${encodeURIComponent(instanceName)}?number=${encodeURIComponent(numero)}`,
-  );
-  if (!res.ok) return { ok: false, error: res.error };
-  const code = res.data?.pairingCode;
-  return { ok: true, data: { pairingCode: typeof code === "string" && code ? code : null } };
 }
 
 export interface InstanceState {
