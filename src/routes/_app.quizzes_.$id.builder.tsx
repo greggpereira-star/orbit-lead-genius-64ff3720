@@ -440,6 +440,8 @@ function QuizBuilderPage() {
       (bid) => schema.blocks.find((b) => b.id === bid)?.childBlockIds ?? [],
     );
     const idsToRemove = new Set([...step.blockIds, ...childIds]);
+    const posicaoDaEtapa = steps.findIndex((s) => s.id === stepId);
+    const blocosRemovidos = schema.blocks.filter((b) => idsToRemove.has(b.id));
     updateSchema((prev) => ({
       ...prev,
       blocks: prev.blocks.filter((b) => !idsToRemove.has(b.id)),
@@ -452,6 +454,16 @@ function QuizBuilderPage() {
         idsToRemove.size === 1
           ? "1 componente removido"
           : `${idsToRemove.size} componentes removidos`,
+      action: {
+        label: "Desfazer",
+        onClick: () =>
+          updateSchema((prev) => {
+            const base = getSteps(prev, { keepEmpty: true });
+            const restaurada = [...base];
+            restaurada.splice(Math.min(Math.max(posicaoDaEtapa, 0), restaurada.length), 0, step);
+            return { ...prev, blocks: [...prev.blocks, ...blocosRemovidos], steps: restaurada };
+          }),
+      },
     });
   };
 
@@ -837,6 +849,26 @@ function QuizBuilderPage() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema, dirty, autosave, loading, trava.souDono, tentativa]);
+
+  /* Delete/Backspace exclui o bloco selecionado — o atalho que quem monta uma
+     tela espera. Não age enquanto a pessoa digita (campo, área de texto, editor
+     rico) nem com diálogo aberto, e o "Desfazer" do aviso cobre o engano. */
+  const excluirPeloTeclado = useRef<() => void>(() => {});
+  excluirPeloTeclado.current = () => {
+    if (activeBlockId) deleteBlock();
+  };
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      const alvo = e.target as HTMLElement | null;
+      if (alvo?.closest("input, textarea, select, [contenteditable], [role='dialog']")) return;
+      e.preventDefault();
+      excluirPeloTeclado.current();
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, []);
 
   /* Fechar a aba com alteração pendente não pode ser silencioso. Com o
      autosave desligado não existe rede de proteção nenhuma; com ele ligado,
@@ -1797,6 +1829,8 @@ function QuizBuilderPage() {
                 setActiveBlockId(blockId);
                 setMobilePanel("inspector");
               }}
+              onDeleteBlock={(blockId) => deleteBlock(blockId)}
+              onDeleteStep={deleteStep}
               device={device}
               onRequestAddBlock={!isDesktop ? () => setMobilePanel("blocks") : undefined}
               /* Canvas e painel olham pra mesma etapa: selecionar um bloco na

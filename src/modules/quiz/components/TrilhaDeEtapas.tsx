@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import type { ResumoDaEtapa } from "../lib/trilhaDeEtapas";
 import { rolagemParaCentralizar } from "../lib/trilhaDeEtapas";
 
@@ -37,9 +37,18 @@ interface Props {
   onEscolher: (stepId: string) => void;
   /** Ausente na tela de Design, onde a trilha só mostra — não constrói. */
   onAdicionar?: () => void;
+  /** Ausente na tela de Design. Exclui a etapa inteira (tela + componentes). */
+  onExcluir?: (stepId: string) => void;
 }
 
-export function TrilhaDeEtapas({ etapas, icones, etapaAtualId, onEscolher, onAdicionar }: Props) {
+export function TrilhaDeEtapas({
+  etapas,
+  icones,
+  etapaAtualId,
+  onEscolher,
+  onAdicionar,
+  onExcluir,
+}: Props) {
   const pistaRef = useRef<HTMLDivElement | null>(null);
   const cartaoAtualRef = useRef<HTMLButtonElement | null>(null);
   /* Esmaecimento só do lado que REALMENTE continua. Fixo nos dois lados, ele
@@ -176,93 +185,110 @@ export function TrilhaDeEtapas({ etapas, icones, etapaAtualId, onEscolher, onAdi
             const selecionada = i === atual;
             const Icone = icones?.[e.id];
             return (
-              <button
-                key={e.id}
-                type="button"
-                role="tab"
-                aria-selected={selecionada}
-                tabIndex={-1}
-                ref={selecionada ? cartaoAtualRef : undefined}
-                onClick={() => onEscolher(e.id)}
-                title={e.titulo}
-                style={{ width: LARGURA_DO_CARTAO }}
-                className={`group relative flex min-h-[66px] shrink-0 scroll-mx-2 flex-col justify-center gap-1.5 overflow-hidden rounded-xl py-2.5 pl-3.5 pr-3 text-left transition-colors ${
-                  selecionada
-                    ? "bg-white text-neutral-900"
-                    : "bg-white/[0.06] text-white/75 hover:bg-white/[0.12] hover:text-white"
-                } ${e.natureza === "vazia" && !selecionada ? "ring-1 ring-inset ring-amber-400/35" : ""}`}
-              >
-                {/* Marca de natureza na BORDA, de alto a baixo — e em todas as
+              <div key={e.id} className="group/cartao relative shrink-0">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={selecionada}
+                  tabIndex={-1}
+                  ref={selecionada ? cartaoAtualRef : undefined}
+                  onClick={() => onEscolher(e.id)}
+                  title={e.titulo}
+                  style={{ width: LARGURA_DO_CARTAO }}
+                  className={`group relative flex min-h-[66px] shrink-0 scroll-mx-2 flex-col justify-center gap-1.5 overflow-hidden rounded-xl py-2.5 pl-3.5 ${onExcluir ? "pr-9" : "pr-3"} text-left transition-colors ${
+                    selecionada
+                      ? "bg-white text-neutral-900"
+                      : "bg-white/[0.06] text-white/75 hover:bg-white/[0.12] hover:text-white"
+                  } ${e.natureza === "vazia" && !selecionada ? "ring-1 ring-inset ring-amber-400/35" : ""}`}
+                >
+                  {/* Marca de natureza na BORDA, de alto a baixo — e em todas as
                     etapas, não só em captura e resultado. Varrendo a trilha com
                     o olho, a sequência de cores desenha a forma do funil: onde
                     pergunta, onde prova, onde pede contato, onde entrega. A
                     versão anterior marcava duas naturezas com 3px no meio do
                     cartão e o resto de nada. */}
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 w-[3px]"
-                  style={{ background: e.tinta }}
-                />
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 w-[3px]"
+                    style={{ background: e.tinta }}
+                  />
 
-                <span className="flex items-center gap-2">
-                  {/* Ícone do primeiro bloco, o mesmo da lista lateral: é o
+                  <span className="flex items-center gap-2">
+                    {/* Ícone do primeiro bloco, o mesmo da lista lateral: é o
                       identificador mais rápido que existe — reconhecido antes
                       de qualquer palavra ser lida. */}
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
-                    style={{
-                      background: selecionada ? `${e.tinta}2E` : `${e.tinta}24`,
-                      color: selecionada ? undefined : e.tinta,
-                    }}
-                  >
-                    {Icone ? (
-                      <Icone className="h-3 w-3" />
-                    ) : (
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                    )}
-                  </span>
-                  <span
-                    /* /50 e não /35: medido no cartão renderizado, 35% de
-                       alfa dava 3,25:1 sobre o fundo do cartão — abaixo do
-                       piso de 4,5:1 para 10px. */
-                    className={`shrink-0 text-[10px] font-bold tabular-nums ${
-                      selecionada ? "text-neutral-500" : "text-white/50"
-                    }`}
-                  >
-                    {String(e.numero).padStart(2, "0")}
-                  </span>
-                  {e.percentual !== null && (
                     <span
-                      className="ml-auto shrink-0 rounded px-1 text-[10px] font-bold tabular-nums"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
                       style={{
-                        color: e.cor ?? undefined,
-                        background: selecionada ? "transparent" : `${e.cor}1F`,
+                        background: selecionada ? `${e.tinta}2E` : `${e.tinta}24`,
+                        color: selecionada ? undefined : e.tinta,
                       }}
                     >
-                      {e.percentual}%
+                      {Icone ? (
+                        <Icone className="h-3 w-3" />
+                      ) : (
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      )}
                     </span>
-                  )}
-                </span>
-
-                <span className="min-w-0">
-                  <span className="block truncate text-[12px] font-semibold leading-[1.3]">
-                    {e.nome}
+                    <span
+                      /* /50 e não /35: medido no cartão renderizado, 35% de
+                       alfa dava 3,25:1 sobre o fundo do cartão — abaixo do
+                       piso de 4,5:1 para 10px. */
+                      className={`shrink-0 text-[10px] font-bold tabular-nums ${
+                        selecionada ? "text-neutral-500" : "text-white/50"
+                      }`}
+                    >
+                      {String(e.numero).padStart(2, "0")}
+                    </span>
+                    {e.percentual !== null && (
+                      <span
+                        className="ml-auto shrink-0 rounded px-1 text-[10px] font-bold tabular-nums"
+                        style={{
+                          color: e.cor ?? undefined,
+                          background: selecionada ? "transparent" : `${e.cor}1F`,
+                        }}
+                      >
+                        {e.percentual}%
+                      </span>
+                    )}
                   </span>
-                  {/* O QUE a etapa é, não QUANTAS peças tem.
+
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12px] font-semibold leading-[1.3]">
+                      {e.nome}
+                    </span>
+                    {/* O QUE a etapa é, não QUANTAS peças tem.
                       "1 comp." aparecia em 14 das 24 etapas deste funil: a
                       linha existia e não distinguia 58% dos cartões. */}
-                  <span
-                    /* Esta linha é o IDENTIFICADOR da etapa, não um rodapé:
+                    <span
+                      /* Esta linha é o IDENTIFICADOR da etapa, não um rodapé:
                        a 40% de alfa saía com 3,82:1, abaixo do piso. */
-                    className={`block truncate text-[10px] leading-[1.4] ${
-                      selecionada ? "text-neutral-600" : "text-white/55"
+                      className={`block truncate text-[10px] leading-[1.4] ${
+                        selecionada ? "text-neutral-600" : "text-white/55"
+                      }`}
+                    >
+                      {e.rotuloDaNatureza}
+                      {e.componentes > 1 && ` · ${e.componentes} itens`}
+                    </span>
+                  </span>
+                </button>
+                {onExcluir && (
+                  /* Irmã do cartão, não filha: botão dentro de botão é HTML inválido
+                   e o clique na lixeira selecionaria a etapa antes de excluir.
+                   Sempre visível na etapa selecionada; nas outras, no hover. */
+                  <button
+                    type="button"
+                    onClick={() => onExcluir(e.id)}
+                    title={`Excluir etapa ${String(e.numero).padStart(2, "0")}`}
+                    aria-label={`Excluir etapa ${e.numero}: ${e.nome}`}
+                    className={`absolute bottom-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-lg border border-red-500/40 bg-red-500/15 text-red-500 transition-opacity hover:bg-red-500 hover:text-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 group-hover/cartao:opacity-100 ${
+                      selecionada ? "opacity-100" : "opacity-0"
                     }`}
                   >
-                    {e.rotuloDaNatureza}
-                    {e.componentes > 1 && ` · ${e.componentes} itens`}
-                  </span>
-                </span>
-              </button>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             );
           })}
 

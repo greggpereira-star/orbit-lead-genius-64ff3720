@@ -14,9 +14,11 @@ import {
   Check,
   Video,
   ArrowDown,
+  Trash2,
 } from "lucide-react";
 import type { QuizBlock, QuizDesign, QuizSchema } from "../types";
 import { getSteps } from "../lib/steps";
+import { designDaEtapa } from "../lib/temaDoBloco";
 import { TrilhaDeEtapas } from "./TrilhaDeEtapas";
 import { resumirEtapa } from "../lib/trilhaDeEtapas";
 import { DISPOSITIVOS, larguraQueCabe, mostrarDobra } from "../lib/dispositivoDoCanvas";
@@ -56,6 +58,10 @@ interface Props {
   schema: QuizSchema;
   activeBlockId?: string | null;
   onSelectBlock?: (id: string) => void;
+  /** Exclui o bloco direto do canvas (lixeira ao lado dele). Ausente na tela de Design. */
+  onDeleteBlock?: (id: string) => void;
+  /** Exclui a etapa inteira, pela lixeira da trilha. Ausente na tela de Design. */
+  onDeleteStep?: (id: string) => void;
   device?: "mobile" | "tablet" | "desktop";
   // Em telas estreitas a paleta fica escondida atrás de um Sheet; quando fornecido,
   // o estado vazio mostra um botão de "Adicionar bloco" em vez de mandar o usuário
@@ -83,6 +89,8 @@ export function QuizPreview({
   schema,
   activeBlockId,
   onSelectBlock,
+  onDeleteBlock,
+  onDeleteStep,
   device = "desktop",
   onRequestAddBlock,
   currentStepId,
@@ -90,7 +98,7 @@ export function QuizPreview({
   conversaoPorEtapa,
   onAdicionarEtapa,
 }: Props) {
-  const { design, blocks } = schema;
+  const { blocks } = schema;
   // keepEmpty: uma etapa recém-criada precisa aparecer no canvas mesmo antes de
   // ganhar o primeiro bloco — senão o usuário cria a tela e não vê nada.
   const steps = useMemo(() => getSteps(schema, { keepEmpty: true }), [schema]);
@@ -100,6 +108,12 @@ export function QuizPreview({
     return i >= 0 ? i : 0;
   }, [steps, currentStepId]);
   const step = steps[stepIndex] ?? null;
+  // Mesmo design efetivo do player: a etapa que sobrescreve fundo/cor aparece assim
+  // aqui também, senão o canvas mostra um quiz e o visitante vê outro.
+  const design = useMemo(
+    () => designDaEtapa(schema.design, step ?? undefined),
+    [schema.design, step],
+  );
 
   /* A natureza da etapa sai da CATEGORIA dos blocos dela, não do tipo: é a
      categoria que já separa captura de resultado na paleta, e manter as duas
@@ -204,6 +218,7 @@ export function QuizPreview({
         etapaAtualId={step?.id ?? null}
         onEscolher={(id) => onChangeStep?.(id)}
         onAdicionar={onAdicionarEtapa}
+        onExcluir={onDeleteStep}
       />
 
       <div ref={areaRef} className="flex min-h-0 flex-1 overflow-auto p-6">
@@ -341,6 +356,28 @@ export function QuizPreview({
                                 >
                                   <GripVertical className="h-4 w-4" />
                                 </div>
+                                {onDeleteBlock && (
+                                  /* Lixeira na calha da DIREITA (a alça de arraste ocupa a
+                                     esquerda): o droppable tem `p-8`, então cabe sem tocar
+                                     no conteúdo. No bloco selecionado fica sempre visível e
+                                     em vermelho; nos demais aparece no hover. Antes a única
+                                     lixeira morava no painel lateral, e quem olhava para o
+                                     canvas não achava como excluir. */
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDeleteBlock(b.id);
+                                    }}
+                                    title="Excluir bloco (Delete)"
+                                    aria-label="Excluir este bloco"
+                                    className={`absolute -right-8 top-0 z-10 grid h-7 w-7 place-items-center rounded-lg border transition-opacity focus-visible:opacity-100 group-hover:opacity-100 ${
+                                      activeBlockId === b.id ? "opacity-100" : "opacity-0"
+                                    } border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
                                 {b.showIf?.enabled && (
                                   <>
                                     {/* Em repouso, só um traço na borda: 3px dentro

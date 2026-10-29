@@ -261,12 +261,14 @@ function BlockInspector({
         </div>
         <Button
           size="sm"
-          variant="ghost"
+          variant="outline"
           onClick={onDelete}
           aria-label="Excluir bloco"
-          className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          title="Excluir bloco (tecla Delete)"
+          className="shrink-0 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground"
         >
           <Trash2 className="h-4 w-4" />
+          Excluir
         </Button>
       </div>
 
