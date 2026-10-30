@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { queryOptions } from '@tanstack/react-query';
 import { quizService, captureQuizLead } from '../services/quizService';
+import { contextoDaVisita } from '../lib/contextoDaVisita';
 import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
 import type { QuizBlock, QuizSchema, AccessRules, QuizDesign, BlockOption } from '../types';
 import { getSteps } from '../lib/steps';
@@ -558,7 +559,18 @@ function PlayerRunner({
 
   useEffect(() => {
     if (preview) return;
-    quizService.trackEvent({ quizId, companyId, eventType: 'start', sessionId: sessionId.current }).catch(() => {});
+    quizService
+      .trackEvent({
+        quizId,
+        companyId,
+        eventType: 'start',
+        sessionId: sessionId.current,
+        // Origem e aparelho de quem ABRIU, não só de quem concluiu.
+        metadata: { ...contextoDaVisita(window.innerWidth, tracking) },
+      })
+      .catch(() => {});
+    // `tracking` fica de fora de propósito: o início é um evento por abertura.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizId, companyId, preview]);
 
   // Cada etapa vista vira um ViewContent. Junto com o Lead e a conclusão, é o

@@ -353,7 +353,8 @@ export function ResumoDoQuiz({
     );
   }
 
-  const { visitantes, leads, taxaDeLead, variacao, amostraPequena, mapa, maiorPerda } = resumo;
+  const { visitantes, leads, taxaDeLead, variacao, amostraPequena, mapa, maiorPerda, contexto } =
+    resumo;
 
   return (
     <div className="mb-4 space-y-3 rounded-lg bg-muted/40 p-3 text-xs">
@@ -408,6 +409,13 @@ export function ResumoDoQuiz({
             ))}
           </ul>
         </div>
+      )}
+
+      {contexto && (
+        <p className="tabular-nums text-muted-foreground">
+          {contexto.celularPct !== null && <>{contexto.celularPct}% no celular · </>}
+          origem principal: {contexto.origemPrincipal?.nome} ({contexto.origemPrincipal?.pct}%)
+        </p>
       )}
 
       <p className="leading-snug text-muted-foreground">

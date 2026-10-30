@@ -1454,7 +1454,7 @@ export const quizService = {
     const agora = Date.now();
     const desde30 = new Date(agora - 30 * 86400000).toISOString();
     const desde60 = new Date(agora - 60 * 86400000).toISOString();
-    const colunas = "quiz_id, event_type, block_id, session_id, created_at";
+    const colunas = "quiz_id, event_type, block_id, session_id, created_at, payload";
 
     const [inicios, etapas, subs] = await Promise.all([
       supabase

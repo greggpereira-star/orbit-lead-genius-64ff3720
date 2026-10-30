@@ -138,3 +138,31 @@ describe("resumirParaCartao", () => {
     expect(todosAvancam.maiorPerda).toBeNull();
   });
 });
+
+describe("contexto do visitante", () => {
+  const comContexto = (sessao: string, device: string, utm?: string): EventoDoCartao => ({
+    ...ev("start", sessao),
+    payload: { device, ...(utm ? { utm_source: utm } : {}) },
+  });
+
+  it("some enquanto não há amostra com contexto, e ignora início antigo sem payload", () => {
+    const antigos = Array.from({ length: 20 }, (_, i) => ev("start", `o${i}`));
+    const poucos = [comContexto("n1", "mobile", "meta"), comContexto("n2", "desktop")];
+    const r = resumirParaCartao({ eventos: [...antigos, ...poucos], submissoes: [], agora: AGORA });
+    expect(r.contexto).toBeNull();
+  });
+
+  it("calcula % celular e origem principal, uma pessoa por voto", () => {
+    const eventos = [
+      ...Array.from({ length: 6 }, (_, i) => comContexto(`m${i}`, "mobile", "meta")),
+      ...Array.from({ length: 2 }, (_, i) => comContexto(`d${i}`, "desktop")),
+      comContexto("m0", "mobile", "meta"), // a mesma pessoa abrindo de novo
+    ];
+    const r = resumirParaCartao({ eventos, submissoes: [], agora: AGORA });
+    expect(r.contexto).toEqual({
+      amostra: 8,
+      celularPct: 75,
+      origemPrincipal: { nome: "meta", pct: 75 },
+    });
+  });
+});

@@ -8,6 +8,8 @@ export interface EventoDoCartao {
   block_id: string | null;
   session_id: string | null;
   created_at: string;
+  /** No `start`: aparelho e UTM, gravados desde 29/10/2026. */
+  payload?: { device?: string; utm_source?: string } | null;
 }
 
 export interface SubmissaoDoCartao {
@@ -41,6 +43,13 @@ export interface ResumoDoCartao {
   amostraPequena: boolean;
   /** Mapa de calor por etapa; vazio quando não há schema ou amostra. */
   mapa: CelulaDoMapa[];
+  /** Quem abriu, por aparelho e origem. `null` até haver amostra com contexto. */
+  contexto: {
+    /** Visitantes cujo início já traz aparelho ou origem. */
+    amostra: number;
+    celularPct: number | null;
+    origemPrincipal: { nome: string; pct: number } | null;
+  } | null;
   /** A etapa que mais perde gente, com número que a sustenta. */
   maiorPerda: { numero: number; nome: string; percentualQueSai: number; visitantes: number } | null;
 }
@@ -128,6 +137,35 @@ export function resumirParaCartao(params: {
     }
   }
 
+  /* Contexto: só os inícios gravados depois que o player passou a mandar
+     aparelho e UTM. Os antigos não têm e não entram — contá-los como "direto"
+     diria que a origem sumiu, quando ela só nunca foi medida. Uma pessoa vale
+     um voto, mesmo que tenha aberto duas vezes. */
+  const porSessao = new Map<string, { device?: string; origem: string }>();
+  for (const e of atuais) {
+    if (e.event_type !== "start" || !e.session_id || !e.payload) continue;
+    if (!e.payload.device && !e.payload.utm_source) continue;
+    if (porSessao.has(e.session_id)) continue;
+    porSessao.set(e.session_id, {
+      device: e.payload.device,
+      origem: e.payload.utm_source?.trim().toLowerCase() || "direto",
+    });
+  }
+  let contexto: ResumoDoCartao["contexto"] = null;
+  if (porSessao.size >= MINIMO_PARA_NOTA) {
+    const pessoas = [...porSessao.values()];
+    const comAparelho = pessoas.filter((p) => p.device);
+    const celular = comAparelho.filter((p) => p.device === "mobile").length;
+    const contagem = new Map<string, number>();
+    for (const p of pessoas) contagem.set(p.origem, (contagem.get(p.origem) ?? 0) + 1);
+    const [nome, n] = [...contagem.entries()].sort((a, b) => b[1] - a[1])[0];
+    contexto = {
+      amostra: pessoas.length,
+      celularPct: comAparelho.length ? Math.round((celular / comAparelho.length) * 100) : null,
+      origemPrincipal: { nome, pct: Math.round((n / pessoas.length) * 100) },
+    };
+  }
+
   return {
     visitantes: base,
     visitantesAnteriores,
@@ -136,6 +174,7 @@ export function resumirParaCartao(params: {
     variacao,
     amostraPequena: base < MINIMO_PARA_NOTA,
     mapa,
+    contexto,
     maiorPerda,
   };
 }
