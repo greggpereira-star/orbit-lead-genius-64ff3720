@@ -249,7 +249,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       type: 'video',
       title: 'Assista antes de continuar',
       mediaProvider: 'youtube',
-      mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      mediaUrl: '',
     }),
   },
   {
@@ -455,7 +455,7 @@ export const BLOCK_LIBRARY: BlockDef[] = [
       pricingPrice: 'R$ 97',
       pricingOriginalPrice: 'R$ 197',
       pricingPeriod: '/mês',
-      pricingFeatures: ['Acesso completo', 'Suporte prioritário', 'Garantia de 7 dias'],
+      pricingFeatures: ['Acesso completo', 'Suporte prioritário', 'Atendimento personalizado'],
       ctaLabel: 'Quero essa oferta',
     }),
   },

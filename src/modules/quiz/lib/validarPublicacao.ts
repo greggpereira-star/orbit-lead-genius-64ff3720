@@ -104,6 +104,40 @@ export function validarPublicacao(schema: QuizSchema, tiers?: ScoreTier[]): Acha
     });
   }
 
+  /* Condição apontando para pergunta que não existe: `showIf` esconde o bloco de
+     TODO visitante (resposta ausente deixa a igualdade falsa) e a regra nunca
+     dispara. Se o bloco era a única captura, o quiz roda e nunca gera lead —
+     por isso bloqueia, e diz QUAL bloco. */
+  const nomeDe = (b: QuizBlock) => b.title?.trim() || b.resultTitle?.trim() || b.type;
+  const condicoesQuebradas = blocos.flatMap((b) => [
+    ...(b.showIf?.enabled && b.showIf.fieldBlockId && !ids.has(b.showIf.fieldBlockId)
+      ? [`"${nomeDe(b)}" (condição de exibição)`]
+      : []),
+    ...(b.logicRules ?? [])
+      .filter((r) => r.fieldBlockId && !ids.has(r.fieldBlockId))
+      .map(() => `"${nomeDe(b)}" (regra de salto)`),
+  ]);
+  if (condicoesQuebradas.length) {
+    achados.push({
+      nivel: "bloqueia",
+      mensagem: `Condição aponta para uma pergunta que não existe mais em: ${condicoesQuebradas.join(", ")}.`,
+    });
+  }
+
+  /* Resultado com botão e sem link: o botão leva a uma segunda tela de conclusão
+     que repete o texto e não oferece nada para clicar. */
+  const resultadosSemLink = blocos.filter(
+    (b) => b.type === "result" && b.ctaLabel?.trim() && !b.ctaUrl?.trim(),
+  );
+  if (resultadosSemLink.length) {
+    achados.push({
+      nivel: "avisa",
+      mensagem:
+        `${resultadosSemLink.length} tela(s) de Resultado têm botão sem link — o botão leva a uma ` +
+        "segunda tela repetida. Coloque o link (ex.: WhatsApp) ou apague o texto do botão.",
+    });
+  }
+
   /* Laço fechado só por saltos: existe conjunto de respostas que faz a pessoa
      sair de uma etapa e voltar a ela para sempre. Num funil de captação isso
      não é incômodo, é perda total daquele visitante — por isso bloqueia.

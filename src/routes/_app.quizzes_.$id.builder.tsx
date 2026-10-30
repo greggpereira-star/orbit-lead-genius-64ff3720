@@ -52,6 +52,7 @@ import { useAuth } from "@/core/auth/hooks/useAuth";
 import { quizService } from "@/modules/quiz/services/quizService";
 import { useEditLock } from "@/modules/quiz/hooks/useEditLock";
 import { reconciliarEtapas } from '@/modules/quiz/lib/reconciliarEtapas';
+import { removerBlocosDoSchema } from '@/modules/quiz/lib/removerBlocos';
 import { validarPublicacao } from "@/modules/quiz/lib/validarPublicacao";
 import {
   calcularConversaoPorEtapa,
@@ -420,11 +421,7 @@ function QuizBuilderPage() {
     const idsToRemove = new Set([...step.blockIds, ...childIds]);
     const posicaoDaEtapa = steps.findIndex((s) => s.id === stepId);
     const blocosRemovidos = schema.blocks.filter((b) => idsToRemove.has(b.id));
-    updateSchema((prev) => ({
-      ...prev,
-      blocks: prev.blocks.filter((b) => !idsToRemove.has(b.id)),
-      steps: getSteps(prev, { keepEmpty: true }).filter((s) => s.id !== stepId),
-    }));
+    updateSchema((prev) => removerBlocosDoSchema(prev, idsToRemove, { removerEtapaId: stepId }));
     if (activeBlockId && idsToRemove.has(activeBlockId)) setActiveBlockId(null);
     if (activeStepId === stepId) setActiveStepId(null);
     toast(`Etapa excluída`, {
@@ -470,24 +467,8 @@ function QuizBuilderPage() {
       .map((id) => schema.blocks.find((b) => b.id === id))
       .filter((b): b is QuizBlock => !!b);
     const idsToRemove = new Set([target, ...cascadeIds]);
-    updateSchema((prev) => ({
-      ...prev,
-      blocks: prev.blocks
-        .filter((b) => !idsToRemove.has(b.id))
-        // se o bloco excluído era filho de outro Container, tira a referência de lá também
-        .map((b) =>
-          b.childBlockIds?.includes(target)
-            ? { ...b, childBlockIds: b.childBlockIds.filter((id) => id !== target) }
-            : b,
-        ),
-      // A etapa fica, mesmo esvaziada: apagar um componente é apagar um
-      // componente. Quem apaga a tela é o botão de excluir etapa.
-      steps: getSteps(prev, { keepEmpty: true }).map((s) =>
-        s.blockIds.includes(target)
-          ? { ...s, blockIds: s.blockIds.filter((bid) => bid !== target) }
-          : s,
-      ),
-    }));
+    // Limpa também saltos, regras e condições que apontavam para o que saiu.
+    updateSchema((prev) => removerBlocosDoSchema(prev, idsToRemove));
     if (target === activeBlockId) setActiveBlockId(null);
     toast(
       cascadeIds.length > 0

@@ -3874,7 +3874,7 @@ function LogicRulesSection({
           fieldBlockId: origens[0]?.id,
           op: "eq",
           value: "",
-          jumpToBlockId: destinos[0]?.id ?? "",
+          jumpToBlockId: destinos[0]?.blockIds[0] ?? "",
         },
       ],
     });
@@ -4026,7 +4026,7 @@ function LogicRulesSection({
 
       {regras.length > 1 && (
         <p className="text-[11px] text-muted-foreground">
-          Quando mais de uma regra bate, vale a última da lista.
+          Quando mais de uma regra bate, vale a primeira da lista.
         </p>
       )}
     </Section>

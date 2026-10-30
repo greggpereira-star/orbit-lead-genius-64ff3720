@@ -66,7 +66,7 @@ export const STEP_TEMPLATES: StepTemplate[] = [
         pricingPrice: 'R$ 97',
         pricingOriginalPrice: 'R$ 197',
         pricingPeriod: '/mês',
-        pricingFeatures: ['Acesso completo', 'Suporte prioritário', 'Garantia de 7 dias'],
+        pricingFeatures: ['Acesso completo', 'Suporte prioritário', 'Atendimento personalizado'],
         ctaLabel: 'Quero essa oferta',
       },
     ],
@@ -79,9 +79,9 @@ export const STEP_TEMPLATES: StepTemplate[] = [
     create: () => [
       {
         type: 'testimonial',
-        title: '“Resultado incrível já nas primeiras semanas. O método é simples e funciona de verdade.”',
-        testimonialAuthor: 'Renata K.',
-        testimonialRole: 'Cliente há 3 meses',
+        title: '“Escreva aqui o depoimento de um cliente real.”',
+        testimonialAuthor: 'Nome do cliente',
+        testimonialRole: 'Cargo ou cidade',
       },
       {
         type: 'cta',

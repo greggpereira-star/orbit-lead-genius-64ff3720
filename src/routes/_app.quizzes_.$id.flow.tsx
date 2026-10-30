@@ -8,6 +8,7 @@ import { useAuth } from "@/core/auth/hooks/useAuth";
 import { useEditLock } from "@/modules/quiz/hooks/useEditLock";
 import { EditLockBanner } from "@/modules/quiz/components/EditLockBanner";
 import { quizService } from "@/modules/quiz/services/quizService";
+import { removerBlocosDoSchema } from '@/modules/quiz/lib/removerBlocos';
 import { getSteps } from "@/modules/quiz/lib/steps";
 import { QuizFlowView } from "@/modules/quiz/components/QuizFlowView";
 import { DEFAULT_DESIGN } from "@/modules/quiz/design-presets";
@@ -138,27 +139,15 @@ function QuizFlowPage() {
     const idx = currentSteps.findIndex((s) => s.id === stepId);
     if (idx === -1) return;
     const removedStep = currentSteps[idx];
-    const removedBlockIds = new Set(removedStep.blockIds);
+    const removedBlockIds = new Set([
+      ...removedStep.blockIds,
+      ...removedStep.blockIds.flatMap((bid) => schema.blocks.find((b) => b.id === bid)?.childBlockIds ?? []),
+    ]);
     const removedBlocks = schema.blocks.filter((b) => removedBlockIds.has(b.id));
     const blockIndex = schema.blocks.findIndex((b) => removedBlockIds.has(b.id));
 
-    updateSchema((prev) => {
-      const nextBlocks = prev.blocks
-        .filter((b) => !removedBlockIds.has(b.id))
-        // limpa qualquer ramificação que apontava pra um bloco removido — sem isso
-        // sobraria uma seta "fantasma" mirando numa etapa que não existe mais.
-        .map((b) => ({
-          ...b,
-          options: b.options?.map((o) =>
-            o.jumpToBlockId && removedBlockIds.has(o.jumpToBlockId)
-              ? { ...o, jumpToBlockId: undefined }
-              : o,
-          ),
-          logicRules: b.logicRules?.filter((r) => !removedBlockIds.has(r.jumpToBlockId)),
-        }));
-      const nextSteps = getSteps(prev, { keepEmpty: true }).filter((s) => s.id !== stepId);
-      return { ...prev, blocks: nextBlocks, steps: nextSteps };
-    });
+    // Mesma limpeza do construtor (saltos, regras, condições e filhos de Container).
+    updateSchema((prev) => removerBlocosDoSchema(prev, removedBlockIds, { removerEtapaId: stepId }));
 
     toast("Etapa excluída", {
       description:
