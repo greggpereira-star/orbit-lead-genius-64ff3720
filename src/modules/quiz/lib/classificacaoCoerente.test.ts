@@ -67,8 +67,8 @@ describe("os três pontos passam as respostas", () => {
   const servidor = readFileSync("src/routes/api/public/quiz-completed.ts", "utf8");
 
   it("o servidor usa teto e piso do visitante", () => {
-    expect(servidor).toContain("maxPossibleScore(schema as never, respostasDoLead ?? undefined)");
-    expect(servidor).toContain("minPossibleScore(schema as never, respostasDoLead ?? undefined)");
+    // teto, piso e pontuação saem de uma função só, alimentada pelas respostas do lead
+    expect(servidor).toContain("pontuacaoNoServidor(schema as never, respostasDoLead, body.score)");
   });
 
   it("nenhuma chamada do player calcula o teto sem as respostas", () => {

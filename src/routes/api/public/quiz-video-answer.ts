@@ -16,7 +16,9 @@
  * em hospedagem grátis.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { sessaoValida } from "@/modules/quiz/lib/entradaPublica";
 import {
+  VIDEO_RESPOSTA,
   validarEnvioDeVideo,
   caminhoDoVideo,
   extensaoDoVideo,
@@ -35,6 +37,12 @@ export const Route = createFileRoute("/api/public/quiz-video-answer")({
             headers: { "Content-Type": "application/json" },
           });
 
+        /* O corpo inteiro é carregado em memória por `formData()`: recusar pelo
+           tamanho declarado ANTES evita que um envio gigante chegue a ser lido.
+           (Margem de 1MB para os outros campos do formulário.) */
+        const declarado = Number(request.headers.get("content-length") ?? 0);
+        if (declarado > VIDEO_RESPOSTA.bytesMax + 1024 * 1024) return recusa("Vídeo grande demais.", 413);
+
         let form: FormData;
         try {
           form = await request.formData();
@@ -50,6 +58,7 @@ export const Route = createFileRoute("/api/public/quiz-video-answer")({
 
         if (!(arquivo instanceof File)) return recusa("Arquivo ausente.");
         if (!quizId || !blockId || !sessionId) return recusa("Dados incompletos.");
+        if (!sessaoValida(sessionId) || quizId.length > 64 || blockId.length > 128) return recusa("Dados inválidos.");
 
         const problema = validarEnvioDeVideo({
           bytes: arquivo.size,

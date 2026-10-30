@@ -28,7 +28,8 @@ describe("tela de resultado do player", () => {
   it("botão do resultado com link abre o link e não abre uma segunda tela de conclusão", () => {
     const caso = player.slice(player.indexOf("case 'result': {"));
     const trecho = caso.slice(0, caso.indexOf("case 'argument':"));
-    expect(trecho).toContain("window.open(block.ctaUrl");
+    expect(trecho).toContain("window.open(u, '_blank'");
+    expect(trecho).toContain("urlSegura(block.ctaUrl)");
   });
 });
 

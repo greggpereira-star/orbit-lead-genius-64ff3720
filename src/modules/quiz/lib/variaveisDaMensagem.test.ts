@@ -79,6 +79,6 @@ describe("paridade com o servidor", () => {
 
   it("e o servidor também espalha as variáveis de saída", () => {
     const rota = readFileSync("src/routes/api/public/quiz-completed.ts", "utf8");
-    expect(rota).toContain("...(body.variaveis ?? {})");
+    expect(rota).toContain("...variaveisDoCorpo");
   });
 });

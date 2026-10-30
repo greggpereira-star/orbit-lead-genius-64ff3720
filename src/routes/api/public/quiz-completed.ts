@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { pontuacaoNoServidor } from '@/modules/quiz/lib/pontuacaoNoServidor';
+import { LIMITES_ENTRADA, limitarNome, limitarVariaveis, sessaoValida } from '@/modules/quiz/lib/entradaPublica';
 
 /**
  * Fim do quiz: classifica o lead na faixa e dispara o WhatsApp da faixa.
@@ -86,11 +88,18 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: cors }),
       POST: async ({ request }) => {
+        /* Rota pública: corpo enorme é recusado antes de ser lido. */
+        const tamanho = Number(request.headers.get('content-length') ?? 0);
+        if (tamanho > LIMITES_ENTRADA.corpoBytes) return json({ error: 'payload_too_large' }, 413);
+
         let body: Payload;
         try { body = (await request.json()) as Payload; }
         catch { return json({ error: 'invalid_json' }, 400); }
 
-        if (!body.quizId) return json({ error: 'missing_quiz' }, 400);
+        if (!body.quizId || typeof body.quizId !== 'string') return json({ error: 'missing_quiz' }, 400);
+        if (body.sessionId !== undefined && !sessaoValida(body.sessionId)) return json({ error: 'invalid_session' }, 400);
+        const nomeDoCorpo = limitarNome(body.nome);
+        const variaveisDoCorpo = limitarVariaveis(body.variaveis);
 
         const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
 
@@ -179,7 +188,7 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         // ficava com percentual inflado e subia de faixa indevidamente — um
         // lead de 34% aparecia como 57%. Duas implementações da mesma regra é
         // como isso acontece; agora existe uma só.
-        const { maxPossibleScore, minPossibleScore, scorePercent } = await import('@/modules/quiz/engine');
+        const { scorePercent } = await import('@/modules/quiz/engine');
         const schema = (versao as { schema?: unknown } | null)?.schema;
         /* As RESPOSTAS entram no cálculo do máximo: sem elas, o teto inclui
            blocos que a exibição condicional escondeu deste visitante, o
@@ -188,17 +197,12 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
            Elas vêm do metadata do lead, gravado por `quiz_capture_lead`; sem
            lead resolvido, resta o teto absoluto, que é o comportamento antigo. */
         const respostasDoLead = (leadDoQuiz?.metadata?.responses ?? null) as Record<string, unknown> | null;
-        const max = schema
-          ? maxPossibleScore(schema as never, respostasDoLead ?? undefined)
-          : 0;
+        if (!schema) return json({ status: 'sem_pontuacao' });
+        /* O score NÃO vem do corpo quando há respostas gravadas: o servidor
+           recalcula com o schema publicado (ver `pontuacaoNoServidor`). */
+        const { score, max, min } = pontuacaoNoServidor(schema as never, respostasDoLead, body.score);
         if (max <= 0) return json({ status: 'sem_pontuacao' });
-
-        /* O piso entra na conta: com opção de pontuação negativa, dividir só
-           pelo máximo produz percentual negativo, que não bate em faixa
-           nenhuma — o lead ficava sem classificação e sem mensagem, calado.
-           Em quiz sem negativos o piso é 0 e a conta não muda. */
-        const min = schema ? minPossibleScore(schema as never, respostasDoLead ?? undefined) : 0;
-        const pct = scorePercent(body.score ?? 0, max, min);
+        const pct = scorePercent(score, max, min);
         const faixa = [...tiers].sort((a, b) => b.minPercent - a.minPercent).find((t) => pct >= t.minPercent);
         if (!faixa) return json({ status: 'sem_faixa_correspondente' });
 
@@ -254,8 +258,8 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         /* `nome` e `faixa` por ÚLTIMO: as variáveis vêm do navegador, e vinham
            depois — quem as enviava sobrescrevia o nome e a faixa da mensagem. */
         const texto = interpolar(faixa.whatsappTemplate ?? '', {
-          ...(body.variaveis ?? {}),
-          nome: body.nome ?? '',
+          ...variaveisDoCorpo,
+          nome: nomeDoCorpo,
           faixa: faixa.label,
         });
 
@@ -291,10 +295,10 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
             companyId: q.company_id,
             leadId: leadDoQuiz?.id ?? null,
             numero,
-            nome: body.nome ?? null,
+            nome: nomeDoCorpo || null,
             texto,
             template: faixa.waTemplate ?? null,
-            dados: { ...(body.variaveis ?? {}), nome: body.nome ?? '', faixa: faixa.label },
+            dados: { ...variaveisDoCorpo, nome: nomeDoCorpo, faixa: faixa.label },
           });
           if (!r.enviou) {
             await liberar().catch(() => {});

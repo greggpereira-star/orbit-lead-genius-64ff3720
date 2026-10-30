@@ -57,6 +57,7 @@ import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 import { AudioPlayer } from './AudioPlayer';
 import { ItensDeConteudo, SumarioDasRespostas, RedesSociais } from './blocosDeConteudo';
+import { urlSegura } from '../lib/urlSegura';
 import { montarResumo as montarResumoDoQuiz, BLOCOS_QUE_PERGUNTAM as TIPOS_PERGUNTA, type LinhaDoResumo } from '../lib/resumoDasRespostas';
 import { getVideoEmbed } from '../lib/videoEmbed';
 import { VideoAnswerRecorder } from './VideoAnswerRecorder';
@@ -181,7 +182,7 @@ export function QuizPlayer({
 
   useEffect(() => {
     if (accessState === 'blocked' && accessRules?.fallbackUrl) {
-      window.location.href = accessRules.fallbackUrl;
+      { const u = urlSegura(accessRules.fallbackUrl); if (u) window.location.href = u; }
     }
   }, [accessState, accessRules?.fallbackUrl]);
 
@@ -2149,7 +2150,7 @@ function BlockView({
                   // Ação por opção (Funilix parity): uma URL externa navega na hora,
                   // sem passar pelo fluxo normal de avançar etapa.
                   if (o.actionUrl) {
-                    window.location.href = o.actionUrl;
+                    { const u = urlSegura(o.actionUrl); if (u) window.location.href = u; }
                     return;
                   }
                   setValue(o.id);
@@ -2656,7 +2657,8 @@ function BlockView({
           textStyle={btnText}
           hidden={!terminal && !block.ctaUrl}
           onClick={() => {
-            if (block.ctaUrl) window.location.href = block.ctaUrl;
+            const u = urlSegura(block.ctaUrl);
+            if (u) window.location.href = u;
             else onSubmit(true);
           }}
         >
@@ -2722,7 +2724,8 @@ function BlockView({
             textStyle={btnText}
             hidden={!terminal}
             onClick={() => {
-              if (block.ctaUrl) window.open(block.ctaUrl, '_blank', 'noopener,noreferrer');
+              const u = urlSegura(block.ctaUrl);
+              if (u) window.open(u, '_blank', 'noopener,noreferrer');
               else onSubmit(true);
             }}
           >
@@ -3493,7 +3496,7 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
         <PrimaryBtn
           design={design}
           textStyle={resultBlock ? resolveTextStyle(resultBlock, 'button') : undefined}
-          onClick={resultBlock.ctaUrl ? () => { window.location.href = resultBlock.ctaUrl!; } : undefined}
+          onClick={urlSegura(resultBlock.ctaUrl) ? () => { window.location.href = urlSegura(resultBlock.ctaUrl)!; } : undefined}
         >
           {resultBlock.ctaLabel}
         </PrimaryBtn>
