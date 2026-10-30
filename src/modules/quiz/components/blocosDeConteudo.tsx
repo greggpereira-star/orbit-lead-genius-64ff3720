@@ -1,6 +1,7 @@
 import type { QuizBlock, QuizDesign } from "../types";
 import type { LinhaDoResumo } from "../lib/resumoDasRespostas";
 import { withAlpha } from "../lib/color";
+import { justificarPeloAlinhamento } from "../lib/blockStyle";
 
 /**
  * Blocos de conteúdo compartilhados entre o CANVAS e o PLAYER.
@@ -172,7 +173,7 @@ export function RedesSociais({ block, design }: { block: QuizBlock; design: Quiz
   const links = (block.redes ?? []).filter((r) => r.url.trim());
   if (!links.length) return null;
   return (
-    <div className="flex flex-wrap justify-center gap-2">
+    <div className="flex flex-wrap gap-2" style={justificarPeloAlinhamento(block)}>
       {links.map((r) => (
         <a
           key={r.id}

@@ -39,7 +39,7 @@ import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   PieChart, Pie, Cell, RadialBarChart, RadialBar,
 } from 'recharts';
-import { resolveBlockStyle, resolveTextStyle, classesDoBloco, designDoBloco } from '../lib/blockStyle';
+import { resolveBlockStyle, resolveTextStyle, classesDoBloco, designDoBloco, justificarPeloAlinhamento } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
@@ -3333,7 +3333,7 @@ function BlockView({
 
     case 'indicator':
       return (
-        <div className="flex justify-center">
+        <div className="flex" style={justificarPeloAlinhamento(block)}>
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold"
             style={{
@@ -3354,7 +3354,7 @@ function BlockView({
          `transform` da animação sobrescreveria o `rotate` e a seta apontaria
          sempre para baixo. */
       return (
-        <div className="flex justify-center" aria-hidden>
+        <div className="flex" style={justificarPeloAlinhamento(block)} aria-hidden>
           <span className="quiz-seta-deriva inline-flex">
             <ArrowDown
               style={{
@@ -3381,13 +3381,13 @@ function BlockView({
         <img
           src={block.marcaUrl}
           alt=""
-          className="mx-auto h-auto object-contain"
+          className="h-auto object-contain"
           style={{ width: block.marcaLargura ?? 140 }}
         />
       ) : null;
       if (!img) return null;
       return (
-        <div className="flex justify-center">
+        <div className="flex" style={justificarPeloAlinhamento(block)}>
           {block.marcaLink ? (
             <a href={block.marcaLink} target="_blank" rel="noopener noreferrer">{img}</a>
           ) : img}

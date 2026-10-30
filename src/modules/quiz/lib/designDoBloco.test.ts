@@ -48,3 +48,14 @@ describe("tamanho do texto do bloco", () => {
     expect(estilo.fontSize).toBe(22);
   });
 });
+
+import { justificarPeloAlinhamento } from "./blockStyle";
+
+describe("justificarPeloAlinhamento", () => {
+  it("sem escolha continua centralizado, e esquerda/direita levam o objeto junto", () => {
+    expect(justificarPeloAlinhamento(bloco()).justifyContent).toBe("center");
+    expect(justificarPeloAlinhamento(bloco({ align: "center" })).justifyContent).toBe("center");
+    expect(justificarPeloAlinhamento(bloco({ align: "left" })).justifyContent).toBe("flex-start");
+    expect(justificarPeloAlinhamento(bloco({ align: "right" })).justifyContent).toBe("flex-end");
+  });
+});

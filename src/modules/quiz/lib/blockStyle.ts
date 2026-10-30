@@ -213,6 +213,20 @@ export function classeDeAlinhamento(block: QuizBlock): string | undefined {
   return block.blockStyle?.align ? "alinhamento-proprio" : undefined;
 }
 
+/**
+ * `justify-content` para o bloco que se centraliza por flex.
+ *
+ * Indicador, seta, logo e redes sociais ficam num `flex justify-center`, e
+ * centralização por flex não lê `text-align`: escolher "Esquerda" ou "Direita"
+ * movia o invólucro e deixava o objeto no meio dele. Medido em 30/10/2026 numa
+ * varredura de alinhamento em todos os tipos de bloco. Sem escolha do autor,
+ * continua centralizado — nenhum quiz publicado muda.
+ */
+export function justificarPeloAlinhamento(block: QuizBlock): CSSProperties {
+  const a = block.blockStyle?.align;
+  return { justifyContent: a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center" };
+}
+
 /** Classes do embrulho do bloco: alinhamento e tamanho próprios, quando escolhidos. */
 export function classesDoBloco(block: QuizBlock): string | undefined {
   const classes = [

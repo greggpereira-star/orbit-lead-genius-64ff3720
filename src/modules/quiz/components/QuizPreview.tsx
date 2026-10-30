@@ -33,6 +33,7 @@ import {
   resolveBlockStyle,
   resolveTextStyle,
   classesDoBloco,
+  justificarPeloAlinhamento,
   designDoBloco,
 } from "../lib/blockStyle";
 import { resolveContainerLayout, type Breakpoint } from "../lib/containerLayout";
@@ -922,7 +923,7 @@ export function BlockRenderer({
 
     case "indicator":
       return (
-        <div className="flex justify-center">
+        <div className="flex" style={justificarPeloAlinhamento(block)}>
           <span
             className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold"
             style={{
@@ -942,7 +943,7 @@ export function BlockRenderer({
         block.direcaoDaSeta ?? "baixo"
       ];
       return (
-        <div className="flex justify-center" aria-hidden>
+        <div className="flex" style={justificarPeloAlinhamento(block)} aria-hidden>
           <span className="quiz-seta-deriva inline-flex">
             <ArrowDown
               style={{
@@ -977,7 +978,7 @@ export function BlockRenderer({
         );
       }
       return (
-        <div className="flex justify-center">
+        <div className="flex" style={justificarPeloAlinhamento(block)}>
           <img
             src={block.marcaUrl}
             alt=""
