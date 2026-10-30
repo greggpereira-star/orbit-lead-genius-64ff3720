@@ -14,7 +14,20 @@ import {
   Archive,
   ArchiveRestore,
   Image as ImageIcon,
+  Link2,
+  MoreHorizontal,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CORES_DE_FAIXA, MINIMO_PARA_NOTA } from "../lib/stepConversion";
+import type { ResumoDoCartao } from "../lib/resumoDoCartao";
 import { quizService } from "../services/quizService";
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import type { QuizFunnel } from "../types";
@@ -30,9 +43,7 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
   const { company, user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<QuizFunnel[]>([]);
-  const [stats, setStats] = useState<
-    Record<string, { total: number; completed: number; leadsCaptured: number }>
-  >({});
+  const [resumos, setResumos] = useState<Record<string, ResumoDoCartao>>({});
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   /* Arquivado fica fora da lista por padrão — é para isso que serve arquivar.
@@ -43,12 +54,16 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [list, listStats] = await Promise.all([
-        quizService.list(company.id),
-        quizService.getListStats(company.id),
-      ]);
+      const list = await quizService.list(company.id);
       setItems(list);
-      setStats(listStats);
+      /* Os números são acessório da lista: se falharem, os cartões continuam
+         abrindo e o aviso diz o que faltou, em vez de a página inteira cair. */
+      try {
+        setResumos(await quizService.getResumosDosCartoes(company.id, list));
+      } catch (e: unknown) {
+        console.error("QuizList: resumos falharam", e);
+        setResumos({});
+      }
     } catch (e: unknown) {
       const msg = getErrorMessage(e);
       toast.error("Erro ao carregar quizzes: " + msg);
@@ -109,6 +124,16 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
       void refresh();
     } catch (e: unknown) {
       toast.error("Erro ao arquivar: " + getErrorMessage(e));
+    }
+  };
+
+  const handleCopyLink = async (slug: string) => {
+    const url = `${window.location.origin}/q/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("Não consegui copiar. O link é " + url);
     }
   };
 
@@ -220,118 +245,199 @@ export function QuizList({ onCreate, onUseTemplate }: Props) {
                     : "Arquivado"}
               </Badge>
             </div>
-            {q.niche && <p className="text-xs text-muted-foreground mb-4">Nicho: {q.niche}</p>}
-            {(() => {
-              const s = stats[q.id];
-              const completionPct =
-                s && s.total > 0 ? `${((s.completed / s.total) * 100).toFixed(0)}%` : "—";
-              const conversionPct =
-                s && s.total > 0 ? `${((s.leadsCaptured / s.total) * 100).toFixed(0)}%` : "—";
-              /* Porcentagem sem denominador não é número, é impressão.
-                 "Conclusão 8%" e "Conversão 8%" apareciam lado a lado com o
-                 mesmo valor e nada dizia que uma mede quem TERMINOU e a outra
-                 quem DEIXOU CONTATO — nem sobre quantas pessoas. Num painel
-                 que serve para decidir onde mexer, isso é a diferença entre
-                 agir e adivinhar. */
-              const comecaram = s?.total ?? 0;
-              const dicaDeLeads = s
-                ? `${s.leadsCaptured} pessoa(s) deixaram e-mail ou telefone nos últimos 30 dias`
-                : "Sem dados nos últimos 30 dias";
-              const dicaDeConclusao = s
-                ? `${s.completed} de ${comecaram} que começaram chegaram ao fim do quiz`
-                : "Sem dados nos últimos 30 dias";
-              const dicaDeConversao = s
-                ? `${s.leadsCaptured} de ${comecaram} que começaram deixaram contato`
-                : "Sem dados nos últimos 30 dias";
-              return (
-                <div className="mb-4 rounded-lg bg-muted/40 py-3 text-center text-xs">
-                  <div className="mb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Últimos 30 dias
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div title={dicaDeLeads}>
-                      <div className="font-bold text-base sm:text-lg">
-                        {s?.leadsCaptured ?? "—"}
-                      </div>
-                      <div className="text-muted-foreground">Leads</div>
-                    </div>
-                    <div title={dicaDeConclusao}>
-                      <div className="font-bold text-base sm:text-lg">{completionPct}</div>
-                      <div className="text-muted-foreground">Concluíram</div>
-                    </div>
-                    <div title={dicaDeConversao}>
-                      <div className="font-bold text-base sm:text-lg">{conversionPct}</div>
-                      <div className="text-muted-foreground">Viraram lead</div>
-                    </div>
-                  </div>
-                  {/* O denominador, escrito. É ele que diz se 8% é pouco ou se
-                      a amostra ainda não significa nada. */}
-                  {comecaram > 0 && (
-                    <div className="mt-1.5 text-[10px] text-muted-foreground">
-                      de {comecaram} que começaram
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            {/* Segunda barreira, além da regra do clique: `stopPropagation` aqui
-              cobre também o que vier a ser adicionado nesta linha depois. */}
+            <ResumoDoQuiz status={q.status} resumo={resumos[q.id]} />
+            {/* O `stopPropagation` da linha cobre também o menu: o conteúdo dele é
+              portal, mas o React faz o clique subir pela árvore dele, não pela do DOM. */}
             <div className="flex gap-2 mt-auto pt-1" onClick={(e) => e.stopPropagation()}>
               <Button asChild size="sm" className="flex-1">
                 <Link to="/quizzes/$id/builder" params={{ id: q.id }}>
                   Abrir
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="shrink-0" title="Visualizar">
-                <Link to="/quizzes/$id/preview" params={{ id: q.id }}>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0"
-                title="Duplicar"
-                onClick={() => handleDuplicate(q.id)}
-                disabled={duplicatingId === q.id}
-              >
-                {duplicatingId === q.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0"
-                title={q.status === "archived" ? "Desarquivar" : "Arquivar"}
-                onClick={() => handleArchive(q.id, q.status !== "archived")}
-              >
-                {q.status === "archived" ? (
-                  <ArchiveRestore className="h-3.5 w-3.5" />
-                ) : (
-                  <Archive className="h-3.5 w-3.5" />
-                )}
-              </Button>
-              {/* O irreversível não pode ter o mesmo peso do reversível.
-                  "Arquivar" e "Excluir" eram dois botões `outline` idênticos,
-                  lado a lado, distinguíveis só pelo desenho do ícone — e
-                  arquivar se desfaz, excluir não. A confirmação continua; ela
-                  é a trava, isto é o aviso antes dela. */}
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0 text-destructive hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-                title="Excluir — não dá para desfazer"
-                onClick={() => handleDelete(q.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              {q.status === "published" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 gap-1.5"
+                  onClick={() => void handleCopyLink(q.slug)}
+                >
+                  <Link2 className="h-3.5 w-3.5" /> Copiar link
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 px-2"
+                    aria-label={`Mais ações de ${q.name}`}
+                  >
+                    {duplicatingId === q.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MoreHorizontal className="h-4 w-4" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/quizzes/$id/preview" params={{ id: q.id }}>
+                      <ExternalLink className="mr-2 h-4 w-4" /> Visualizar
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={duplicatingId === q.id}
+                    onSelect={() => void handleDuplicate(q.id)}
+                  >
+                    <Copy className="mr-2 h-4 w-4" /> Duplicar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => void handleArchive(q.id, q.status !== "archived")}
+                  >
+                    {q.status === "archived" ? (
+                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Archive className="mr-2 h-4 w-4" />
+                    )}
+                    {q.status === "archived" ? "Desarquivar" : "Arquivar"}
+                  </DropdownMenuItem>
+                  {/* O irreversível fica separado e vermelho: arquivar se desfaz,
+                      excluir não. A confirmação continua sendo a trava. */}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={() => void handleDelete(q.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Excluir — não dá para desfazer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * O miolo do cartão: três números, o mapa de calor e UMA frase.
+ *
+ * O desenho anterior tinha três colunas e duas delas diziam o mesmo número
+ * ("Concluíram 5%" e "Viraram lead 5%", 3 de 60 nas duas). Aqui cada coluna
+ * responde uma pergunta diferente — quanta gente chegou, quantos viraram lead,
+ * que fatia isso é — e o que sobra de espaço vai para a leitura: onde o funil
+ * perde gente. Sem amostra, o cartão diz isso em vez de dar nota.
+ */
+export function ResumoDoQuiz({
+  status,
+  resumo,
+}: {
+  status: QuizFunnel["status"];
+  resumo: ResumoDoCartao | undefined;
+}) {
+  if (status === "draft") {
+    return (
+      <p className="mb-4 rounded-lg bg-muted/40 px-3 py-3 text-xs text-muted-foreground">
+        Rascunho. Publique para começar a medir visitas e leads.
+      </p>
+    );
+  }
+  if (!resumo || (resumo.visitantes === 0 && resumo.leads === 0)) {
+    return (
+      <p className="mb-4 rounded-lg bg-muted/40 px-3 py-3 text-xs text-muted-foreground">
+        {status === "archived"
+          ? "Arquivado. Sem visitas nos últimos 30 dias."
+          : "Ainda sem visitas nos últimos 30 dias. Copie o link e divulgue."}
+      </p>
+    );
+  }
+
+  const { visitantes, leads, taxaDeLead, variacao, amostraPequena, mapa, maiorPerda } = resumo;
+
+  return (
+    <div className="mb-4 space-y-3 rounded-lg bg-muted/40 p-3 text-xs">
+      <div className="flex items-baseline justify-between text-[11px] text-muted-foreground">
+        <span>Últimos 30 dias</span>
+        {variacao !== null && (
+          <span
+            className="inline-flex items-center gap-1 tabular-nums"
+            title={`${resumo.visitantesAnteriores} visitantes nos 30 dias anteriores`}
+          >
+            {variacao >= 0 ? (
+              <TrendingUp className="h-3 w-3" aria-hidden />
+            ) : (
+              <TrendingDown className="h-3 w-3" aria-hidden />
+            )}
+            {variacao >= 0 ? "+" : ""}
+            {variacao}% visitas
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <Numero
+          valor={visitantes}
+          rotulo="Visitantes"
+          dica="Pessoas distintas que abriram o quiz"
+        />
+        <Numero valor={leads} rotulo="Leads" dica="Deixaram e-mail ou telefone" />
+        <Numero
+          valor={taxaDeLead === null ? "—" : `${Math.round(taxaDeLead)}%`}
+          rotulo="Viram lead"
+          dica={`${leads} de ${visitantes} visitantes deixaram contato`}
+        />
+      </div>
+
+      {mapa.length > 0 && (
+        <div>
+          {/* Mapa de calor do funil: uma célula por etapa, na cor de quanta gente
+              passou dela. Cor nunca é o único sinal — cada célula tem texto. */}
+          <ul className="flex gap-0.5" aria-label="Mapa de calor do funil por etapa">
+            {mapa.map((c) => (
+              <li
+                key={c.numero}
+                className="h-2 flex-1 rounded-[2px]"
+                style={{ backgroundColor: CORES_DE_FAIXA[c.faixa].cor }}
+                title={
+                  c.percentualQueAvancou === null
+                    ? `Etapa ${c.numero} · ${c.nome}: sem dados suficientes`
+                    : `Etapa ${c.numero} · ${c.nome}: ${c.percentualQueAvancou}% avançaram (de ${c.visitantes})`
+                }
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="leading-snug text-muted-foreground">
+        {maiorPerda ? (
+          <>
+            Maior perda na etapa {maiorPerda.numero}
+            {maiorPerda.nome !== `Etapa ${maiorPerda.numero}` ? ` (${maiorPerda.nome})` : ""}:{" "}
+            <strong className="font-semibold text-foreground tabular-nums">
+              {maiorPerda.percentualQueSai}%
+            </strong>{" "}
+            saem aqui.
+          </>
+        ) : amostraPequena ? (
+          <>
+            Só {visitantes} visita(s): pouco para tirar conclusão (a leitura começa em{" "}
+            {MINIMO_PARA_NOTA}).
+          </>
+        ) : (
+          <>Sem perda relevante entre as etapas.</>
+        )}
+      </p>
+    </div>
+  );
+}
+
+function Numero({ valor, rotulo, dica }: { valor: number | string; rotulo: string; dica: string }) {
+  return (
+    <div title={dica} className="text-center">
+      <div className="text-lg font-bold tabular-nums leading-tight">{valor}</div>
+      <div className="text-muted-foreground">{rotulo}</div>
     </div>
   );
 }

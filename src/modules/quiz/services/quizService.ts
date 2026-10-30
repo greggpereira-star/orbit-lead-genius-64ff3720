@@ -23,6 +23,14 @@ import { DEFAULT_ACCESS_RULES } from "../types";
 import { parseSubdomain } from "../lib/tenant";
 import { contarVisitantes, taxaDeConclusao, visitantesPorBloco } from "../lib/contagemDeVisitantes";
 import { resolveEntryStageId, newLeadBoardOrder } from "@/modules/crm/services/stageService";
+import { getSteps } from "../lib/steps";
+import { MINIMO_PARA_NOTA } from "../lib/stepConversion";
+import {
+  resumirParaCartao,
+  type EventoDoCartao,
+  type ResumoDoCartao,
+  type SubmissaoDoCartao,
+} from "../lib/resumoDoCartao";
 
 function slugify(input: string): string {
   return (
@@ -1428,6 +1436,92 @@ export const quizService = {
       if (!(inicios ?? []).length) entry.total++;
     }
     return stats;
+  },
+
+  /**
+   * O que cada cartão da lista mostra, em quatro consultas para a empresa toda.
+   *
+   * O `start` e o `complete` vêm de 60 dias (30 atuais + 30 de régua para a
+   * variação); o `block_view`, que é o volumoso, só dos 30 atuais. O schema —
+   * o dado pesado — só é lido para o quiz que tem visitante suficiente para o
+   * mapa de calor significar alguma coisa: ler o de todos para desenhar célula
+   * "sem dados" seria custo sem retorno.
+   */
+  async getResumosDosCartoes(
+    companyId: string,
+    funis: Pick<QuizFunnel, "id" | "published_version_id">[],
+  ): Promise<Record<string, ResumoDoCartao>> {
+    const agora = Date.now();
+    const desde30 = new Date(agora - 30 * 86400000).toISOString();
+    const desde60 = new Date(agora - 60 * 86400000).toISOString();
+    const colunas = "quiz_id, event_type, block_id, session_id, created_at";
+
+    const [inicios, etapas, subs] = await Promise.all([
+      supabase
+        .from("quiz_events")
+        .select(colunas)
+        .eq("company_id", companyId)
+        .eq("event_type", "start")
+        .gte("created_at", desde60)
+        .limit(20000),
+      supabase
+        .from("quiz_events")
+        .select(colunas)
+        .eq("company_id", companyId)
+        .eq("event_type", "block_view")
+        .gte("created_at", desde30)
+        .limit(50000),
+      supabase
+        .from("quiz_submissions")
+        .select("quiz_id, status, answers, created_at")
+        .eq("company_id", companyId)
+        .gte("created_at", desde30),
+    ]);
+    if (subs.error) throw subs.error;
+    if (inicios.error || etapas.error) {
+      console.warn("Resumo dos cartões: falha ao ler eventos", inicios.error ?? etapas.error);
+    }
+
+    const eventos = [...(inicios.data ?? []), ...(etapas.data ?? [])] as unknown as EventoDoCartao[];
+    const submissoes = (subs.data ?? []) as unknown as SubmissaoDoCartao[];
+
+    const porQuiz = <T extends { quiz_id: string }>(lista: T[]) => {
+      const m = new Map<string, T[]>();
+      for (const x of lista) (m.get(x.quiz_id) ?? m.set(x.quiz_id, []).get(x.quiz_id)!).push(x);
+      return m;
+    };
+    const eventosDoQuiz = porQuiz(eventos);
+    const submissoesDoQuiz = porQuiz(submissoes);
+
+    // Só lê o schema de quem tem amostra para o mapa.
+    const comAmostra = funis.filter(
+      (f) =>
+        f.published_version_id &&
+        (eventosDoQuiz.get(f.id) ?? []).filter((e) => e.event_type === "start").length >=
+          MINIMO_PARA_NOTA,
+    );
+    const schemas = new Map<string, QuizSchema>();
+    if (comAmostra.length > 0) {
+      const { data } = await supabase
+        .from("quiz_versions")
+        .select("id, schema")
+        .in("id", comAmostra.map((f) => f.published_version_id as string));
+      for (const v of (data ?? []) as unknown as { id: string; schema: QuizSchema }[]) {
+        schemas.set(v.id, v.schema);
+      }
+    }
+
+    const out: Record<string, ResumoDoCartao> = {};
+    for (const f of funis) {
+      const schema = f.published_version_id ? schemas.get(f.published_version_id) : undefined;
+      out[f.id] = resumirParaCartao({
+        eventos: eventosDoQuiz.get(f.id) ?? [],
+        submissoes: submissoesDoQuiz.get(f.id) ?? [],
+        steps: schema ? getSteps(schema) : undefined,
+        agora,
+      });
+    }
+    return out;
   },
 
   async getAbTestStats(
