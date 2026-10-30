@@ -40,15 +40,19 @@ export function evaluateResponse(
       if (opt.jumpToBlockId) jumpToBlockId = opt.jumpToBlockId;
     }
   } else if (block.type === 'multi-choice' && Array.isArray(response)) {
-    for (const id of response as string[]) {
+    // Id repetido não soma duas vezes.
+    for (const id of new Set(response as string[])) {
       const opt = optionsFor(block).find((o) => o.id === id);
       if (opt) {
         scoreDelta += (opt.score ?? 0) * weight;
         if (opt.tag) tags.push(opt.tag);
       }
     }
-  } else if (block.type === 'rating' && typeof response === 'number') {
-    scoreDelta += response * weight;
+  } else if (block.type === 'rating' && (typeof response === 'number' || typeof response === 'string')) {
+    // NaN envenenava a soma toda e o lead ficava sem faixa; string numérica (progresso
+    // salvo) pontuava 0. Fora de [0, máximo] não faz sentido numa nota.
+    const n = typeof response === 'string' && response.trim() === '' ? Number.NaN : Number(response);
+    if (Number.isFinite(n)) scoreDelta += Math.min(Math.max(n, 0), block.maxRating ?? 5) * weight;
   }
 
   return { scoreDelta, tags, jumpToBlockId };
@@ -68,7 +72,9 @@ export interface LogicContext {
 
 /** Compara dois valores pelo operador, com a semântica de `isBlockVisible`. */
 function compara(bruto: unknown, op: BlockLogicOp, alvo: string | number, alvo2?: number): boolean {
-  const comoNumero = (v: unknown): number => (Array.isArray(v) ? Number.NaN : Number(v));
+  // Vazio e nulo são "sem resposta", não zero: `Number('')` é 0 e fazia "menor que 5" bater.
+  const comoNumero = (v: unknown): number =>
+    Array.isArray(v) || v === '' || v === null || v === undefined ? Number.NaN : Number(v);
   const igual = Array.isArray(bruto)
     ? (bruto as unknown[]).map(String).includes(String(alvo))
     : String(bruto ?? '') === String(alvo);
@@ -182,7 +188,8 @@ export function isBlockVisible(block: QuizBlock, responses: QuizResponses, scope
   // Modo fórmula: compara o RESULTADO de uma expressão (cruzando várias variáveis,
   // ex.: IMC) em vez da resposta crua de um único bloco anterior.
   const raw: unknown = cond.useFormula ? evaluateExpression(cond.expression!, scope) : responses[cond.fieldBlockId];
-  const asNumber = (v: unknown): number => (Array.isArray(v) ? Number.NaN : Number(v));
+  const asNumber = (v: unknown): number =>
+    Array.isArray(v) || v === '' || v === null || v === undefined ? Number.NaN : Number(v);
   const eq = Array.isArray(raw)
     ? (raw as unknown[]).map(String).includes(String(cond.value))
     : String(raw ?? '') === String(cond.value);
@@ -260,7 +267,9 @@ export function recomputeScore(
 export function scorePercent(score: number, max: number, min = 0): number {
   const amplitude = max - min;
   if (amplitude <= 0) return 0;
-  const pct = ((score - min) / amplitude) * 100;
+  // Multiplicar antes de dividir e arredondar a 1e-9: 29/100 dava 28.999999999999996 e
+  // o lead caía na faixa de baixo no corte exato.
+  const pct = Math.round(((score - min) * 100 / amplitude) * 1e9) / 1e9;
   // Resposta fora da faixa não deveria acontecer, mas se acontecer é melhor
   // grudar nos limites do que produzir um percentual impossível.
   return Math.min(100, Math.max(0, pct));

@@ -59,6 +59,8 @@ export function resolveScope(
 }
 
 function toNumberOrString(v: unknown): number | string {
+  // Decimal brasileiro ("72,5") virava texto e a conta saía NaN.
+  if (typeof v === 'string' && /^\s*-?\d+,\d+\s*$/.test(v)) v = v.trim().replace(',', '.');
   const n = Number(v);
   return Number.isFinite(n) && String(v).trim() !== '' ? n : String(v);
 }
@@ -71,7 +73,10 @@ type Token =
   | { type: 'op'; value: string }
   | { type: 'lparen' }
   | { type: 'rparen' }
-  | { type: 'comma' };
+  | { type: 'comma' }
+  /* Caractere que não é parte de expressão (ex.: `>`): a fórmula inteira vira NaN em
+     vez de ignorar o símbolo e devolver um número que parece certo. */
+  | { type: 'bad' };
 
 function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
@@ -116,7 +121,8 @@ function tokenize(src: string): Token[] {
       i++;
       continue;
     }
-    // caractere desconhecido (ex.: {{ }} residual): ignora, mantém o parser tolerante
+    // chaves residuais de {{ }} são ignoradas; qualquer outro símbolo invalida a fórmula
+    if (c !== '{' && c !== '}') tokens.push({ type: 'bad' });
     i++;
   }
   return tokens;
@@ -151,7 +157,9 @@ class ExprParser {
   }
 
   parse(): number {
-    return this.parseExpr();
+    const v = this.parseExpr();
+    // Sobra de tokens = expressão malformada (ex.: "peso 2", "0,5*10"): NaN, não o prefixo.
+    return this.pos < this.tokens.length ? NaN : v;
   }
 
   private parseExpr(): number {
@@ -218,7 +226,7 @@ class ExprParser {
           }
         }
         if (this.peek()?.type === 'rparen') this.next();
-        const fn = FUNCS[tok.value];
+        const fn = Object.prototype.hasOwnProperty.call(FUNCS, tok.value) ? FUNCS[tok.value] : undefined;
         return fn ? fn(...args) : NaN;
       }
       const v = this.scope[tok.value];
@@ -265,7 +273,10 @@ function renderToken(inner: string, scope: VariableScope): string {
     const result = evaluateExpression(calcMatch[1], scope);
     return Number.isFinite(result) ? formatNumber(result) : '';
   }
-  const v = scope[inner.trim()];
+  const chave = inner.trim();
+  // `{{constructor}}` não pode ler o protótipo do objeto.
+  if (!Object.prototype.hasOwnProperty.call(scope, chave)) return '';
+  const v = scope[chave];
   return v === undefined ? '' : String(v);
 }
 
