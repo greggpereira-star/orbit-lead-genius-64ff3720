@@ -391,6 +391,19 @@ function PlayerRunner({
     });
   };
 
+  /* Barra de progresso sobre as etapas que ESTE visitante vê. Etapa escondida por
+     condição contava no total e no índice: a barra pulava e não chegava a 100% antes do
+     fim. */
+  const progressoVisivel = (() => {
+    const visiveis: number[] = [];
+    for (let k = 0; k < steps.length; k += 1) {
+      if (k === state.currentStepIndex || stepHasVisibleBlocks(k, state.responses)) visiveis.push(k);
+    }
+    const total = Math.max(1, visiveis.length);
+    const posicao = Math.min(total, Math.max(1, visiveis.filter((k) => k <= state.currentStepIndex).length));
+    return { posicao, total };
+  })();
+
   const urgencyBar: UrgencyBarSettings = useMemo(
     () => ({ ...DEFAULT_URGENCY_BAR, ...(settings?.urgency_bar as Partial<UrgencyBarSettings> | undefined) }),
     [settings]
@@ -663,7 +676,21 @@ function PlayerRunner({
 
   const allStepValid = flatAnswerableBlocks.every((b) => stepValidity[b.id] !== false);
 
+  /* Trava de reentrada: dois toques seguidos numa opção chamavam o avanço duas vezes
+     com o mesmo estado, empilhando a etapa no histórico (Voltar passava a exigir dois
+     cliques). */
+  const travaDeAvanco = useRef(false);
   const advanceStep = async (finalDraft: Record<string, unknown>) => {
+    if (travaDeAvanco.current) return;
+    travaDeAvanco.current = true;
+    try {
+      await avancarEtapa(finalDraft);
+    } finally {
+      travaDeAvanco.current = false;
+    }
+  };
+
+  const avancarEtapa = async (finalDraft: Record<string, unknown>) => {
     let scoreDelta = 0;
     const tags: string[] = [];
     let jumpToBlockId: string | undefined;
@@ -739,7 +766,16 @@ function PlayerRunner({
           tracking: trackingDaVisita(),
           responses: nextResponses,
           completed: false,
-        }).catch(() => {});
+        })
+          .then((leadId) => {
+            // Falhou (rede caiu): libera para a próxima etapa tentar de novo. Antes a chave
+            // ficava marcada como capturada e o contato só entrava na conclusão — se a
+            // pessoa abandonasse, o lead se perdia.
+            if (!leadId && capturedContact.current === chave) capturedContact.current = '';
+          })
+          .catch(() => {
+            if (capturedContact.current === chave) capturedContact.current = '';
+          });
       }
     }
 
@@ -836,7 +872,9 @@ function PlayerRunner({
          termina sem passar pela tela final interna e `done` segue falso. O
          sinal honesto de "acabou" é ter gravado. */
       if (!preview) limparProgresso(quizId);
-      await quizService
+      // Sem await: uma gravação de evento lenta segurava a tela em "Enviando…" e atrasava
+      // o WhatsApp da faixa e a conversão do Meta, que vêm logo abaixo.
+      void quizService
         .trackEvent({
           quizId,
           companyId,
@@ -949,9 +987,9 @@ function PlayerRunner({
           {/* Com a capa em tela cheia, a barra some só na primeira etapa: a capa abre limpa. */}
           {!(design.coverImage && !done && state.currentStepIndex === 0) && (
             <ProgressBar
-              value={done ? 1 : (state.currentStepIndex + 1) / steps.length}
-              current={done ? steps.length - 1 : state.currentStepIndex}
-              total={steps.length}
+              value={done ? 1 : progressoVisivel.posicao / progressoVisivel.total}
+              current={done ? progressoVisivel.total - 1 : progressoVisivel.posicao - 1}
+              total={progressoVisivel.total}
               design={design}
             />
           )}
@@ -2156,7 +2194,7 @@ function BlockView({
                   setValue(o.id);
                   // Ausente = avança (comportamento de sempre). Só quem
                   // desliga o Autoavançar ganha o botão de continuar abaixo.
-                  if (terminal && block.autoAdvance !== false) onSubmit(o.id);
+                  if (terminal && block.autoAdvance !== false && !saving) onSubmit(o.id);
                 }}
               />
             ))}
@@ -3435,7 +3473,12 @@ function BlockView({
 
 function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState }) {
   const design = schema.design;
-  const resultBlock = schema.blocks.find((b) => b.type === 'result');
+  /* O resultado que ESTE visitante vê: com dois resultados condicionais, o primeiro do
+     schema nem sempre é o dele. (Se nenhum estiver visível, cai no primeiro.) */
+  const escopoDoResultado = resolveScope(schema.blocks, state.responses, { score: state.score });
+  const resultBlock =
+    schema.blocks.find((b) => b.type === 'result' && isBlockVisible(b, state.responses, escopoDoResultado)) ??
+    schema.blocks.find((b) => b.type === 'result');
   /* Mesmo par do servidor e do `finish`: teto e piso DESTE visitante. */
   const max = maxPossibleScore(schema, state.responses);
   const min = minPossibleScore(schema, state.responses);
@@ -3489,10 +3532,14 @@ function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState
         className="quiz-rich text-base max-w-md mx-auto"
         style={resultBlock ? resolveTextStyle(resultBlock, 'subtitle', { color: design.muted }) : { color: design.muted }}
       />
-      <div className="text-5xl font-bold pt-4" style={{ color: design.primary, fontFamily: design.fontHeading }}>
-        {pct}%
-      </div>
-      {resultBlock?.ctaLabel && (
+      {/* Sem pontuação no quiz o percentual é 0%, um número sem sentido. */}
+      {max > 0 && (
+        <div className="text-5xl font-bold pt-4" style={{ color: design.primary, fontFamily: design.fontHeading }}>
+          {pct}%
+        </div>
+      )}
+      {/* Botão sem destino não faz nada: só aparece quando há link. */}
+      {resultBlock?.ctaLabel && urlSegura(resultBlock.ctaUrl) && (
         <PrimaryBtn
           design={design}
           textStyle={resultBlock ? resolveTextStyle(resultBlock, 'button') : undefined}

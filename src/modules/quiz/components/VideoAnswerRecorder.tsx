@@ -100,6 +100,10 @@ export function VideoAnswerRecorder({
         if (e.data.size > 0) pedacosRef.current.push(e.data);
       };
       rec.onstop = () => {
+        /* Desmontou no meio da gravação (voltar, avançar, fechar): as trilhas são paradas
+           e o `stop` dispara mesmo assim. Sem esta saída o vídeo era ENVIADO ao servidor
+           sem a pessoa ter decidido enviar. */
+        if (!montadoRef.current) return;
         blobRef.current = new Blob(pedacosRef.current, { type: rec.mimeType || "video/webm" });
         encerrarCamera();
         if (videoRef.current) {

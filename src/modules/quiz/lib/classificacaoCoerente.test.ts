@@ -79,6 +79,6 @@ describe("os três pontos passam as respostas", () => {
 
   it("a tela de resultado usa scorePercent, não uma divisão à mão", () => {
     const vista = player.slice(player.indexOf("function ResultView"));
-    expect(vista.slice(0, 900)).toContain("scorePercent(");
+    expect(vista.slice(0, 1600)).toContain("scorePercent(");
   });
 });

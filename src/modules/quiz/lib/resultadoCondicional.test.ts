@@ -42,3 +42,28 @@ describe("gravar ao chegar só em tela que apenas apresenta", () => {
     expect(fonte).toMatch(/'form', 'video-answer', 'scheduling', 'container'/);
   });
 });
+
+describe("player: robustez do avanço e da conclusão", () => {
+  it("o avanço tem trava de reentrada", () => {
+    expect(player).toContain("travaDeAvanco.current");
+  });
+  it("captura antecipada libera a chave quando falha, para tentar de novo", () => {
+    expect(player).toMatch(/if \(!leadId && capturedContact\.current === chave\) capturedContact\.current = ''/);
+  });
+  it("o evento 'complete' não segura a tela de conclusão", () => {
+    expect(player).not.toMatch(/await quizService\s*\.trackEvent\(\{\s*quizId,\s*companyId,\s*submissionId: id,\s*eventType: 'complete'/);
+  });
+  it("a barra de progresso usa só etapas visíveis", () => {
+    expect(player).toContain("progressoVisivel.posicao / progressoVisivel.total");
+  });
+  it("a tela final escolhe o resultado visível e só mostra % e botão quando fazem sentido", () => {
+    const vista = player.slice(player.indexOf("function ResultView"));
+    expect(vista).toContain("isBlockVisible(b, state.responses, escopoDoResultado)");
+    expect(vista).toContain("{max > 0 && (");
+    expect(vista).toMatch(/resultBlock\?\.ctaLabel && urlSegura\(resultBlock\.ctaUrl\)/);
+  });
+  it("gravação de vídeo abandonada não é enviada", () => {
+    const rec = readFileSync("src/modules/quiz/components/VideoAnswerRecorder.tsx", "utf8");
+    expect(rec).toContain("if (!montadoRef.current) return;");
+  });
+});
