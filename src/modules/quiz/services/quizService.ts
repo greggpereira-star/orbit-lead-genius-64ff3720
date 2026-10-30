@@ -929,35 +929,8 @@ export const quizService = {
     const quizSettings = (quizRow?.settings as Record<string, unknown> | undefined) ?? {};
     const defaultStageId = (quizSettings.default_stage_id as string | undefined) ?? null;
 
-    // Fire-and-forget webhook, se configurado nas configurações do quiz
-    (async () => {
-      try {
-        const webhookUrl = quizSettings.webhook_url as string | undefined;
-        if (!webhookUrl) return;
-        await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "quiz.submission.completed",
-            quiz_id: params.quizId,
-            submission_id: submissionId,
-            score: params.score,
-            temperature: params.temperature,
-            tags: params.tags,
-            contact: {
-              email: params.email ?? null,
-              phone: params.phone ?? null,
-              name: params.name ?? null,
-            },
-            responses: params.responses,
-            tracking,
-            completed_at: new Date().toISOString(),
-          }),
-        });
-      } catch {
-        // Fire-and-forget: falhas de webhook não devem quebrar a submissão do quiz
-      }
-    })();
+    /* O webhook do cliente saiu daqui: dispará-lo do navegador exigia a URL
+       legível ao público. Quem envia agora é `/api/public/quiz-completed`. */
 
     // Auto-create lead + trigger CV.CRM sync when contact info was captured
     if (params.email || params.phone) {

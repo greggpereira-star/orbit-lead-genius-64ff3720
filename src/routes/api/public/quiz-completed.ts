@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { pontuacaoNoServidor } from '@/modules/quiz/lib/pontuacaoNoServidor';
 import { LIMITES_ENTRADA, limitarNome, limitarVariaveis, sessaoValida } from '@/modules/quiz/lib/entradaPublica';
+import {
+  CHAVE_WEBHOOK_ENVIADO, montarCorpoDoWebhook, submissaoElegivel, urlDeWebhookSegura,
+  type SubmissaoGravada,
+} from '@/modules/quiz/lib/webhookDoQuiz';
 
 /**
  * Fim do quiz: classifica o lead na faixa e dispara o WhatsApp da faixa.
@@ -19,6 +23,8 @@ interface Payload {
   quizId?: string;
   /** Sessão da resposta. O lead é encontrado por ela — id vindo do navegador não é fonte confiável. */
   sessionId?: string;
+  /** Submissão gravada pelo navegador; o webhook do cliente sai a partir dela. */
+  submissionId?: string;
   score?: number;
   nome?: string;
   telefone?: string;
@@ -83,6 +89,55 @@ async function atribuirResponsavel(
   return assignee;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Uma entrega por submissão: o reclame é atômico, então chamadas repetidas
+ * da rota pública não reenviam o mesmo lead ao endpoint do cliente.
+ */
+async function dispararWebhookDoQuiz(
+  admin: { from: (t: string) => any },
+  quizId: string,
+  urlBruta: unknown,
+  submissionId: unknown,
+): Promise<void> {
+  if (typeof urlBruta !== 'string' || !urlBruta.trim()) return;
+  if (typeof submissionId !== 'string' || !UUID.test(submissionId)) return;
+  const url = urlDeWebhookSegura(urlBruta);
+  if (!url) {
+    console.error(JSON.stringify({ scope: 'quiz-completed', msg: 'webhook_url_recusada', quiz_id: quizId }));
+    return;
+  }
+  const { data } = await admin
+    .from('quiz_submissions')
+    .select('id, quiz_id, score, temperature, tags, answers, tracking, status, completed_at')
+    .eq('id', submissionId)
+    .maybeSingle();
+  const sub = data as SubmissaoGravada | null;
+  if (!submissaoElegivel(sub, quizId) || !sub) return;
+
+  const { data: venceu } = await admin
+    .from('quiz_submissions')
+    .update({ tracking: { ...(sub.tracking ?? {}), [CHAVE_WEBHOOK_ENVIADO]: new Date().toISOString() } })
+    .eq('id', sub.id)
+    .is(`tracking->>${CHAVE_WEBHOOK_ENVIADO}`, null)
+    .select('id');
+  if (!venceu || venceu.length === 0) return;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(montarCorpoDoWebhook(sub)),
+    redirect: 'manual',
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!resp.ok) {
+    console.error(JSON.stringify({
+      scope: 'quiz-completed', msg: 'webhook_resposta_ruim', quiz_id: quizId, status: resp.status,
+    }));
+  }
+}
+
 export const Route = createFileRoute('/api/public/quiz-completed')({
   server: {
     handlers: {
@@ -111,6 +166,17 @@ export const Route = createFileRoute('/api/public/quiz-completed')({
         if (!quiz) return json({ error: 'unknown_quiz' }, 404);
 
         const q = quiz as { company_id: string; settings: Record<string, unknown>; published_version_id: string | null };
+
+        /* Webhook do cliente: sai daqui, não do navegador. Falha dele nunca
+           derruba a classificação nem o WhatsApp da faixa. */
+        try {
+          await dispararWebhookDoQuiz(supabaseAdmin as never, body.quizId, q.settings?.webhook_url, body.submissionId);
+        } catch (err) {
+          console.error(JSON.stringify({
+            scope: 'quiz-completed', msg: 'webhook_excecao',
+            quiz_id: body.quizId, erro: err instanceof Error ? err.message : String(err),
+          }));
+        }
 
         /* O lead é resolvido aqui em cima, e não lá embaixo junto da faixa,
            porque os três `return` de faixa que vêm a seguir são saídas

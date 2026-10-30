@@ -893,6 +893,7 @@ function PlayerRunner({
         body: JSON.stringify({
           quizId,
           sessionId: sessionId.current,
+          submissionId: id,
           score: finalState.score,
           nome: name,
           telefone: phone,
