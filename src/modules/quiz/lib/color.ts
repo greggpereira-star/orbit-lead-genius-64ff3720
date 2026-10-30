@@ -57,6 +57,25 @@ function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }): nu
 }
 
 /**
+ * Mistura `a` com `b` em `t` (0 = só `a`, 1 = só `b`), sempre devolvendo hex.
+ *
+ * Hex de propósito: há renderizadores que anexam dois dígitos de alfa à cor do
+ * tema (`${design.muted}66`), e isso só funciona com `#rrggbb`.
+ */
+export function mesclarHex(a: string, b: string, t: number): string {
+  const ra = hexToRgb(a);
+  const rb = hexToRgb(b);
+  if (!ra || !rb) return a;
+  const m = (x: number, y: number) => Math.round(x + (y - x) * t);
+  return rgbToHex(m(ra.r, rb.r), m(ra.g, rb.g), m(ra.b, rb.b));
+}
+
+/** `hex` válido (#rgb ou #rrggbb)? */
+export function ehHex(valor: string | undefined): valor is string {
+  return !!valor && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(valor.trim());
+}
+
+/**
  * `hex` com transparência, em `rgb(r g b / a)`.
  *
  * O tema do quiz é hex puro, mas contorno e realce precisam de uma tinta que

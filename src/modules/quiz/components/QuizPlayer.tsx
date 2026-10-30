@@ -39,7 +39,7 @@ import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   PieChart, Pie, Cell, RadialBarChart, RadialBar,
 } from 'recharts';
-import { resolveBlockStyle, resolveTextStyle, classeDeAlinhamento } from '../lib/blockStyle';
+import { resolveBlockStyle, resolveTextStyle, classeDeAlinhamento, designDoBloco } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
@@ -1009,7 +1009,7 @@ function PlayerRunner({
                   >
                   <BlockView
                     block={b}
-                    design={design}
+                    design={designDoBloco(design, b)}
                     scope={scope}
                     quizId={quizId}
                     sessionId={sessionId.current}
@@ -2502,7 +2502,7 @@ function BlockView({
               &ldquo;
             </span>
             <blockquote className="relative text-[1.0625rem] sm:text-lg italic leading-relaxed text-pretty">
-              {title}
+              <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich" />
             </blockquote>
             <figcaption className="flex items-center gap-3">
               {block.testimonialAvatar && (
@@ -3156,8 +3156,10 @@ function BlockView({
                 <span className="text-xs font-semibold opacity-60">{block.notificationApp ?? 'App'}</span>
                 <span className="text-[11px] opacity-50">{block.notificationTime ?? 'agora'}</span>
               </div>
-              <div className="text-base font-semibold">{title}</div>
-              {subtitle && <div className="text-sm opacity-70">{subtitle}</div>}
+              <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-base font-semibold" />
+              {(block.subtitleRich || subtitle) && (
+                <RichText doc={block.subtitleRich} fallback={subtitle} scope={scope} className="quiz-rich text-sm opacity-70" />
+              )}
             </div>
           </div>
           <PrimaryBtn design={design} textStyle={btnText} hidden={!terminal} onClick={() => onSubmit(true)}>
@@ -3181,8 +3183,11 @@ function BlockView({
             )}
           </div>
           <div>
-            <div className="text-xl font-bold" style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })}>{title}</div>
-            <div className="mt-1 text-sm opacity-60">{subtitle || 'Chamada de voz'} · {block.audioCallDuration ?? '00:00'}</div>
+            <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-xl font-bold" style={resolveTextStyle(block, 'title', { fontFamily: design.fontHeading })} />
+            <div className="mt-1 inline-flex items-baseline gap-1 text-sm opacity-60">
+              <RichText doc={block.subtitleRich} fallback={subtitle || 'Chamada de voz'} scope={scope} className="quiz-rich" />
+              <span>· {block.audioCallDuration ?? '00:00'}</span>
+            </div>
           </div>
           <div className="flex items-center justify-center gap-6">
             <div aria-hidden="true" className="flex h-14 w-14 items-center justify-center rounded-full opacity-40" style={{ background: design.surface }}>

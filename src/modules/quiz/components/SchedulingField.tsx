@@ -98,6 +98,9 @@ export function SchedulingField({
           ['--primary' as string]: design.primary,
           ['--primary-foreground' as string]: getContrastText(design.primary),
           ['--accent' as string]: withAlpha(design.primary, 0.12),
+          // Dias da semana e dias de fora do mês usam `text-muted-foreground`, que é a
+          // cor do APLICATIVO: o texto do bloco mudava e o calendário ficava para trás.
+          ['--muted-foreground' as string]: design.muted,
           color: design.text,
         }}
       >

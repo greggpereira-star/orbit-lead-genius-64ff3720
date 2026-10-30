@@ -29,7 +29,12 @@ import { getContrastText, withAlpha } from "../lib/color";
 import { getButtonStyle } from "../lib/buttonStyles";
 import { parseRichText } from "../lib/richtext";
 import { evaluatePercent } from "../lib/variables";
-import { resolveBlockStyle, resolveTextStyle, classeDeAlinhamento } from "../lib/blockStyle";
+import {
+  resolveBlockStyle,
+  resolveTextStyle,
+  classeDeAlinhamento,
+  designDoBloco,
+} from "../lib/blockStyle";
 import { resolveContainerLayout, type Breakpoint } from "../lib/containerLayout";
 import { larguraDoBloco } from "../lib/larguraDoBloco";
 import { estiloDoAlerta } from "../lib/alerta";
@@ -413,7 +418,7 @@ export function QuizPreview({
                                 >
                                   <BlockRenderer
                                     block={b}
-                                    design={design}
+                                    design={designDoBloco(design, b)}
                                     allBlocks={blocks}
                                     device={device}
                                   />
@@ -1066,9 +1071,12 @@ export function BlockRenderer({
           className="p-6 space-y-4"
           style={{ background: design.surface, borderRadius: design.radius }}
         >
-          <p className="text-lg italic leading-relaxed" style={{ color: design.text }}>
-            {title}
-          </p>
+          <RichText
+            doc={block.titleRich}
+            fallback={title}
+            className="quiz-rich text-lg italic leading-relaxed"
+            style={{ color: design.text }}
+          />
           <div className="flex items-center gap-3">
             {block.testimonialAvatar && (
               <img
@@ -1389,12 +1397,12 @@ export function BlockRenderer({
           className="p-6 rounded-xl space-y-4 text-center"
           style={{ background: design.surface }}
         >
-          <div
-            className="text-sm font-semibold"
+          <RichText
+            doc={block.titleRich}
+            fallback={title}
+            className="quiz-rich text-sm font-semibold"
             style={{ color: design.text, fontFamily: design.fontHeading }}
-          >
-            {title}
-          </div>
+          />
           <div className="flex items-end justify-center gap-1.5">
             <span
               className="text-3xl font-bold"
@@ -1464,13 +1472,19 @@ export function BlockRenderer({
                 {block.notificationTime ?? "agora"}
               </span>
             </div>
-            <div className="text-sm font-semibold" style={{ color: design.text }}>
-              {title}
-            </div>
-            {sub && (
-              <div className="text-xs" style={{ color: design.muted }}>
-                {sub}
-              </div>
+            <RichText
+              doc={block.titleRich}
+              fallback={title}
+              className="quiz-rich text-sm font-semibold"
+              style={{ color: design.text }}
+            />
+            {(block.subtitleRich || sub) && (
+              <RichText
+                doc={block.subtitleRich}
+                fallback={sub}
+                className="quiz-rich text-xs"
+                style={{ color: design.muted }}
+              />
             )}
           </div>
         </div>
@@ -1500,14 +1514,22 @@ export function BlockRenderer({
             )}
           </div>
           <div>
-            <div
-              className="text-base font-bold"
+            <RichText
+              doc={block.titleRich}
+              fallback={title}
+              className="quiz-rich text-base font-bold"
               style={{ color: design.text, fontFamily: design.fontHeading }}
+            />
+            <div
+              className="inline-flex items-baseline gap-1 text-xs"
+              style={{ color: design.muted }}
             >
-              {title}
-            </div>
-            <div className="text-xs" style={{ color: design.muted }}>
-              {sub || "Chamada de voz"} · {block.audioCallDuration ?? "00:00"}
+              <RichText
+                doc={block.subtitleRich}
+                fallback={sub || "Chamada de voz"}
+                className="quiz-rich"
+              />
+              <span>· {block.audioCallDuration ?? "00:00"}</span>
             </div>
           </div>
         </div>

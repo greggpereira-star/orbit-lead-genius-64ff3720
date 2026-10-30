@@ -11,7 +11,8 @@
  * de tema depois.
  */
 import type { CSSProperties } from "react";
-import type { QuizBlock } from "../types";
+import type { QuizBlock, QuizDesign } from "../types";
+import { ehHex, mesclarHex } from "./color";
 
 export interface BlockStyle {
   /** Espaço acima e abaixo do bloco, em px. */
@@ -205,4 +206,29 @@ export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
  */
 export function classeDeAlinhamento(block: QuizBlock): string | undefined {
   return block.blockStyle?.align ? "alinhamento-proprio" : undefined;
+}
+
+/**
+ * O tema, visto por UM bloco que escolheu a própria "Cor do texto".
+ *
+ * `resolveBlockStyle` põe `color` no invólucro, e isso só chega no texto que
+ * HERDA. Medido em 30/10/2026 numa varredura de todos os tipos de bloco com a
+ * mesma cor aplicada: em cerca de 24 tipos (resultado, avaliação, depoimento,
+ * contagem, argumento, nível, FAQ, formulário, peso, altura, preços,
+ * notificação, comparação, gráfico, agendamento, grade, cartões…) o texto
+ * continuava na cor do tema, porque cada renderizador a escreve direto no
+ * elemento — e estilo inline ganha da herança. A pessoa escolhia a cor, o
+ * canvas não mudava, e o campo parecia quebrado.
+ *
+ * Em vez de remendar vinte e quatro renderizadores (e os que vierem), o bloco
+ * recebe um `design` em que `text` e `muted` já são a cor escolhida. Tudo que
+ * lê o tema — texto, contornos derivados dele, rótulos secundários — passa a
+ * acompanhar. `muted` é a mesma cor puxada para o fundo, em hex.
+ */
+export function designDoBloco(design: QuizDesign, block: QuizBlock): QuizDesign {
+  const cor = block.blockStyle?.textColor?.trim();
+  if (!ehHex(cor)) return design;
+  const fundo = block.blockStyle?.background;
+  const base = ehHex(fundo) ? fundo : design.surface || design.background;
+  return { ...design, text: cor, muted: mesclarHex(cor, base, 0.4) };
 }

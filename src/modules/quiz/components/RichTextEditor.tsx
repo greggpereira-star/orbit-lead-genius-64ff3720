@@ -133,10 +133,20 @@ export function RichTextEditor({
     }
   };
 
+  /* Restaura a seleção guardada SÓ quando a viva saiu do editor (clique num
+     popover de cor ou link, no seletor de nível).
+
+     Antes restaurava sempre, e a guardada era a do último clique do mouse. O
+     primeiro comando (negrito) trocava o texto por `<b>…</b>`, a seleção
+     guardada passava a apontar para um nó que não existe mais, e o comando
+     seguinte (itálico, cor, link) rodava nessa seleção morta: o botão acendia
+     e o texto não mudava. Os botões da barra já seguram o foco com
+     `preventDefault` no mouseDown, então a seleção viva está certa. */
   const restoreSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && ref.current?.contains(sel.anchorNode)) return;
     const range = savedRange.current;
     if (!range) return;
-    const sel = window.getSelection();
     sel?.removeAllRanges();
     sel?.addRange(range);
   };
@@ -145,6 +155,8 @@ export function RichTextEditor({
     ref.current?.focus();
     restoreSelection();
     exec(command, arg);
+    // A seleção que vale agora é a de DEPOIS do comando.
+    rememberSelection();
     emit();
   };
 
@@ -152,6 +164,7 @@ export function RichTextEditor({
     ref.current?.focus();
     restoreSelection();
     exec("insertText", `{{${name}}}`);
+    rememberSelection();
     emit();
   };
 
@@ -163,6 +176,7 @@ export function RichTextEditor({
     ref.current?.focus();
     restoreSelection();
     exec("insertImage", url);
+    rememberSelection();
     emit();
     setImgUrl("");
   };
