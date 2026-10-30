@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { aplicarCampo } from "../lib/camposDeSettings";
+import { estabilizarMidia } from "../lib/midiaEstavel";
 import { prefixoDoQuiz, outroQuizUsaAMidia } from "../lib/midiaDoQuiz";
 import {
   classificarArquivos,
@@ -780,7 +781,9 @@ export const quizService = {
       design: { ...DEFAULT_DESIGN, ...(raw.design ?? {}) },
       results: raw.results ?? [],
     };
-    return { quiz: quiz as unknown as QuizFunnel, schema };
+    // Quiz antigo guarda URL assinada de 1 ano no schema; reescreve para o endereço
+    // estável na leitura, sem mexer no banco e antes de qualquer expiração.
+    return { quiz: quiz as unknown as QuizFunnel, schema: estabilizarMidia(schema) };
   },
 
   async getDraftBySlug(

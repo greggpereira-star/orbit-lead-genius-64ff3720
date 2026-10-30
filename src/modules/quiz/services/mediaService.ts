@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { urlEstavel } from '../lib/midiaEstavel';
 
 const BUCKET = 'quiz-media';
 // 1 ano (max permitido pelo Supabase Storage para signed URLs)
@@ -15,7 +16,7 @@ const AUDIO_MAX = 10 * 1024 * 1024;     // 10MB
 export type MediaKind = 'image' | 'video' | 'audio';
 
 export interface UploadResult {
-  url: string;         // signed URL utilizável no player público
+  url: string;         // endereço estável do app (nunca vence); a URL assinada é gerada a cada acesso
   storagePath: string; // caminho relativo no bucket
   mimeType: string;
   size: number;
@@ -61,10 +62,9 @@ export const mediaService = {
       .upload(path, file, { contentType: file.type, upsert: false, cacheControl: '31536000' });
     if (upErr) throw upErr;
 
-    const { data: signed, error: signErr } = await supabase.storage
-      .from(BUCKET)
-      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
-    if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Falha ao gerar URL assinada.');
+    // O que vai para o schema é o endereço estável: a URL assinada vence em 1 ano e,
+    // vencida, a mídia de todo quiz publicado quebra em silêncio.
+    const urlDoSchema = urlEstavel(path);
 
     // Registra a mídia (best-effort; falha aqui não bloqueia o upload).
     try {
@@ -72,7 +72,7 @@ export const mediaService = {
         company_id: companyId,
         quiz_id: quizId,
         uploaded_by: userId ?? null,
-        url: signed.signedUrl,
+        url: urlDoSchema,
         storage_path: path,
         media_type: kind,
         mime_type: file.type,
@@ -82,7 +82,7 @@ export const mediaService = {
       console.warn('quiz_media insert falhou (upload OK):', e);
     }
 
-    return { url: signed.signedUrl, storagePath: path, mimeType: file.type, size: file.size };
+    return { url: urlDoSchema, storagePath: path, mimeType: file.type, size: file.size };
   },
 
   /** Gera nova URL assinada para um caminho existente (útil se expirar). */

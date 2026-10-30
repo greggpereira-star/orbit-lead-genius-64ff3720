@@ -95,6 +95,7 @@ import { Route as ApiPublicCronMetaReprocessFailedRouteImport } from './routes/a
 import { Route as ApiPublicCronMetaRetryRouteImport } from './routes/api/public/cron/meta-retry'
 import { Route as ApiPublicCronWaWebhookSweepRouteImport } from './routes/api/public/cron/wa-webhook-sweep'
 import { Route as ApiPublicCronWebhookDispatchRouteImport } from './routes/api/public/cron/webhook-dispatch'
+import { Route as ApiPublicQuizMediaSplatRouteImport } from './routes/api/public/quiz-media.$'
 import { Route as ApiPublicV1LeadsRouteImport } from './routes/api/public/v1/leads'
 import { Route as ApiPublicV1StagesRouteImport } from './routes/api/public/v1/stages'
 import { Route as ApiPublicV1LeadsIdRouteImport } from './routes/api/public/v1/leads.$id'
@@ -541,6 +542,11 @@ const ApiPublicCronWebhookDispatchRoute =
     path: '/api/public/cron/webhook-dispatch',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicQuizMediaSplatRoute = ApiPublicQuizMediaSplatRouteImport.update({
+  id: '/api/public/quiz-media/$',
+  path: '/api/public/quiz-media/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1LeadsRoute = ApiPublicV1LeadsRouteImport.update({
   id: '/api/public/v1/leads',
   path: '/api/public/v1/leads',
@@ -641,6 +647,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
   '/api/public/cron/webhook-dispatch': typeof ApiPublicCronWebhookDispatchRoute
+  '/api/public/quiz-media/$': typeof ApiPublicQuizMediaSplatRoute
   '/api/public/v1/leads': typeof ApiPublicV1LeadsRouteWithChildren
   '/api/public/v1/stages': typeof ApiPublicV1StagesRoute
   '/settings/conexoes/': typeof AppSettingsConexoesIndexRoute
@@ -729,6 +736,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
   '/api/public/cron/webhook-dispatch': typeof ApiPublicCronWebhookDispatchRoute
+  '/api/public/quiz-media/$': typeof ApiPublicQuizMediaSplatRoute
   '/api/public/v1/leads': typeof ApiPublicV1LeadsRouteWithChildren
   '/api/public/v1/stages': typeof ApiPublicV1StagesRoute
   '/settings/conexoes': typeof AppSettingsConexoesIndexRoute
@@ -821,6 +829,7 @@ export interface FileRoutesById {
   '/api/public/cron/meta-retry': typeof ApiPublicCronMetaRetryRoute
   '/api/public/cron/wa-webhook-sweep': typeof ApiPublicCronWaWebhookSweepRoute
   '/api/public/cron/webhook-dispatch': typeof ApiPublicCronWebhookDispatchRoute
+  '/api/public/quiz-media/$': typeof ApiPublicQuizMediaSplatRoute
   '/api/public/v1/leads': typeof ApiPublicV1LeadsRouteWithChildren
   '/api/public/v1/stages': typeof ApiPublicV1StagesRoute
   '/_app/settings/conexoes/': typeof AppSettingsConexoesIndexRoute
@@ -912,6 +921,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
     | '/api/public/cron/webhook-dispatch'
+    | '/api/public/quiz-media/$'
     | '/api/public/v1/leads'
     | '/api/public/v1/stages'
     | '/settings/conexoes/'
@@ -1000,6 +1010,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
     | '/api/public/cron/webhook-dispatch'
+    | '/api/public/quiz-media/$'
     | '/api/public/v1/leads'
     | '/api/public/v1/stages'
     | '/settings/conexoes'
@@ -1091,6 +1102,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/meta-retry'
     | '/api/public/cron/wa-webhook-sweep'
     | '/api/public/cron/webhook-dispatch'
+    | '/api/public/quiz-media/$'
     | '/api/public/v1/leads'
     | '/api/public/v1/stages'
     | '/_app/settings/conexoes/'
@@ -1131,6 +1143,7 @@ export interface RootRouteChildren {
   ApiPublicCronMetaRetryRoute: typeof ApiPublicCronMetaRetryRoute
   ApiPublicCronWaWebhookSweepRoute: typeof ApiPublicCronWaWebhookSweepRoute
   ApiPublicCronWebhookDispatchRoute: typeof ApiPublicCronWebhookDispatchRoute
+  ApiPublicQuizMediaSplatRoute: typeof ApiPublicQuizMediaSplatRoute
   ApiPublicV1LeadsRoute: typeof ApiPublicV1LeadsRouteWithChildren
   ApiPublicV1StagesRoute: typeof ApiPublicV1StagesRoute
 }
@@ -1739,6 +1752,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronWebhookDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/quiz-media/$': {
+      id: '/api/public/quiz-media/$'
+      path: '/api/public/quiz-media/$'
+      fullPath: '/api/public/quiz-media/$'
+      preLoaderRoute: typeof ApiPublicQuizMediaSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/leads': {
       id: '/api/public/v1/leads'
       path: '/api/public/v1/leads'
@@ -1960,6 +1980,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronMetaRetryRoute: ApiPublicCronMetaRetryRoute,
   ApiPublicCronWaWebhookSweepRoute: ApiPublicCronWaWebhookSweepRoute,
   ApiPublicCronWebhookDispatchRoute: ApiPublicCronWebhookDispatchRoute,
+  ApiPublicQuizMediaSplatRoute: ApiPublicQuizMediaSplatRoute,
   ApiPublicV1LeadsRoute: ApiPublicV1LeadsRouteWithChildren,
   ApiPublicV1StagesRoute: ApiPublicV1StagesRoute,
 }
