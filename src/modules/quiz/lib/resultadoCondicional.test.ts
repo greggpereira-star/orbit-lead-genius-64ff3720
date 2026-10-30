@@ -31,3 +31,13 @@ describe("tela de resultado do player", () => {
     expect(trecho).toContain("window.open(block.ctaUrl");
   });
 });
+
+describe("gravar ao chegar só em tela que apenas apresenta", () => {
+  const fonte = player;
+  it("exige etapaSoApresenta além de ehUltimaVisivel", () => {
+    expect(fonte).toMatch(/ehUltimaVisivel\(idx, nextResponses\) && etapaSoApresenta\(idx, nextResponses\)/);
+  });
+  it("considera formulário, vídeo, agendamento e contêiner como coleta", () => {
+    expect(fonte).toMatch(/'form', 'video-answer', 'scheduling', 'container'/);
+  });
+});

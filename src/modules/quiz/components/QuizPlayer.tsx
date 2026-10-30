@@ -57,7 +57,7 @@ import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { CountdownTimer } from './CountdownTimer';
 import { AudioPlayer } from './AudioPlayer';
 import { ItensDeConteudo, SumarioDasRespostas, RedesSociais } from './blocosDeConteudo';
-import { montarResumo as montarResumoDoQuiz, type LinhaDoResumo } from '../lib/resumoDasRespostas';
+import { montarResumo as montarResumoDoQuiz, BLOCOS_QUE_PERGUNTAM as TIPOS_PERGUNTA, type LinhaDoResumo } from '../lib/resumoDasRespostas';
 import { getVideoEmbed } from '../lib/videoEmbed';
 import { VideoAnswerRecorder } from './VideoAnswerRecorder';
 import { Sparkles, Hourglass, CheckCircle2, Bell, Gift, BellRing, X, Users, Star, Flame, PhoneCall, Mic, VolumeX, Check, PlayCircle, Image as ImageIcon, ArrowLeft, ArrowDown } from 'lucide-react';
@@ -371,6 +371,23 @@ function PlayerRunner({
       if (stepHasVisibleBlocks(k, responses)) return false;
     }
     return true;
+  };
+
+  /* Gravar ao CHEGAR só vale para tela que apenas apresenta (resultado, CTA,
+     texto): ali não há mais nenhum clique. Se a tela ainda pede algo — pergunta,
+     formulário, vídeo, agendamento, contêiner que pode esconder campos —, gravar
+     na chegada salva ANTES do preenchimento e o clique final deixa de gravar
+     (jaSalvou já estaria true): a submissão sairia sem contato e sem as
+     respostas da própria última etapa. */
+  const TIPOS_QUE_COLETAM = new Set<string>([...TIPOS_PERGUNTA, 'form', 'video-answer', 'scheduling', 'container']);
+  const etapaSoApresenta = (stepIdx: number, responses: Record<string, unknown>): boolean => {
+    const s = steps[stepIdx];
+    if (!s) return false;
+    const escopo = resolveScope(blocks, responses);
+    return !s.blockIds.some((bid) => {
+      const b = blocks.find((x) => x.id === bid);
+      return !!b && isBlockVisible(b, responses, escopo) && TIPOS_QUE_COLETAM.has(b.type);
+    });
   };
 
   const urgencyBar: UrgencyBarSettings = useMemo(
@@ -744,7 +761,7 @@ function PlayerRunner({
     /* Chegou na última etapa: grava agora. Se esta etapa tiver um bloco de
        resultado sem botão de avanço, não haverá um próximo clique — e esperar
        por ele é o que fazia o quiz perder todo mundo. */
-    if (ehUltimaVisivel(idx, nextResponses) && !preview) {
+    if (ehUltimaVisivel(idx, nextResponses) && etapaSoApresenta(idx, nextResponses) && !preview) {
       void finish(estadoFinal, false);
     }
   };
