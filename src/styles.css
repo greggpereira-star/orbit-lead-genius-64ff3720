@@ -451,6 +451,23 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Tamanho do texto do bloco.
+
+   O campo "Tamanho do texto" gravava `font-size` no embrulho, e quase todo
+   texto do quiz tem tamanho próprio por classe (`text-sm`, `text-lg`…), que
+   ignora o que o pai define. Medido em 30/10/2026 em todos os tipos de bloco:
+   o valor chegava em 1 a 4 elementos por bloco e em NENHUM em seis tipos
+   (depoimento, contagem, argumento, notificação do iOS, chamada de áudio,
+   indicador). `:is()` leva a especificidade do elemento mais forte, então esta
+   regra vence a classe utilitária; o tamanho ajustado por elemento (título,
+   subtítulo, opções, botão) vai inline e continua ganhando dela.
+   Sem tamanho escolhido o embrulho não ganha a classe: nada muda.
+   --------------------------------------------------------------------------- */
+.tamanho-proprio :is(h1, h2, h3, p, span, div, li, label, button, strong, em, a, small, blockquote, figcaption) {
+  font-size: var(--tamanho-bloco);
+}
+
+/* ---------------------------------------------------------------------------
    Foco de teclado.
 
    Medido navegando com Tab de verdade (o `.focus()` por script não dispara

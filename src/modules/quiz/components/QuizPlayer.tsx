@@ -39,7 +39,7 @@ import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   PieChart, Pie, Cell, RadialBarChart, RadialBar,
 } from 'recharts';
-import { resolveBlockStyle, resolveTextStyle, classeDeAlinhamento, designDoBloco } from '../lib/blockStyle';
+import { resolveBlockStyle, resolveTextStyle, classesDoBloco, designDoBloco } from '../lib/blockStyle';
 import {
   createInitialState,
   evaluateResponse,
@@ -998,7 +998,7 @@ function PlayerRunner({
                   <div
                     key={b.id}
                     ref={b.posicao === 'topo-fixo' ? refTopo : b.posicao === 'rodape-fixo' ? refRodape : undefined}
-                    className={classeDeAlinhamento(b)}
+                    className={classesDoBloco(b)}
                     style={{
                       ...larguraDoBloco(b, breakpointDaTela, GAP_DA_ETAPA),
                       ...resolveBlockStyle(b),
@@ -2502,7 +2502,7 @@ function BlockView({
               &ldquo;
             </span>
             <blockquote className="relative text-[1.0625rem] sm:text-lg italic leading-relaxed text-pretty">
-              <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich" />
+              <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich" style={resolveTextStyle(block, 'title')} />
             </blockquote>
             <figcaption className="flex items-center gap-3">
               {block.testimonialAvatar && (
@@ -3156,9 +3156,9 @@ function BlockView({
                 <span className="text-xs font-semibold opacity-60">{block.notificationApp ?? 'App'}</span>
                 <span className="text-[11px] opacity-50">{block.notificationTime ?? 'agora'}</span>
               </div>
-              <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-base font-semibold" />
+              <RichText doc={block.titleRich} fallback={title} scope={scope} className="quiz-rich text-base font-semibold" style={resolveTextStyle(block, 'title')} />
               {(block.subtitleRich || subtitle) && (
-                <RichText doc={block.subtitleRich} fallback={subtitle} scope={scope} className="quiz-rich text-sm opacity-70" />
+                <RichText doc={block.subtitleRich} fallback={subtitle} scope={scope} className="quiz-rich text-sm opacity-70" style={resolveTextStyle(block, 'subtitle')} />
               )}
             </div>
           </div>

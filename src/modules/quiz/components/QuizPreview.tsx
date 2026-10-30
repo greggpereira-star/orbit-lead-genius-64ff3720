@@ -32,7 +32,7 @@ import { evaluatePercent } from "../lib/variables";
 import {
   resolveBlockStyle,
   resolveTextStyle,
-  classeDeAlinhamento,
+  classesDoBloco,
   designDoBloco,
 } from "../lib/blockStyle";
 import { resolveContainerLayout, type Breakpoint } from "../lib/containerLayout";
@@ -412,10 +412,7 @@ export function QuizPreview({
                                       embrulho: sem ele cada bloco teria que
                                       aplicar margem e cor por conta própria, e
                                       37 tipos divergiriam em uma semana. */}
-                                <div
-                                  className={classeDeAlinhamento(b)}
-                                  style={resolveBlockStyle(b)}
-                                >
+                                <div className={classesDoBloco(b)} style={resolveBlockStyle(b)}>
                                   <BlockRenderer
                                     block={b}
                                     design={designDoBloco(design, b)}
@@ -1075,7 +1072,7 @@ export function BlockRenderer({
             doc={block.titleRich}
             fallback={title}
             className="quiz-rich text-lg italic leading-relaxed"
-            style={{ color: design.text }}
+            style={resolveTextStyle(block, "title", { color: design.text })}
           />
           <div className="flex items-center gap-3">
             {block.testimonialAvatar && (
@@ -1106,7 +1103,7 @@ export function BlockRenderer({
               doc={block.titleRich}
               fallback={title}
               className="quiz-rich text-lg font-semibold"
-              style={{ color: design.text }}
+              style={resolveTextStyle(block, "title", { color: design.text })}
             />
           )}
           {/* O canvas não aplica o "Mostrar após": senão o autor configura 10
@@ -1198,14 +1195,17 @@ export function BlockRenderer({
               doc={block.titleRich}
               fallback={title}
               className="quiz-rich text-base font-semibold leading-snug"
-              style={{ color: design.text, fontFamily: design.fontHeading }}
+              style={resolveTextStyle(block, "title", {
+                color: design.text,
+                fontFamily: design.fontHeading,
+              })}
             />
             {(block.subtitleRich || sub) && (
               <RichText
                 doc={block.subtitleRich}
                 fallback={sub}
                 className="quiz-rich text-sm"
-                style={{ color: design.muted }}
+                style={resolveTextStyle(block, "subtitle", { color: design.muted })}
               />
             )}
           </div>
@@ -1476,14 +1476,14 @@ export function BlockRenderer({
               doc={block.titleRich}
               fallback={title}
               className="quiz-rich text-sm font-semibold"
-              style={{ color: design.text }}
+              style={resolveTextStyle(block, "title", { color: design.text })}
             />
             {(block.subtitleRich || sub) && (
               <RichText
                 doc={block.subtitleRich}
                 fallback={sub}
                 className="quiz-rich text-xs"
-                style={{ color: design.muted }}
+                style={resolveTextStyle(block, "subtitle", { color: design.muted })}
               />
             )}
           </div>
@@ -1518,11 +1518,14 @@ export function BlockRenderer({
               doc={block.titleRich}
               fallback={title}
               className="quiz-rich text-base font-bold"
-              style={{ color: design.text, fontFamily: design.fontHeading }}
+              style={resolveTextStyle(block, "title", {
+                color: design.text,
+                fontFamily: design.fontHeading,
+              })}
             />
             <div
               className="inline-flex items-baseline gap-1 text-xs"
-              style={{ color: design.muted }}
+              style={resolveTextStyle(block, "subtitle", { color: design.muted })}
             >
               <RichText
                 doc={block.subtitleRich}

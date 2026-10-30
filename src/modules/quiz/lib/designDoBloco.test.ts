@@ -30,3 +30,21 @@ describe("designDoBloco", () => {
     expect(designDoBloco(design, bloco({ textColor: "red" }))).toBe(design);
   });
 });
+
+import { classesDoBloco, resolveBlockStyle } from "./blockStyle";
+
+describe("tamanho do texto do bloco", () => {
+  it("o embrulho só ganha a classe quando o autor escolheu um tamanho", () => {
+    expect(classesDoBloco(bloco())).toBeUndefined();
+    expect(classesDoBloco(bloco({ fontSize: 22 }))).toBe("tamanho-proprio");
+    expect(classesDoBloco(bloco({ fontSize: 22, align: "left" }))).toBe(
+      "alinhamento-proprio tamanho-proprio",
+    );
+  });
+
+  it("o valor vai para a variável lida pela regra de CSS", () => {
+    const estilo = resolveBlockStyle(bloco({ fontSize: 22 })) as Record<string, unknown>;
+    expect(estilo["--tamanho-bloco"]).toBe("22px");
+    expect(estilo.fontSize).toBe(22);
+  });
+});

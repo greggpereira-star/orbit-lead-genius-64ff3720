@@ -185,7 +185,12 @@ export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
   if (s.radius !== undefined) style.borderRadius = s.radius;
 
   if (s.fontFamily) style.fontFamily = s.fontFamily;
-  if (s.fontSize) style.fontSize = s.fontSize;
+  if (s.fontSize) {
+    style.fontSize = s.fontSize;
+    // Lido pela regra `.tamanho-proprio` de styles.css, que leva o valor ao texto
+    // que tem tamanho por classe.
+    (style as Record<string, unknown>)["--tamanho-bloco"] = `${s.fontSize}px`;
+  }
 
   return Object.keys(style).length ? style : undefined;
 }
@@ -206,6 +211,15 @@ export function resolveBlockStyle(block: QuizBlock): CSSProperties | undefined {
  */
 export function classeDeAlinhamento(block: QuizBlock): string | undefined {
   return block.blockStyle?.align ? "alinhamento-proprio" : undefined;
+}
+
+/** Classes do embrulho do bloco: alinhamento e tamanho próprios, quando escolhidos. */
+export function classesDoBloco(block: QuizBlock): string | undefined {
+  const classes = [
+    classeDeAlinhamento(block),
+    block.blockStyle?.fontSize ? "tamanho-proprio" : undefined,
+  ].filter(Boolean);
+  return classes.length ? classes.join(" ") : undefined;
 }
 
 /**

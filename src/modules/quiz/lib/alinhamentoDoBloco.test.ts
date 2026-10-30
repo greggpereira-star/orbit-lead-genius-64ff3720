@@ -32,13 +32,14 @@ describe("paridade entre canvas e player", () => {
   const player = readFileSync("src/modules/quiz/components/QuizPlayer.tsx", "utf8");
   const canvas = readFileSync("src/modules/quiz/components/QuizPreview.tsx", "utf8");
 
-  it("os dois chamam classeDeAlinhamento", () => {
-    expect(player).toContain("classeDeAlinhamento");
-    expect(canvas).toContain("classeDeAlinhamento");
+  it("os dois chamam classesDoBloco, que inclui classeDeAlinhamento", () => {
+    expect(player).toContain("classesDoBloco");
+    expect(canvas).toContain("classesDoBloco");
   });
 
   it("a regra de CSS que dá efeito à classe existe", () => {
     const css = readFileSync("src/styles.css", "utf8");
     expect(css).toContain(".alinhamento-proprio");
+    expect(css).toContain(".tamanho-proprio");
   });
 });
