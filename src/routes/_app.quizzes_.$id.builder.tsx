@@ -51,6 +51,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/core/auth/hooks/useAuth";
 import { quizService } from "@/modules/quiz/services/quizService";
 import { useEditLock } from "@/modules/quiz/hooks/useEditLock";
+import { reconciliarEtapas } from '@/modules/quiz/lib/reconciliarEtapas';
 import { validarPublicacao } from "@/modules/quiz/lib/validarPublicacao";
 import {
   calcularConversaoPorEtapa,
@@ -250,30 +251,7 @@ function QuizBuilderPage() {
   // newSteps (isso já causou perda silenciosa do bloco no canvas). Qualquer bloco que
   // sobrar é reanexado como sua própria etapa no final — o dado nunca some.
   const applySteps = (buildSteps: (prev: QuizSchema) => QuizStep[]) => {
-    updateSchema((prev) => {
-      const rawSteps = buildSteps(prev);
-      const existing = new Set(prev.blocks.map((b) => b.id));
-      // sanea referências pendentes e etapas vazias
-      // Etapa vazia sobrevive no builder de propósito: ela é uma tela que o
-      // usuário criou e ainda não preencheu. Quem poda é o preview/player.
-      const cleaned = rawSteps.map((s) => ({
-        ...s,
-        blockIds: s.blockIds.filter((id) => existing.has(id)),
-      }));
-      // reanexa qualquer bloco que ficou de fora — mas um bloco "filho" de algum
-      // Container (childBlockIds) também conta como coberto: ele nunca aparece no
-      // blockIds de uma etapa, só na lista do Container que o contém.
-      const containerChildIds = prev.blocks.flatMap((b) => b.childBlockIds ?? []);
-      const covered = new Set([...cleaned.flatMap((s) => s.blockIds), ...containerChildIds]);
-      const orphanSteps = prev.blocks
-        .filter((b) => !covered.has(b.id))
-        .map((b) => ({ id: `step-${b.id}`, blockIds: [b.id] }));
-      const finalSteps = [...cleaned, ...orphanSteps];
-      const orderedIds = finalSteps.flatMap((s) => s.blockIds);
-      const blockMap = new Map(prev.blocks.map((b) => [b.id, b]));
-      const newBlocks = orderedIds.map((bid) => blockMap.get(bid)!).filter(Boolean);
-      return { ...prev, blocks: newBlocks, steps: finalSteps };
-    });
+    updateSchema((prev) => reconciliarEtapas(prev, buildSteps(prev)));
   };
 
   // Insere uma ETAPA inteira pré-montada (vários blocos agrupados numa tela só).
@@ -932,6 +910,9 @@ function QuizBuilderPage() {
       // versão" dentro do publish deixava o autosave se meter no meio e o
       // ponteiro do funil apontar pra uma versão diferente da marcada.
       const target = dirty ? await handleSave({ silent: true }) : latestVersionId;
+      // Salvamento que não gravou (falha ou aba sem a trava) NÃO pode seguir para a
+      // publicação: ela levaria ao ar a versão antiga dizendo que é a nova.
+      if (dirty && !target) throw new Error("O rascunho não foi salvo");
       await quizService.publish(id, target ?? undefined);
       const pub = await quizService.getPublishState(id);
       setPublishedVersionId(pub.publishedVersionId);
@@ -959,6 +940,9 @@ function QuizBuilderPage() {
     setPublishing(true);
     try {
       const target = dirty ? await handleSave({ silent: true }) : latestVersionId;
+      // Salvamento que não gravou (falha ou aba sem a trava) NÃO pode seguir para a
+      // publicação: ela levaria ao ar a versão antiga dizendo que é a nova.
+      if (dirty && !target) throw new Error("O rascunho não foi salvo");
       if (quiz.status === "published") {
         await quizService.unpublish(id);
         toast.success("Quiz despublicado — o link público deixou de funcionar.");

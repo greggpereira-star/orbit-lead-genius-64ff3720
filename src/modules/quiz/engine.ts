@@ -230,8 +230,14 @@ export function recomputeScore(
 ): { score: number; tags: string[] } {
   let score = 0;
   const tags = new Set<string>();
+  // Só vale o que o visitante PODE ver agora. Quem respondeu um bloco, voltou e
+  // mudou a resposta que o liberava deixa uma resposta velha em `responses`; sem
+  // este filtro ela continuava pontuando (e etiquetando) enquanto o teto, que já
+  // ignora o bloco oculto, não a contava — o lead subia de faixa.
+  const escopo = resolveScope(blocks, responses);
   for (const b of blocks) {
     if (!(b.id in responses)) continue;
+    if (!isBlockVisible(b, responses, escopo)) continue;
     const r = evaluateResponse(b, responses[b.id]);
     score += r.scoreDelta;
     r.tags.forEach((t) => tags.add(t));

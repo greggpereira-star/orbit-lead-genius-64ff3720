@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { aplicarCampo } from "../lib/camposDeSettings";
 import { prefixoDoQuiz, outroQuizUsaAMidia } from "../lib/midiaDoQuiz";
 import {
   classificarArquivos,
@@ -454,11 +455,7 @@ export const quizService = {
       if (fetchError) throw fetchError;
       const settings = { ...((current?.settings as Record<string, unknown>) ?? {}) };
       for (const [key, settingsKey] of settingsFields) {
-        const value = params[key];
-        if (value === undefined) continue;
-        const trimmed = (value as string).trim();
-        if (trimmed) settings[settingsKey] = trimmed;
-        else delete settings[settingsKey];
+        aplicarCampo(settings, settingsKey, params[key]);
       }
       if (params.socialProof !== undefined) settings.social_proof = params.socialProof as never;
       if (params.urgencyBar !== undefined) settings.urgency_bar = params.urgencyBar as never;
@@ -677,19 +674,26 @@ export const quizService = {
   // RLS de leitura pública (anon) em quiz_versions depende de is_published=true,
   // independente do published_version_id em quiz_funnels — os dois precisam ficar em sincronia.
   async markVersionPublished(quizId: string, versionId: string): Promise<void> {
-    await supabase
+    const { error: e1 } = await supabase
       .from("quiz_versions")
       .update({ is_published: false })
       .eq("quiz_id", quizId)
       .neq("id", versionId);
-    await supabase
+    if (e1) throw e1;
+    const { data, error: e2 } = await supabase
       .from("quiz_versions")
       .update({ is_published: true, published_at: new Date().toISOString() })
-      .eq("id", versionId);
+      .eq("id", versionId)
+      .select("id");
+    if (e2) throw e2;
+    // RLS que filtra a linha responde "sucesso" com 0 linhas: sem esta conferência a
+    // tela diria "publicado" e o visitante continuaria sem a versão.
+    if (!data?.length) throw new Error("Não foi possível marcar a versão como publicada (sem permissão?).");
   },
 
   async unpublishAllVersions(quizId: string): Promise<void> {
-    await supabase.from("quiz_versions").update({ is_published: false }).eq("quiz_id", quizId);
+    const { error } = await supabase.from("quiz_versions").update({ is_published: false }).eq("quiz_id", quizId);
+    if (error) throw error;
   },
 
   async promoteVariant(params: {
@@ -837,21 +841,32 @@ export const quizService = {
     // ponteiro — inofensivo, porque a leitura pública passou a derivar do
     // ponteiro. Na ordem inversa, sobraria um ponteiro para uma versão que o
     // visitante não pode ler: exatamente a falha que estamos corrigindo.
-    if (target) await this.markVersionPublished(quizId, target);
+    // Sem versão não há o que publicar: gravar status=published com ponteiro nulo
+    // deixava o link no ar entregando schema vazio.
+    if (!target) throw new Error("Este quiz ainda não tem nenhuma versão salva para publicar.");
+    await this.markVersionPublished(quizId, target);
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("quiz_funnels")
       .update({
         status: "published",
         published_version_id: target,
         published_at: new Date().toISOString(),
       })
-      .eq("id", quizId);
+      .eq("id", quizId)
+      .select("id");
     if (error) throw error;
+    if (!data?.length) throw new Error("Não foi possível publicar o quiz (sem permissão?).");
   },
 
   async unpublish(quizId: string): Promise<void> {
-    await supabase.from("quiz_funnels").update({ status: "draft" }).eq("id", quizId);
+    const { data, error } = await supabase
+      .from("quiz_funnels")
+      .update({ status: "draft" })
+      .eq("id", quizId)
+      .select("id");
+    if (error) throw error;
+    if (!data?.length) throw new Error("Não foi possível despublicar o quiz (sem permissão?).");
     await this.unpublishAllVersions(quizId);
   },
 
