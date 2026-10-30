@@ -4,10 +4,34 @@
  * é uma cor clara (ex: dourado, coral).
  */
 export function getContrastText(hex: string): string {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return "#ffffff";
-  const luminance = relativeLuminance(rgb);
-  return luminance > 0.45 ? "#1a1a1a" : "#ffffff";
+  const norm = normalizarHex(hex);
+  if (!norm) return "#ffffff";
+  // O corte por luminância fixa (0,45) escolhia branco em fundos de meio-tom — laranja,
+  // verde e azul dos presets davam 2,5 a 2,8:1. Agora: branco enquanto ele passa do piso
+  // de texto grande da WCAG (3:1; rótulo de botão é negrito e grande) — assim quem já
+  // estava legível não muda de cara —, e só quando não passa vale o de maior contraste.
+  const branco = contrasteWCAG(norm, "#ffffff");
+  if (branco >= CONTRASTE_BOTAO_MINIMO) return "#ffffff";
+  return contrasteWCAG(norm, "#1a1a1a") > branco ? "#1a1a1a" : "#ffffff";
+}
+
+/** `#rgb` ou `#rrggbb` válido vira `#rrggbb` minúsculo; qualquer outra coisa, `null`. */
+export function normalizarHex(valor: string | undefined | null): string | null {
+  const v = (valor ?? "").trim();
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v);
+  if (!m) return null;
+  const h = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
+  return `#${h.toLowerCase()}`;
+}
+
+/**
+ * Normaliza as cores do tema para `#rrggbb`. Vários renderizadores anexam dois dígitos de
+ * alfa (`${primary}cc`), que com `#f90` viram `#f90cc` — inválido, e o gradiente some.
+ * Valor que não é hex (ex.: `red`) é mantido como está.
+ */
+export function normalizarCoresDoDesign<T extends { primary: string; background: string; surface: string; text: string; muted: string; titleColor?: string }>(d: T): T {
+  const n = (v: string) => normalizarHex(v) ?? v;
+  return { ...d, primary: n(d.primary), background: n(d.background), surface: n(d.surface), text: n(d.text), muted: n(d.muted), ...(d.titleColor ? { titleColor: n(d.titleColor) } : {}) };
 }
 
 /** Clareia `hex` em direção ao branco por `amount` (0-1). Usado pelos estilos de
@@ -34,17 +58,10 @@ function rgbToHex(r: number, g: number, b: number): string {
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const clean = hex.replace("#", "");
-  const full =
-    clean.length === 3
-      ? clean
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : clean;
-  if (full.length !== 6) return null;
+  // Estrito: `parseInt("12g456", 16)` devolvia 0x12 sem NaN e "aceitava" lixo parcial.
+  const full = normalizarHex(hex)?.slice(1);
+  if (!full) return null;
   const num = parseInt(full, 16);
-  if (Number.isNaN(num)) return null;
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
 }
 
@@ -116,6 +133,9 @@ export function contrasteWCAG(a: string, b: string): number {
   const l2 = lum(b);
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
+
+/** Piso da WCAG AA para texto grande/negrito (rótulo de botão). */
+export const CONTRASTE_BOTAO_MINIMO = 3;
 
 /** Piso da WCAG AA para texto normal. Texto grande (>=24px) pede 3:1. */
 export const CONTRASTE_MINIMO = 4.5;

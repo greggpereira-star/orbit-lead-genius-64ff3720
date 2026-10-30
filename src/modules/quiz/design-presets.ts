@@ -135,7 +135,7 @@ export const DESIGN_PRESETS: DesignPreset[] = [
       background: "#ffffff",
       surface: "#f4f4f5",
       text: "#0a0a0a",
-      muted: "#71717a",
+      muted: "#6b6b74",
       radius: 4,
       fontHeading: "Playfair Display",
       fontBody: "Inter",
@@ -180,3 +180,34 @@ export const DESIGN_PRESETS: DesignPreset[] = [
     },
   },
 ];
+
+/**
+ * Design resultante de aplicar um tema (`base`) sobre o design `atual`.
+ *
+ * O `patch` da tela de design faz merge com o que já existia, e os presets não definem
+ * `titleColor`. Resultado: quem tinha título branco num tema escuro e trocava para um
+ * tema claro ficava com título branco sobre fundo branco. A cor do título é parte da
+ * paleta e sai junto. Logo e cores guardadas são do usuário e ficam.
+ *
+ * Com `restaurar`, todas as chaves opcionais personalizadas (tamanhos, capa, alinhamento…)
+ * também voltam ao padrão — "Retornar ao padrão" tem de significar isso.
+ */
+export function designAoTrocarDeTema(
+  atual: QuizDesign,
+  base: QuizDesign,
+  opcoes: { restaurar?: boolean } = {},
+): QuizDesign {
+  const limpo: Record<string, undefined> = {};
+  if (opcoes.restaurar) {
+    for (const k of Object.keys(atual)) limpo[k] = undefined;
+  } else {
+    limpo.titleColor = undefined;
+  }
+  return {
+    ...limpo,
+    ...base,
+    savedColors: atual.savedColors,
+    logoUrl: atual.logoUrl,
+    logoWidth: atual.logoWidth,
+  } as QuizDesign;
+}

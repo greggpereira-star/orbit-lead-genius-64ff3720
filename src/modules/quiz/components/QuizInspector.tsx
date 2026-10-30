@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { normalizarHex } from "../lib/color";
 import type {
   QuizBlock,
   QuizDesign,
@@ -3413,16 +3414,30 @@ function ColorField({
   value: string;
   onChange: (v: string) => void;
 }) {
+  // Rascunho local: só cor válida (#rgb/#rrggbb) é gravada, já normalizada para #rrggbb.
+  const [rascunho, setRascunho] = useState(value);
+  useEffect(() => setRascunho(value), [value]);
+  const valida = normalizarHex(rascunho) !== null;
   return (
     <Field label={label}>
       <div className="flex gap-2">
         <input
           type="color"
-          value={value}
+          value={normalizarHex(value) ?? "#000000"}
           onChange={(e) => onChange(e.target.value)}
           className="h-9 w-12 rounded border cursor-pointer"
         />
-        <Input value={value} onChange={(e) => onChange(e.target.value)} />
+        <Input
+          value={rascunho}
+          aria-invalid={!valida}
+          className={valida ? "" : "border-destructive"}
+          onChange={(e) => {
+            setRascunho(e.target.value);
+            const ok = normalizarHex(e.target.value);
+            if (ok) onChange(ok);
+          }}
+          onBlur={() => setRascunho(value)}
+        />
       </div>
     </Field>
   );

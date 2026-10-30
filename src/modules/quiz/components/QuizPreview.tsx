@@ -25,7 +25,7 @@ import { DISPOSITIVOS, larguraQueCabe, mostrarDobra } from "../lib/dispositivoDo
 import { BLOCK_LIBRARY } from "../blocks-library";
 import type { ConversaoDaEtapa } from "../lib/stepConversion";
 import { RichText } from "./RichText";
-import { getContrastText, withAlpha } from "../lib/color";
+import { getContrastText, normalizarCoresDoDesign, withAlpha } from "../lib/color";
 import { getButtonStyle } from "../lib/buttonStyles";
 import { parseRichText } from "../lib/richtext";
 import { evaluatePercent } from "../lib/variables";
@@ -117,7 +117,7 @@ export function QuizPreview({
   // Mesmo design efetivo do player: a etapa que sobrescreve fundo/cor aparece assim
   // aqui também, senão o canvas mostra um quiz e o visitante vê outro.
   const design = useMemo(
-    () => designDaEtapa(schema.design, step ?? undefined),
+    () => normalizarCoresDoDesign(designDaEtapa(schema.design, step ?? undefined)),
     [schema.design, step],
   );
 

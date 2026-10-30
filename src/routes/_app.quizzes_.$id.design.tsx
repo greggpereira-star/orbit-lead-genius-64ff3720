@@ -15,7 +15,8 @@ import { quizService } from "@/modules/quiz/services/quizService";
 import { getSteps } from "@/modules/quiz/lib/steps";
 import { MediaUploader } from "@/modules/quiz/components/MediaUploader";
 import { QuizPreview } from "@/modules/quiz/components/QuizPreview";
-import { DEFAULT_DESIGN, DESIGN_PRESETS } from "@/modules/quiz/design-presets";
+import { DEFAULT_DESIGN, DESIGN_PRESETS, designAoTrocarDeTema } from "@/modules/quiz/design-presets";
+import { normalizarHex } from "@/modules/quiz/lib/color";
 import type { QuizDesign, QuizFunnel, QuizSchema } from "@/modules/quiz/types";
 
 export const Route = createFileRoute("/_app/quizzes_/$id/design")({
@@ -147,12 +148,7 @@ function QuizDesignPage() {
     if (!preset) return;
     /* As cores guardadas e a logo são do usuário, não do preset: trocar de
        preset é trocar a paleta, não apagar a marca dele. */
-    patch({
-      ...preset.design,
-      savedColors: design.savedColors,
-      logoUrl: design.logoUrl,
-      logoWidth: design.logoWidth,
-    });
+    patch(designAoTrocarDeTema(design, preset.design));
     toast.success(`Tema "${preset.name}" aplicado`);
   };
 
@@ -163,12 +159,7 @@ function QuizDesignPage() {
       )
     )
       return;
-    patch({
-      ...DEFAULT_DESIGN,
-      savedColors: design.savedColors,
-      logoUrl: design.logoUrl,
-      logoWidth: design.logoWidth,
-    });
+    patch(designAoTrocarDeTema(design, DEFAULT_DESIGN, { restaurar: true }));
   };
 
   if (loading) {
@@ -454,6 +445,10 @@ function Cor({
   onGuardar: (v: string) => void;
   salvas?: string[];
 }) {
+  const [rascunho, setRascunho] = useState(valor);
+  useEffect(() => setRascunho(valor), [valor]);
+  const valida = normalizarHex(rascunho) !== null;
+
   const pegarDaTela = async () => {
     try {
       const Ctor = (window as unknown as { EyeDropper: EyeDropperCtor }).EyeDropper;
@@ -475,9 +470,17 @@ function Cor({
           className="h-9 w-10 shrink-0 cursor-pointer rounded-md border bg-transparent p-0.5"
         />
         <Input
-          value={valor}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 flex-1 font-mono text-xs"
+          value={rascunho}
+          onChange={(e) => {
+            setRascunho(e.target.value);
+            // Só grava cor válida (#rgb ou #rrggbb), já em #rrggbb: "red" ou "#6" eram
+            // gravados e autosalvos, e o 3 dígitos quebrava o alfa dos botões.
+            const ok = normalizarHex(e.target.value);
+            if (ok) onChange(ok);
+          }}
+          onBlur={() => setRascunho(valor)}
+          aria-invalid={!valida}
+          className={`h-9 flex-1 font-mono text-xs ${valida ? "" : "border-destructive focus-visible:ring-destructive"}`}
           spellCheck={false}
         />
         {temContaGotas() && (

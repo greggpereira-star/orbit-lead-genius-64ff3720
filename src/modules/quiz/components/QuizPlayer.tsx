@@ -6,7 +6,7 @@ import { contextoDaVisita } from '../lib/contextoDaVisita';
 import { usePixelTracking } from '@/modules/tracking/usePixelTracking';
 import type { QuizBlock, QuizSchema, AccessRules, QuizDesign, BlockOption } from '../types';
 import { getSteps } from '../lib/steps';
-import { getContrastText, withAlpha } from '../lib/color';
+import { getContrastText, normalizarCoresDoDesign, withAlpha } from '../lib/color';
 import { getButtonStyle } from '../lib/buttonStyles';
 import { designVars, contentWidth, verticalAlignClass } from '../lib/designVars';
 import { estaNoFluxo, estiloDaPosicao } from '../lib/blockPosition';
@@ -322,7 +322,7 @@ function PlayerRunner({
   /* O design pode ser sobrescrito pela ETAPA: é o que permite uma tela de
      oferta em fundo escuro sem reconfigurar o funil inteiro. Só as chaves que
      a etapa define mandam; o resto continua herdando. */
-  const design = useMemo(() => designDaEtapa(schema.design, currentStep), [schema.design, currentStep]);
+  const design = useMemo(() => normalizarCoresDoDesign(designDaEtapa(schema.design, currentStep)), [schema.design, currentStep]);
   const stepBlocks = useMemo(
     () => (currentStep ? (currentStep.blockIds.map((id) => blocks.find((b) => b.id === id)).filter(Boolean) as QuizBlock[]) : []),
     [currentStep, blocks]
@@ -3472,7 +3472,7 @@ function BlockView({
 }
 
 function ResultView({ schema, state }: { schema: QuizSchema; state: QuizRunState }) {
-  const design = schema.design;
+  const design = normalizarCoresDoDesign(schema.design);
   /* O resultado que ESTE visitante vê: com dois resultados condicionais, o primeiro do
      schema nem sempre é o dele. (Se nenhum estiver visível, cai no primeiro.) */
   const escopoDoResultado = resolveScope(schema.blocks, state.responses, { score: state.score });
